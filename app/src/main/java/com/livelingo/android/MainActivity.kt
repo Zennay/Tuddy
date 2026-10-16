@@ -25,6 +25,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.translate.TranslateLanguage
@@ -53,6 +56,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun TuddyScreen() {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val colors = darkColorScheme(
         primary = androidx.compose.ui.graphics.Color(0xFFAB9BFF),
         background = androidx.compose.ui.graphics.Color(0xFF10111C),
@@ -192,8 +196,14 @@ private fun TuddyScreen() {
         else error = "Microfoontoegang is nodig. Geef toestemming via de Android-instellingen."
     }
 
-    DisposableEffect(Unit) {
+    // Activity remaining composed in the background must NOT keep the mic open.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) stop()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             generation++
             stop()
             recognizer?.destroy()
