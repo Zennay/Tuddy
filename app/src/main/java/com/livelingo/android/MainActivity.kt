@@ -65,6 +65,7 @@ private fun TuddyScreen() {
     var target by remember { mutableStateOf(spoken[1]) }
     var sourceOpen by remember { mutableStateOf(false) }
     var targetOpen by remember { mutableStateOf(false) }
+    var targetQuery by remember { mutableStateOf("") }
     var listening by remember { mutableStateOf(false) }
     var follow by remember { mutableStateOf(true) }
     var generation by remember { mutableIntStateOf(0) }
@@ -232,10 +233,19 @@ private fun TuddyScreen() {
                             Text("Naar: ${target.label}", maxLines = 1)
                         }
                         DropdownMenu(expanded = targetOpen, onDismissRequest = { targetOpen = false }) {
-                            spoken.forEach {
-                                DropdownMenuItem(text = { Text(it.label) }, onClick = {
+                            Text("59 talen · offline tekstmodellen", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                            OutlinedTextField(
+                                value = targetQuery,
+                                onValueChange = { targetQuery = it },
+                                label = { Text("Zoek taal") },
+                                modifier = Modifier.width(310.dp).padding(horizontal = 10.dp),
+                                singleLine = true
+                            )
+                            TargetCatalog.search(targetQuery).take(35).forEach { choice ->
+                                DropdownMenuItem(text = { Text(choice.title) }, onClick = {
                                     stop()
-                                    target = it
+                                    target = LanguageChoice(choice.title, choice.code, choice.code)
+                                    targetQuery = ""
                                     targetOpen = false
                                 })
                             }
