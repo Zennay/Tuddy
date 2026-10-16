@@ -24,7 +24,7 @@ Record device model, Android version, Android System Intelligence/recognition pr
 
 ## Known gaps and release gate
 
-- Current GitHub MVP selects six speech input languages and six translation targets. The preserved v0.4 Library source catalog covers 59 ML Kit text targets. Import and reconcile the full v0.4 source before claiming parity.
+- Current GitHub MVP selects six speech input languages and offers 59 on-device ML Kit text translation targets with a searchable picker; actual offline speech recognition coverage depends on the device. The preserved v0.4 Library source catalog covers 59 ML Kit text targets. Import and reconcile the full v0.4 source before claiming parity.
 - Kurdish Kurmanji, Sorani and Pashto are **not** full offline translation / speech recognition. Their archived v0.4 phrasebook has only five simple phrases.
 - A screenshot, source-only unit-test pass, or hosted APK build is not a substitute for airplane-mode validation on a physical Android device.
 - Keep zCloud project runtime gated: zero AI workers, disabled compute pool and no VPS app workload until these gates and serialized deployment review pass.
