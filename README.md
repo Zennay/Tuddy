@@ -6,7 +6,7 @@ It aims to display speech and its translation together like synchronized lyrics,
 
 ## Status — 2026-10-13
 
-**Prototype, not a released APK.** Existing Kotlin/Jetpack Compose v0.4 Android source is tracked in ChatGPT Library at `/Projects/LiveLingo/LiveLingo-Android-v0.4-Kurdish-Pashto.zip`, and is being imported into this repo. Android device/build validation has not yet been completed.
+**Prototype, not a released APK.** A new Android/Jetpack Compose MVP and hosted build pipeline are under active review in [PR #3](https://github.com/Zennay/Tuddy/pull/3). The *full* archived v0.4 Android source (including the phrasebook and additional tests) remains in ChatGPT Library at `/Projects/LiveLingo/LiveLingo-Android-v0.4-Kurdish-Pashto.zip` and is **not yet completely imported**. GitHub build success does not constitute on-device airplane-mode acceptance. Android device/build validation has not yet been completed.
 
 The existing prototype implements on-device Android speech recognition when supported by the device, ML Kit offline text translation (downloaded models) for 59 supported target languages, searchable target-language selection, and a scrolling bilingual timeline. Offline speech recognition is *not* guaranteed for every language/device.
 
