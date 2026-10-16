@@ -1,10 +1,13 @@
 name: Android APK (hosted)
 on:
   push:
-    branches: [main, 'feat/android-mvp-offline-20261016']
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+concurrency:
+  group: tuddy-android-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
