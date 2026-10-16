@@ -73,6 +73,7 @@ private fun TuddyScreen() {
     var listening by remember { mutableStateOf(false) }
     var follow by remember { mutableStateOf(true) }
     var generation by remember { mutableIntStateOf(0) }
+    var voiceEpoch by remember { mutableIntStateOf(0) }
     var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
     val offlineAvailable = remember { SpeechRecognizer.isOnDeviceRecognitionAvailable(context) }
     val listState = rememberLazyListState()
@@ -127,6 +128,7 @@ private fun TuddyScreen() {
     }
 
     fun stop() {
+        voiceEpoch++ // Invalidate late on-device recognizer callbacks after stop or background.
         try { recognizer?.cancel() } catch (_: Exception) { }
         listening = false
         partial = ""
@@ -146,18 +148,21 @@ private fun TuddyScreen() {
             val selectedTarget = target.translateCode
             val selectedSource = source.translateCode
             val token = generation
+            val voiceToken = voiceEpoch
             speech.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) { listening = true }
-                override fun onBeginningOfSpeech() { listening = true }
+                override fun onReadyForSpeech(params: Bundle?) { if (voiceToken == voiceEpoch) listening = true }
+                override fun onBeginningOfSpeech() { if (voiceToken == voiceEpoch) listening = true }
                 override fun onRmsChanged(rmsdB: Float) = Unit
                 override fun onBufferReceived(buffer: ByteArray?) = Unit
-                override fun onEndOfSpeech() { listening = false }
+                override fun onEndOfSpeech() { if (voiceToken == voiceEpoch) listening = false }
                 override fun onError(code: Int) {
+                    if (voiceToken != voiceEpoch) return
                     listening = false
                     partial = ""
                     error = "Offline spraakherkenning niet beschikbaar of onderbroken (code $code). Controleer het gedownloade spraakpakket."
                 }
                 override fun onResults(results: Bundle?) {
+                    if (voiceToken != voiceEpoch) return
                     listening = false
                     val sentence = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()?.trim().orEmpty()
@@ -168,7 +173,7 @@ private fun TuddyScreen() {
                     translate(sentence, id, selectedTarget, selectedSource, token)
                 }
                 override fun onPartialResults(results: Bundle?) {
-                    if (token == generation) {
+                    if (token == generation && voiceToken == voiceEpoch) {
                         partial = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                             ?.firstOrNull().orEmpty()
                     }
