@@ -135,6 +135,22 @@ def verify_apk(apk_path):
         raise RuntimeError("merged_manifest_extract_failed")
     problems = audit_manifest(completed.stdout)
     if problems:
+        if "unexpected_exported_component" in problems:
+            # Class names/manifest types are public APK metadata, not secrets.
+            # Limit output to exact offending types/names for accountable review;
+            # never print the full manifest or runtime transcript.
+            root = ET.fromstring(completed.stdout)
+            rejected = []
+            for element in root.iter():
+                kind = local_name(element.tag)
+                if kind in ("activity", "activity-alias", "service", "receiver", "provider"):
+                    if element.get(ANDROID + "exported") == "true":
+                        name = element.get(ANDROID + "name", "")
+                        if kind != "activity" or name not in (
+                            ".MainActivity", "com.livelingo.android.MainActivity"):
+                            rejected.append(kind + ":" + name[:180])
+            print("Unexpected APK exported components: " +
+                  ", ".join(rejected[:10]), file=sys.stderr)
         raise RuntimeError(",".join(problems))
 
 
