@@ -39,8 +39,9 @@ class ContinuousOfflineVoiceBoundary(unittest.TestCase):
         self.assertIn("ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)", self.ui)
         self.assertIn("Lifecycle.Event.ON_STOP) stop()", self.ui)
         self.assertIn("onDispose {", self.ui)
-        self.assertIn("recognizer?.cancel()", self.ui)
-        self.assertIn("recognizer?.destroy()", self.ui)
+        self.assertIn("SpeechCleanupPolicy.release(active::cancel, active::destroy)", self.ui)
+        self.assertIn("SpeechCleanupPolicy.release(previous::cancel, previous::destroy)", self.ui)
+        self.assertIn("SpeechCleanupPolicy.release(failed::cancel, failed::destroy)", self.ui)
 
     def test_no_cloud_fallback_or_unbounded_fatal_error_retry(self):
         self.assertIn("SpeechRecognizer.createOnDeviceSpeechRecognizer(context)", self.ui)

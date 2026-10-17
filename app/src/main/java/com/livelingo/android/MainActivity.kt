@@ -187,7 +187,11 @@ private fun TuddyScreen() {
         voiceSessions.invalidate() // Stop/background immediately invalidates prior callbacks.
         pendingRestart?.let(restartHandler::removeCallbacks)
         pendingRestart = null
-        try { recognizer?.cancel() } catch (_: Exception) { }
+        // Invalidate callbacks before releasing Android's recognizer so a
+        // late interim/final result cannot revive the stopped conversation.
+        val active = recognizer
+        recognizer = null
+        if (active != null) SpeechCleanupPolicy.release(active::cancel, active::destroy)
         listening = false
         partial = ""
     }
@@ -217,7 +221,11 @@ private fun TuddyScreen() {
             // Every start, including a rapid restart after Android's own end-of-speech,
             // must invalidate the previous recognizer's delayed callbacks.
             val voiceToken = voiceSessions.begin()
-            recognizer?.destroy()
+            // Android final/end-of-speech requires a fresh recognizer.
+            // Release both its microphone capture and service before restart.
+            val previous = recognizer
+            recognizer = null
+            if (previous != null) SpeechCleanupPolicy.release(previous::cancel, previous::destroy)
             val speech = SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
             recognizer = speech
             val selectedTarget = target.translateCode
@@ -280,8 +288,17 @@ private fun TuddyScreen() {
             speech.startListening(intent)
             listening = true
         } catch (exception: Exception) {
+            // startListening may throw after a recognizer was allocated.
+            // Do not leave that session eligible for callbacks or reuse.
+            voiceSessions.invalidate()
+            pendingRestart?.let(restartHandler::removeCallbacks)
+            pendingRestart = null
+            val failed = recognizer
+            recognizer = null
+            if (failed != null) SpeechCleanupPolicy.release(failed::cancel, failed::destroy)
             listening = false
-            error = "Offline spraakdienst kon niet starten: ${exception.localizedMessage}"
+            partial = ""
+            error = "Offline spraakdienst kon niet starten: ${exception.localizedMessage ?: "onbekende fout"}"
         }
     }
 
@@ -304,9 +321,7 @@ private fun TuddyScreen() {
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             generation++
-            stop()
-            recognizer?.destroy()
-            recognizer = null
+            stop() // stop() already releases and nulls Android's recognizer
         }
     }
 
