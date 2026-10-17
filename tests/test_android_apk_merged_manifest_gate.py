@@ -55,6 +55,22 @@ class MergedApkManifestGate(unittest.TestCase):
                     '  <application', '  <uses-permission android:name="' + permission + '" />\n  <application')
                 self.assertIn("unexpected_sensitive_permission", policy.audit_manifest(replaced))
 
+    def test_androidx_profileinstaller_requires_signature_dump_permission(self):
+        permitted = GOOD.replace(
+            "  </application>",
+            '    <receiver android:name="androidx.profileinstaller.ProfileInstallReceiver" '
+            'android:exported="true" android:permission="android.permission.DUMP" />\\n'
+            "  </application>",
+        )
+        self.assertEqual([], policy.audit_manifest(permitted))
+        for bad in (
+            permitted.replace(' android:permission="android.permission.DUMP"', ""),
+            permitted.replace('android.permission.DUMP', 'android.permission.INTERNET'),
+            permitted.replace('androidx.profileinstaller.ProfileInstallReceiver',
+                              'androidx.profileinstaller.UnrecognizedReceiver'),
+        ):
+            self.assertIn("unexpected_exported_component", policy.audit_manifest(bad))
+
     def test_missing_microphone_permission_denied(self):
         xml = GOOD.replace('<uses-permission android:name="android.permission.RECORD_AUDIO" />', "")
         self.assertIn("record_audio_permission_missing", policy.audit_manifest(xml))
