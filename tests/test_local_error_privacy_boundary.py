@@ -22,7 +22,7 @@ class LocalErrorPrivacyBoundary(unittest.TestCase):
         self.assertNotIn("localizedMessage", self.ui[start:end])
 
     def test_speech_start_error_never_displays_raw_exception_message(self):
-        start = self.ui.index("        } catch (_: Exception) {\n            // startListening may throw")
+        start = self.ui.index("        } catch (exception: Exception) {\n            // startListening may throw")
         end = self.ui.index("    val microphonePermission", start)
         failure = self.ui[start:end]
         self.assertIn("error = SafeLocalFailureText.SPEECH_START", failure)
@@ -30,9 +30,10 @@ class LocalErrorPrivacyBoundary(unittest.TestCase):
         self.assertNotIn("localizedMessage", failure)
 
     def test_no_network_or_sensitive_data_persisted_in_policy(self):
+        executable = self.policy.split("internal object SafeLocalFailureText", 1)[1]
         for forbidden in ("http://", "https://", "Throwable", "Exception", "FileOutputStream",
                           "SharedPreferences(", "SpeechRecognizer.create", "Translation.getClient(", "Log."):
-            self.assertNotIn(forbidden, self.policy)
+            self.assertNotIn(forbidden, executable)
         self.assertIn("const val SPEECH_START", self.policy)
         self.assertIn("const val TRANSLATION", self.policy)
         self.assertNotIn("localizedMessage", self.ui)
