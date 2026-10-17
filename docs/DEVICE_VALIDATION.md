@@ -113,6 +113,19 @@ speech or full transcripts** with reports.
    text/audio timeline is absent; only selected language codes may persist.
    No unsupported Kurdish/Pashto free-form model or source license is implied.
 
+11. **Live lyric-style provisional translation:** with source/target text models
+    already downloaded, use a slow 10-second spoken sentence. Check the
+    second live line appears only after ~650ms of stable interim text (not
+    per-word downloads), updates while speech continues and never overwrites
+    a newer partial after a delayed old translation finishes. Switch target,
+    press Stop, deny permission and clear the conversation while an interim
+    request is in-flight; no late result may resurrect a preview. When an
+    offline model is missing, raw ML Kit exception details must never be
+    rendered and the preview may remain untranslated until models are
+    explicitly prepared. Follow-live must scroll for both the growing source
+    and the translated provisional subtitle. The source-only and hosted
+    synthetic gates cannot replace this actual handset trial.
+
 ## 3. Evidence / release record (fill only after running the test)
 
 - Candidate source / APK digest: **NOT YET OBSERVED ON DEVICE**
