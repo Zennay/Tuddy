@@ -30,10 +30,25 @@ object CommunityPhrasebook {
     private fun norm(value: String) = value.trim().lowercase(Locale.ROOT)
         .replace(Regex("[.!?؟،,;:]+$"), "").trim().replace(Regex("\\s+"), " ")
 
+    // The preview is an exact *single-line* word/phrase lookup, never free-form MT.
+    // Fail closed on hidden Unicode controls, multiline OCR/ASR payloads and overly
+    // large input instead of allowing whitespace folding to fabricate an entry.
+    private const val MAX_PREVIEW_CHARS = 256
+
+    private fun isPlainSingleLine(value: String): Boolean =
+        value.length in 1..MAX_PREVIEW_CHARS && value.none { ch ->
+            Character.isISOControl(ch) ||
+                Character.getType(ch) == Character.FORMAT.toInt() ||
+                Character.isSurrogate(ch) ||
+                ch == '\u2028' || ch == '\u2029'
+        }
+
     fun translate(source: String?, target: String, phrase: String): Result<String> {
         if (target !in enabledTargets) return Result.failure(IllegalArgumentException("Not a phrasebook target"))
         if (source !in setOf("en", "nl")) return Result.failure(UnsupportedOperationException(
             "For $target, offline beginner words currently require recognized English or Dutch. Other speech and sentences need a new local model."))
+        if (!isPlainSingleLine(phrase)) return Result.failure(UnsupportedOperationException(
+            "Only short single-line visible beginner phrases are supported. No translation invented."))
         val normalized = norm(phrase)
         val entry = entries.firstOrNull { item ->
             (if (source == "en") item.english else item.dutch).any { norm(it) == normalized }
