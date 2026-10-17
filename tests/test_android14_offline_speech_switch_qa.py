@@ -45,6 +45,9 @@ class OfflineSpeechSourceSelectionQA(unittest.TestCase):
         self.assertIn("OfflineSpeechLanguageSwitchPolicy.resolveDetectedTextSource(", callback)
         self.assertIn("SpeechRecognizer.DETECTED_LANGUAGE", callback)
         self.assertIn("SpeechRecognizer.LANGUAGE_SWITCH_RESULT_SKIPPED_NO_MODEL", callback)
+        self.assertIn("SpeechRecognizer.LANGUAGE_SWITCH_RESULT_SUCCEEDED", callback)
+        self.assertIn("OfflineSpeechLanguageSwitchPolicy.confirmedSwitch(", callback)
+        self.assertLess(callback.index("confirmedSwitch("), callback.index("resolveDetectedTextSource("))
         self.assertIn("geïnstalleerde lokale spraakpakketten", callback)
 
     def test_only_valid_preselected_speech_tags_relabel_historical_caption(self):
