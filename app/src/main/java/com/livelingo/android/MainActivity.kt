@@ -259,7 +259,9 @@ private fun TuddyScreen() {
         }
     }
 
-    LaunchedEffect(lines.size, follow) {
+    // At 500 lines the list size remains constant as old captions are evicted.
+    // Use the immutable newest ID to keep Follow live responding to each new line.
+    LaunchedEffect(lines.lastOrNull()?.id, follow) {
         if (follow && lines.isNotEmpty()) listState.animateScrollToItem(lines.size - 1)
     }
 
