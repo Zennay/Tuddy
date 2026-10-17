@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -82,6 +84,8 @@ private fun TuddyScreen() {
     var generation by remember { mutableIntStateOf(0) }
     val voiceSessions = remember { VoiceSessionGeneration() }
     var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
+    val restartHandler = remember { Handler(Looper.getMainLooper()) }
+    var pendingRestart by remember { mutableStateOf<Runnable?>(null) }
     val offlineAvailable = remember { SpeechRecognizer.isOnDeviceRecognitionAvailable(context) }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -148,31 +152,55 @@ private fun TuddyScreen() {
             }
     }
 
+    // Queued work is valid only for this *exact* on-device speech generation.
+    // Clearing, stopping, backgrounding or choosing another source invalidates
+    // the token and cancels its runnable before microphone access is attempted.
+    fun scheduleRestart(voiceToken: Long, delayMs: Long, restart: () -> Unit) {
+        if (!voiceSessions.isCurrent(voiceToken) || !listening) return
+        pendingRestart?.let(restartHandler::removeCallbacks)
+        val task = Runnable {
+            pendingRestart = null
+            if (voiceSessions.isCurrent(voiceToken) && listening &&
+                MicrophoneStartPolicy.mayStart(lifecycleOwner.lifecycle.currentState) &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED) {
+                restart()
+            }
+        }
+        pendingRestart = task
+        restartHandler.postDelayed(task, delayMs)
+    }
+
     fun stop() {
         voiceSessions.invalidate() // Stop/background immediately invalidates prior callbacks.
+        pendingRestart?.let(restartHandler::removeCallbacks)
+        pendingRestart = null
         try { recognizer?.cancel() } catch (_: Exception) { }
         listening = false
         partial = ""
     }
 
-    fun start() {
+    fun start(forceRestart: Boolean = false) {
         error = ""
         // The runtime permission dialog may return after the Activity has
         // stopped. The microphone must never start from that stale callback.
         if (!MicrophoneStartPolicy.mayStart(lifecycleOwner.lifecycle.currentState)) {
+            listening = false
             error = "Microfoon gestopt: open Tuddy en tik opnieuw op Luister."
             return
         }
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED) {
+            listening = false
             error = "Microfoontoegang ontbreekt. Geef toestemming via Android."
             return
         }
         if (!offlineAvailable) {
+            listening = false
             error = "Deze telefoon heeft geen on-device spraakherkenning. Tuddy schakelt niet over naar cloud-spraak."
             return
         }
-        if (listening) return
+        if (listening && !forceRestart) return
         try {
             // Every start, including a rapid restart after Android's own end-of-speech,
             // must invalidate the previous recognizer's delayed callbacks.
@@ -188,29 +216,40 @@ private fun TuddyScreen() {
                 override fun onBeginningOfSpeech() { if (voiceSessions.isCurrent(voiceToken)) listening = true }
                 override fun onRmsChanged(rmsdB: Float) = Unit
                 override fun onBufferReceived(buffer: ByteArray?) = Unit
-                override fun onEndOfSpeech() { if (voiceSessions.isCurrent(voiceToken)) listening = false }
+                override fun onEndOfSpeech() = Unit // keep user intent active for the next utterance
                 override fun onError(code: Int) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
-                    listening = false
                     partial = ""
-                    error = "Offline spraakherkenning niet beschikbaar of onderbroken (code $code). Controleer het gedownloade spraakpakket."
+                    val retry = ContinuousSpeechRestartPolicy.delayForError(
+                        code, SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
+                    if (retry != null) {
+                        scheduleRestart(voiceToken, retry) { start(forceRestart = true) }
+                    } else {
+                        stop() // never retry permissions, unsupported languages or unknown errors
+                        error = "Offline spraakherkenning niet beschikbaar of onderbroken (code $code). Controleer het gedownloade spraakpakket."
+                    }
                 }
                 override fun onResults(results: Bundle?) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
-                    listening = false
                     val sentence = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()?.trim().orEmpty()
                     partial = ""
-                    if (sentence.isBlank() || token != generation) return
-                    val id = System.nanoTime()
-                    lines.add(Line(id, sentence, "Vertalen…", "Bezig"))
-                    // Evict old RAM-only captions before scheduling more work.
-                    // Late callbacks for evicted IDs are already denied by
-                    // translationStillRelevant(lines.any { it.id == id }).
-                    repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
-                        lines.removeAt(0)
+                    if (sentence.isNotBlank() && token == generation) {
+                        val id = System.nanoTime()
+                        lines.add(Line(id, sentence, "Vertalen…", "Bezig"))
+                        // Evict old RAM-only captions before scheduling more work.
+                        // Late callbacks for evicted IDs are already denied by
+                        // translationStillRelevant(lines.any { it.id == id }).
+                        repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
+                            lines.removeAt(0)
+                        }
+                        translate(sentence, id, selectedTarget, selectedSource, token)
                     }
-                    translate(sentence, id, selectedTarget, selectedSource, token)
+                    // The user asked for live captions, not one isolated sentence.
+                    // A new recognizer generation suppresses callbacks from the old one.
+                    scheduleRestart(voiceToken, ContinuousSpeechRestartPolicy.RESULT_DELAY_MS) {
+                        start(forceRestart = true)
+                    }
                 }
                 override fun onPartialResults(results: Bundle?) {
                     if (token == generation && voiceSessions.isCurrent(voiceToken)) {
