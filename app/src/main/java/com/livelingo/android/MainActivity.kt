@@ -37,6 +37,7 @@ import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.launch
 import com.livelingo.android.model.CommunityPhrasebook
+import com.livelingo.android.ui.OfflineWordText
 
 private data class LanguageChoice(val label: String, val speechCode: String, val translateCode: String)
 private val spoken = listOf(
@@ -47,7 +48,14 @@ private val spoken = listOf(
     LanguageChoice("Español", "es-ES", TranslateLanguage.SPANISH),
     LanguageChoice("العربية", "ar-SA", TranslateLanguage.ARABIC)
 )
-private data class Line(val id: Long, val original: String, val translated: String, val status: String)
+private data class Line(
+    val id: Long,
+    val original: String,
+    val translated: String,
+    val status: String,
+    val sourceCode: String,
+    val targetCode: String
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,6 +120,10 @@ private fun TuddyScreen() {
                 if (!translationStillRelevant(id, token)) return@addOnSuccessListener
                 val identified = guess.takeIf { it != "und" && TranslateLanguage.fromLanguageTag(it) != null }
                 val from = identified?.let { TranslateLanguage.fromLanguageTag(it) } ?: sourceCode
+                // Each historical caption keeps its recognized original language.
+                // Never relabel older lines when a different source is selected.
+                val row = lines.indexOfFirst { it.id == id }
+                if (row >= 0) lines[row] = lines[row].copy(sourceCode = from)
                 if (from == targetCode) {
                     updateLine(id, text, "Lokaal", token)
                     return@addOnSuccessListener
@@ -236,7 +248,7 @@ private fun TuddyScreen() {
                     partial = ""
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
-                        lines.add(Line(id, sentence, "Vertalen…", "Bezig"))
+                        lines.add(Line(id, sentence, "Vertalen…", "Bezig", selectedSource, selectedTarget))
                         // Evict old RAM-only captions before scheduling more work.
                         // Late callbacks for evicted IDs are already denied by
                         // translationStillRelevant(lines.any { it.id == id }).
@@ -442,8 +454,20 @@ private fun TuddyScreen() {
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(line.original, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                                Text(line.translated, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                OfflineWordText(
+                                    line.original, line.sourceCode,
+                                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                                )
+                                if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
+                                    OfflineWordText(
+                                        line.translated, line.targetCode,
+                                        MaterialTheme.typography.titleMedium.copy(
+                                            color = MaterialTheme.colorScheme.primary)
+                                    )
+                                } else {
+                                    Text(line.translated, style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary)
+                                }
                                 Text(line.status, style = MaterialTheme.typography.labelSmall)
                             }
                         }
