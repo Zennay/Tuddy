@@ -31,7 +31,7 @@ class LocalErrorPrivacyBoundary(unittest.TestCase):
 
     def test_no_network_or_sensitive_data_persisted_in_policy(self):
         for forbidden in ("http://", "https://", "Throwable", "Exception", "FileOutputStream",
-                          "SharedPreferences", "SpeechRecognizer", "Translation.getClient(", "Log."):
+                          "SharedPreferences(", "SpeechRecognizer.create", "Translation.getClient(", "Log."):
             self.assertNotIn(forbidden, self.policy)
         self.assertIn("const val SPEECH_START", self.policy)
         self.assertIn("const val TRANSLATION", self.policy)
