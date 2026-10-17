@@ -9,10 +9,10 @@ APP = ROOT / "app/src/main/java/com/livelingo/android"
 class CaptionMemoryBoundary(unittest.TestCase):
     def test_eviction_runs_before_async_translation(self):
         ui = (APP / "MainActivity.kt").read_text(encoding="utf-8")
-        add = ui.index('lines.add(Line(id, sentence, "Vertalen…", "Bezig", selectedSource, selectedTarget))')
+        add = ui.index('lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))')
         evict = ui.index("repeat(CaptionRetentionPolicy.oldestToDrop(lines.size))")
         remove = ui.index("lines.removeAt(0)", evict)
-        translate = ui.index("translate(sentence, id, selectedTarget, selectedSource, token)", add)
+        translate = ui.index("translate(sentence, id, selectedTarget, observedSource, token)", add)
         self.assertLess(add, evict)
         self.assertLess(evict, remove)
         self.assertLess(remove, translate)
