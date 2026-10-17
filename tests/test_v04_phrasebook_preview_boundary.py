@@ -29,11 +29,10 @@ class CommunityPreviewBoundary(unittest.TestCase):
             self.assertNotIn(network, self.phrases)
 
     def test_exactly_five_bundled_phrase_entries_and_no_fallback(self):
-        self.assertEqual(len(re.findall(r"^\\s*Entry\\(listOf\\(", self.phrases, flags=re.M)), 5)
+        self.assertEqual(len(re.findall(r"^\s*Entry\(listOf\(", self.phrases, flags=re.M)), 5)
         self.assertIn("No translation invented.", self.phrases)
         self.assertIn("Result.failure", self.phrases)
         self.assertIn("not in setOf(\"en\", \"nl\")", self.phrases)
-        self.assertIn("Dit", "Dit")  # no external catalog/network side effects
 
     def test_manual_preview_is_bounded_and_erased_with_conversation(self):
         self.assertIn("previewInput = it.take(80)", self.ui)
