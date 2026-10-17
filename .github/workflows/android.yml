@@ -26,7 +26,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
       - name: Test fail-closed workflow identity before untrusted Gradle code
-        run: python3 -B -m unittest discover -s tests -p 'test_android_workflow_identity.py'
+        run: python3 -B -m unittest discover -s tests -p 'test_*.py'
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -45,12 +45,24 @@ jobs:
           gradle-version: '8.11.1'
       - name: Verify unit tests and build APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
-      - name: SHA-256 of APK
-        run: sha256sum app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify APK digest and bind artifact to built checkout
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          out="app/build/outputs/apk/debug"
+          test -s "$out/app-debug.apk"
+          (cd "$out" && sha256sum app-debug.apk > app-debug.apk.sha256 && sha256sum --check app-debug.apk.sha256)
+          git rev-parse HEAD > "$out/source-commit.txt"
+          test "$(cat "$out/source-commit.txt")" = "$EXPECTED_SHA"
+          cat "$out/app-debug.apk.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: Tuddy-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/app-debug.apk.sha256
+            app/build/outputs/apk/debug/source-commit.txt
           retention-days: 14
           if-no-files-found: error
 
@@ -66,7 +78,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - name: Run offline workflow-identity regressions
-        run: python3 -B -m unittest discover -s tests -p 'test_android_workflow_identity.py'
+        run: python3 -B -m unittest discover -s tests -p 'test_*.py'
       - name: Verify exact immutable contributor revision
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
