@@ -32,7 +32,7 @@ class CommunityPreviewBoundary(unittest.TestCase):
         self.assertEqual(len(re.findall(r"^\s*Entry\(listOf\(", self.phrases, flags=re.M)), 5)
         self.assertIn("No translation invented.", self.phrases)
         self.assertIn("Result.failure", self.phrases)
-        self.assertIn("not in setOf(\"en\", \"nl\")", self.phrases)
+        self.assertIn("source !in setOf(\"en\", \"nl\")", self.phrases)
 
     def test_manual_preview_is_bounded_and_erased_with_conversation(self):
         self.assertIn("previewInput = it.take(80)", self.ui)
