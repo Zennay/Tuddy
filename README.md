@@ -27,6 +27,10 @@ microphone usability, speech model coverage, device performance or release readi
   independent and device-/speech-pack-specific.
 - Bilingual live/interim/final captions; 'Volg live' respects the user's pause,
   follows growing interim text and works with a 500-line RAM-only history.
+- The chosen spoken source and text target survive process restarts as two
+  validated private preference codes (restoring unknown/stale codes falls back
+  to reviewed defaults); microphone audio, captions and word lookups remain
+  RAM-only and are never restored from storage.
 - Small, offline, explicitly **five-phrase** NL/EN → Kurmanji/Sorani/Pashto
   preview. This is NOT arbitrary-sentence translation or offline recognition.
 - Tap-to-define bilingual text with accessible manual word entry, Unicode

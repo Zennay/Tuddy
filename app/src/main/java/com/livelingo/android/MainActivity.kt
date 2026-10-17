@@ -1,6 +1,7 @@
 package com.livelingo.android
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -77,8 +78,28 @@ private fun TuddyScreen() {
     val lines = remember { mutableStateListOf<Line>() }
     var partial by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
-    var source by remember { mutableStateOf(spoken[0]) }
-    var target by remember { mutableStateOf(spoken[1]) }
+    // Only the picker codes are private on-disk preferences; all captions and
+    // speech/model status remain ephemeral in RAM and never restored.
+    val languageSettings = remember(context) {
+        context.getSharedPreferences(PrivateLanguageSelectionPolicy.SETTINGS_NAME, Context.MODE_PRIVATE)
+    }
+    var source by remember {
+        val storedTag = runCatching {
+            languageSettings.getString(PrivateLanguageSelectionPolicy.SOURCE_KEY, null)
+        }.getOrNull()
+        val safeTag = PrivateLanguageSelectionPolicy.restoreSource(
+            storedTag, spoken.map { it.speechCode }, spoken[0].speechCode)
+        mutableStateOf(spoken.first { it.speechCode == safeTag })
+    }
+    var target by remember {
+        val storedCode = runCatching {
+            languageSettings.getString(PrivateLanguageSelectionPolicy.TARGET_KEY, null)
+        }.getOrNull()
+        val safeCode = PrivateLanguageSelectionPolicy.restoreTarget(
+            storedCode, TargetCatalog.codes, spoken[1].translateCode)
+        val catalog = TargetCatalog.targets.first { it.code == safeCode }
+        mutableStateOf(LanguageChoice(catalog.title, catalog.code, catalog.code))
+    }
     var sourceOpen by remember { mutableStateOf(false) }
     var targetOpen by remember { mutableStateOf(false) }
     var targetQuery by remember { mutableStateOf("") }
@@ -445,6 +466,9 @@ private fun TuddyScreen() {
                                 DropdownMenuItem(text = { Text(it.label) }, onClick = {
                                     stop()
                                     source = it
+                                    languageSettings.edit()
+                                        .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, it.speechCode)
+                                        .apply()
                                     offlineModelStatus = ""
                                     sourceOpen = false
                                 })
@@ -468,6 +492,9 @@ private fun TuddyScreen() {
                                 DropdownMenuItem(text = { Text(choice.title) }, onClick = {
                                     stop()
                                     target = LanguageChoice(choice.title, choice.code, choice.code)
+                                    languageSettings.edit()
+                                        .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, choice.code)
+                                        .apply()
                                     offlineModelStatus = ""
                                     targetQuery = ""
                                     targetOpen = false
