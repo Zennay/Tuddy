@@ -12,7 +12,9 @@ class InterimFollowBoundary(unittest.TestCase):
         self.assertIn("LiveFollowPolicy.targetIndex(lines.size, partial.isNotBlank(), follow)", ui)
         self.assertNotIn("LaunchedEffect(lines.size, follow)", ui)
         self.assertIn("if (partial.isNotBlank())", ui)
-        self.assertIn("if (index != null) listState.animateScrollToItem(index)", ui)
+        self.assertIn("if (index != null) {", ui)
+        self.assertIn("if (partial.isNotBlank()) listState.scrollToItem(index)", ui)
+        self.assertIn("else listState.animateScrollToItem(index)", ui)
 
     def test_policy_never_scrolls_when_paused_or_empty(self):
         model = (APP / "LiveFollowPolicy.kt").read_text(encoding="utf-8")
