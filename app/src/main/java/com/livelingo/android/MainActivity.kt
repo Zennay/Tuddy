@@ -36,7 +36,7 @@ import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.launch
-import com.livelingo.android.model.CommunityPhrasebook
+import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
 
 private data class LanguageChoice(val label: String, val speechCode: String, val translateCode: String)
@@ -406,7 +406,7 @@ private fun TuddyScreen() {
                     }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                         label = { Text("Bijv. hallo, bedankt, ja, nee, water") })
                     Button(onClick = {
-                        previewResult = CommunityPhrasebook.translate(previewSource, previewTarget, previewInput)
+                        previewResult = SafeCommunityPhrasebook.translate(previewSource, previewTarget, previewInput)
                             .fold(onSuccess = { it }, onFailure = { "Niet in deze kleine woordenlijst." })
                     }, enabled = previewInput.isNotBlank()) { Text("Zoek basiswoord lokaal") }
                     if (previewResult != null) Text(previewResult!!, color = MaterialTheme.colorScheme.primary)
