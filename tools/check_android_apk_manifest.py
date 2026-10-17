@@ -41,6 +41,18 @@ def local_name(tag):
     return tag.rsplit("}", 1)[-1]
 
 
+def permitted_exported_component(kind, name, permission):
+    # AndroidX ProfileInstaller's debug/performance tooling exposes a receiver
+    # guarded by the platform DUMP signature/privileged permission. It is not
+    # callable by unprivileged third-party apps. Never allow it without DUMP.
+    if kind == "activity" and name in (
+        ".MainActivity", "com.livelingo.android.MainActivity"):
+        return True
+    return (kind == "receiver" and
+            name == "androidx.profileinstaller.ProfileInstallReceiver" and
+            permission == "android.permission.DUMP")
+
+
 def audit_manifest(xml_text):
     problems = []
     try:
@@ -90,8 +102,8 @@ def audit_manifest(xml_text):
             continue
         name = element.get(ANDROID + "name", "")
         if element.get(ANDROID + "exported") == "true":
-            if kind != "activity" or name not in (
-                ".MainActivity", "com.livelingo.android.MainActivity"):
+            if not permitted_exported_component(
+                    kind, name, element.get(ANDROID + "permission")):
                 problems.append("unexpected_exported_component")
         if kind == "activity" and name in (
             ".MainActivity", "com.livelingo.android.MainActivity"):
@@ -146,8 +158,8 @@ def verify_apk(apk_path):
                 if kind in ("activity", "activity-alias", "service", "receiver", "provider"):
                     if element.get(ANDROID + "exported") == "true":
                         name = element.get(ANDROID + "name", "")
-                        if kind != "activity" or name not in (
-                            ".MainActivity", "com.livelingo.android.MainActivity"):
+                        if not permitted_exported_component(
+                                kind, name, element.get(ANDROID + "permission")):
                             rejected.append(kind + ":" + name[:180])
             print("Unexpected APK exported components: " +
                   ", ".join(rejected[:10]), file=sys.stderr)
