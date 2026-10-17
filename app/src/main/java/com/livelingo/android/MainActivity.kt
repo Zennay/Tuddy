@@ -259,12 +259,16 @@ private fun TuddyScreen() {
         }
     }
 
-    // The active interim caption is an EXTRA LazyColumn item. Re-evaluate
-    // when it appears/disappears, not just when a final line ID changes.
-    // This also preserves live scrolling after the 500-caption RAM limit.
-    LaunchedEffect(lines.lastOrNull()?.id, partial.isNotBlank(), follow) {
+    // The partial caption grows while still visible. A Boolean key never
+    // changes after the first word, so track its actual text revision.
+    // Keep interim scrolling immediate rather than repeatedly restarting
+    // an animation on each speech-recognition callback.
+    LaunchedEffect(lines.lastOrNull()?.id, partial, follow) {
         val index = LiveFollowPolicy.targetIndex(lines.size, partial.isNotBlank(), follow)
-        if (index != null) listState.animateScrollToItem(index)
+        if (index != null) {
+            if (partial.isNotBlank()) listState.scrollToItem(index)
+            else listState.animateScrollToItem(index)
+        }
     }
 
     MaterialTheme(colorScheme = colors) {
