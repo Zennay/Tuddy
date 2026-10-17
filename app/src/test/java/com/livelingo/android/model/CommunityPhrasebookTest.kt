@@ -48,9 +48,9 @@ class CommunityPhrasebookTest {
                 assertTrue("$target must reject hidden/multiline input",
                     CommunityPhrasebook.translate("en", target, phrase).isFailure)
             }
-            assertEquals("Spas".takeIf { target == "kmr" },
-                CommunityPhrasebook.translate("en", target, "THANK   YOU!").getOrNull()
-                    .takeIf { target == "kmr" })
+            val expectedThanks = mapOf("kmr" to "Spas", "ckb" to "سوپاس", "ps" to "مننه")
+            assertEquals(expectedThanks[target],
+                CommunityPhrasebook.translate("en", target, "THANK   YOU!").getOrNull())
             assertTrue(CommunityPhrasebook.translate("nl", target, "dank\nje").isFailure)
         }
     }
