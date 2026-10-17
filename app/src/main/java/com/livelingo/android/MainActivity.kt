@@ -484,6 +484,7 @@ private fun TuddyScreen() {
             if (failed != null) SpeechCleanupPolicy.release(failed::cancel, failed::destroy)
             listening = false
             partial = ""
+            clearInterim()
             error = SafeLocalFailureText.SPEECH_START
         }
     }
@@ -515,7 +516,7 @@ private fun TuddyScreen() {
     // changes after the first word, so track its actual text revision.
     // Keep interim scrolling immediate rather than repeatedly restarting
     // an animation on each speech-recognition callback.
-    LaunchedEffect(lines.lastOrNull()?.id, partial, follow) {
+    LaunchedEffect(lines.lastOrNull()?.id, partial, partialTranslation, follow) {
         val index = LiveFollowPolicy.targetIndex(lines.size, partial.isNotBlank(), follow)
         if (index != null) {
             if (partial.isNotBlank()) listState.scrollToItem(index)
