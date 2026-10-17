@@ -46,21 +46,21 @@ class CommunityPhrasebookTest {
         for (target in CommunityPhrasebook.enabledTargets) {
             for (phrase in forgedEnglish) {
                 assertTrue("$target must reject hidden/multiline input",
-                    CommunityPhrasebook.translate("en", target, phrase).isFailure)
+                    SafeCommunityPhrasebook.translate("en", target, phrase).isFailure)
             }
             val expectedThanks = mapOf("kmr" to "Spas", "ckb" to "سوپاس", "ps" to "مننه")
             assertEquals(expectedThanks[target],
-                CommunityPhrasebook.translate("en", target, "THANK   YOU!").getOrNull())
-            assertTrue(CommunityPhrasebook.translate("nl", target, "dank\nje").isFailure)
+                SafeCommunityPhrasebook.translate("en", target, "THANK   YOU!").getOrNull())
+            assertTrue(SafeCommunityPhrasebook.translate("nl", target, "dank\nje").isFailure)
         }
     }
 
     @Test fun oversizedAndMalformedTextCannotBecomeATranslation() {
         for (target in CommunityPhrasebook.enabledTargets) {
             for (source in listOf("nl", "en")) {
-                assertTrue(CommunityPhrasebook.translate(source, target, " ".repeat(300) + "yes").isFailure)
-                assertTrue(CommunityPhrasebook.translate(source, target, "\uD800yes").isFailure)
-                assertTrue(CommunityPhrasebook.translate(source, target, "").isFailure)
+                assertTrue(SafeCommunityPhrasebook.translate(source, target, " ".repeat(300) + "yes").isFailure)
+                assertTrue(SafeCommunityPhrasebook.translate(source, target, "\uD800yes").isFailure)
+                assertTrue(SafeCommunityPhrasebook.translate(source, target, "").isFailure)
             }
         }
     }
