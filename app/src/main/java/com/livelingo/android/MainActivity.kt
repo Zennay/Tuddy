@@ -176,7 +176,7 @@ private fun TuddyScreen() {
                                 translator.close()
                             }
                             .addOnFailureListener {
-                                updateLine(id, "Vertalen mislukt: ${it.localizedMessage ?: "onbekende fout"}", "Fout", token)
+                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token)
                                 translator.close()
                             }
                     }
@@ -409,7 +409,7 @@ private fun TuddyScreen() {
             if (failed != null) SpeechCleanupPolicy.release(failed::cancel, failed::destroy)
             listening = false
             partial = ""
-            error = "Offline spraakdienst kon niet starten: ${exception.localizedMessage ?: "onbekende fout"}"
+            error = SafeLocalFailureText.SPEECH_START
         }
     }
 
