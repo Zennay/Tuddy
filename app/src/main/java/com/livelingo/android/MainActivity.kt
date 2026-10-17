@@ -330,8 +330,8 @@ private fun TuddyScreen() {
                 }
                 override fun onResults(results: Bundle?) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
-                    val sentence = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        ?.firstOrNull()?.trim().orEmpty()
+                    val sentence = SpeechHypothesisPolicy.select(
+                        results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
                     partial = ""
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
@@ -352,8 +352,8 @@ private fun TuddyScreen() {
                 }
                 override fun onPartialResults(results: Bundle?) {
                     if (token == generation && voiceSessions.isCurrent(voiceToken)) {
-                        partial = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                            ?.firstOrNull().orEmpty()
+                        partial = SpeechHypothesisPolicy.select(
+                            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
                     }
                 }
                 override fun onEvent(eventType: Int, params: Bundle?) = Unit
