@@ -17,6 +17,23 @@ class OfflineSpeechLanguageSwitchPolicyTest {
         assertTrue(OfflineSpeechLanguageSwitchPolicy.shouldRequest(35, true, true))
     }
 
+    @Test fun onlyAndroidConfirmedSwitchMayChangeCaptionLanguage() {
+        assertTrue(OfflineSpeechLanguageSwitchPolicy.confirmedSwitch(1, 1))
+        for (unconfirmed in listOf(-1, 0, 2, 3, Int.MAX_VALUE)) {
+            assertFalse(OfflineSpeechLanguageSwitchPolicy.confirmedSwitch(unconfirmed, 1))
+        }
+    }
+
+    @Test fun successfulLanguageDetectionIsNotAConfirmedSwitch() {
+        // A valid detected locale can be returned while Android reports
+        // NOT_ATTEMPTED/FAILED/SKIPPED_NO_MODEL; the callback must gate this.
+        assertEquals("en", OfflineSpeechLanguageSwitchPolicy.resolveDetectedTextSource(
+            "en-US", "nl", tags))
+        for (unconfirmed in listOf(0, 2, 3)) {
+            assertFalse(OfflineSpeechLanguageSwitchPolicy.confirmedSwitch(unconfirmed, 1))
+        }
+    }
+
     @Test fun recognizedAllowedTagsMapToMlKitTextSources() {
         assertEquals("en", OfflineSpeechLanguageSwitchPolicy.resolveDetectedTextSource("en-US", "nl", tags))
         assertEquals("de", OfflineSpeechLanguageSwitchPolicy.resolveDetectedTextSource("de-DE", "nl", tags))
