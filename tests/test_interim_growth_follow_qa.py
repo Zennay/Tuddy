@@ -17,7 +17,7 @@ class InterimGrowthFollowTest(unittest.TestCase):
         text = UI.read_text(encoding="utf-8")
         self.assertRegex(
             text,
-            r"LaunchedEffect\(lines\.lastOrNull\(\)\?\.id,\s*partial,\s*follow\)",
+            r"LaunchedEffect\(lines\.lastOrNull\(\)\?\.id,\s*partial,\s*partialTranslation,\s*follow\)",
         )
         self.assertNotIn("LaunchedEffect(lines.lastOrNull()?.id, partial.isNotBlank(), follow)", text)
 
