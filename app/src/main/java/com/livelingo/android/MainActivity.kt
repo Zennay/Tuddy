@@ -136,6 +136,17 @@ private fun TuddyScreen() {
 
     fun start() {
         error = ""
+        // The runtime permission dialog may return after the Activity has
+        // stopped. The microphone must never start from that stale callback.
+        if (!MicrophoneStartPolicy.mayStart(lifecycleOwner.lifecycle.currentState)) {
+            error = "Microfoon gestopt: open Tuddy en tik opnieuw op Luister."
+            return
+        }
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+            PackageManager.PERMISSION_GRANTED) {
+            error = "Microfoontoegang ontbreekt. Geef toestemming via Android."
+            return
+        }
         if (!offlineAvailable) {
             error = "Deze telefoon heeft geen on-device spraakherkenning. Tuddy schakelt niet over naar cloud-spraak."
             return
@@ -197,8 +208,11 @@ private fun TuddyScreen() {
     val microphonePermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) start()
-        else error = "Microfoontoegang is nodig. Geef toestemming via de Android-instellingen."
+        when {
+            !granted -> error = "Microfoontoegang is nodig. Geef toestemming via de Android-instellingen."
+            MicrophoneStartPolicy.mayStart(lifecycleOwner.lifecycle.currentState) -> start()
+            else -> error = "Tuddy was op de achtergrond. Open de app en tik opnieuw op Luister."
+        }
     }
 
     // Activity remaining composed in the background must NOT keep the mic open.
