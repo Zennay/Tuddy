@@ -93,6 +93,6 @@ speech or full transcripts** with reports.
 
 The repository's P1 [#1](https://github.com/Zennay/Tuddy/issues/1)
 and [#2](https://github.com/Zennay/Tuddy/issues/2) remain open. Full
-historical v0.4 architecture and licensed off-device-free Kurdish/Pashto
+historical v0.4 architecture and licensed, fully on-device Kurdish/Pashto
 ASR/MT engines are not completed. Keep all production/release/worker
 capabilities disabled until owner-reviewed evidence meets the gates.
