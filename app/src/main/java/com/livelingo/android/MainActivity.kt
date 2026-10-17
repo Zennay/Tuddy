@@ -88,6 +88,9 @@ private fun TuddyScreen() {
     var previewInput by remember { mutableStateOf("") }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
+    var preparingOfflineModel by remember { mutableStateOf(false) }
+    var offlineModelStatus by remember { mutableStateOf("") }
+    val offlinePreparationEpoch = remember { OfflinePreparationEpoch() }
     var follow by remember { mutableStateOf(true) }
     var generation by remember { mutableIntStateOf(0) }
     val voiceSessions = remember { VoiceSessionGeneration() }
@@ -164,6 +167,64 @@ private fun TuddyScreen() {
             }
     }
 
+    // Explicit offline text preparation: one supported source->target model,
+    // never a hidden bulk download or an unreviewed speech recognition model.
+    // Existing ML Kit model downloads cannot be stopped by clearing text;
+    // stale UI completions are suppressed and the client is always closed.
+    fun prepareOfflinePair() {
+        if (preparingOfflineModel) return
+        when (OfflineModelPreparationPolicy.decide(
+            source.translateCode, target.translateCode, TargetCatalog.codes)) {
+            OfflinePairDecision.UNSUPPORTED -> {
+                offlineModelStatus = "Taalpaar niet ondersteund door lokale tekstvertaling."
+                return
+            }
+            OfflinePairDecision.ALREADY_SAME_LANGUAGE -> {
+                offlineModelStatus = "De talen zijn gelijk; geen vertaalmodel nodig."
+                return
+            }
+            OfflinePairDecision.MODEL_REQUIRED -> Unit
+        }
+        val requestEpoch = offlinePreparationEpoch.begin()
+        val sourceCode = source.translateCode
+        val targetCode = target.translateCode
+        preparingOfflineModel = true
+        offlineModelStatus = "Tekstmodel via wifi voorbereiden…"
+        val translator = try {
+            Translation.getClient(TranslatorOptions.Builder()
+                .setSourceLanguage(sourceCode)
+                .setTargetLanguage(targetCode)
+                .build())
+        } catch (_: Exception) {
+            preparingOfflineModel = false
+            offlineModelStatus = "Tekstmodel kon niet worden geopend."
+            return
+        }
+        try {
+            translator.downloadModelIfNeeded(DownloadConditions.Builder().requireWifi().build())
+                .addOnSuccessListener {
+                    translator.close()
+                    preparingOfflineModel = false
+                    if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
+                        offlineModelStatus = "Tekstmodel klaar voor offline gebruik. Spraakpakket apart controleren."
+                    }
+                }
+                .addOnFailureListener {
+                    translator.close()
+                    preparingOfflineModel = false
+                    if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
+                        offlineModelStatus = "Tekstmodel niet beschikbaar. Controleer wifi en opslag; probeer opnieuw."
+                    }
+                }
+        } catch (_: Exception) {
+            translator.close()
+            preparingOfflineModel = false
+            if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
+                offlineModelStatus = "Tekstmodel kon niet worden voorbereid."
+            }
+        }
+    }
+
     // Queued work is valid only for this *exact* on-device speech generation.
     // Clearing, stopping, backgrounding or choosing another source invalidates
     // the token and cancels its runnable before microphone access is attempted.
@@ -184,6 +245,7 @@ private fun TuddyScreen() {
     }
 
     fun stop() {
+        offlinePreparationEpoch.invalidate() // A stale model receipt never applies after Stop/background.
         voiceSessions.invalidate() // Stop/background immediately invalidates prior callbacks.
         pendingRestart?.let(restartHandler::removeCallbacks)
         pendingRestart = null
@@ -355,6 +417,7 @@ private fun TuddyScreen() {
                                 DropdownMenuItem(text = { Text(it.label) }, onClick = {
                                     stop()
                                     source = it
+                                    offlineModelStatus = ""
                                     sourceOpen = false
                                 })
                             }
@@ -377,6 +440,7 @@ private fun TuddyScreen() {
                                 DropdownMenuItem(text = { Text(choice.title) }, onClick = {
                                     stop()
                                     target = LanguageChoice(choice.title, choice.code, choice.code)
+                                    offlineModelStatus = ""
                                     targetQuery = ""
                                     targetOpen = false
                                 })
@@ -443,6 +507,7 @@ private fun TuddyScreen() {
                     OutlinedButton(onClick = {
                         generation++
                         stop()
+                        offlineModelStatus = ""
                         lines.clear()
                         previewInput = ""
                         previewResult = null
@@ -452,6 +517,18 @@ private fun TuddyScreen() {
                         Text(if (follow) "Live ✓" else "Volg live")
                     }
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = { prepareOfflinePair() }, enabled = !preparingOfflineModel) {
+                        Text(if (preparingOfflineModel) "Tekstmodel voorbereiden…" else "Tekstmodel offline voorbereiden")
+                    }
+                }
+                Text(
+                    offlineModelStatus.ifBlank {
+                        "Tik terwijl wifi beschikbaar is om het gekozen teksttaalpaar lokaal op te slaan. " +
+                            "Offline spraakherkenning vereist een afzonderlijk Android-spraakpakket."
+                    },
+                    style = MaterialTheme.typography.bodySmall
+                )
                 if (!offlineAvailable) {
                     Text("Geen lokale spraakherkenning op dit apparaat. Geen cloudfallback.", color = MaterialTheme.colorScheme.error)
                 }

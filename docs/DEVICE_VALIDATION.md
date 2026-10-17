@@ -39,10 +39,18 @@ speech or full transcripts** with reports.
    grant via system UI. Denied permission must never start recognition.
    Tap Stop while an utterance is ending and while a no-match 850ms retry is
    pending: no restart or new microphone request after Stop.
-2. **Model provisioning:** while connected to Wi-Fi, prepare the chosen on-device
-   speech model(s) and applicable ML Kit translation model(s). Record what was
-   downloaded and separately verify speech and text availability. A supported
-   *text* target does not guarantee speech recognition for that language.
+2. **Model provisioning (new in PR #22 candidate):** while connected to Wi-Fi,
+   select the desired source and target and tap **Tekstmodel offline voorbereiden**.
+   Confirm visible **Tekstmodel klaar voor offline gebruik** only for that exact
+   selection. Try an unsupported Kurdish/Pashto phrasebook choice (must remain
+   separate), same-source/target choice (no model requested), switch languages
+   while a download is pending and background/Stop the app (old completion must
+   not claim the new selection ready). Run a second independent model check after
+   relaunch before airplane mode; this status is an in-memory download receipt,
+   not proof of the recognizer or persistence. Provision Android's **on-device
+   speech packs separately** in system settings. Record both speech and ML Kit
+   models; only the latter is downloaded by Tuddy's button. Wi-Fi may be used
+   for model downloading, never as a cloud speech recognition fallback.
 3. **Network-disabled proof:** switch on airplane mode and independently
    disable/restrict remaining connectivity. Record at least **10** sequential
    NL→EN and EN→NL bilingual utterances; each must yield correct interim/final
