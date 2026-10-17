@@ -25,9 +25,17 @@ def check_workflow(source: str) -> None:
         with_checkout = job.split("uses: " + CHECKOUT, 1)[1].split("\n      - ", 1)[0]
         assert "persist-credentials: false" in with_checkout
         assert "ref: " + revision in with_checkout
-        assert "test \"$(git rev-parse HEAD)\" = \"$EXPECTED_SHA\"" in job
-        assert "test -z \"$(git status --porcelain)\"" in job
-        assert "EXPECTED_SHA: " + revision in job
+        identity_step = (
+            "Verify proposed-merge checkout identity without credentials"
+            if job is build else "Verify exact immutable contributor revision"
+        )
+        assert identity_step in job
+        verify = job.split(identity_step, 1)[1].split("\n      - ", 1)[0]
+        # Do not accept a correct expected SHA in a *different* build step
+        # when this checkout's own verification was weakened.
+        assert "test \"$(git rev-parse HEAD)\" = \"$EXPECTED_SHA\"" in verify
+        assert "test -z \"$(git status --porcelain)\"" in verify
+        assert "EXPECTED_SHA: " + revision in verify
     assert "gradle :app:testDebugUnitTest :app:assembleDebug" in build
     assert "gradle :app:testDebugUnitTest" in source_head
 
