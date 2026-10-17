@@ -377,7 +377,7 @@ private fun TuddyScreen() {
             }
             speech.startListening(intent)
             listening = true
-        } catch (_: Exception) {
+        } catch (exception: Exception) {
             // startListening may throw after a recognizer was allocated.
             // Do not leave that session eligible for callbacks or reuse.
             voiceSessions.invalidate()
