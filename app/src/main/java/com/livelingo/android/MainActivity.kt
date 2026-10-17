@@ -108,6 +108,7 @@ private fun TuddyScreen() {
     var previewSource by remember { mutableStateOf("nl") }
     var previewMenuOpen by remember { mutableStateOf(false) }
     var previewInput by remember { mutableStateOf("") }
+    var manualText by remember { mutableStateOf("") }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
@@ -566,6 +567,46 @@ private fun TuddyScreen() {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                // A local text-only fallback works even when Android does not
+                // provide an on-device speech recognizer or mic permission.
+                // It shares the same RAM-only history and ML Kit translator.
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Zin typen · lokale tekstvertaling",
+                        style = MaterialTheme.typography.titleSmall)
+                    OutlinedTextField(
+                        value = manualText,
+                        onValueChange = { candidate ->
+                            if (candidate.length <= OfflineTypedCaptionPolicy.MAX_INPUT_UNITS) {
+                                manualText = candidate
+                            }
+                        },
+                        label = { Text("Typ een zin om lokaal te vertalen") },
+                        minLines = 1,
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Button(
+                        onClick = {
+                            val sentence = OfflineTypedCaptionPolicy.normalize(manualText)
+                                ?: return@Button
+                            val id = System.nanoTime()
+                            val token = generation
+                            val selectedSource = source.translateCode
+                            val selectedTarget = target.translateCode
+                            lines.add(Line(id, sentence, "Vertalen…", "Bezig",
+                                selectedSource, selectedTarget))
+                            repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
+                                lines.removeAt(0)
+                            }
+                            manualText = ""
+                            translate(sentence, id, selectedTarget, selectedSource, token)
+                        },
+                        enabled = OfflineTypedCaptionPolicy.normalize(manualText) != null
+                    ) { Text("Vertaal tekst lokaal") }
+                    Text("Geen microfoon nodig. Alleen de beschikbare lokale ML Kit-tekstmodellen; " +
+                        "geen netwerk-spraakdienst of ondersteuning voor vrije Koerdische/Pasjtoe zinnen.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val canStart = offlineAvailable && !listening
                     Button(
@@ -583,6 +624,7 @@ private fun TuddyScreen() {
                         offlineModelStatus = ""
                         lines.clear()
                         previewInput = ""
+                        manualText = ""
                         previewResult = null
                         error = ""
                     }) { Text("Wis gesprek") }
