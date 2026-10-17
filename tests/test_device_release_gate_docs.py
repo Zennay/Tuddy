@@ -20,12 +20,12 @@ class DeviceReleaseGateDocs(unittest.TestCase):
         self.assertIn(SOURCE_SHA, text)
         self.assertIn("39064114978", text)
         self.assertIn("NOT device-validated", text)
-        self.assertIn("not constitute a", text.lower() + " not constitute a")
+        self.assertIn("do not constitute a", text.lower())
         self.assertIn("five-phrase", text)
         self.assertIn("Kurmanji", text)
         self.assertIn("Sorani", text)
         self.assertIn("Pashto", text)
-        self.assertIn("Full", text)
+        self.assertIn("Finish full historical Android v0.4", text)
 
     def test_device_acceptance_requires_real_observations_not_hosted_ci(self):
         text = DEVICE.read_text(encoding="utf-8")
