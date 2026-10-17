@@ -20,7 +20,9 @@ class BoundedHypothesisSourceQA(unittest.TestCase):
     def test_final_and_interim_use_same_policy(self):
         self.assertEqual(2, self.activity.count("SpeechHypothesisPolicy.select("))
         self.assertIn("val sentence = SpeechHypothesisPolicy.select(", self.activity)
-        self.assertIn("partial = SpeechHypothesisPolicy.select(", self.activity)
+        self.assertIn("val latest = SpeechHypothesisPolicy.select(", self.activity)
+        self.assertIn("partial = latest", self.activity)
+        self.assertIn("prepareInterim(latest, observedSource, selectedTarget, voiceToken, token)", self.activity)
         self.assertNotIn("?.firstOrNull()?.trim().orEmpty()", self.activity)
         self.assertNotIn("?.firstOrNull().orEmpty()", self.activity)
 

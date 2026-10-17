@@ -28,7 +28,7 @@ class CaptionMemoryBoundary(unittest.TestCase):
 
     def test_follow_live_reacts_to_new_last_id_even_when_count_stays_500(self):
         ui = (APP / "MainActivity.kt").read_text(encoding="utf-8")
-        self.assertIn("LaunchedEffect(lines.lastOrNull()?.id, partial, follow)", ui)
+        self.assertIn("LaunchedEffect(lines.lastOrNull()?.id, partial, partialTranslation, follow)", ui)
         self.assertNotIn("LaunchedEffect(lines.size, follow)", ui)
 
     def test_existing_session_clear_still_removes_every_caption(self):
