@@ -8,7 +8,7 @@ APP = Path(__file__).resolve().parents[1] / "app/src/main/java/com/livelingo/and
 class InterimFollowBoundary(unittest.TestCase):
     def test_interim_visibility_participates_in_follow_live_effect(self):
         ui = (APP / "MainActivity.kt").read_text(encoding="utf-8")
-        self.assertIn("LaunchedEffect(lines.lastOrNull()?.id, partial.isNotBlank(), follow)", ui)
+        self.assertIn("LaunchedEffect(lines.lastOrNull()?.id, partial, follow)", ui)
         self.assertIn("LiveFollowPolicy.targetIndex(lines.size, partial.isNotBlank(), follow)", ui)
         self.assertNotIn("LaunchedEffect(lines.size, follow)", ui)
         self.assertIn("if (partial.isNotBlank())", ui)
