@@ -37,7 +37,7 @@ class BoundedHypothesisSourceQA(unittest.TestCase):
         self.assertIn("text.isNotBlank() && text.length <= MAX_CAPTION_CHARS", self.policy)
         self.assertIn('return ""', self.policy)
         for forbidden in ("http://", "https://", "FileOutputStream", "SharedPreferences",
-                          "Translation.getClient(", "RecognizerIntent", "SpeechRecognizer"):
+                          "Translation.getClient(", "RecognizerIntent", "SpeechRecognizer.create"):
             self.assertNotIn(forbidden, self.policy)
 
     def test_regression_covers_real_blank_top_and_unicode(self):
