@@ -155,7 +155,7 @@ private fun TuddyScreen() {
                                 translator.close()
                             }
                             .addOnFailureListener {
-                                updateLine(id, "Vertalen mislukt: ${it.localizedMessage ?: "onbekende fout"}", "Fout", token)
+                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token)
                                 translator.close()
                             }
                     }
@@ -377,7 +377,7 @@ private fun TuddyScreen() {
             }
             speech.startListening(intent)
             listening = true
-        } catch (exception: Exception) {
+        } catch (_: Exception) {
             // startListening may throw after a recognizer was allocated.
             // Do not leave that session eligible for callbacks or reuse.
             voiceSessions.invalidate()
@@ -388,7 +388,7 @@ private fun TuddyScreen() {
             if (failed != null) SpeechCleanupPolicy.release(failed::cancel, failed::destroy)
             listening = false
             partial = ""
-            error = "Offline spraakdienst kon niet starten: ${exception.localizedMessage ?: "onbekende fout"}"
+            error = SafeLocalFailureText.SPEECH_START
         }
     }
 
