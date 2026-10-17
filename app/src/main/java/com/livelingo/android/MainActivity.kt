@@ -85,13 +85,20 @@ private fun TuddyScreen() {
         if (index >= 0) lines[index] = lines[index].copy(translated = translation, status = status)
     }
 
+    fun translationStillRelevant(id: Long, token: Int): Boolean =
+        TranslationWorkPolicy.mayContinue(token, generation, lines.any { it.id == id })
+
     fun translate(text: String, id: Long, targetCode: String, sourceCode: String, token: Int) {
+        if (!translationStillRelevant(id, token)) return
         // Text language detection and translation remain ON DEVICE. Models are downloaded only
         // when the user is on Wi-Fi; without a downloaded model, fail transparently.
         val detector = LanguageIdentification.getClient()
         detector.identifyLanguage(text)
             .addOnSuccessListener { guess ->
                 detector.close()
+                // Clear/remove may occur while language detection is pending.
+                // Do not begin a *new* Wi-Fi model download for abandoned text.
+                if (!translationStillRelevant(id, token)) return@addOnSuccessListener
                 val identified = guess.takeIf { it != "und" && TranslateLanguage.fromLanguageTag(it) != null }
                 val from = identified?.let { TranslateLanguage.fromLanguageTag(it) } ?: sourceCode
                 if (from == targetCode) {
@@ -106,6 +113,13 @@ private fun TuddyScreen() {
                 val conditions = DownloadConditions.Builder().requireWifi().build()
                 translator.downloadModelIfNeeded(conditions)
                     .addOnSuccessListener {
+                        // A model download already underway may finish after
+                        // the conversation was cleared. Close without launching
+                        // an unnecessary translation for now-absent text.
+                        if (!translationStillRelevant(id, token)) {
+                            translator.close()
+                            return@addOnSuccessListener
+                        }
                         translator.translate(text)
                             .addOnSuccessListener { output ->
                                 updateLine(id, output, "Lokaal vertaald", token)
