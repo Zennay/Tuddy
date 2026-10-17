@@ -19,7 +19,7 @@ class OfflineWordCardIntegrationQA(unittest.TestCase):
 
     def test_original_and_translation_preserve_per_caption_language(self):
         for marker in ("val sourceCode: String", "val targetCode: String",
-                       'Line(id, sentence, "Vertalen…", "Bezig", selectedSource, selectedTarget)',
+                       'Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget)',
                        "lines[row].copy(sourceCode = from)",
                        "OfflineWordText(", "line.original, line.sourceCode",
                        "line.translated, line.targetCode"):
@@ -27,6 +27,8 @@ class OfflineWordCardIntegrationQA(unittest.TestCase):
         self.assertIn('if (line.status == "Lokaal vertaald" || line.status == "Lokaal")', self.ui)
         self.assertIn("TranslationWorkPolicy.mayContinue", self.ui)
         self.assertIn("CaptionRetentionPolicy.oldestToDrop", self.ui)
+        self.assertIn("OfflineSpeechLanguageSwitchPolicy.resolveDetectedTextSource(", self.ui)
+        self.assertIn("!voiceSessions.isCurrent(voiceToken)", self.ui)
 
     def test_accessibility_word_lookup_and_safe_bounded_input(self):
         for marker in ("detectTapGestures", "getOffsetForPosition(point)",
