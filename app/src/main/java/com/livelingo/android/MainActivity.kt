@@ -204,6 +204,12 @@ private fun TuddyScreen() {
                     if (sentence.isBlank() || token != generation) return
                     val id = System.nanoTime()
                     lines.add(Line(id, sentence, "Vertalen…", "Bezig"))
+                    // Evict old RAM-only captions before scheduling more work.
+                    // Late callbacks for evicted IDs are already denied by
+                    // translationStillRelevant(lines.any { it.id == id }).
+                    repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
+                        lines.removeAt(0)
+                    }
                     translate(sentence, id, selectedTarget, selectedSource, token)
                 }
                 override fun onPartialResults(results: Bundle?) {
