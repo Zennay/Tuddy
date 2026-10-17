@@ -99,6 +99,20 @@ speech or full transcripts** with reports.
    Arabic RTL rendering and unsupported-language labeling without claims of
    Kurmanji/Sorani/Pashto ASR/model coverage.
 
+10. **Typed local translation when speech is unavailable:** on a device without
+   Android on-device speech packs, keep microphone permission denied and select
+   two supported ML Kit text languages. While Wi-Fi is available, explicitly
+   prepare the selected text pair, then disable network connectivity. Type
+   ordinary NL/EN and Arabic Unicode sentences in **Zin typen** and tap
+   **Vertaal tekst lokaal**. Confirm local output appears in the **same bounded
+   RAM-only bilingual timeline**, without starting microphone recognition or
+   granting a permission. Empty, over-1500-unit and binary-control text must
+   never enter translation. An unavailable offline model must show an honest
+   missing-model status rather than invent an answer. **Wis gesprek** must
+   erase both the typed input and conversation. Reopen the app and verify the
+   text/audio timeline is absent; only selected language codes may persist.
+   No unsupported Kurdish/Pashto free-form model or source license is implied.
+
 ## 3. Evidence / release record (fill only after running the test)
 
 - Candidate source / APK digest: **NOT YET OBSERVED ON DEVICE**
