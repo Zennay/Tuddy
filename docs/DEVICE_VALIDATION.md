@@ -56,10 +56,21 @@ speech or full transcripts** with reports.
    NL→EN and EN→NL bilingual utterances; each must yield correct interim/final
    replacement with no duplicate, and on-device text translation after
    provisioning. No cloud STT fallback or silent unverified recognition.
-4. **Continuous utterances:** wait through a final result, and through silence
-   or no-match. Confirm recognition resumes automatically **only** while
-   explicitly listening in the foreground. Fatal permission, unsupported
-   language and unexpected recognition errors must STOP without a busy retry.
+4. **Continuous utterances and optional Android 14+ language switching:**
+   wait through a final result, silence and no-match. Recognition must resume
+   **only** while explicitly listening in foreground. Permission/unsupported
+   language/unknown recognition errors must STOP without busy retries. On
+   Android 14+ with downloaded **on-device speech** packs, opt into
+   **Automatische spraaktaal** and alternate between two of the six supported
+   spoken source tags. Verify only actual accepted language-detection events
+   relabel the correct finalized line, never earlier lines; when the device
+   reports a missing language-switch pack, the app must show an actionable
+   local-model notice instead of cloud fallback. Toggle this off and confirm
+   single-source behavior is unchanged. On Android 12–13 the toggle must be
+   disabled and manual source selection must still work. Unknown, Kurdish and
+   Pashto speech-model coverage must **not** be inferred from a text target
+   or five-phrase vocabulary preview. A hosted JUnit build does not establish
+   that any phone supports this optional speech API.
 5. **Lifecycle race:** during the 350ms final-result and 850ms quiet retry
    windows, press Stop, change source language, lock/background the app, rotate,
    dismiss the Activity, and deny permission. No queued restart may record

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.speech.RecognitionListener
@@ -98,6 +99,8 @@ private fun TuddyScreen() {
     val restartHandler = remember { Handler(Looper.getMainLooper()) }
     var pendingRestart by remember { mutableStateOf<Runnable?>(null) }
     val offlineAvailable = remember { SpeechRecognizer.isOnDeviceRecognitionAvailable(context) }
+    val speechSwitchSupported = Build.VERSION.SDK_INT >= 34 && offlineAvailable
+    var automaticSpeechSource by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -292,6 +295,10 @@ private fun TuddyScreen() {
             recognizer = speech
             val selectedTarget = target.translateCode
             val selectedSource = source.translateCode
+            var observedSource = selectedSource
+            val requestLanguageSwitch = OfflineSpeechLanguageSwitchPolicy.shouldRequest(
+                Build.VERSION.SDK_INT, automaticSpeechSource, offlineAvailable)
+            val allowedSpeechTags = spoken.map { it.speechCode }
             val token = generation
             speech.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) { if (voiceSessions.isCurrent(voiceToken)) listening = true }
@@ -299,6 +306,16 @@ private fun TuddyScreen() {
                 override fun onRmsChanged(rmsdB: Float) = Unit
                 override fun onBufferReceived(buffer: ByteArray?) = Unit
                 override fun onEndOfSpeech() = Unit // keep user intent active for the next utterance
+                override fun onLanguageDetection(results: Bundle) {
+                    if (!requestLanguageSwitch || !voiceSessions.isCurrent(voiceToken)) return
+                    observedSource = OfflineSpeechLanguageSwitchPolicy.resolveDetectedTextSource(
+                        results.getString(SpeechRecognizer.DETECTED_LANGUAGE),
+                        selectedSource, allowedSpeechTags)
+                    if (results.getInt(SpeechRecognizer.LANGUAGE_SWITCH_RESULT, -1) ==
+                        SpeechRecognizer.LANGUAGE_SWITCH_RESULT_SKIPPED_NO_MODEL) {
+                        error = "Automatisch wisselen vereist geïnstalleerde lokale spraakpakketten. Kies zo nodig handmatig."
+                    }
+                }
                 override fun onError(code: Int) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
                     partial = ""
@@ -318,14 +335,14 @@ private fun TuddyScreen() {
                     partial = ""
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
-                        lines.add(Line(id, sentence, "Vertalen…", "Bezig", selectedSource, selectedTarget))
+                        lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
                         // Evict old RAM-only captions before scheduling more work.
                         // Late callbacks for evicted IDs are already denied by
                         // translationStillRelevant(lines.any { it.id == id }).
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             lines.removeAt(0)
                         }
-                        translate(sentence, id, selectedTarget, selectedSource, token)
+                        translate(sentence, id, selectedTarget, observedSource, token)
                     }
                     // The user asked for live captions, not one isolated sentence.
                     // A new recognizer generation suppresses callbacks from the old one.
@@ -346,6 +363,13 @@ private fun TuddyScreen() {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, source.speechCode)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+                if (requestLanguageSwitch) {
+                    putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_DETECTION, true)
+                    putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_SWITCH,
+                        RecognizerIntent.LANGUAGE_SWITCH_BALANCED)
+                    putStringArrayListExtra(RecognizerIntent.EXTRA_LANGUAGE_SWITCH_ALLOWED_LANGUAGES,
+                        ArrayList(allowedSpeechTags))
+                }
             }
             speech.startListening(intent)
             listening = true
@@ -447,6 +471,24 @@ private fun TuddyScreen() {
                             }
                         }
                     }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Automatische spraaktaal (Android 14+)",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = automaticSpeechSource,
+                        enabled = speechSwitchSupported,
+                        onCheckedChange = {
+                            stop()
+                            automaticSpeechSource = it
+                        }
+                    )
+                }
+                if (automaticSpeechSource) {
+                    Text("Alleen de zes gekozen lokale spraaktalen; de telefoon moet hun offline spraakpakketten bezitten. " +
+                        "Detectie is niet gegarandeerd en gebruikt nooit cloudspraak.",
+                        style = MaterialTheme.typography.bodySmall)
                 }
                 // This panel has no microphone path, translator client or network request.
                 // It is five locally bundled expressions only, not free-form translation.
