@@ -77,6 +77,11 @@ private fun TuddyScreen() {
     )
     val lines = remember { mutableStateListOf<Line>() }
     var partial by remember { mutableStateOf("") }
+    var partialTranslation by remember { mutableStateOf("") }
+    var partialRevision by remember { mutableIntStateOf(0) }
+    var interimTranslationBusy by remember { mutableStateOf(false) }
+    var pendingInterim by remember { mutableStateOf<Runnable?>(null) }
+    val interimHandler = remember { Handler(Looper.getMainLooper()) }
     var error by remember { mutableStateOf("") }
     // Only the picker codes are private on-disk preferences; all captions and
     // speech/model status remain ephemeral in RAM and never restored.
@@ -250,6 +255,70 @@ private fun TuddyScreen() {
         }
     }
 
+    // A single quiet-window translation may run only after 650ms of stable
+    // interim speech. It calls translate() on an *already installed* ML Kit
+    // model and never starts a Wi-Fi download for provisional words.
+    fun clearInterim() {
+        partial = ""
+        partialTranslation = ""
+        partialRevision++
+        pendingInterim?.let(interimHandler::removeCallbacks)
+        pendingInterim = null
+    }
+
+    fun prepareInterim(text: String, sourceCode: String, targetCode: String,
+                       voiceToken: Long, token: Int) {
+        pendingInterim?.let(interimHandler::removeCallbacks)
+        pendingInterim = null
+        partialTranslation = ""
+        val revision = ++partialRevision
+        if (!InterimTranslationPolicy.eligible(text, sourceCode, targetCode, listening)) return
+        val task = Runnable {
+            pendingInterim = null
+            val stillCurrent = InterimTranslationPolicy.mayPublish(
+                revision, partialRevision, token, generation,
+                voiceSessions.isCurrent(voiceToken), listening)
+            if (!stillCurrent || interimTranslationBusy) return@Runnable
+            if (sourceCode == targetCode) {
+                partialTranslation = text
+                return@Runnable
+            }
+            val translator = try {
+                Translation.getClient(TranslatorOptions.Builder()
+                    .setSourceLanguage(sourceCode)
+                    .setTargetLanguage(targetCode)
+                    .build())
+            } catch (_: Exception) {
+                return@Runnable
+            }
+            interimTranslationBusy = true
+            try {
+                // Do not call downloadModelIfNeeded: no per-word model traffic.
+                translator.translate(text)
+                    .addOnSuccessListener { translated ->
+                        if (InterimTranslationPolicy.mayPublish(
+                                revision, partialRevision, token, generation,
+                                voiceSessions.isCurrent(voiceToken), listening)) {
+                            partialTranslation = translated
+                        }
+                        translator.close()
+                        interimTranslationBusy = false
+                    }
+                    .addOnFailureListener {
+                        // A missing local model leaves the preview untranslated.
+                        // Never display raw ML Kit error text or attempt cloud STT.
+                        translator.close()
+                        interimTranslationBusy = false
+                    }
+            } catch (_: Exception) {
+                translator.close()
+                interimTranslationBusy = false
+            }
+        }
+        pendingInterim = task
+        interimHandler.postDelayed(task, InterimTranslationPolicy.STABLE_WAIT_MS)
+    }
+
     // Queued work is valid only for this *exact* on-device speech generation.
     // Clearing, stopping, backgrounding or choosing another source invalidates
     // the token and cancels its runnable before microphone access is attempted.
@@ -274,6 +343,7 @@ private fun TuddyScreen() {
         voiceSessions.invalidate() // Stop/background immediately invalidates prior callbacks.
         pendingRestart?.let(restartHandler::removeCallbacks)
         pendingRestart = null
+        clearInterim()
         // Invalidate callbacks before releasing Android's recognizer so a
         // late interim/final result cannot revive the stopped conversation.
         val active = recognizer
@@ -344,7 +414,7 @@ private fun TuddyScreen() {
                 }
                 override fun onError(code: Int) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
-                    partial = ""
+                    clearInterim()
                     val retry = ContinuousSpeechRestartPolicy.delayForError(
                         code, SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
                     if (retry != null) {
@@ -358,7 +428,7 @@ private fun TuddyScreen() {
                     if (!voiceSessions.isCurrent(voiceToken)) return
                     val sentence = SpeechHypothesisPolicy.select(
                         results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
-                    partial = ""
+                    clearInterim()
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
                         lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
@@ -378,8 +448,12 @@ private fun TuddyScreen() {
                 }
                 override fun onPartialResults(results: Bundle?) {
                     if (token == generation && voiceSessions.isCurrent(voiceToken)) {
-                        partial = SpeechHypothesisPolicy.select(
+                        val latest = SpeechHypothesisPolicy.select(
                             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
+                        if (latest != partial) {
+                            partial = latest
+                            prepareInterim(latest, observedSource, selectedTarget, voiceToken, token)
+                        }
                     }
                 }
                 override fun onEvent(eventType: Int, params: Bundle?) = Unit
@@ -685,6 +759,11 @@ private fun TuddyScreen() {
                                 Column(Modifier.padding(14.dp)) {
                                     Text("● Spreekt nu…", color = MaterialTheme.colorScheme.primary)
                                     Text(partial, fontWeight = FontWeight.Bold)
+                                    if (partialTranslation.isNotBlank()) {
+                                        Text(partialTranslation,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = MaterialTheme.typography.titleMedium)
+                                    }
                                 }
                             }
                         }
