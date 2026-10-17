@@ -10,7 +10,7 @@ internal object OfflineTypedCaptionPolicy {
 
     fun normalize(raw: String): String? {
         if (raw.length > MAX_INPUT_UNITS ||
-            raw.any { it.isISOControl() && it != '\n' && it != '\t' }) return null
+            raw.any { Character.isISOControl(it) && it != '\n' && it != '\t' }) return null
         val clean = raw.trim()
         return clean.takeIf { it.isNotEmpty() && it.length <= MAX_INPUT_UNITS }
     }
