@@ -12,6 +12,15 @@ internal object OfflineSpeechLanguageSwitchPolicy {
         apiLevel >= 34 && optedIn && onDeviceRecognizerAvailable
 
     /**
+     * Language detection by itself is NOT proof the recognizer switched.
+     * Android 14 reports 0 not attempted, 1 succeeded, 2 failed and
+     * 3 skipped (missing/not-allowlisted local model). Only 1 may relabel a
+     * finalized subtitle; callers provide the SDK's declared success value.
+     */
+    fun confirmedSwitch(actual: Int, androidSucceeded: Int): Boolean =
+        actual == androidSucceeded
+
+    /**
      * Accept only a tag from the *user-visible spoken source picker*.
      * Unknown, unsupported or unexpected callback values fall back to the
      * explicit choice without inventing an Android speech pack.

@@ -308,13 +308,17 @@ private fun TuddyScreen() {
                 override fun onEndOfSpeech() = Unit // keep user intent active for the next utterance
                 override fun onLanguageDetection(results: Bundle) {
                     if (!requestLanguageSwitch || !voiceSessions.isCurrent(voiceToken)) return
+                    val switchResult = results.getInt(SpeechRecognizer.LANGUAGE_SWITCH_RESULT, -1)
+                    if (switchResult == SpeechRecognizer.LANGUAGE_SWITCH_RESULT_SKIPPED_NO_MODEL) {
+                        error = "Automatisch wisselen vereist geïnstalleerde lokale spraakpakketten. Kies zo nodig handmatig."
+                    }
+                    // Detection can succeed while switching fails or is not attempted.
+                    // Never relabel a caption unless Android confirmed the actual switch.
+                    if (!OfflineSpeechLanguageSwitchPolicy.confirmedSwitch(
+                            switchResult, SpeechRecognizer.LANGUAGE_SWITCH_RESULT_SUCCEEDED)) return
                     observedSource = OfflineSpeechLanguageSwitchPolicy.resolveDetectedTextSource(
                         results.getString(SpeechRecognizer.DETECTED_LANGUAGE),
                         selectedSource, allowedSpeechTags)
-                    if (results.getInt(SpeechRecognizer.LANGUAGE_SWITCH_RESULT, -1) ==
-                        SpeechRecognizer.LANGUAGE_SWITCH_RESULT_SKIPPED_NO_MODEL) {
-                        error = "Automatisch wisselen vereist geïnstalleerde lokale spraakpakketten. Kies zo nodig handmatig."
-                    }
                 }
                 override fun onError(code: Int) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
