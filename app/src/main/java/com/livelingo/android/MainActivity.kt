@@ -259,10 +259,12 @@ private fun TuddyScreen() {
         }
     }
 
-    // At 500 lines the list size remains constant as old captions are evicted.
-    // Use the immutable newest ID to keep Follow live responding to each new line.
-    LaunchedEffect(lines.lastOrNull()?.id, follow) {
-        if (follow && lines.isNotEmpty()) listState.animateScrollToItem(lines.size - 1)
+    // The active interim caption is an EXTRA LazyColumn item. Re-evaluate
+    // when it appears/disappears, not just when a final line ID changes.
+    // This also preserves live scrolling after the 500-caption RAM limit.
+    LaunchedEffect(lines.lastOrNull()?.id, partial.isNotBlank(), follow) {
+        val index = LiveFollowPolicy.targetIndex(lines.size, partial.isNotBlank(), follow)
+        if (index != null) listState.animateScrollToItem(index)
     }
 
     MaterialTheme(colorScheme = colors) {
