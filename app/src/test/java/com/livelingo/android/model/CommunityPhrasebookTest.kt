@@ -30,6 +30,41 @@ class CommunityPhrasebookTest {
         }
     }
 
+    @Test fun hiddenControlsAndMultilineCannotForgeExactPhrasebookHits() {
+        val forgedEnglish = listOf(
+            "thank\\nyou".replace("\\n", "\n"),
+            "thank\\tyou".replace("\\t", "\t"),
+            "thank\u200Byou",
+            "thank\u202Eyou",
+            "thank\u2066you",
+            "thank\uFEFFyou",
+            "thank\u2028you",
+            "thank\u2029you",
+            "hello\u0000",
+            "yes\r",
+        )
+        for (target in CommunityPhrasebook.enabledTargets) {
+            for (phrase in forgedEnglish) {
+                assertTrue("$target must reject hidden/multiline input",
+                    CommunityPhrasebook.translate("en", target, phrase).isFailure)
+            }
+            assertEquals("Spas".takeIf { target == "kmr" },
+                CommunityPhrasebook.translate("en", target, "THANK   YOU!").getOrNull()
+                    .takeIf { target == "kmr" })
+            assertTrue(CommunityPhrasebook.translate("nl", target, "dank\nje").isFailure)
+        }
+    }
+
+    @Test fun oversizedAndMalformedTextCannotBecomeATranslation() {
+        for (target in CommunityPhrasebook.enabledTargets) {
+            for (source in listOf("nl", "en")) {
+                assertTrue(CommunityPhrasebook.translate(source, target, " ".repeat(300) + "yes").isFailure)
+                assertTrue(CommunityPhrasebook.translate(source, target, "\uD800yes").isFailure)
+                assertTrue(CommunityPhrasebook.translate(source, target, "").isFailure)
+            }
+        }
+    }
+
     @Test fun unknownSentencesUnsupportedSourcesAndNonPhrasebookTargetsFailClosed() {
         for (target in listOf("kmr", "ckb", "ps")) {
             assertTrue(CommunityPhrasebook.translate("en", target, "I need urgent help").isFailure)
