@@ -34,6 +34,7 @@ import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.launch
+import com.livelingo.android.model.CommunityPhrasebook
 
 private data class LanguageChoice(val label: String, val speechCode: String, val translateCode: String)
 private val spoken = listOf(
@@ -70,6 +71,12 @@ private fun TuddyScreen() {
     var sourceOpen by remember { mutableStateOf(false) }
     var targetOpen by remember { mutableStateOf(false) }
     var targetQuery by remember { mutableStateOf("") }
+    // A deliberately separate offline phrase preview: never passed to ML Kit or ASR.
+    var previewTarget by remember { mutableStateOf("kmr") }
+    var previewSource by remember { mutableStateOf("nl") }
+    var previewMenuOpen by remember { mutableStateOf(false) }
+    var previewInput by remember { mutableStateOf("") }
+    var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
     var follow by remember { mutableStateOf(true) }
     var generation by remember { mutableIntStateOf(0) }
@@ -297,11 +304,51 @@ private fun TuddyScreen() {
                         }
                     }
                 }
-                Text(
-                    "Koerdisch (Kurmanji/Sorani) en Pasjtoe: alleen mini-woordenlijst in v0.4-bronpakket; vrije vertaling nog niet beschikbaar.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // This panel has no microphone path, translator client or network request.
+                // It is five locally bundled expressions only, not free-form translation.
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Offline basiswoorden · Kurmanji, Sorani, Pasjtoe",
+                        style = MaterialTheme.typography.titleSmall)
+                    Text("Handmatig · slechts 5 woorden/uitdrukkingen, geen spraakherkenning of volledige vertaling.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(Modifier.weight(1f)) {
+                            OutlinedButton(onClick = { previewMenuOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text(when (previewTarget) {
+                                    "kmr" -> "Kurmanji"
+                                    "ckb" -> "Sorani"
+                                    else -> "Pasjtoe"
+                                })
+                            }
+                            DropdownMenu(expanded = previewMenuOpen, onDismissRequest = { previewMenuOpen = false }) {
+                                listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe").forEach { (code, label) ->
+                                    DropdownMenuItem(text = { Text(label) }, onClick = {
+                                        previewTarget = code
+                                        previewResult = null
+                                        previewMenuOpen = false
+                                    })
+                                }
+                            }
+                        }
+                        OutlinedButton(onClick = {
+                            previewSource = if (previewSource == "nl") "en" else "nl"
+                            previewResult = null
+                        }) { Text(if (previewSource == "nl") "Van: NL" else "From: EN") }
+                    }
+                    OutlinedTextField(value = previewInput, onValueChange = {
+                        previewInput = it.take(80)
+                        previewResult = null
+                    }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        label = { Text("Bijv. hallo, bedankt, ja, nee, water") })
+                    Button(onClick = {
+                        previewResult = CommunityPhrasebook.translate(previewSource, previewTarget, previewInput)
+                            .fold(onSuccess = { it }, onFailure = { "Niet in deze kleine woordenlijst." })
+                    }, enabled = previewInput.isNotBlank()) { Text("Zoek basiswoord lokaal") }
+                    if (previewResult != null) Text(previewResult!!, color = MaterialTheme.colorScheme.primary)
+                    Text("Niet geschikt voor medisch, juridisch of asieladvies zonder tolk. Controle door moedertaalsprekers ontbreekt.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val canStart = offlineAvailable && !listening
                     Button(
@@ -317,6 +364,8 @@ private fun TuddyScreen() {
                         generation++
                         stop()
                         lines.clear()
+                        previewInput = ""
+                        previewResult = null
                         error = ""
                     }) { Text("Wis gesprek") }
                     TextButton(onClick = { follow = !follow }) {
