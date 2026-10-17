@@ -49,6 +49,22 @@ microphone usability, speech model coverage, device performance or release readi
   has **29/29** Python quality checks passing in an isolated checkout.
   These complement, not replace, hosted Android unit tests.
 
+### New source feature: on-device speech-pack preparation (P1 #2 partial)
+
+- Android 13+ now has a user-initiated **Controleer spraak** action
+  reporting Android's actual installed/pending/downloadable/online-only
+  on-device source language packs. Unavailable coverage stays unknown.
+- A missing supported pack gets an explicit **Download via wifi** action.
+  The device recognizer manages model provisioning; Android 14+ progress
+  is visible, Android 13 requests must be checked again. Status is
+  invalidated after a language switch or background lifecycle.
+- It is still **not** free-form Kurmanji, Sorani or Pashto ASR/translation.
+  Those languages remain visibly limited to the five-phrase preview.
+  See [offline speech pack guide](docs/OFFLINE_SPEECH_PACKS.md).
+- Device execution and end-to-end airplane-mode speech remain **unverified**;
+  issue #2 stays open until independently licensed local ASR + MT actually
+  works for all three communities.
+
 ### Open release and product gates
 
 1. Use [docs/DEVICE_VALIDATION.md](docs/DEVICE_VALIDATION.md) with the exact
