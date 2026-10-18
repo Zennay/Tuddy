@@ -97,6 +97,7 @@ internal fun PrivateSubtitleFileDialog(
     var clipStart by remember { mutableStateOf("") }
     var clipEnd by remember { mutableStateOf("") }
     var practiceOpen by remember { mutableStateOf(false) }
+    var retimingOpen by remember { mutableStateOf(false) }
     var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var sourceAtPicker by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var pendingImport by remember { mutableStateOf<PendingSubtitleImport?>(null) }
@@ -315,6 +316,10 @@ internal fun PrivateSubtitleFileDialog(
                 ) { Text("▣ Oefen deze gevonden ondertitelregels…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
+                    onClick = { retimingOpen = true }
+                ) { Text("⏱ Tijdcodes van alle regels aanpassen…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = draft.size < 500,
                     onClick = {
                         sourceAtPicker = draft.toList()
@@ -453,6 +458,19 @@ internal fun PrivateSubtitleFileDialog(
                     style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+
+    if (retimingOpen) {
+        SubtitleRetimingDialog(
+            draft = draft,
+            onApply = { updated ->
+                applyChange(updated)
+                shownIndex = -1
+                notice = "Tijdlijn aangepast. Je kunt dit terugdraaien met Terug."
+                retimingOpen = false
+            },
+            onDismiss = { retimingOpen = false }
+        )
     }
 
     if (practiceOpen) {
