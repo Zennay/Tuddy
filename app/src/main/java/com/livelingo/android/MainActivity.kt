@@ -120,6 +120,11 @@ private fun TuddyScreen() {
     var preparingOfflineModel by remember { mutableStateOf(false) }
     var offlineModelStatus by remember { mutableStateOf("") }
     val offlinePreparationEpoch = remember { OfflinePreparationEpoch() }
+    val textInventory = remember { OfflineTextModelInventory() }
+    var textReceipt by remember {
+        mutableStateOf(OfflineTextReceipt(spoken[0].translateCode, spoken[1].translateCode,
+            OfflineTextStage.UNCHECKED, "Controleer welke tekstmodellen lokaal aanwezig zijn."))
+    }
     // Device-native ASR pack coverage is independent of the ML Kit text
     // translation model and of the five-entry community word preview.
     val speechPacks = remember(context) { OnDeviceSpeechPackController(context) }
@@ -209,6 +214,20 @@ private fun TuddyScreen() {
     // never a hidden bulk download or an unreviewed speech recognition model.
     // Existing ML Kit model downloads cannot be stopped by clearing text;
     // stale UI completions are suppressed and the client is always closed.
+    // Local read-only inventory. A green speech model is not evidence
+    // that both ML Kit TEXT language models are present, or vice versa.
+    fun checkTextPair() {
+        val from = source.translateCode
+        val to = target.translateCode
+        textInventory.check(from, to, TargetCatalog.codes) { receipt ->
+            if (source.translateCode == receipt.source &&
+                target.translateCode == receipt.target &&
+                lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                textReceipt = receipt
+            }
+        }
+    }
+
     fun prepareOfflinePair() {
         if (preparingOfflineModel) return
         when (OfflineModelPreparationPolicy.decide(
@@ -244,7 +263,8 @@ private fun TuddyScreen() {
                     translator.close()
                     preparingOfflineModel = false
                     if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
-                        offlineModelStatus = "Tekstmodel klaar voor offline gebruik. Spraakpakket apart controleren."
+                        offlineModelStatus = "Download afgerond; aanwezigheid opnieuw controleren…"
+                        checkTextPair() // Only installed models can justify a READY label.
                     }
                 }
                 .addOnFailureListener {
@@ -348,6 +368,11 @@ private fun TuddyScreen() {
 
     fun stop() {
         offlinePreparationEpoch.invalidate() // A stale model receipt never applies after Stop/background.
+        textInventory.invalidate() // Late inventory callbacks never publish after Stop/background.
+        if (textReceipt.stage == OfflineTextStage.CHECKING) {
+            textReceipt = OfflineTextReceipt(source.translateCode, target.translateCode,
+                OfflineTextStage.UNCHECKED, "Controle onderbroken; tik opnieuw op Controleer tekst.")
+        }
         speechPacks.cancel() // Old device coverage/download callbacks cannot change a new session.
         voiceSessions.invalidate() // Stop/background immediately invalidates prior callbacks.
         pendingRestart?.let(restartHandler::removeCallbacks)
@@ -573,6 +598,8 @@ private fun TuddyScreen() {
                                         .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, it.speechCode)
                                         .apply()
                                     offlineModelStatus = ""
+                                    textReceipt = OfflineTextReceipt(it.translateCode, target.translateCode,
+                                        OfflineTextStage.UNCHECKED, "Spreektaal veranderd: controleer tekstmodel opnieuw.")
                                     speechPackReceipt = SpeechPackReceipt(it.speechCode, SpeechPackStage.UNCHECKED,
                                         "Voor deze spreektaal is nog geen lokale pakketcontrole uitgevoerd.")
                                     sourceOpen = false
@@ -601,6 +628,8 @@ private fun TuddyScreen() {
                                         .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, choice.code)
                                         .apply()
                                     offlineModelStatus = ""
+                                    textReceipt = OfflineTextReceipt(source.translateCode, choice.code,
+                                        OfflineTextStage.UNCHECKED, "Vertaaltaal veranderd: controleer tekstmodel opnieuw.")
                                     targetQuery = ""
                                     targetOpen = false
                                 })
@@ -748,18 +777,39 @@ private fun TuddyScreen() {
                         Text(if (follow) "Live ✓" else "Volg live")
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = { prepareOfflinePair() }, enabled = !preparingOfflineModel) {
-                        Text(if (preparingOfflineModel) "Tekstmodel voorbereiden…" else "Tekstmodel offline voorbereiden")
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Offline tekstvertaling · ${source.label} → ${target.label}",
+                        style = MaterialTheme.typography.titleSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        OutlinedButton(
+                            onClick = { checkTextPair() },
+                            enabled = !preparingOfflineModel &&
+                                textReceipt.stage != OfflineTextStage.CHECKING
+                        ) { Text("Controleer tekst") }
+                        OutlinedButton(onClick = { prepareOfflinePair() }, enabled = !preparingOfflineModel) {
+                            Text(if (preparingOfflineModel) "Tekstmodel voorbereiden…" else "Tekstmodel offline voorbereiden")
+                        }
                     }
+                    if (textReceipt.stage == OfflineTextStage.CHECKING) {
+                        TextButton(onClick = {
+                            textInventory.invalidate()
+                            textReceipt = OfflineTextReceipt(source.translateCode, target.translateCode,
+                                OfflineTextStage.UNCHECKED, "Tekstcontrole gestopt. Probeer opnieuw.")
+                        }) { Text("Stop tekstcontrole") }
+                    }
+                    Text(
+                        if (textReceipt.source == source.translateCode &&
+                            textReceipt.target == target.translateCode) textReceipt.detail
+                        else "Taalpaar gewijzigd: controleer de lokale tekstmodellen opnieuw.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        offlineModelStatus.ifBlank {
+                            "Gedownloade ML Kit-tekstmodellen zijn een andere capaciteit dan Android-spraakpakketten."
+                        },
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
-                Text(
-                    offlineModelStatus.ifBlank {
-                        "Tik terwijl wifi beschikbaar is om het gekozen teksttaalpaar lokaal op te slaan. " +
-                            "Offline spraakherkenning vereist een afzonderlijk Android-spraakpakket."
-                    },
-                    style = MaterialTheme.typography.bodySmall
-                )
                 // Android 13+ exposes actual installed, pending and supported
                 // on-device recognition languages. Never infer speech readiness
                 // from a successful ML Kit text-model download.
