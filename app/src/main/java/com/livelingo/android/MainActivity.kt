@@ -2919,6 +2919,7 @@ private fun TuddyScreen(
             DailyStudyHub(
                 words = savedVocabulary,
                 phrases = personalPhrases,
+                ownWords = ownWordDeck,
                 onManageWords = {
                     dailyStudyHubOpen = false
                     savedWordsOpen = true
@@ -2927,7 +2928,12 @@ private fun TuddyScreen(
                     dailyStudyHubOpen = false
                     personalPhrasesOpen = true
                 },
+                onManageOwnWords = {
+                    dailyStudyHubOpen = false
+                    ownWordsOpen = true
+                },
                 onWordChanged = { savedWordRevision++ },
+                onOwnWordChanged = { ownWordRevision++ },
                 onDismiss = { dailyStudyHubOpen = false }
             )
         }
