@@ -52,22 +52,25 @@ internal fun MixedDailyReviewPanel(
     onPhraseChanged: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val mixed = remember(words, ownWords, phrases) {
+    val mixed: List<MixedStudyCard>? = remember(words, ownWords, phrases) {
         val today = LocalDate.now().toEpochDay()
-        val basics = if (words.reviewsEnabled()) words.scheduledReviews()
-            .filter { it.dueDay <= today }.map { MixedStudyCard.Basis(it) }
+        val basics: List<MixedStudyCard> = if (words.reviewsEnabled())
+            words.scheduledReviews().filter { it.dueDay <= today }
+                .map { MixedStudyCard.Basis(it) }
         else emptyList()
-        val own = if (ownWords.reviewsEnabled()) ownWords.scheduledReviews()
-            ?.filter { it.dueDay <= today }?.map { MixedStudyCard.Own(it) }
+        val own: List<MixedStudyCard>? = if (ownWords.reviewsEnabled())
+            ownWords.scheduledReviews()?.filter { it.dueDay <= today }
+                ?.map { MixedStudyCard.Own(it) }
         else emptyList()
-        val privatePhrases = if (phrases.reviewsEnabled()) phrases.scheduledReviews()
-            ?.filter { it.dueDay <= today }?.map { MixedStudyCard.Phrase(it) }
+        val privatePhrases: List<MixedStudyCard>? = if (phrases.reviewsEnabled())
+            phrases.scheduledReviews()?.filter { it.dueDay <= today }
+                ?.map { MixedStudyCard.Phrase(it) }
         else emptyList()
         if (own == null || privatePhrases == null) null else {
             // Rotate sources instead of exhausting one language group first.
             val lanes: List<List<MixedStudyCard>> = listOf(basics, privatePhrases, own)
-            buildList {
-                val longest = lanes.maxOfOrNull { it.size } ?: 0
+            buildList<MixedStudyCard> {
+                val longest = lanes.maxOfOrNull { lane -> lane.size } ?: 0
                 for (i in 0 until longest) {
                     for (lane in lanes) if (i < lane.size) add(lane[i])
                 }
