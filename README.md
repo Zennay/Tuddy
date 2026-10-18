@@ -4,6 +4,17 @@
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
+## Nieuw: tweetalige SRT-ondertitelconcepten
+
+Bij **Gesprekstools → Bewaar SRT-ondertitelconcept…** kun je van
+voltooide originele en lokaal vertaalde zinnen een SRT-bestand maken.
+Dit is alleen na aparte privacytoestemming en via je eigen Android-
+bestandskiezer; er is geen automatische export. De cue-tijden zijn
+**ruwe schattingen gebaseerd op het moment dat spraakherkenning klaar
+was** en absoluut geen audio-/woord-synchronisatie. Controleer de
+vertaling en lijn de tijden handmatig uit in je montageprogramma.
+[Werking en privacygrenzen](docs/PRIVATE_BILINGUAL_SRT_DRAFTS.md).
+
 ## Nieuw: één privéondertitel verwijderen
 
 Per ondertitel kun je met **🗑 Wis deze regel** een afzonderlijke
