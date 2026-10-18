@@ -862,10 +862,15 @@ private fun TuddyScreen() {
                                                 " · " + line.sourceCode + " → " + line.targetCode,
                                             style = MaterialTheme.typography.labelSmall
                                         )
-                                        Text(line.original, style = MaterialTheme.typography.bodyMedium)
+                                        Text(line.original, style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = MaterialTheme.typography.bodyMedium.fontSize * captionSize.scale
+                                        ))
                                         if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
                                             Text(line.translated,
-                                                color = MaterialTheme.colorScheme.primary)
+                                                color = MaterialTheme.colorScheme.primary,
+                                                style = MaterialTheme.typography.bodyLarge.copy(
+                                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
+                                                ))
                                         } else {
                                             Text("[Vertaling niet voltooid]",
                                                 style = MaterialTheme.typography.bodySmall)
