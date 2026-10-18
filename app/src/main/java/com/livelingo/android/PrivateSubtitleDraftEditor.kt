@@ -29,6 +29,37 @@ internal object PrivateSubtitleDraftEditor {
         }
     }
 
+    /**
+     * Apply an intentionally literal text replacement to an already opened
+     * ephemeral draft, never to the original selected file. Reuse the same
+     * per-cue admission contract and total export size limit as Save Copy.
+     * No regex, network lookup, automatic translation or persistent history.
+     */
+    fun replaceLiteral(
+        current: List<PrivateSubtitleCue>,
+        search: String,
+        replacement: String
+    ): Pair<List<PrivateSubtitleCue>, Int>? {
+        if (current.isEmpty() || current.size > MAX_CUES ||
+            search.isBlank() || search.length > 100 ||
+            replacement.isBlank() || replacement.length > 100 ||
+            search.any { it.isISOControl() } ||
+            replacement.any { it.isISOControl() } ||
+            search == replacement) return null
+        var changed = 0
+        val updated = current.mapIndexed { index, cue ->
+            if (!cue.text.contains(search)) cue
+            else {
+                val next = cue.text.replace(search, replacement)
+                val revised = revise(current, index, next) ?: return null
+                changed++
+                revised[index]
+            }
+        }
+        if (changed == 0 || snapshot(updated, SubtitleDraftFormat.SRT) == null) return null
+        return updated to changed
+    }
+
     /** Move all cues by a fixed amount, preserving their relative positions. */
     fun shift(
         current: List<PrivateSubtitleCue>, milliseconds: Long
