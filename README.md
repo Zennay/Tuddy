@@ -4,6 +4,15 @@
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
+## Nieuw: een afgeronde gesprekszin groot tonen
+
+Tik in de gesprekstijdlijn bij een afgeronde zin op
+**▣ Toon deze zin groot** om zonder delen of exporteren tijdelijk
+een leesbare schermvullende kaart te tonen. Kies origineel, vertaling
+of beide, grotere tekst en bladeren door andere afgeronde zinnen.
+De microfoon wordt gestopt, er wordt niets automatisch bewaard.
+[Uitleg en grenzen](docs/FULLSCREEN_SINGLE_CAPTION_CARD.md).
+
 ## Nieuw: afdrukbaar offline tweetalig zinnenboek
 
 Bij **Mijn eigen offline zinnen** kan de gebruiker een zelfstandig
