@@ -1,5 +1,7 @@
 package com.livelingo.android.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,12 +45,21 @@ import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PrivateSubtitleBatchReplace
 import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateSubtitleCue
+import com.livelingo.android.PrivateSubtitleFileReader
+import com.livelingo.android.PrivateSubtitleDocumentCombine
+import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateSubtitleTimelineNavigation
 import com.livelingo.android.SubtitleDraftFormat
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
+import java.io.ByteArrayOutputStream
+
+private data class PendingSubtitleImport(
+    val existing: List<PrivateSubtitleCue>,
+    val imported: List<PrivateSubtitleCue>
+)
 
 /** Explicitly opened, ephemeral subtitle document editor, never the live transcript. */
 @Composable
@@ -85,10 +96,49 @@ internal fun PrivateSubtitleFileDialog(
     var clipOpen by remember { mutableStateOf(false) }
     var clipStart by remember { mutableStateOf("") }
     var clipEnd by remember { mutableStateOf("") }
+    var sourceAtPicker by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    var pendingImport by remember { mutableStateOf<PendingSubtitleImport?>(null) }
+    var importMode by remember { mutableStateOf(SubtitleCombineMode.APPEND_AFTER_LAST) }
     val found = draft.mapIndexed { idx, row -> idx to row }
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
     val current = found.getOrNull(shownIndex)?.second
     val context = LocalContext.current
+    val importPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val original = sourceAtPicker
+        sourceAtPicker = null
+        if (uri != null && original != null) {
+            if (draft != original) {
+                notice = "Het concept is intussen gewijzigd. Kies het tweede bestand opnieuw."
+            } else {
+                // Bound the input before parsing. Never read arbitrarily large documents.
+                val bytes = runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        val buffer = ByteArray(8192)
+                        val output = ByteArrayOutputStream()
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            if (output.size() + count > PrivateSubtitleFileReader.MAX_BYTES)
+                                return@use null
+                            output.write(buffer, 0, count)
+                        }
+                        output.toByteArray()
+                    }
+                }.getOrNull()
+                val imported = bytes?.let(PrivateSubtitleFileReader::read)
+                if (imported == null) {
+                    notice = "Bestand geweigerd: kies een geldig UTF-8 SRT/VTT-document " +
+                        "van maximaal 256 KiB en 500 ondertitelregels."
+                } else {
+                    pendingImport = PendingSubtitleImport(original.toList(), imported.toList())
+                    importMode = SubtitleCombineMode.APPEND_AFTER_LAST
+                    notice = ""
+                }
+            }
+        }
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     var chosenVoiceLanguage by remember { mutableStateOf<String?>(null) }
@@ -253,6 +303,17 @@ internal fun PrivateSubtitleFileDialog(
                         Text("↷ Opnieuw (${redoHistory.size})")
                     }
                 }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = draft.size < 500,
+                    onClick = {
+                        sourceAtPicker = draft.toList()
+                        notice = ""
+                        // MIME labels vary between providers; the reader rejects
+                        // anything that is not a safe SRT or WebVTT text document.
+                        importPicker.launch(arrayOf("*/*"))
+                    }
+                ) { Text("＋ Tweede SRT/VTT-document toevoegen…") }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     OutlinedButton(onClick = { requestSave = SubtitleDraftFormat.SRT }) {
@@ -382,6 +443,81 @@ internal fun PrivateSubtitleFileDialog(
                     style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+
+    val stagedImport = pendingImport
+    if (stagedImport != null) {
+        val stillCurrent = draft == stagedImport.existing
+        val proposed = if (stillCurrent)
+            PrivateSubtitleDocumentCombine.preview(
+                draft, stagedImport.imported, importMode
+            ) else null
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text("Tweede ondertitelbestand toevoegen") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text(
+                        "Tweede bestand: ${stagedImport.imported.size} ondertitelregels. " +
+                            "Huidig concept: ${draft.size} regels. Alleen tijdelijk in " +
+                            "het geheugen; niets overschrijft je originele bestanden.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { importMode = SubtitleCombineMode.APPEND_AFTER_LAST }
+                    ) {
+                        Text((if (importMode == SubtitleCombineMode.APPEND_AFTER_LAST)
+                            "✓ " else "") + "Aansluiten na laatste regel (+1 seconde)")
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { importMode = SubtitleCombineMode.KEEP_SOURCE_TIMES }
+                    ) {
+                        Text((if (importMode == SubtitleCombineMode.KEEP_SOURCE_TIMES)
+                            "✓ " else "") + "Originele tijdcodes naast elkaar")
+                    }
+                    Text(
+                        if (!stillCurrent)
+                            "Het huidige concept is veranderd: voeg opnieuw toe."
+                        else if (proposed == null)
+                            "Samenvoegen kan niet: maximaal 500 regels, geldige " +
+                                "tijdcodes en maximaal 256 KiB per export."
+                        else "${proposed.cues.size} regels in de gecombineerde versie. " +
+                            "${proposed.adjacentOverlaps} aangrenzende tijdsoverlappingen. " +
+                            "Controleer tijdcodes zelf; er is geen audio-/video-uitlijning.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        "SRT en VTT zijn beide leesbaar. Alleen expliciet bewaren als " +
+                            "nieuwe SRT/VTT-kopie schrijft naar je gekozen " +
+                            "Android-bestandsprovider, die extern kan synchroniseren.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = proposed != null && stillCurrent, onClick = {
+                    val updated = PrivateSubtitleDocumentCombine.preview(
+                        draft, stagedImport.imported, importMode
+                    )
+                    if (draft != stagedImport.existing || updated == null) {
+                        notice = "Het concept is veranderd of de gecombineerde " +
+                            "ondertitels zijn ongeldig. Probeer opnieuw."
+                    } else {
+                        applyChange(updated.cues)
+                        query = ""
+                        shownIndex = -1
+                        notice = "${updated.importedCount} regels toegevoegd aan " +
+                            "tijdelijk concept. Gebruik Bewaar kopie… voor een nieuw bestand."
+                    }
+                    pendingImport = null
+                }) { Text("Voeg alleen toe aan tijdelijk concept") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null }) { Text("Annuleren") }
+            }
+        )
     }
 
     if (insertOpen) {
