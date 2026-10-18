@@ -32,7 +32,8 @@ internal fun SubtitleTimelineInspectorDialog(
 ) {
     val overview = remember(cues) { PrivateSubtitleTimelineInspector.analyze(cues) }
     var filter by remember { mutableStateOf<SubtitleTimelineFindingKind?>(null) }
-    val visible = overview.findings.filter { filter == null || it.kind == filter }
+    val matching = overview.findings.filter { filter == null || it.kind == filter }
+    val visible = matching.take(160)
     val groups = listOf(
         null to "Alles",
         SubtitleTimelineFindingKind.OVERLAP to "Overlap",
@@ -89,9 +90,9 @@ internal fun SubtitleTimelineInspectorDialog(
                         }
                     }
                 }
-                if (overview.totalFindings > overview.findings.size) {
-                    Text("De eerste " + overview.findings.size + " signalen worden " +
-                        "getoond; de telling bevat ook de overige.",
+                if (matching.size > visible.size) {
+                    Text("De eerste " + visible.size + " signalen van deze selectie " +
+                        "worden getoond; de telling bevat ook de overige.",
                         style = MaterialTheme.typography.labelSmall)
                 }
             }
