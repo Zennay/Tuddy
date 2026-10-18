@@ -5,8 +5,6 @@ import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.net.Uri
 import android.os.SystemClock
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -50,6 +48,8 @@ import java.util.Locale
 @Composable
 internal fun LocalSubtitleAudioPreviewDialog(
     cues: List<PrivateSubtitleCue>,
+    audioUri: Uri,
+    onChangeAudio: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -121,14 +121,13 @@ internal fun LocalSubtitleAudioPreviewDialog(
         playbackSpeed = value
     }
 
-    val audioPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            closeAudio()
-            if (uri.scheme != "content") {
-                notice = "Alleen een zelfgekozen Android-document is toegestaan."
-            } else {
+    // MainActivity owns the SAF picker. Android may stop the Activity while
+    // DocumentsUI is open; this dialog is created only AFTER picker returns.
+    LaunchedEffect(audioUri) {
+        closeAudio()
+        if (audioUri.scheme != "content") {
+            notice = "Alleen een zelfgekozen Android-document is toegestaan."
+        } else {
                 val next = MediaPlayer()
                 runCatching {
                     next.setAudioAttributes(
@@ -178,7 +177,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         }
                         true
                     }
-                    next.setDataSource(context, uri)
+                    next.setDataSource(context, audioUri)
                     player = next
                     notice = "Audio wordt geopend; afspelen start niet automatisch."
                     next.prepareAsync()
@@ -186,7 +185,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     if (player === next) closeAudio() else runCatching { next.release() }
                     notice = "Audio openen mislukt. Kies een ondersteund audiobestand."
                 }
-            }
+
         }
     }
 
@@ -272,7 +271,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick = {
                     pauseAudio()
-                    audioPicker.launch(arrayOf("audio/*"))
+                    closeAudio()
+                    onChangeAudio()
                 }, modifier = Modifier.fillMaxWidth()) {
                     Text(if (prepared) "Andere audio kiezen…" else "Audio openen…")
                 }
