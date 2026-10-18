@@ -146,6 +146,16 @@ uitdrukkingen mogen geen verzonnen definities krijgen. Apparaatacceptatie en
 native-speaker review zijn nog niet bewezen.
 
 
+### Instelbare, beter leesbare ondertitels
+
+Onder **Taal- en modelinstellingen → Ondertitelgrootte** kies je
+**Normaal / Groot / Extra groot**. Dit past onmiddellijk de live
+oorspronkelijke tekst én vertaling, het leesbare privé-archief en de
+tijdelijk gemarkeerde zinnen aan. Alleen de schermvoorkeur wordt
+privé onthouden, nooit het transcript of audio. De modeluitkomst blijft
+gelijk. [Gebruik en privacy](docs/CAPTION_READING_SIZE.md). Echte
+Android-toegankelijkheidsacceptatie blijft nog afzonderlijk vereist.
+
 ### Tijdelijke markeringen voor een belangrijk gespreksmoment
 
 Je kunt nu een afgeronde tweetalige uitspraak **☆ Markeer** geven,
