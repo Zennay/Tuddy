@@ -42,3 +42,11 @@ permissie toegevoegd.
 Dit is een **debug-/incubatiefunctie**. Voor productie ontbreken nog de
 fysieke Android-vliegtuigmodusproef, vrije Koerdische/Pasjtoe-modellen,
 licentie- en native-speakeracceptatie, en release-ondertekening.
+
+## Ook vanuit een bewust geopend JSON-archief
+
+Bij **Gesprekstools → Open JSON-archief…** kun je een eerder opgeslagen
+privégesprek zonder microfoon bekijken en na aparte toestemming vanuit
+datzelfde venster een SRT-concept maken. Ook hier zijn de tijden geschat
+en moeten ze met audio worden uitgelijnd.
+[Bediening en privacy](PRIVATE_ARCHIVE_SRT_EXPORT.md).
