@@ -587,6 +587,9 @@ private fun TuddyScreen() {
             ) {
                 Text("Tuddy", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text("Gesprekken begrijpen, ook zonder internet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Spreektaal: ${source.label}  ·  Vertaling: ${target.label}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val canStart = offlineAvailable && !listening
                     Button(
@@ -898,6 +901,17 @@ private fun TuddyScreen() {
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    if (lines.isEmpty() && partial.isBlank()) {
+                        item(key = "empty-conversation") {
+                            Text(
+                                "Nog geen ondertitels. Tik op Luister voor offline spraak " +
+                                    "of open Taal- en modelinstellingen om een zin te typen. " +
+                                    "Je gesprek blijft op dit apparaat in tijdelijk geheugen.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     items(lines, key = { it.id }) { line ->
                         Card(
                             shape = RoundedCornerShape(14.dp),
