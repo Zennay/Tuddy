@@ -1595,8 +1595,7 @@ private fun TuddyScreen() {
                                         )
                                     )
                                     if (partialTranslation.isNotBlank()) {
-                                        Text(
-                                            partialTranslation,
+                                        Text(partialTranslation,
                                             color = MaterialTheme.colorScheme.primary,
                                             style = MaterialTheme.typography.titleMedium.copy(
                                                 fontSize = MaterialTheme.typography.titleMedium.fontSize * captionSize.scale
