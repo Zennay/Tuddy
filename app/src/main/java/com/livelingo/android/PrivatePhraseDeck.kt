@@ -116,6 +116,28 @@ internal class PrivatePhraseDeck(context: Context) {
         return write(next)
     }
 
+    /**
+     * Replace one existing user-written sentence with one atomic preferences
+     * write. The old record snapshot must still match; duplicate language/phrase
+     * identities are rejected by the same whole-deck validator as normal saves.
+     */
+    @Synchronized
+    fun edit(original: PersonalPhrase, replacement: PersonalPhrase): Boolean {
+        val clean = replacement.copy(
+            phrase = replacement.phrase.trim(),
+            ownMeaning = replacement.ownMeaning.trim()
+        )
+        if (!valid(clean)) return false
+        val current = decode() ?: return false
+        val index = current.indexOfFirst {
+            it.language == original.language && it.phrase == original.phrase
+        }
+        if (index < 0 || current[index] != original) return false
+        val changed = current.toMutableList()
+        changed[index] = clean
+        return write(changed)
+    }
+
     @Synchronized
     fun remove(language: String, phrase: String): Boolean {
         val current = decode() ?: return false

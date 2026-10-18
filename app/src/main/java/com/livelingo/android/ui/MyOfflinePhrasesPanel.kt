@@ -53,6 +53,7 @@ internal fun MyOfflinePhrasesPanel(
     var info by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
     var practiceOpen by remember { mutableStateOf(false) }
+    var editingPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     val context = LocalContext.current
@@ -128,6 +129,18 @@ internal fun MyOfflinePhrasesPanel(
                         "Bewaar geen gevoelige gesprekken of persoonsgegevens.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (editingPhrase != null) {
+                    Text("✎ Je bewerkt één bestaande zin. Opslaan vervangt alleen deze " +
+                        "zin en jouw betekenis, nooit het hele gesprek.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                    TextButton(onClick = {
+                        editingPhrase = null
+                        phrase = ""
+                        meaning = ""
+                        info = "Bewerken geannuleerd. De bewaarde zin is niet veranderd."
+                    }) { Text("Annuleer bewerken") }
+                }
                 Text("Taal van je eigen zin")
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     labels.forEach { (code, title) ->
@@ -163,18 +176,30 @@ internal fun MyOfflinePhrasesPanel(
                 OutlinedButton(
                     enabled = phrase.isNotBlank() && meaning.isNotBlank(),
                     onClick = {
-                        if (deck.save(language, phrase, meaningLanguage, meaning)) {
+                        val old = editingPhrase
+                        val saved = if (old == null) {
+                            deck.save(language, phrase, meaningLanguage, meaning)
+                        } else {
+                            deck.edit(old, PersonalPhrase(language, phrase,
+                                meaningLanguage, meaning))
+                        }
+                        if (saved) {
+                            editingPhrase = null
                             phrase = ""
                             meaning = ""
                             revision++
-                            info = "Je eigen zin is lokaal opgeslagen. Niet automatisch vertaald."
+                            info = if (old == null)
+                                "Je eigen zin is lokaal opgeslagen. Niet automatisch vertaald."
+                            else "Je bestaande eigen zin is bijgewerkt. Niet gecontroleerd door Tuddy."
                         } else {
-                            info = "Kon zin niet bewaren. Controleer beide teksten " +
-                                "(één regel, maximaal 120/180 tekens, maximaal 80 zinnen)."
+                            info = "Opslaan mislukt. Controleer op dubbele zinnen, " +
+                                "gewijzigde invoer of te veel tekens (120/180). " +
+                                "De bestaande zinnen zijn behouden."
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Bewaar mijn eigen zin") }
+                ) { Text(if (editingPhrase == null) "Bewaar mijn eigen zin"
+                    else "Bewaar wijziging aan eigen zin") }
                 Text("Alleen op jouw verzoek blijven deze zinnen in privé-appopslag staan. " +
                     "Ze worden niet gedeeld of automatisch overgenomen uit gesprekken.",
                     style = MaterialTheme.typography.bodySmall)
@@ -239,7 +264,21 @@ internal fun MyOfflinePhrasesPanel(
                             ))
                         Text(item.ownMeaning, style = MaterialTheme.typography.bodyMedium)
                         TextButton(onClick = {
+                            editingPhrase = item
+                            language = item.language
+                            phrase = item.phrase
+                            meaningLanguage = item.meaningLanguage
+                            meaning = item.ownMeaning
+                            info = "Pas deze zelf ingevoerde zin hierboven aan. " +
+                                "Kies 'Bewaar wijziging' om precies dit item te vervangen."
+                        }) { Text("✎ Bewerk deze zin") }
+                        TextButton(onClick = {
                             if (deck.remove(item.language, item.phrase)) {
+                                if (editingPhrase == item) {
+                                    editingPhrase = null
+                                    phrase = ""
+                                    meaning = ""
+                                }
                                 revision++
                                 info = "Eigen zin verwijderd."
                             } else info = "Verwijderen mislukt."
@@ -264,7 +303,12 @@ internal fun MyOfflinePhrasesPanel(
             confirmButton = {
                 TextButton(onClick = {
                     val saved = deck.replaceImported(imported)
-                    if (saved) revision++
+                    if (saved) {
+                        revision++
+                        editingPhrase = null
+                        phrase = ""
+                        meaning = ""
+                    }
                     info = if (saved) "Back-up lokaal hersteld. Alle betekenissen zijn door mensen ingevoerd."
                         else "Herstellen mislukt. De oude lijst blijft behouden."
                     pendingImport = null
@@ -287,7 +331,12 @@ internal fun MyOfflinePhrasesPanel(
             confirmButton = {
                 TextButton(onClick = {
                     val cleared = deck.clear()
-                    if (cleared) revision++
+                    if (cleared) {
+                        revision++
+                        editingPhrase = null
+                        phrase = ""
+                        meaning = ""
+                    }
                     info = if (cleared) "Je eigen zinnen zijn gewist."
                         else "Wissen mislukt; probeer opnieuw."
                     confirmClear = false
