@@ -314,6 +314,9 @@ internal fun PrivateSubtitleFileDialog(
                         practiceOpen = true
                     }
                 ) { Text("▣ Oefen deze gevonden ondertitelregels…") }
+                PrivateSubtitleWorksheetExportAction(
+                    selected = found.map { it.second }.take(24)
+                )
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { retimingOpen = true }
