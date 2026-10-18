@@ -56,6 +56,7 @@ internal data class TypedConversationLine(
 internal fun TwoWayTypedConversationDialog(
     initialSource: String,
     initialTarget: String,
+    initialSharedDraft: String? = null,
     recentLines: List<TypedConversationLine>,
     retryableCount: (String, String) -> Int,
     onRetryMissing: (String, String) -> Int,
@@ -64,7 +65,10 @@ internal fun TwoWayTypedConversationDialog(
 ) {
     var from by remember { mutableStateOf(initialSource.takeIf { it in TargetCatalog.codes } ?: "nl") }
     var to by remember { mutableStateOf(initialTarget.takeIf { it in TargetCatalog.codes } ?: "en") }
-    var draft by remember { mutableStateOf("") }
+    var draft by remember { mutableStateOf(
+        initialSharedDraft?.take(OfflineTypedCaptionPolicy.MAX_INPUT_UNITS).orEmpty()
+    ) }
+    var externalShareReview by remember { mutableStateOf(initialSharedDraft != null) }
     var alternating by remember { mutableStateOf(true) }
     var chooser by remember { mutableStateOf<String?>(null) }
     var search by remember { mutableStateOf("") }
@@ -113,14 +117,18 @@ internal fun TwoWayTypedConversationDialog(
             pair.to !in TargetCatalog.codes || pair.from == pair.to) return
         from = pair.from
         to = pair.to
-        // A private draft belongs to the previous source language.
-        draft = ""
+        // An externally shared sentence has no trusted known source yet:
+        // preserve it across intentional language selection for manual review.
+        if (!externalShareReview) draft = ""
         chooser = null
         search = ""
         favoritesOpen = false
         speaker.stop()
         speechNotice = ""
-        info = "Favoriet gekozen; controleer of beide lokale tekstmodellen aanwezig zijn."
+        info = if (externalShareReview)
+            "Gedeelde tekst blijft als concept staan. Controleer de echte brontaal " +
+                "en pas de zin aan vóór vertalen."
+        else "Favoriet gekozen; controleer of beide lokale tekstmodellen aanwezig zijn."
     }
     val rtlLanguages = setOf("ar", "fa", "ur", "he")
     fun title(code: String): String = TargetCatalog.targets
@@ -149,6 +157,15 @@ internal fun TwoWayTypedConversationDialog(
                     "Dit gebruikt uitsluitend lokale ML Kit-tekstvertaling, " +
                     "geen microfoon, cloudspraak of automatisch bewaarde gesprekken.",
                     style = MaterialTheme.typography.bodySmall)
+                if (externalShareReview) {
+                    Text("Gedeelde tekst uit een andere app: niets wordt automatisch " +
+                        "verstuurd of vertaald. Kies eerst de echte brontaal en " +
+                        "de gewenste doeltaal uit de tekstcatalogus. " +
+                        "Een favoriet verandert de taal, maar wist dit gedeelde " +
+                        "concept niet. Controleer de inhoud zelf.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                }
                 Text("Actieve richting", style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -307,6 +324,7 @@ internal fun TwoWayTypedConversationDialog(
                         val normalized = OfflineTypedCaptionPolicy.normalize(draft)
                         if (normalized != null && onSend(normalized, from, to)) {
                             draft = ""
+                            externalShareReview = false
                             info = "Zin aan het tijdelijke gesprek toegevoegd; " +
                                 "alleen werkelijk lokaal voltooide vertalingen worden getoond."
                             if (alternating) switchTurn()
