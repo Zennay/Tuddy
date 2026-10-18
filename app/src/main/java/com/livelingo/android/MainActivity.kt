@@ -147,6 +147,9 @@ private fun TuddyScreen() {
     }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
+    // Local search stays in memory, never persisted or sent to an API.
+    var historySearchOpen by remember { mutableStateOf(false) }
+    var historySearchQuery by remember { mutableStateOf("") }
     var generation by remember { mutableIntStateOf(0) }
     val voiceSessions = remember { VoiceSessionGeneration() }
     var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
@@ -157,6 +160,24 @@ private fun TuddyScreen() {
     var automaticSpeechSource by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val normalizedHistoryQuery = historySearchQuery.trim()
+    val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
+        else lines.indices.filter { index ->
+            lines[index].original.contains(normalizedHistoryQuery, ignoreCase = true) ||
+                lines[index].translated.contains(normalizedHistoryQuery, ignoreCase = true)
+        }
+
+    fun jumpToHistoryMatch(forward: Boolean) {
+        if (historyMatches.isEmpty()) return
+        val currentIndex = listState.firstVisibleItemIndex
+        val destination = if (forward) {
+            historyMatches.firstOrNull { it > currentIndex } ?: historyMatches.first()
+        } else {
+            historyMatches.lastOrNull { it < currentIndex } ?: historyMatches.last()
+        }
+        follow = false
+        coroutineScope.launch { listState.animateScrollToItem(destination) }
+    }
     // Only a real user scroll should pause lyric-style following. Programmatic
     // scrollToItem / animateScrollToItem uses non-user nested-scroll sources and
     // must not pause itself while tracking a live utterance.
@@ -653,6 +674,8 @@ private fun TuddyScreen() {
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
+                        historySearchQuery = ""
+                        historySearchOpen = false
                         previewInput = ""
                         manualText = ""
                         previewResult = null
@@ -977,6 +1000,40 @@ private fun TuddyScreen() {
                 }
                     }
                 }
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = {
+                        historySearchOpen = !historySearchOpen
+                        if (historySearchOpen) follow = false
+                        else historySearchQuery = ""
+                    }, enabled = lines.isNotEmpty()) {
+                        Text(if (historySearchOpen) "Sluit zoeken" else "Zoek in gesprek")
+                    }
+                    if (historySearchOpen && normalizedHistoryQuery.isNotBlank()) {
+                        Text("${historyMatches.size} gevonden",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (historySearchOpen) {
+                    OutlinedTextField(
+                        value = historySearchQuery,
+                        onValueChange = { historySearchQuery = it.take(80) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Zoek originele tekst of vertaling") },
+                        singleLine = true
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { jumpToHistoryMatch(false) },
+                            enabled = historyMatches.isNotEmpty()
+                        ) { Text("← Vorige") }
+                        OutlinedButton(
+                            onClick = { jumpToHistoryMatch(true) },
+                            enabled = historyMatches.isNotEmpty()
+                        ) { Text("Volgende →") }
+                    }
+                }
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
                 if (!follow) {
                     Text(
@@ -1006,7 +1063,17 @@ private fun TuddyScreen() {
                         Card(
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth(),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            border = BorderStroke(
+                                if (normalizedHistoryQuery.isNotBlank() && (
+                                        line.original.contains(normalizedHistoryQuery, ignoreCase = true) ||
+                                            line.translated.contains(normalizedHistoryQuery, ignoreCase = true)
+                                    )) 2.dp else 1.dp,
+                                if (normalizedHistoryQuery.isNotBlank() && (
+                                        line.original.contains(normalizedHistoryQuery, ignoreCase = true) ||
+                                            line.translated.contains(normalizedHistoryQuery, ignoreCase = true)
+                                    )) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant
+                            )
                         ) {
                             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
