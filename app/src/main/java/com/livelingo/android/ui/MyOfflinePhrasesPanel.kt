@@ -31,6 +31,7 @@ import java.io.ByteArrayOutputStream
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivatePhraseDeck
+import com.livelingo.android.PrivatePhraseTopics
 import com.livelingo.android.PrivatePrintablePhrasebook
 
 /**
@@ -50,6 +51,9 @@ internal fun MyOfflinePhrasesPanel(
     var phrase by remember { mutableStateOf("") }
     var meaning by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
+    var chosenTopicFilter by remember { mutableStateOf<String?>(null) }
+    var manageTopicsOpen by remember { mutableStateOf(false) }
+    var assigningTopicTo by remember { mutableStateOf<PersonalPhrase?>(null) }
     var revision by remember { mutableIntStateOf(0) }
     var info by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
@@ -67,6 +71,7 @@ internal fun MyOfflinePhrasesPanel(
     var printableAllLanguages by remember { mutableStateOf(false) }
     var pendingPrintable by remember { mutableStateOf<Pair<String?, ByteArray>?>(null) }
     val context = LocalContext.current
+    val phraseTopics = remember(context) { PrivatePhraseTopics(context) }
     val createBackup = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -198,7 +203,31 @@ internal fun MyOfflinePhrasesPanel(
         }
     }
     val phrases = remember(revision) { deck.entries() }
+    val topics = remember(revision) { phraseTopics.topics() }
+    val topicCounts = remember(revision) { phraseTopics.counts(phrases.orEmpty()) }
+    val selectedTopic = chosenTopicFilter?.takeIf { it == "__without__" || it in topics }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
+
+    if (manageTopicsOpen) {
+        PrivatePhraseTopicsDialog(
+            storage = phraseTopics,
+            revision = revision,
+            onChanged = { revision++ },
+            onDismiss = { manageTopicsOpen = false }
+        )
+        return
+    }
+    val assigning = assigningTopicTo
+    if (assigning != null) {
+        AssignPrivatePhraseTopicDialog(
+            note = assigning,
+            storage = phraseTopics,
+            topics = topics,
+            onChanged = { revision++ },
+            onDismiss = { assigningTopicTo = null }
+        )
+        return
+    }
 
     val toDisplay = displayedPhrase
     if (toDisplay != null) {
@@ -416,6 +445,25 @@ internal fun MyOfflinePhrasesPanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary)
                 HorizontalDivider()
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { manageTopicsOpen = true }
+                ) { Text("Mijn zinnenthema’s beheren · ${topics.size}/12") }
+                Text("Filter mijn eigen zinnen op zelfgekozen thema",
+                    style = MaterialTheme.typography.labelMedium)
+                TextButton(onClick = { chosenTopicFilter = null }) {
+                    Text(if (selectedTopic == null) "Alle thema’s ✓" else "Alle thema’s")
+                }
+                TextButton(onClick = { chosenTopicFilter = "__without__" }) {
+                    Text(if (selectedTopic == "__without__")
+                        "Zonder thema ✓" else "Zonder thema")
+                }
+                topics.forEach { topic ->
+                    TextButton(onClick = { chosenTopicFilter = topic }) {
+                        Text((if (selectedTopic == topic) "✓ " else "") +
+                            "$topic (${topicCounts[topic] ?: 0})")
+                    }
+                }
                 OutlinedTextField(
                     value = search, onValueChange = { search = it.take(60) },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
@@ -428,10 +476,17 @@ internal fun MyOfflinePhrasesPanel(
                 } else {
                     val query = search.trim()
                     val shown = phrases.filter {
-                        query.isEmpty() ||
+                        val searchMatches = query.isEmpty() ||
                             it.phrase.contains(query, ignoreCase = true) ||
                             it.ownMeaning.contains(query, ignoreCase = true) ||
                             labels[it.language].orEmpty().contains(query, ignoreCase = true)
+                        val assigned = phraseTopics.topicFor(it)
+                        val topicMatches = when (selectedTopic) {
+                            null -> true
+                            "__without__" -> assigned == null
+                            else -> assigned == selectedTopic
+                        }
+                        searchMatches && topicMatches
                     }
                     Text("${shown.size} van ${phrases.size} zelf ingevoerde zinnen",
                         style = MaterialTheme.typography.bodySmall)
@@ -445,6 +500,11 @@ internal fun MyOfflinePhrasesPanel(
                                     TextDirection.Rtl else TextDirection.Ltr
                             ))
                         Text(item.ownMeaning, style = MaterialTheme.typography.bodyMedium)
+                        Text("Thema: ${phraseTopics.topicFor(item) ?: "Niet ingedeeld"}",
+                            style = MaterialTheme.typography.labelSmall)
+                        TextButton(onClick = { assigningTopicTo = item }) {
+                            Text("▤ Kies thema voor deze zin")
+                        }
                         OutlinedButton(onClick = { displayedPhrase = item }) {
                             Text("▣ Toon groot · gesprekskaart")
                         }
