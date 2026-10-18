@@ -42,7 +42,8 @@ internal fun FocusTranscriptDialog(
     listening: Boolean,
     fontScale: Float,
     onStop: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    archiveMode: Boolean = false
 ) {
     val listState = rememberLazyListState()
     var followLive by remember { mutableStateOf(true) }
@@ -53,12 +54,12 @@ internal fun FocusTranscriptDialog(
     val isWide = LocalConfiguration.current.screenWidthDp >= 600
     var preferColumns by remember { mutableStateOf(true) }
     val showColumns = isWide && preferColumns
-    val displayedCaptions = when (speakerFilter) {
+    val displayedCaptions = when (if (archiveMode) null else speakerFilter) {
         "A", "B" -> captions.filter { it.speaker == speakerFilter }
         "?" -> captions.filter { it.speaker == null }
         else -> captions
     }
-    val showInterim = speakerFilter == null
+    val showInterim = !archiveMode && speakerFilter == null
     val manualScroll = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -96,12 +97,14 @@ internal fun FocusTranscriptDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Tuddy · Leesmodus", style = MaterialTheme.typography.titleLarge,
+                    Text(if (archiveMode) "Tuddy · Archief groot lezen" else "Tuddy · Leesmodus",
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     TextButton(onClick = onClose) { Text("Sluiten") }
                 }
                 Text(
-                    if (listening) "● Microfoon actief · on-device herkenning"
+                    if (archiveMode) "■ Privé-JSON-archief · microfoon uit · alleen lezen"
+                    else if (listening) "● Microfoon actief · on-device herkenning"
                     else "■ Microfoon uit · alleen huidige gespreksregels",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -114,11 +117,13 @@ internal fun FocusTranscriptDialog(
                     OutlinedButton(
                         onClick = { followLive = true },
                         enabled = !followLive
-                    ) { Text(if (followLive) "Live ✓" else "Volg live") }
-                    if (listening) {
+                    ) { Text(if (archiveMode) "↓ Laatste archiefregel" else
+                        if (followLive) "Live ✓" else "Volg live") }
+                    if (listening && !archiveMode) {
                         OutlinedButton(onClick = onStop) { Text("■ Stop microfoon") }
                     }
                 }
+                if (!archiveMode) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -159,6 +164,7 @@ internal fun FocusTranscriptDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                }
                 if (isWide) {
                     OutlinedButton(
                         onClick = { preferColumns = !preferColumns },
@@ -174,7 +180,8 @@ internal fun FocusTranscriptDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (!followLive) {
-                    Text("Teruglezen gepauzeerd. Tik op Volg live om verder te volgen.",
+                    Text(if (archiveMode) "Archief teruglezen · gebruik Laatste archiefregel voor onderaan."
+                        else "Teruglezen gepauzeerd. Tik op Volg live om verder te volgen.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
                 }
@@ -188,7 +195,8 @@ internal fun FocusTranscriptDialog(
                     if (displayedCaptions.isEmpty() && (!showInterim || interimOriginal.isBlank())) {
                         item(key = "empty") {
                             Text(
-                                if (speakerFilter == null)
+                                if (archiveMode) "Geen regels in deze archiefselectie. Sluit en wijzig de zoekterm."
+                                 else if (speakerFilter == null)
                                     "Nog geen ondertitels. Sluit de leesmodus en tik op Luister."
                                 else "Geen afgeronde regels met dit handmatige sprekerlabel. Kies Alle sprekers.",
                                 style = MaterialTheme.typography.bodyLarge
@@ -203,7 +211,8 @@ internal fun FocusTranscriptDialog(
                                 verticalArrangement = Arrangement.spacedBy(9.dp)
                             ) {
                                 Text(
-                                    "${line.sourceCode.uppercase()} → ${line.targetCode.uppercase()} · " +
+                                    if (archiveMode) "${line.sourceCode.uppercase()} → ${line.targetCode.uppercase()} · privéarchief"
+                                    else "${line.sourceCode.uppercase()} → ${line.targetCode.uppercase()} · " +
                                         (line.speaker?.let { "Spreker $it (handmatig)" }
                                             ?: "Spreker onbekend (handmatig)"),
                                     style = MaterialTheme.typography.labelMedium,
@@ -290,7 +299,8 @@ internal fun FocusTranscriptDialog(
                         }
                     }
                 }
-                Text("Alleen de huidige sessie · niets automatisch bewaren of delen.",
+                Text(if (archiveMode) "Alleen dit geopende privéarchief · geen import, opslag of delen."
+                    else "Alleen de huidige sessie · niets automatisch bewaren of delen.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

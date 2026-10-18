@@ -1,5 +1,15 @@
 # Tuddy 🎙️
 
+## Nieuw: eigen JSON-archief groot lezen
+
+Open bewust een eerder opgeslagen privé-JSON-archief, zoek in
+de regels en tik **▣ Lees gevonden archiefregels groot**.
+De bestaande tweetalige leesmodus toont uitsluitend deze
+zoekresultaten groter, bij voldoende schermbreedte naast elkaar.
+Sluiten brengt je terug naar hetzelfde archief, zonder iets
+in het live gesprek te importeren of automatisch op te slaan.
+[Bediening en privacy](docs/PRIVATE_ARCHIVE_FULLSCREEN_READER.md).
+
 ## Nieuw: woord bekijken zolang je het indrukt
 
 De v0.4-functie **vasthouden-en-loslaten** is terug als tijdelijke
