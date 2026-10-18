@@ -134,7 +134,7 @@ internal class PrivatePhraseDeck(context: Context) {
         val current = decode() ?: return false
         if (phrase !in current) return false
         val id = PrivatePhraseShortcuts.fingerprint(phrase)
-        val validHashes = current.map(PrivatePhraseShortcuts::fingerprint).toSet()
+        val validHashes = current.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
         val records = reviewRows().filterKeys { it in validHashes }.toMutableMap()
         val stage = if (remembered) ((records[id]?.first ?: 0) + 1).coerceAtMost(5) else 0
         val due = java.time.LocalDate.now().plusDays(REVIEW_INTERVALS[stage]).toEpochDay()
@@ -164,7 +164,7 @@ internal class PrivatePhraseDeck(context: Context) {
         val allowedPins = entries.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
         // Only identical human notes retain an old due date. Correcting the
         // meaning resets that card rather than implying the new answer was learned.
-        val previous = decode().orEmpty().associateBy(PrivatePhraseShortcuts::fingerprint)
+        val previous = decode().orEmpty().associateBy { PrivatePhraseShortcuts.fingerprint(it) }
         val allowedReviews = if (resetReview) emptyMap() else {
             reviewRows().filterKeys { hash ->
                 val current = entries.firstOrNull {
