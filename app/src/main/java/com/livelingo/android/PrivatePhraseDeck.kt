@@ -47,38 +47,36 @@ internal class PrivatePhraseDeck(context: Context) {
             humanText(record.phrase, 120) &&
             humanText(record.ownMeaning, 180)
 
+    private fun parseEntries(array: JSONArray): List<PersonalPhrase>? {
+        if (array.length() > MAX_ROWS) return null
+        val seen = mutableSetOf<String>()
+        val entries = mutableListOf<PersonalPhrase>()
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            if (obj.length() != 4 ||
+                listOf("language", "phrase", "meaningLanguage", "ownMeaning").any {
+                    obj.opt(it) !is String
+                }) return null
+            val record = PersonalPhrase(
+                obj.getString("language"), obj.getString("phrase"),
+                obj.getString("meaningLanguage"), obj.getString("ownMeaning")
+            )
+            if (!valid(record)) return null
+            val key = record.language + "|" + record.phrase.lowercase(Locale.ROOT)
+            if (!seen.add(key)) return null
+            entries.add(record)
+        }
+        return entries
+    }
+
     private fun decode(): List<PersonalPhrase>? {
         val raw = try { prefs.getString(KEY, null) } catch (_: RuntimeException) { return null }
         if (raw == null) return emptyList()
         if (raw.length > MAX_JSON) return null
-        return try {
-            val array = JSONArray(raw)
-            if (array.length() > MAX_ROWS) return null
-            val seen = mutableSetOf<String>()
-            val entries = mutableListOf<PersonalPhrase>()
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                if (obj.length() != 4 ||
-                    listOf("language", "phrase", "meaningLanguage", "ownMeaning").any {
-                        obj.opt(it) !is String
-                    }) return null
-                val record = PersonalPhrase(
-                    obj.getString("language"), obj.getString("phrase"),
-                    obj.getString("meaningLanguage"), obj.getString("ownMeaning")
-                )
-                if (!valid(record)) return null
-                val key = record.language + "|" + record.phrase.lowercase(Locale.ROOT)
-                if (!seen.add(key)) return null
-                entries.add(record)
-            }
-            entries
-        } catch (_: Exception) {
-            null
-        }
+        return try { parseEntries(JSONArray(raw)) } catch (_: Exception) { null }
     }
 
-    private fun write(entries: List<PersonalPhrase>): Boolean {
-        if (entries.size > MAX_ROWS || entries.any { !valid(it) }) return false
+    private fun toJson(entries: List<PersonalPhrase>): JSONArray {
         val array = JSONArray()
         for (entry in entries) {
             array.put(JSONObject()
@@ -87,7 +85,15 @@ internal class PrivatePhraseDeck(context: Context) {
                 .put("meaningLanguage", entry.meaningLanguage)
                 .put("ownMeaning", entry.ownMeaning))
         }
-        val value = array.toString()
+        return array
+    }
+
+    private fun write(entries: List<PersonalPhrase>): Boolean {
+        if (entries.size > MAX_ROWS || entries.any { !valid(it) }) return false
+        if (entries.map {
+            it.language + "|" + it.phrase.lowercase(Locale.ROOT)
+        }.toSet().size != entries.size) return false
+        val value = toJson(entries).toString()
         if (value.length > MAX_JSON) return false
         return try { prefs.edit().putString(KEY, value).commit() }
         catch (_: RuntimeException) { false }
@@ -118,6 +124,37 @@ internal class PrivatePhraseDeck(context: Context) {
         }
         return next.size < current.size && write(next)
     }
+
+    /** User-chosen Storage Access Framework export; never background/silent. */
+    @Synchronized
+    fun exportSnapshot(): ByteArray? {
+        val saved = decode() ?: return null
+        if (saved.isEmpty()) return null
+        val document = JSONObject()
+            .put("format", "tuddy-private-phrases-v1")
+            .put("entries", toJson(saved))
+        val bytes = (document.toString() + "\n").toByteArray(Charsets.UTF_8)
+        return bytes.takeIf { it.size <= MAX_JSON }
+    }
+
+    /** Strict UTF-8, version, schema and duplicate checking before import UI. */
+    fun previewImport(bytes: ByteArray): List<PersonalPhrase>? {
+        if (bytes.isEmpty() || bytes.size > MAX_JSON) return null
+        val source = bytes.toString(Charsets.UTF_8)
+        if (!source.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        return try {
+            val root = JSONObject(source)
+            if (root.length() != 2 ||
+                root.opt("format") != "tuddy-private-phrases-v1" ||
+                root.opt("entries") !is JSONArray) return null
+            val records = parseEntries(root.getJSONArray("entries")) ?: return null
+            records.takeIf { it.isNotEmpty() }
+        } catch (_: Exception) { null }
+    }
+
+    /** Runs only after a separate, visible replacement confirmation. */
+    @Synchronized
+    fun replaceImported(records: List<PersonalPhrase>): Boolean = write(records)
 
     @Synchronized
     fun clear(): Boolean = try { prefs.edit().remove(KEY).commit() }
