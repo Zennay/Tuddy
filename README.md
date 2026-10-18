@@ -11,6 +11,8 @@ Je kiest zelf via Android waar de JSON met maximaal 500 afgeronde regels
 wordt opgeslagen.
 Met **Open JSON-archief…** kun je een zelf gekozen, eerder opgeslagen bestand
 begrensd en alleen-lezen bekijken, zonder het lopende gesprek te vervangen.
+Het archief heeft nu ook een **tweetalige zoekbalk**, resultaatentelling en
+per uitspraak datum/tijd; zoekopdrachten blijven volledig lokaal in RAM.
 Ongeldige, gewijzigde of te grote archieven worden geweigerd; de inhoud
 is door de gebruiker aangeleverd en geen bewijs van echte spraakopname. Per regel blijven originele taal, doeltaal, tijdstempel,
 originele tekst en een eventuele **voltooide** vertaling gekoppeld.
