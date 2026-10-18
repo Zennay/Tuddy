@@ -11,6 +11,17 @@ nooit je eigen teksten. Het JSON-bestand bevat themanamen en
 herleidbare SHA-256-identiteiten: dat is **geen encryptie**.
 [Uitleg en privacy](docs/PRIVATE_PHRASE_TOPIC_BACKUP.md).
 
+## Nieuw: mijn offline herhalingen acht weken vooruitzien
+
+In **Vandaag offline oefenen** toont **Bekijk mijn geplande
+herhalingen · 8 weken** nu per dag hoeveel basiswoorden,
+zelfgeschreven zinnen en eigen woordbetekenissen je vrijwillig
+hebt ingepland. Achterstallige kaarten tellen alleen bij vandaag;
+de kalender verandert niets, vraagt geen extra toestemming en
+stuurt geen meldingen.
+[Werking en privacy](docs/PRIVATE_EIGHT_WEEK_STUDY_CALENDAR.md).
+
+
 ## Nieuw: favorieten en thema’s bij voorbereide teksten
 
 Bij **Gebruik mijn voorbereide eigen tekst…** kun je nu ook
