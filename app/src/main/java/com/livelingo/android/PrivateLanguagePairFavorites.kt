@@ -42,6 +42,10 @@ internal class PrivateLanguagePairFavorites(context: Context) {
         supportedSpeechTags: Collection<String>
     ): Boolean = write(entries(supportedSpeechTags).filterNot { it == pair })
 
+    fun clear(): Boolean = runCatching {
+        prefs.edit().remove("favorites-v1").commit()
+    }.getOrDefault(false)
+
     private fun write(list: List<FavoriteLanguagePair>): Boolean = runCatching {
         prefs.edit().putString("favorites-v1",
             list.joinToString(";") { "${it.speechTag}~${it.targetCode}" }).commit()

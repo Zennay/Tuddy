@@ -15,6 +15,15 @@ voltooide export- en deelacties worden ingetrokken, maar bestaande externe
 kopieën en klembordinhoud kunnen niet achteraf worden gewist.
 [Privacy en bediening](docs/PRIVATE_SINGLE_CAPTION_DELETE.md).
 
+## Nieuw: lokaal opgeslagen oefengegevens bewust wissen
+
+Onder **Taal- en modelinstellingen → Privacy** kun je na afzonderlijke
+bevestiging alle privébasiswoorden, zelfgemaakte oefenzinnen en favoriete
+taalparen tegelijk verwijderen. Tuddy meldt per opslagcategorie
+eventuele mislukte verwijderingen; het huidige gesprek, de actieve
+taalkeuze en eerder gemaakte externe exports blijven intact.
+[Bediening en privacygrenzen](docs/PRIVATE_STUDY_DATA_ERASURE.md).
+
 ## Nieuw: favoriete taalparen
 
 Gebruik **☆ Favoriete taalparen** om maximaal drie privécombinaties van
