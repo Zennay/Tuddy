@@ -146,6 +146,21 @@ uitdrukkingen mogen geen verzonnen definities krijgen. Apparaatacceptatie en
 native-speaker review zijn nog niet bewezen.
 
 
+### Woorden oefenen én back-uppen op eigen verzoek
+
+De bestaande knop **Mijn woorden** biedt nu ook **Bewaar back-up…** en
+**Herstel back-up…** voor alleen de zelf opgeslagen taal/woord-sleutels
+uit het kleine lokale, handmatig gecontroleerde woordenboek.
+Herstel controleert eerst bestandsversie, bekende woorden, dubbelen en
+UTF-8-inhoud, toont hoeveel woorden geladen worden en vraagt vervolgens
+apart om de bestaande lijst werkelijk te vervangen. Annuleren raakt de
+woorden niet. Definities komen altijd uit de lokaal geïnstalleerde
+woordenlijst, niet uit het gekozen bestand. Geen gesprekken, audio of
+persoonlijke zinnen worden geëxporteerd of geïmporteerd. Android vraagt
+zelf om een opslaglocatie; een externe bestandsprovider kan wel
+synchroniseren. Zie [woordback-uphandleiding](docs/PRIVATE_WORD_BACKUP.md).
+Fysieke toestelacceptatie en release-APK blijven afzonderlijk vereist.
+
 ### Voorlezen van afgeronde vertalingen (op eigen verzoek)
 
 Bij een definitieve lokaal vertaalde regel kun je nu op
