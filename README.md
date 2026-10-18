@@ -37,6 +37,17 @@ online fallback. Een eigen stopactie beëindigt de uitspraak.
 Er wordt niets als audio bewaard.
 [Bediening en beperkingen](docs/OFFLINE_PRONUNCIATION_CHOICES.md).
 
+## Nieuw: tweetalig lezen naast elkaar
+
+In **⛶ Leesmodus** komen het werkelijk herkende origineel en de
+lokale vertaling op brede schermen (vanaf 600 dp) in twee kolommen
+**naast elkaar**. Je kunt daar zelf tussen kolommen of de normale
+weergave onder elkaar wisselen. Spraak-/vertalingsstatus, eigen
+sprekerlabels en de live-woordfocus blijven zichtbaar; onvoltooide
+vertalingen worden niet ingevuld met verzonnen tekst. Op smalle
+schermen blijft de vertrouwde verticale layout.
+[Uitleg en privacygrenzen](docs/BILINGUAL_PARALLEL_READING.md).
+
 ## Nieuw: privé-oefenkaarten zonder internet
 
 Met **🧠 Oefenkaarten** oefen je de woorden die je bewust hebt
