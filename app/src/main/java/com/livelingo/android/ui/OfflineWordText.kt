@@ -4,9 +4,11 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -15,12 +17,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import com.livelingo.android.model.LocalGlossary
 import com.livelingo.android.model.wordAt
 
@@ -42,6 +47,8 @@ internal fun OfflineWordText(
     var layout by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     var dialogOpen by remember(text, language) { mutableStateOf(false) }
     var selectedWord by remember(text, language) { mutableStateOf("") }
+    // Held peek is transient and never modifies the stored glossary/deck.
+    var heldWord by remember(text, language) { mutableStateOf<String?>(null) }
     var meaningDraft by remember(text, language) { mutableStateOf("") }
     var noteMessage by remember(text, language) { mutableStateOf("") }
 
@@ -51,14 +58,30 @@ internal fun OfflineWordText(
         onTextLayout = { layout = it },
         modifier = Modifier
             .pointerInput(text) {
-                detectTapGestures { point ->
-                    val offset = layout?.getOffsetForPosition(point)
-                    val word = offset?.let { wordAt(text, it) } ?: return@detectTapGestures
-                    selectedWord = word.take(40)
-                    meaningDraft = ""
-                    noteMessage = ""
-                    dialogOpen = true
-                }
+                detectTapGestures(
+                    onPress = {
+                        // Both release and scroll cancellation clear the hover
+                        // preview. An ordinary tap still opens the full editor.
+                        tryAwaitRelease()
+                        heldWord = null
+                    },
+                    onLongPress = { point ->
+                        val offset = layout?.getOffsetForPosition(point)
+                        val word = offset?.let { wordAt(text, it) }
+                        heldWord = word?.take(40)
+                    },
+                    onTap = { point ->
+                        val offset = layout?.getOffsetForPosition(point)
+                        val word = offset?.let { wordAt(text, it) }
+                        if (word != null) {
+                            heldWord = null
+                            selectedWord = word.take(40)
+                            meaningDraft = ""
+                            noteMessage = ""
+                            dialogOpen = true
+                        }
+                    }
+                )
             }
             .semantics {
                 onClick(label = "Open lokale woordkaart") {
@@ -70,6 +93,43 @@ internal fun OfflineWordText(
                 }
             }
     )
+
+    val peek = heldWord
+    if (peek != null && !dialogOpen) {
+        val local = LocalGlossary.lookup(language, peek)
+        val authored = language?.let { readOwnMeaning?.invoke(it, peek) }
+        Popup(
+            alignment = Alignment.TopCenter,
+            onDismissRequest = { heldWord = null },
+            properties = PopupProperties(focusable = false)
+        ) {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                tonalElevation = 8.dp,
+                shadowElevation = 6.dp
+            ) {
+                Column(
+                    modifier = Modifier.widthIn(max = 280.dp).padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text("Woord · ${language?.uppercase() ?: "onbekend"}: $peek",
+                        style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        if (local != null) "${local.illustration} ${local.definition}"
+                        else "Geen bekende lokale woordenboekbetekenis.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 3
+                    )
+                    if (!authored.isNullOrBlank()) {
+                        Text("Mijn eigen uitleg · niet geverifieerd: $authored",
+                            style = MaterialTheme.typography.bodySmall, maxLines = 3)
+                    }
+                    Text("Laat los om te sluiten · tik kort om te bewerken.",
+                        style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+    }
 
     if (dialogOpen) {
         val definition = LocalGlossary.lookup(language, selectedWord)
