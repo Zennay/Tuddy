@@ -1,5 +1,14 @@
 # Tuddy 🎙️
 
+## Nieuw: afdrukbaar oefenblad van eigen ondertitels
+
+Je kunt geselecteerde regels uit een bewust geopend SRT/VTT-bestand
+ook als veilig, volledig offline HTML-oefenblad bewaren. Eerst de
+tijdcode, starthint en schrijfruimte; daarna een apart antwoordblad.
+Alleen een afzonderlijke Android-bestandskeuze schrijft een nieuwe
+kopie. Tijdcodes en tekst zijn niet automatisch geverifieerd.
+[Uitleg](docs/OFFLINE_SUBTITLE_PRINTABLE_WORKSHEET.md).
+
 ## Nieuw: eigen SRT/VTT-ondertitels oefenen
 
 Gebruik een bewust geopend ondertitelbestand nu ook als tijdelijke
