@@ -16,11 +16,22 @@ Deze actie wordt geweigerd als de benodigde verschuiving groter dan
 30 seconden is. Met **Herstel de oorspronkelijke tijdcodes (0 s)**
 keer je direct terug naar het originele timingoverzicht.
 
-Dit is bewust uitsluitend een luisterhulpmiddel in het huidige scherm:
+Dit is standaard een luisterhulpmiddel in het huidige scherm:
 Tuddy bewerkt geen originele SRT/VTT-cues, bewaart geen offset op schijf
 en doet geen automatische spraak-/woorduitlijning. Sluiten of andere
 audio kiezen wist de correctie. De gekozen Android-bestandsprovider
 kan zelf mediabestanden downloaden of synchroniseren.
+
+Wil je de handmatig gecorrigeerde tijdcodes tóch verder bewerken of
+bewaren? Kies **Neem deze correctie over in mijn tijdelijke
+ondertiteleditor…**. Tuddy controleert dan of **alle** regels binnen de
+toegelaten tijdsgrenzen blijven; een ongeldige verschuiving wordt
+geweigerd in plaats van regels af te kappen. Je ziet de hoeveelheid
+regels en oude/nieuwe begin- en eindtijden en moet de omzetting
+**afzonderlijk bevestigen**. De app keert pas daarna terug naar de
+bestaande tijdelijke editor, waar je zelf desgewenst een **nieuwe**
+SRT/VTT-kopie kiest via Android Opslaan als. Het brondocument wordt
+nooit automatisch gewijzigd.
 
 ## Nieuw: eigen audio beluisteren met SRT/VTT-tijdcodes
 
