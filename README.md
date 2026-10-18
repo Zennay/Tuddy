@@ -18,19 +18,16 @@ spraakmodelverbetering of menselijke tolkvalidatie.
 
 ## Nieuw: mobiel transcript-eerst gesprekscherm
 
-Op kleinere telefoons staat de live tijdlijn centraal. De belangrijkste
-acties **Luister, Wis gesprek, Volg live, ⛶ Leesmodus en ⇄ Wissel richting**
-blijven direct bereikbaar. **Gesprekstools · export, sprekers en archief**
-opent tijdelijk een apart tot 256dp hoog, scrollbaar actiepaneel voor
-handmatige spreker-navigatie, veilig TXT/JSON bewaren, archief openen en
-sprekerlabel-export; standaard is dit paneel dicht zodat ondertitels niet
-door een lange knoppenlijst worden weggedrukt. **Taal- en
-modelinstellingen** opent een eigen begrensd paneel; bij openen van
-één paneel sluit het andere. Alle bestaande toestemmingsdialoog-
-en exportbeperkingen blijven gehandhaafd.
-
-Deze wijziging is een UI-indeling, niet het bewijs van een fysiek
-Android-toestel, volledig offline spraakmodel of getekende release-APK.
+Op kleinere telefoons blijft de live ondertiteltijdlijn zichtbaar: **Luister,
+Wis gesprek, Volg live, ⛶ Leesmodus en ⇄ Wissel richting** blijven bereikbaar.
+De knop **Gesprekstools · export, sprekers en archief** opent een begrensd,
+intern scrollbaar paneel voor de bestaande spreker-navigatie, eigen TXT/JSON-
+export, privéarchief en eventueel apart gelabelde export, plus nieuwe
+archiefacties. Het paneel is standaard gesloten; ook de taal- en
+modelinstellingen blijven afzonderlijk uitklapbaar. Beide grote panelen
+sluiten elkaar om niet tegelijk de ruimte boven de live tekst op te eisen.
+Alle bestaande privacybevestigingen, documentkiezers en rechten blijven
+onveranderd. Dit is broncode, geen fysiek geïnstalleerde/release-APK.
 
 ## Nieuw: schermvullend live meelezen
 
@@ -62,6 +59,18 @@ niet hetzelfde als 59 on-device spraaktalen: de knop is alleen beschikbaar
 voor elf expliciet kiesbare spreektaalkandidaten (NL/EN/DE/FR/ES/AR/FA/UK/TR/RU/UR). Android moet het lokale spraakpakket voor iedere kandidaat daadwerkelijk beschikbaar hebben; de picker bewijst dat niet. Zie
 [de handleiding voor tweeweg-gesprekken](docs/TWO_WAY_OFFLINE_CONVERSATION.md).
 Dit bewijst geen telefoonacceptatie of Koerdische/Pasjtoe vrije vertaling.
+
+## Nieuw: één regel uit een privé-archief kopiëren of delen
+
+In het eigen **read-only JSON-archief** kunnen gebruikers na selectie
+van een **afgeronde** tweetalige regel kiezen voor
+**Gebruik deze archiefregel…**. Een aparte toestemming is vereist voordat
+die ene regel naar het Android-klembord of de deelkiezer kan gaan.
+De payload meldt dat de inhoud afkomstig is uit een **niet onafhankelijk
+geverifieerd, door de gebruiker gekozen archiefbestand**.
+De huidige live-sessie wordt niet gewijzigd; de actie wordt geannuleerd
+bij achtergrond, gesprek wissen of archief sluiten.
+[Privacy en bediening](docs/PRIVATE_ARCHIVE_EXCERPTS.md).
 
 ## Nieuw: privégesprek exporteren als JSON
 
@@ -225,6 +234,17 @@ verdwijnen bij **Wis gesprek**, als de oudste zin uit het geheugen
 rolt of bij app-afsluiting. Er is geen automatische opslag of netwerk,
 en lopende vertalingen zijn nooit als afgerond gelabeld.
 [Lees de privacy- en gebruiksinstructies](docs/SESSION_CAPTION_BOOKMARKS.md).
+
+### Zelfgekozen leesbaar woordenblad
+
+Via **Mijn woorden → Bewaar leesbaar woordenblad…** kun je na een
+expliciete Android-bestandskeuze een TXT maken met uitsluitend
+zelf opgeslagen, door het ingebouwde NL/EN/DE/FR/ES-miniwoordenboek
+herkende woorden en hun reeds aanwezige betekenissen. Dit is een
+**lees- en printbestand**, geen vervanging van de JSON-herstelback-up.
+Het bevat geen gesprek, audio, zelfgeschreven oefenzinnen of
+leerresultaten. Een gekozen externe bestandsprovider kan synchroniseren.
+[Uitleg en privacy](docs/PRIVATE_VOCABULARY_STUDY_SHEET.md).
 
 ### Nieuwe offline woordoefening
 
