@@ -47,6 +47,7 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.launch
 import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
+import com.livelingo.android.ui.SavedWordsPanel
 import java.text.DateFormat
 import java.util.Date
 
@@ -86,6 +87,18 @@ private fun TuddyScreen() {
         surface = androidx.compose.ui.graphics.Color(0xFF202238)
     )
     val lines = remember { mutableStateListOf<Line>() }
+    val savedVocabulary = remember(context) { PrivateVocabularyDeck(context) }
+    var savedWordRevision by remember { mutableIntStateOf(0) }
+    val savedWordCount = remember(savedWordRevision) { savedVocabulary.entries().size }
+    var savedWordsOpen by remember { mutableStateOf(false) }
+    var savedWordNotice by remember { mutableStateOf("") }
+    fun saveVerifiedWord(language: String, word: String): Boolean {
+        val saved = savedVocabulary.save(language, word)
+        savedWordNotice = if (saved) "Woord opgeslagen in je privéwoordenlijst."
+            else "Woord niet opgeslagen. Alleen gecontroleerde basiswoorden zijn toegestaan (maximaal 120)."
+        if (saved) savedWordRevision++
+        return saved
+    }
     var partial by remember { mutableStateOf("") }
     var partialTranslation by remember { mutableStateOf("") }
     var partialRevision by remember { mutableIntStateOf(0) }
@@ -93,8 +106,8 @@ private fun TuddyScreen() {
     var pendingInterim by remember { mutableStateOf<Runnable?>(null) }
     val interimHandler = remember { Handler(Looper.getMainLooper()) }
     var error by remember { mutableStateOf("") }
-    // Only the picker codes are private on-disk preferences; all captions and
-    // speech/model status remain ephemeral in RAM and never restored.
+    // Only picker codes and explicitly bookmarked curated vocabulary are kept
+    // in app-private preferences. Captions, speech and model status stay in RAM.
     val languageSettings = remember(context) {
         context.getSharedPreferences(PrivateLanguageSelectionPolicy.SETTINGS_NAME, Context.MODE_PRIVATE)
     }
@@ -655,6 +668,14 @@ private fun TuddyScreen() {
     }
 
     MaterialTheme(colorScheme = colors) {
+        if (savedWordsOpen) {
+            SavedWordsPanel(
+                deck = savedVocabulary,
+                revision = savedWordRevision,
+                onChanged = { savedWordRevision++ },
+                onDismiss = { savedWordsOpen = false }
+            )
+        }
         Surface(Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(18.dp),
@@ -730,6 +751,22 @@ private fun TuddyScreen() {
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall
                 )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(onClick = { savedWordsOpen = true }) {
+                        Text("Mijn woorden ($savedWordCount)")
+                    }
+                    Text(
+                        "Zelf bewaarde basiswoorden · offline",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (savedWordNotice.isNotBlank()) {
+                    Text(savedWordNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 OutlinedButton(
                     onClick = { showSettings = !showSettings },
                     modifier = Modifier.fillMaxWidth()
@@ -1093,13 +1130,15 @@ private fun TuddyScreen() {
                                 )
                                 OfflineWordText(
                                     line.original, line.sourceCode,
-                                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                    onSaveWord = ::saveVerifiedWord
                                 )
                                 if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
                                     OfflineWordText(
                                         line.translated, line.targetCode,
                                         MaterialTheme.typography.titleMedium.copy(
-                                            color = MaterialTheme.colorScheme.primary)
+                                            color = MaterialTheme.colorScheme.primary),
+                                        onSaveWord = ::saveVerifiedWord
                                     )
                                 } else {
                                     Text(line.translated, style = MaterialTheme.typography.titleMedium,
@@ -1126,7 +1165,7 @@ private fun TuddyScreen() {
                     }
                 }
                 Text(
-                    "Privacy: lokale spraak en vertaling; modellen via wifi voorbereiden. Gesprekken blijven in tijdelijk geheugen, tenzij je zelf Bewaar gesprek kiest. De gekozen opslaglocatie kan synchroniseren.",
+                    "Privacy: gesprekken blijven in tijdelijk geheugen, behalve wanneer je zelf Bewaar gesprek kiest. Alleen zelf bewaarde gecontroleerde basiswoorden blijven privé op je telefoon. De gekozen exportlocatie kan synchroniseren.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

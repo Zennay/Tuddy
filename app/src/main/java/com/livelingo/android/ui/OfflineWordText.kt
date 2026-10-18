@@ -30,7 +30,12 @@ import com.livelingo.android.model.wordAt
  * The app never submits user text to an external definition service.
  */
 @Composable
-internal fun OfflineWordText(text: String, language: String?, style: TextStyle) {
+internal fun OfflineWordText(
+    text: String,
+    language: String?,
+    style: TextStyle,
+    onSaveWord: ((String, String) -> Boolean)? = null
+) {
     var layout by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     var dialogOpen by remember(text, language) { mutableStateOf(false) }
     var selectedWord by remember(text, language) { mutableStateOf("") }
@@ -84,6 +89,13 @@ internal fun OfflineWordText(text: String, language: String?, style: TextStyle) 
             },
             confirmButton = {
                 TextButton(onClick = { dialogOpen = false }) { Text("Sluiten") }
+            },
+            dismissButton = {
+                if (definition != null && onSaveWord != null && language != null) {
+                    TextButton(onClick = {
+                        if (onSaveWord(language, selectedWord)) dialogOpen = false
+                    }) { Text("Bewaar woord") }
+                }
             }
         )
     }

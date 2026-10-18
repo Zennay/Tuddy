@@ -105,3 +105,23 @@ Earlier project tracking: https://github.com/Zennay/zCloud/issues/1344 and https
 ## Privacy and accuracy
 
 No cloud transcription fallback is intended. Text/model downloads may require internet once. Accuracy for legal, asylum, and medical contexts is not guaranteed; a qualified interpreter or native-speaker review remains essential.
+
+
+### Offline woorden bewaren en oefenen (nieuw)
+
+Tik op een woord in een afgeronde oorspronkelijke of vertaalde ondertitel om de
+**lokale woordkaart** te openen. Alleen als de kleine, handmatig gecontroleerde
+NL/EN/DE/FR/ES woordenlijst de betekenis daadwerkelijk bevat, verschijnt
+**Bewaar woord**. Bewaren is uitdrukkelijk opt-in. Via **Mijn woorden** kun je
+woorden offline terugvinden, jezelf oefenen door betekenissen te onthullen,
+woorden afzonderlijk verwijderen of na bevestiging de hele lijst wissen.
+
+Alleen maximaal 120 unieke `taal|woord`-sleutels worden opgeslagen in private
+Android appvoorkeuren; de betekenis komt telkens opnieuw uit de ingebouwde
+woordenlijst. Er wordt **geen gesprek, audio, contextzin, providerantwoord,
+persoonlijke identiteit of gespreksgeschiedenis** mee opgeslagen, en er is geen
+cloud-woordenboek of netwerkverzoek. Android-backup blijft uitgeschakeld.
+Gesprekken blijven standaard RAM-only; de bestaande expliciete export is een
+afzonderlijke gebruikersactie. Niet bekende woorden en Koerdische/Pasjtoe
+uitdrukkingen mogen geen verzonnen definities krijgen. Apparaatacceptatie en
+native-speaker review zijn nog niet bewezen.
