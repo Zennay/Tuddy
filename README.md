@@ -47,6 +47,18 @@ voor elf expliciet kiesbare spreektaalkandidaten (NL/EN/DE/FR/ES/AR/FA/UK/TR/RU/
 [de handleiding voor tweeweg-gesprekken](docs/TWO_WAY_OFFLINE_CONVERSATION.md).
 Dit bewijst geen telefoonacceptatie of Koerdische/Pasjtoe vrije vertaling.
 
+## Nieuw: één regel uit een privé-archief kopiëren of delen
+
+In het eigen **read-only JSON-archief** kunnen gebruikers na selectie
+van een **afgeronde** tweetalige regel kiezen voor
+**Gebruik deze archiefregel…**. Een aparte toestemming is vereist voordat
+die ene regel naar het Android-klembord of de deelkiezer kan gaan.
+De payload meldt dat de inhoud afkomstig is uit een **niet onafhankelijk
+geverifieerd, door de gebruiker gekozen archiefbestand**.
+De huidige live-sessie wordt niet gewijzigd; de actie wordt geannuleerd
+bij achtergrond, gesprek wissen of archief sluiten.
+[Privacy en bediening](docs/PRIVATE_ARCHIVE_EXCERPTS.md).
+
 ## Nieuw: privégesprek exporteren als JSON
 
 Naast de bestaande tekstexport heeft het gesprekscherm nu **Bewaar JSON…**.

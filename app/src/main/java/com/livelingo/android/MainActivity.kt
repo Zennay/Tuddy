@@ -183,6 +183,12 @@ private fun TuddyScreen() {
     var previewArchiveRows by remember { mutableStateOf<List<TranscriptExportRow>?>(null) }
     var archiveSearchQuery by remember { mutableStateOf("") }
     var pendingArchiveGeneration by remember { mutableStateOf<Int?>(null) }
+    // The user selects one completed row from a read-only, unverified
+    // imported archive. No clipboard/share side effects before consent.
+    var pendingArchiveExcerpt by remember {
+        mutableStateOf<Triple<Int, TranscriptExportRow, String>?>(null)
+    }
+    var archiveExcerptNotice by remember { mutableStateOf("") }
     var copyStatus by remember { mutableStateOf("") }
     var lastCopiedCaptionId by remember { mutableStateOf<Long?>(null) }
     // Privacy gate: no caption is handed to Android's external share chooser
@@ -767,6 +773,8 @@ private fun TuddyScreen() {
                 }
                 PrivateTranscriptArchive.read(bytes)
             }.getOrNull()
+            pendingArchiveExcerpt = null
+            archiveExcerptNotice = ""
             if (loaded == null) {
                 previewArchiveRows = null
                 error = "Geen geldig privégespreksarchief. Het huidige gesprek is niet gewijzigd."
@@ -787,6 +795,8 @@ private fun TuddyScreen() {
                 focusMode = false
                 previewArchiveRows = null
                 archiveSearchQuery = ""
+                pendingArchiveExcerpt = null
+                archiveExcerptNotice = ""
                 pendingCaptionShare = null
                 pendingSpeakerExport = null
                 editingCaptionId = null
@@ -805,6 +815,8 @@ private fun TuddyScreen() {
             previewArchiveRows = null
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
+            pendingArchiveExcerpt = null
+            archiveExcerptNotice = ""
             pendingSpeakerExport = null
             editingCaptionId = null
             captionCorrectionDraft = ""
@@ -1010,14 +1022,91 @@ private fun TuddyScreen() {
                 }
             )
         }
+        val excerptRequest = pendingArchiveExcerpt
+        if (excerptRequest != null) {
+            fun stillCurrent(): Boolean {
+                val row = excerptRequest.second
+                val clean = PrivateCaptionCopy.snapshot(row)
+                return excerptRequest.first == generation && !listening &&
+                    previewArchiveRows?.contains(row) == true &&
+                    row.status == "Lokaal vertaald" && clean != null &&
+                    "Eigen archief — inhoud niet geverifieerd\n" + clean == excerptRequest.third
+            }
+            AlertDialog(
+                onDismissRequest = { pendingArchiveExcerpt = null },
+                title = { Text("Dit archieffragment buiten Tuddy gebruiken?") },
+                text = {
+                    Text("Dit bestand is door jou gekozen. Tuddy controleert " +
+                        "de oorspronkelijke zin of vertaling niet opnieuw. " +
+                        "Het Android-klembord en andere apps vallen buiten de " +
+                        "privé-opslag van Tuddy en kunnen tekst bewaren of delen. " +
+                        "Alleen deze ene afgeronde tweetalige regel wordt overgedragen.")
+                },
+                confirmButton = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = {
+                            pendingArchiveExcerpt = null
+                            if (!stillCurrent()) {
+                                archiveExcerptNotice = "Archief gewijzigd of gesloten. Kies opnieuw."
+                            } else {
+                                val copied = runCatching {
+                                    val board = context.getSystemService(
+                                        Context.CLIPBOARD_SERVICE
+                                    ) as ClipboardManager
+                                    val clip = ClipData.newPlainText(
+                                        "Tuddy privéarchief — niet gecontroleerd",
+                                        excerptRequest.third
+                                    )
+                                    clip.description.extras = PersistableBundle().apply {
+                                        putBoolean("android.content.extra.IS_SENSITIVE", true)
+                                    }
+                                    board.setPrimaryClip(clip)
+                                    true
+                                }.getOrDefault(false)
+                                archiveExcerptNotice = if (copied)
+                                    "Fragment gekopieerd; Android-klembord is buiten Tuddy zichtbaar."
+                                else "Kopiëren mislukt; niets overgedragen."
+                            }
+                        }) { Text("Kopieer") }
+                        TextButton(onClick = {
+                            pendingArchiveExcerpt = null
+                            if (!stillCurrent()) {
+                                archiveExcerptNotice = "Archief gewijzigd of gesloten. Kies opnieuw."
+                            } else {
+                                val opened = runCatching {
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, excerptRequest.third)
+                                    }
+                                    context.startActivity(Intent.createChooser(
+                                        intent, "Kies waar je dit archieffragment deelt"
+                                    ))
+                                    true
+                                }.getOrDefault(false)
+                                archiveExcerptNotice = if (opened)
+                                    "Android-deelvenster geopend; bestemming bepaal je zelf."
+                                else "Delen niet mogelijk; niets verzonden."
+                            }
+                        }) { Text("Open delen") }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingArchiveExcerpt = null }) {
+                        Text("Annuleer")
+                    }
+                }
+            )
+        }
         val archive = previewArchiveRows
         val matchedArchive = if (archive == null) emptyList() else
             PrivateArchiveSearch.filter(archive, archiveSearchQuery)
-        if (archive != null) {
+        if (archive != null && pendingArchiveExcerpt == null) {
             AlertDialog(
                 onDismissRequest = {
+                    pendingArchiveExcerpt = null
                     previewArchiveRows = null
                     archiveSearchQuery = ""
+                    archiveExcerptNotice = ""
                 },
                 title = { Text("Eigen JSON-archief · alleen lezen") },
                 text = {
@@ -1041,6 +1130,11 @@ private fun TuddyScreen() {
                             "${matchedArchive.size} van ${archive.size} regels zichtbaar · alleen op dit toestel",
                             style = MaterialTheme.typography.labelSmall
                         )
+                        if (archiveExcerptNotice.isNotBlank()) {
+                            Text(archiveExcerptNotice,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
                         Spacer(Modifier.height(8.dp))
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
@@ -1066,6 +1160,22 @@ private fun TuddyScreen() {
                                             fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
                                         )
                                     )
+                                    if (row.status == "Lokaal vertaald" &&
+                                        row.translated.isNotBlank()) {
+                                        TextButton(enabled = !listening, onClick = {
+                                            val text = PrivateCaptionCopy.snapshot(row)
+                                            if (text == null) {
+                                                archiveExcerptNotice =
+                                                    "Deze regel kan niet veilig buiten Tuddy worden gebruikt."
+                                            } else {
+                                                pendingArchiveExcerpt = Triple(
+                                                    generation, row,
+                                                    "Eigen archief — inhoud niet geverifieerd\n" + text
+                                                )
+                                                archiveExcerptNotice = ""
+                                            }
+                                        }) { Text("Gebruik deze archiefregel…") }
+                                    }
                                     HorizontalDivider()
                                 }
                             }
@@ -1074,6 +1184,8 @@ private fun TuddyScreen() {
                 },
                 confirmButton = {
                     TextButton(onClick = {
+                        pendingArchiveExcerpt = null
+                        archiveExcerptNotice = ""
                         previewArchiveRows = null
                         archiveSearchQuery = ""
                     }) { Text("Sluiten") }
@@ -1217,6 +1329,8 @@ private fun TuddyScreen() {
                         previewArchiveRows = null
                         archiveSearchQuery = ""
                         pendingArchiveGeneration = null
+                        pendingArchiveExcerpt = null
+                        archiveExcerptNotice = ""
                         copyStatus = ""
                         lastCopiedCaptionId = null
                         pendingCaptionShare = null
