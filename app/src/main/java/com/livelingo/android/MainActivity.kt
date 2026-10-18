@@ -68,6 +68,7 @@ import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.TwoWayTypedConversationDialog
 import com.livelingo.android.ui.TypedConversationLine
+import com.livelingo.android.ui.CaptionLanguageCorrectionDialog
 import java.io.ByteArrayOutputStream
 import java.text.DateFormat
 import java.util.Date
@@ -339,6 +340,10 @@ private fun TuddyScreen(
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
     var editingCaptionId by remember { mutableStateOf<Long?>(null) }
+    // Selected caption id, translation revision and conversation generation.
+    var pendingCaptionLanguageChange by remember {
+        mutableStateOf<Triple<Long, Int, Int>?>(null)
+    }
     var captionCorrectionDraft by remember { mutableStateOf("") }
     var editingMeaning by remember { mutableStateOf<Triple<Long, String, Int>?>(null) }
     var meaningDraft by remember { mutableStateOf("") }
@@ -1037,6 +1042,7 @@ private fun TuddyScreen(
             captionPins = captionPins - removed.id
             if (editingCaptionId == removed.id) {
                 editingCaptionId = null
+                pendingCaptionLanguageChange = null
                 captionCorrectionDraft = ""
             }
         }
@@ -1323,6 +1329,7 @@ private fun TuddyScreen(
                 pendingCaptionShare = null
                 pendingSpeakerExport = null
                 editingCaptionId = null
+                pendingCaptionLanguageChange = null // dismiss sensitive caption tool on background
                 captionCorrectionDraft = ""
                 pendingSingleCaptionDelete = null
                 pendingStudyErase = false
@@ -1343,6 +1350,7 @@ private fun TuddyScreen(
             ownWordsOpen = false
             twoWayTypedOpen = false
             presentedCaptionId = null
+            pendingCaptionLanguageChange = null
             meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
@@ -1836,6 +1844,49 @@ private fun TuddyScreen(
                 }
             )
         }
+        val selectedLanguageCorrection = pendingCaptionLanguageChange
+        val sourceLine = selectedLanguageCorrection?.let { request ->
+            lines.firstOrNull { it.id == request.first }
+        }
+        if (selectedLanguageCorrection != null && sourceLine != null) {
+            CaptionLanguageCorrectionDialog(
+                original = sourceLine.original,
+                initialSource = sourceLine.sourceCode,
+                initialTarget = sourceLine.targetCode,
+                onApply = { newSource, newTarget ->
+                    val index = lines.indexOfFirst { it.id == selectedLanguageCorrection.first }
+                    if (listening || generation != selectedLanguageCorrection.third ||
+                        index < 0 || lines[index].translationRevision !=
+                        selectedLanguageCorrection.second ||
+                        newSource !in TargetCatalog.codes || newTarget !in TargetCatalog.codes
+                    ) {
+                        false
+                    } else {
+                        val previous = lines[index]
+                        captionSpeaker.stop()
+                        pendingCaptionShare = null
+                        pendingTranscriptExport = null
+                        exportStatus = ""
+                        lines[index] = previous.copy(
+                            sourceCode = newSource,
+                            targetCode = newTarget,
+                            translated = "Vertalen…",
+                            status = "Bezig",
+                            userCorrected = true,
+                            translationRevision = previous.translationRevision + 1
+                        )
+                        // Explicit source choice overrules automatic short-text
+                        // language detection; no model download is performed.
+                        translate(previous.original, previous.id, newTarget, newSource,
+                            generation, explicitlyChosenSource = true)
+                        correctionNotice = "Taalrichting voor deze zin gewijzigd; " +
+                            "lokale vertaling aangevraagd."
+                        true
+                    }
+                },
+                onDismiss = { pendingCaptionLanguageChange = null }
+            )
+        }
         val correctionId = editingCaptionId
         val correctionLine = lines.firstOrNull { it.id == correctionId }
         if (correctionId != null && correctionLine != null) {
@@ -1894,7 +1945,8 @@ private fun TuddyScreen(
                                     personalMeaning = null
                                 )
                                 translate(corrected, previous.id, previous.targetCode,
-                                    previous.sourceCode, generation)
+                                    previous.sourceCode, generation,
+                                    explicitlyChosenSource = true)
                                 correctionNotice = "Correctie opgeslagen in dit gesprek; " +
                                     "vertaling opnieuw gestart."
                             }
@@ -3711,13 +3763,22 @@ private fun TuddyScreen(
                                                         translationRevision = old.translationRevision + 1
                                                     )
                                                     translate(old.original, old.id, old.targetCode,
-                                                        old.sourceCode, generation)
+                                                        old.sourceCode, generation,
+                                                        explicitlyChosenSource = true)
                                                     correctionNotice = "Lokale vertaling opnieuw aangevraagd."
                                                 }
                                             }
                                         ) { Text("↻ Probeer opnieuw") }
                                     }
                                 }
+                                TextButton(
+                                    enabled = !listening && line.original.isNotBlank(),
+                                    onClick = {
+                                        pendingCaptionLanguageChange = Triple(
+                                            line.id, line.translationRevision, generation)
+                                        correctionNotice = ""
+                                    }
+                                ) { Text("🌐 Corrigeer taalrichting van deze zin") }
                                 if ((line.status == "Lokaal" ||
                                         line.status == "Lokaal vertaald") &&
                                     line.original.isNotBlank()
