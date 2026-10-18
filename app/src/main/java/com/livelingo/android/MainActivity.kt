@@ -92,6 +92,17 @@ private fun TuddyScreen() {
         surface = androidx.compose.ui.graphics.Color(0xFF202238)
     )
     val lines = remember { mutableStateListOf<Line>() }
+    val captionPrefs = remember(context) {
+        context.getSharedPreferences(CaptionDisplayPreferences.NAME, Context.MODE_PRIVATE)
+    }
+    var captionSize by remember {
+        mutableStateOf(
+            CaptionSize.restore(runCatching {
+                captionPrefs.getString(CaptionDisplayPreferences.SIZE_KEY, null)
+            }.getOrNull())
+        )
+    }
+    var captionSizeMessage by remember { mutableStateOf("") }
     // Local-only bookmarks: never persisted or associated with external identity.
     var captionPins by remember { mutableStateOf(emptySet<Long>()) }
     var pinsOpen by remember { mutableStateOf(false) }
@@ -797,11 +808,17 @@ private fun TuddyScreen() {
                                             " · " + row.sourceCode + " → " + row.targetCode,
                                         style = MaterialTheme.typography.labelSmall
                                     )
-                                    Text(row.original)
+                                    Text(row.original,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
+                                        ))
                                     Text(
                                         if (row.status == "Lokaal vertaald") row.translated
                                         else "[Vertaling niet voltooid]",
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
+                                        )
                                     )
                                     HorizontalDivider()
                                 }
@@ -1097,6 +1114,30 @@ private fun TuddyScreen() {
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
+                Text("Ondertitelgrootte", style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    CaptionSize.entries.forEach { option ->
+                        TextButton(onClick = {
+                            captionSize = option
+                            val saved = runCatching {
+                                captionPrefs.edit()
+                                    .putString(CaptionDisplayPreferences.SIZE_KEY, option.name)
+                                    .commit()
+                            }.getOrDefault(false)
+                            captionSizeMessage = if (saved) "" else
+                                "Grootte geldt nu alleen voor deze sessie."
+                        }) {
+                            Text(if (captionSize == option) "${option.label} ✓" else option.label)
+                        }
+                    }
+                }
+                if (captionSizeMessage.isNotBlank()) {
+                    Text(captionSizeMessage, style = MaterialTheme.typography.bodySmall)
+                }
+                Text(
+                    "Alleen de presentatie verandert; het gesprek en de vertaling blijven gelijk.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.weight(1f)) {
                         OutlinedButton(onClick = { sourceOpen = true }, modifier = Modifier.fillMaxWidth()) {
@@ -1453,14 +1494,19 @@ private fun TuddyScreen() {
                                 )
                                 OfflineWordText(
                                     line.original, line.sourceCode,
-                                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                    MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
+                                    ),
                                     onSaveWord = ::saveVerifiedWord
                                 )
                                 if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
                                     OfflineWordText(
                                         line.translated, line.targetCode,
                                         MaterialTheme.typography.titleMedium.copy(
-                                            color = MaterialTheme.colorScheme.primary),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontSize = MaterialTheme.typography.titleMedium.fontSize * captionSize.scale
+                                        ),
                                         onSaveWord = ::saveVerifiedWord
                                     )
                                     TextButton(onClick = {
@@ -1474,8 +1520,13 @@ private fun TuddyScreen() {
                                         }
                                     }) { Text("🔊 Spreek vertaling uit") }
                                 } else {
-                                    Text(line.translated, style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.primary)
+                                    Text(
+                                        line.translated,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = MaterialTheme.typography.titleMedium.fontSize * captionSize.scale
+                                        ),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                                 Text(line.status, style = MaterialTheme.typography.labelSmall)
                                 TextButton(onClick = {
@@ -1531,11 +1582,21 @@ private fun TuddyScreen() {
                             Card {
                                 Column(Modifier.padding(14.dp)) {
                                     Text("● Spreekt nu…", color = MaterialTheme.colorScheme.primary)
-                                    Text(partial, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        partial,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
+                                        )
+                                    )
                                     if (partialTranslation.isNotBlank()) {
-                                        Text(partialTranslation,
+                                        Text(
+                                            partialTranslation,
                                             color = MaterialTheme.colorScheme.primary,
-                                            style = MaterialTheme.typography.titleMedium)
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontSize = MaterialTheme.typography.titleMedium.fontSize * captionSize.scale
+                                            )
+                                        )
                                     }
                                 }
                             }
