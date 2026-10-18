@@ -1853,6 +1853,16 @@ private fun TuddyScreen(
                 fontScale = captionSize.scale,
                 onStop = { stop() },
                 onClose = { focusMode = false },
+                canStartOffline = offlineAvailable && !modelStorageBusy,
+                onStart = {
+                    if (ContextCompat.checkSelfPermission(context,
+                            Manifest.permission.RECORD_AUDIO) ==
+                        PackageManager.PERMISSION_GRANTED) {
+                        start()
+                    } else {
+                        microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
                 pinnedCaptionIds = captionPins,
                 onTogglePin = { id ->
                     val before = captionPins
