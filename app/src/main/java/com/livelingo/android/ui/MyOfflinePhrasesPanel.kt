@@ -52,6 +52,7 @@ internal fun MyOfflinePhrasesPanel(
     var revision by remember { mutableIntStateOf(0) }
     var info by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
+    var practiceOpen by remember { mutableStateOf(false) }
     var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     val context = LocalContext.current
@@ -102,6 +103,15 @@ internal fun MyOfflinePhrasesPanel(
     }
     val phrases = remember(revision) { deck.entries() }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
+
+    if (practiceOpen) {
+        PersonalPhrasePracticePanel(
+            notes = phrases.orEmpty(),
+            initialLanguage = language,
+            onDismiss = { practiceOpen = false }
+        )
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -168,6 +178,11 @@ internal fun MyOfflinePhrasesPanel(
                 Text("Alleen op jouw verzoek blijven deze zinnen in privé-appopslag staan. " +
                     "Ze worden niet gedeeld of automatisch overgenomen uit gesprekken.",
                     style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    enabled = phrases?.isNotEmpty() == true,
+                    onClick = { practiceOpen = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Oefen mijn eigen zinnen") }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         enabled = phrases?.isNotEmpty() == true,
