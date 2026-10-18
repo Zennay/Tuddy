@@ -70,6 +70,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
     // Playback-only calibration. A positive offset shows subtitles later than source timecodes.
     var subtitleOffsetMs by remember { mutableLongStateOf(0L) }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
+    var rangeStartIndex by remember { mutableIntStateOf(-1) }
+    var rangeEndIndex by remember { mutableIntStateOf(-1) }
+    var rangeRepeating by remember { mutableStateOf(false) }
+    var rangeToolsOpen by remember { mutableStateOf(false) }
     var lastLoopAtMs by remember { mutableLongStateOf(0L) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
@@ -86,6 +90,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
         durationMs = 0L
         playbackSpeed = 1f
         loopCueIndex = -1
+        rangeStartIndex = -1
+        rangeEndIndex = -1
+        rangeRepeating = false
+        rangeToolsOpen = false
         subtitleOffsetMs = 0L
         cuePickerOpen = false
         confirmApplyOpen = false
@@ -114,11 +122,40 @@ internal fun LocalSubtitleAudioPreviewDialog(
     fun cuePlayable(cue: PrivateSubtitleCue) =
         cueStart(cue) >= 0L && cueStart(cue) < durationMs && cueEnd(cue) <= durationMs
 
+    // A/B repetition uses existing user-authored cue intervals, never inferred speech beats.
+    fun rangeBounds(): Pair<Long, Long>? {
+        if (rangeStartIndex < 0 || rangeEndIndex < rangeStartIndex) return null
+        val first = cues.getOrNull(rangeStartIndex) ?: return null
+        val last = cues.getOrNull(rangeEndIndex) ?: return null
+        val start = cueStart(first)
+        val end = cueEnd(last)
+        // No silently truncated line may be part of an A–B exercise.
+        // Bound practice passages to five minutes so accidental far-apart
+        // anchors cannot create a huge surprising repeat interval.
+        if (start < 0L || start >= durationMs || end > durationMs ||
+            end - start !in 750L..300_000L ||
+            cues.subList(rangeStartIndex, rangeEndIndex + 1).any { cue ->
+                !cuePlayable(cue) || cueStart(cue) < start || cueEnd(cue) > end
+            }) return null
+        return start to end
+    }
+
+    fun currentRepeatBounds(): Pair<Long, Long>? {
+        if (rangeRepeating) return rangeBounds()
+        val single = cues.getOrNull(loopCueIndex) ?: return null
+        if (!cuePlayable(single) || single.endMillis - single.startMillis < 750L)
+            return null
+        return cueStart(single) to cueEnd(single)
+    }
+
     fun shiftSubtitles(deltaMs: Long) {
         val shifted = (subtitleOffsetMs + deltaMs).coerceIn(-30_000L, 30_000L)
         if (shifted == subtitleOffsetMs) return
         subtitleOffsetMs = shifted
         loopCueIndex = -1
+        rangeStartIndex = -1
+        rangeEndIndex = -1
+        rangeRepeating = false
         confirmApplyOpen = false
         lastLoopAtMs = 0L
         notice = "Verschuiving aangepast; dit wijzigt je SRT/VTT-bestand niet."
@@ -128,9 +165,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val current = player ?: return
         if (!prepared || durationMs <= 0L) return
         val target = position.coerceIn(0L, durationMs)
-        val loop = cues.getOrNull(loopCueIndex)
-        if (loop != null && target !in cueStart(loop) until cueEnd(loop))
+        val repeat = currentRepeatBounds()
+        if (repeat != null && target !in repeat.first until repeat.second) {
             loopCueIndex = -1
+            rangeRepeating = false
+        }
         runCatching { current.seekTo(target.toInt()) }
             .onSuccess { positionMs = target }
             .onFailure { notice = "Naar deze tijd springen is niet gelukt." }
@@ -183,15 +222,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     }
                     next.setOnCompletionListener { finished ->
                         if (player === finished) {
-                            val cue = cues.getOrNull(loopCueIndex)
-                            val loopAllowed = cue != null &&
-                                cue.endMillis - cue.startMillis >= 750L &&
-                                cuePlayable(cue)
-                            val replayed = if (loopAllowed && cue != null) runCatching {
-                                val start = cueStart(cue)
-                                finished.seekTo(start.toInt())
+                            val repeat = currentRepeatBounds()
+                            val replayed = if (repeat != null) runCatching {
+                                finished.seekTo(repeat.first.toInt())
                                 finished.start()
-                                positionMs = start
+                                positionMs = repeat.first
                                 true
                             }.getOrDefault(false) else false
                             if (!replayed) {
@@ -231,25 +266,24 @@ internal fun LocalSubtitleAudioPreviewDialog(
         }
     }
 
-    LaunchedEffect(player, playing, loopCueIndex) {
+    LaunchedEffect(player, playing, loopCueIndex, rangeRepeating,
+        rangeStartIndex, rangeEndIndex, subtitleOffsetMs) {
         val current = player
         while (playing && current != null && player === current) {
             val now = runCatching { current.currentPosition.toLong() }.getOrNull()
             if (now != null) {
                 positionMs = now.coerceIn(0L, durationMs)
-                val loop = cues.getOrNull(loopCueIndex)
+                val repeat = currentRepeatBounds()
                 val elapsed = SystemClock.elapsedRealtime()
-                if (loop != null && loop.endMillis - loop.startMillis >= 750L &&
-                    cuePlayable(loop) && now >= cueEnd(loop) &&
+                if (repeat != null && now >= repeat.second &&
                     elapsed - lastLoopAtMs >= 450L) {
-                    val start = cueStart(loop)
                     val rewound = runCatching {
-                        current.seekTo(start.toInt())
+                        current.seekTo(repeat.first.toInt())
                         true
                     }.getOrDefault(false)
                     if (rewound) {
                         lastLoopAtMs = elapsed
-                        positionMs = start
+                        positionMs = repeat.first
                     }
                 }
             }
@@ -379,16 +413,18 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         String.format(Locale.ROOT, "%.2f", subtitleOffsetMs / 1000.0) +
                         " s · positief = ondertitels later",
                         style = MaterialTheme.typography.labelLarge)
-                    Row(modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        listOf(-5000L to "−5s", -1000L to "−1s", -250L to "−0,25s",
-                            250L to "+0,25s", 1000L to "+1s", 5000L to "+5s")
-                            .forEach { (delta, label) ->
+                    listOf(
+                        listOf(-5000L to "−5s", -1000L to "−1s", -250L to "−0,25s"),
+                        listOf(250L to "+0,25s", 1000L to "+1s", 5000L to "+5s")
+                    ).forEach { controls ->
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            controls.forEach { (delta, label) ->
                                 TextButton(onClick = { shiftSubtitles(delta) },
-                                    modifier = Modifier.weight(1f),
-                                    contentPadding = PaddingValues(horizontal = 0.dp)
+                                    modifier = Modifier.weight(1f)
                                 ) { Text(label, style = MaterialTheme.typography.labelSmall) }
                             }
+                        }
                     }
                     OutlinedButton(
                         onClick = { shiftSubtitles(-subtitleOffsetMs) },
@@ -415,6 +451,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             cuePlayable(active)),
                         onClick = {
                             loopCueIndex = if (loopCueIndex >= 0) -1 else activeIndex
+                            rangeRepeating = false
                             lastLoopAtMs = 0L
                         }
                     ) {
@@ -425,6 +462,71 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     Text("Herhalen gebruikt alleen de door jou ingevoerde tijdcodes " +
                         "(minimaal 0,75 s). Geen automatische woord- of audiouitlijning.",
                         style = MaterialTheme.typography.labelSmall)
+                    TextButton(onClick = { rangeToolsOpen = !rangeToolsOpen },
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text(if (rangeToolsOpen) "▴ Verberg A–B-passageoefening"
+                            else "▾ Oefen een A–B-passage van meerdere regels")
+                    }
+                    if (rangeToolsOpen) {
+                    HorizontalDivider()
+                    Text("Oefen meerdere ondertitelregels achter elkaar: markeer eerst " +
+                        "A (beginregel), daarna B (eindregel). Start vervolgens A–B-herhaling. " +
+                        "Het gehele fragment moet binnen de audio vallen (0,75 s tot 5 min).",
+                        style = MaterialTheme.typography.bodySmall)
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            enabled = activeIndex >= 0 && active != null && cuePlayable(active),
+                            onClick = {
+                                rangeStartIndex = activeIndex
+                                rangeEndIndex = -1
+                                rangeRepeating = false
+                                loopCueIndex = -1
+                                notice = "A ingesteld op regel " + (activeIndex + 1) +
+                                    ". Kies nu een latere of dezelfde regel als B."
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text(if (rangeStartIndex >= 0) "A ✓ regel " +
+                            (rangeStartIndex + 1) else "Kies A-start") }
+                        OutlinedButton(
+                            enabled = rangeStartIndex >= 0 && activeIndex >= rangeStartIndex &&
+                                active != null && cuePlayable(active),
+                            onClick = {
+                                rangeEndIndex = activeIndex
+                                rangeRepeating = false
+                                loopCueIndex = -1
+                                notice = "B ingesteld op regel " + (activeIndex + 1) + "."
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text(if (rangeEndIndex >= rangeStartIndex &&
+                            rangeStartIndex >= 0) "B ✓ regel " +
+                            (rangeEndIndex + 1) else "Kies B-einde") }
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = rangeRepeating || rangeBounds() != null,
+                        onClick = {
+                            if (rangeRepeating) {
+                                rangeRepeating = false
+                                notice = "A–B-herhaling gestopt."
+                            } else {
+                                val bounds = rangeBounds()
+                                if (bounds != null) {
+                                    loopCueIndex = -1
+                                    lastLoopAtMs = 0L
+                                    rangeRepeating = true
+                                    seekTo(bounds.first)
+                                    notice = "Herhaal A–B vanaf de gekozen startregel; " +
+                                        "druk op Afspelen als de audio pauzeert."
+                                }
+                            }
+                        }
+                    ) { Text(if (rangeRepeating) "Stop A–B-herhaling ✓"
+                        else "↻ Herhaal mijn A–B-passage") }
+                    Text("A–B-herhaling is tijdelijk en bevat alleen de door jou gekozen " +
+                        "ondertitelregels, geen automatische audioanalyse.",
+                        style = MaterialTheme.typography.labelSmall)
+                    }
                     Text("Tijdcorrectie geldt alleen voor deze audiosessie; " +
                         "de originele SRT/VTT wordt niet overschreven.",
                         style = MaterialTheme.typography.labelSmall)

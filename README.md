@@ -1,5 +1,24 @@
 # Tuddy 🎙️
 
+## Nieuw: een A–B-passage met meerdere ondertitelregels herhalen
+
+Voor langere zinnen of gesprekjes kun je nu binnen **▶ Eigen audio met
+tijdcodes afspelen…** de geavanceerde **A–B-passageoefening** openen.
+Spring eerst naar de gewenste beginregel en kies **A-start**. Spring
+vervolgens naar dezelfde of een latere regel en kies **B-einde**. Kies
+**↻ Herhaal mijn A–B-passage**: de speler springt naar het begin van A en
+herhaalt tot na de eindtijd van B. Je kunt het herhalen op elk moment
+uitzetten. Gewoon één regel herhalen blijft daarnaast beschikbaar.
+
+De A–B-selectie is alleen bruikbaar als alle geselecteerde regels en
+het hele fragment (minimaal 0,75 seconde, maximaal 5 minuten) binnen de
+gekozen audio vallen. De huidige tijdelijke handmatige
+tijdsverschuiving geldt ook hier, zonder originele audio of SRT/VTT te
+wijzigen. Alle A/B-selecties verdwijnen na audio wisselen of sluiten; bij
+een gewijzigde offset stopt de oude herhaling zodat geen onverwacht
+fragment wordt herhaald. Dit is persoonlijke luisteroefening zonder
+automatische audioanalyse, spraakherkenning of externe opslag.
+
 ## Nieuw: handmatig ondertitels gelijkzetten met je eigen audio
 
 Als de gesproken tekst niet gelijkloopt met de SRT/VTT-tijdcodes, open
