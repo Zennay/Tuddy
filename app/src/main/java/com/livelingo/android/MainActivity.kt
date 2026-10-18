@@ -3926,7 +3926,8 @@ private fun TuddyScreen(
                                     ),
                                     onSaveWord = ::saveVerifiedWord,
                                     readOwnMeaning = ::readOwnWordMeaning,
-                                    saveOwnMeaning = ::saveOwnWordMeaning
+                                    saveOwnMeaning = ::saveOwnWordMeaning,
+                                    allowSpeech = !listening
                                 )
                                 if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
                                     OfflineWordText(
@@ -3937,7 +3938,8 @@ private fun TuddyScreen(
                                         ),
                                         onSaveWord = ::saveVerifiedWord,
                                         readOwnMeaning = ::readOwnWordMeaning,
-                                        saveOwnMeaning = ::saveOwnWordMeaning
+                                        saveOwnMeaning = ::saveOwnWordMeaning,
+                                        allowSpeech = !listening
                                     )
                                 } else {
                                     Text(

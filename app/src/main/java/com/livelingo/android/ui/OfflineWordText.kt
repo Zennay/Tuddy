@@ -36,7 +36,8 @@ internal fun OfflineWordText(
     style: TextStyle,
     onSaveWord: ((String, String) -> Boolean)? = null,
     readOwnMeaning: ((String, String) -> String?)? = null,
-    saveOwnMeaning: ((String, String, String) -> Boolean)? = null
+    saveOwnMeaning: ((String, String, String) -> Boolean)? = null,
+    allowSpeech: Boolean = true
 ) {
     var layout by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     var dialogOpen by remember(text, language) { mutableStateOf(false) }
@@ -92,6 +93,11 @@ internal fun OfflineWordText(
                         if (definition != null) "${definition.illustration} ${definition.definition}"
                         else "Geen gecontroleerde lokale betekenis voor dit woord of deze taal.",
                         style = MaterialTheme.typography.bodyMedium
+                    )
+                    OfflineWordPronunciation(
+                        word = selectedWord,
+                        language = language,
+                        enabled = allowSpeech
                     )
                     if (ownMeaning != null) {
                         Text("Mijn eigen notitie (niet geverifieerd): " + ownMeaning,
