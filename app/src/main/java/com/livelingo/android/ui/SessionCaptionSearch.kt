@@ -44,6 +44,8 @@ internal fun SessionCaptionSearchText(
         Text(text, style = style)
         return
     }
+    val hitBackground = MaterialTheme.colorScheme.tertiaryContainer
+    val hitForeground = MaterialTheme.colorScheme.onTertiaryContainer
     val marked = buildAnnotatedString {
         var from = 0
         while (from < text.length) {
@@ -51,8 +53,8 @@ internal fun SessionCaptionSearchText(
             if (match < 0) break
             append(text.substring(from, match))
             withStyle(SpanStyle(
-                background = androidx.compose.ui.graphics.Color(0xFFFFE28C),
-                color = androidx.compose.ui.graphics.Color(0xFF212121)
+                background = hitBackground,
+                color = hitForeground
             )) {
                 append(text.substring(match, match + term.length))
             }
