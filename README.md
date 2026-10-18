@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: luister naar je eigen offline oefenkaart
+
+Tijdens **Oefen mijn eigen zinnen** kun je de zichtbare vraag
+op verzoek met een lokaal geïnstalleerde Android-stem laten lezen.
+Het **antwoord** is pas na **Toon mijn betekenis** afspeelbaar,
+normaal of rustig. Kaart-/richtingwissel, beoordelen en
+achtergrond sluiten het vorige geluid. Ontbrekende lokale stemmen
+betekenen stilte, geen cloudfallback; jouw zinnen zijn niet
+automatisch gecontroleerd.
+[Bediening en beperkingen](docs/OFFLINE_PRIVATE_PRACTICE_VOICE.md).
+
 ## Nieuw: offline gesprekskaarten op verzoek voorlezen
 
 De grote eigen-zinnenkaart én de vijf ingebouwde voorbeeldwoorden
