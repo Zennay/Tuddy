@@ -797,15 +797,17 @@ internal fun PrivateSubtitleFileDialog(
             onDismissRequest = { wrapOpen = false },
             title = { Text("Lange ondertitelregels afbreken") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Voeg alleen op gewone spaties regelafbrekingen toe. " +
                         "Tekst, woordvolgorde en tijdcodes blijven behouden. " +
                         "Kies een gewenste maximale regelbreedte; langere woorden " +
                         "blijven intact. Dit is geen taalkundige of audioanalyse.",
                         style = MaterialTheme.typography.bodySmall)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         listOf(32, 42, 50).forEach { option ->
-                            OutlinedButton(onClick = { wrapWidth = option }) {
+                            OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                onClick = { wrapWidth = option }) {
                                 Text((if (wrapWidth == option) "✓ " else "") +
                                     "$option tekens")
                             }
