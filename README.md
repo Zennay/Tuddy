@@ -4,6 +4,19 @@
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
+## Nieuw: privégesprek exporteren als JSON
+
+Naast de bestaande tekstexport heeft het gesprekscherm nu **Bewaar JSON…**.
+Je kiest zelf via Android waar de JSON met maximaal 500 afgeronde regels
+wordt opgeslagen. Per regel blijven originele taal, doeltaal, tijdstempel,
+originele tekst en een eventuele **voltooide** vertaling gekoppeld.
+Nog lopende of mislukte vertalingen worden expliciet `null`, niet stilzwijgend
+als voltooid beschouwd. Export is opt-in; er wordt niets automatisch
+gesynchroniseerd of bewaard. Het gekozen bestandsplatform kan **wel**
+privégesprekken buiten Tuddy synchroniseren. Lees
+[de JSON-format- en privacyuitleg](docs/PRIVATE_TRANSCRIPT_JSON.md).
+Dit is broncode-functionaliteit, geen bewijs van een toestelinstallatie.
+
 ## Status — 2026-10-17
 
 **Native Android debug APK available; prototype NOT device-validated or released.**

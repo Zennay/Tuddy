@@ -1,6 +1,8 @@
 package com.livelingo.android
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,6 +10,7 @@ import android.os.Bundle
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PersistableBundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -146,6 +149,8 @@ private fun TuddyScreen() {
     // Android document picker result; no automatic disk/history persistence.
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var exportStatus by remember { mutableStateOf("") }
+    var copyStatus by remember { mutableStateOf("") }
+    var lastCopiedCaptionId by remember { mutableStateOf<Long?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
@@ -635,6 +640,27 @@ private fun TuddyScreen() {
         }
     }
 
+    val saveTranscriptJson = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val pending = pendingTranscriptExport
+        pendingTranscriptExport = null
+        if (uri != null && pending != null && pending.first == generation) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(pending.second)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            if (saved) {
+                exportStatus = "JSON-gesprek opgeslagen op de door jou gekozen locatie."
+            } else {
+                error = "JSON-gesprek niet opgeslagen. Kies een andere locatie en probeer opnieuw."
+            }
+        }
+    }
+
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -715,6 +741,8 @@ private fun TuddyScreen() {
                         generation++
                         pendingTranscriptExport = null
                         exportStatus = ""
+                        copyStatus = ""
+                        lastCopiedCaptionId = null
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
@@ -756,6 +784,37 @@ private fun TuddyScreen() {
                     ) { Text("Bewaar gesprek…") }
                     Text(
                         "Alleen op verzoek. Externe opslag kan synchroniseren.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TextButton(
+                        enabled = lines.isNotEmpty() && !listening,
+                        onClick = {
+                            exportStatus = ""
+                            val snapshot = PrivateTranscriptJsonExport.snapshot(
+                                lines.map { line ->
+                                    TranscriptExportRow(
+                                        line.original, line.translated, line.status,
+                                        line.sourceCode, line.targetCode, line.recordedAtMillis
+                                    )
+                                }
+                            )
+                            if (snapshot == null) {
+                                error = "Kan dit gesprek niet veilig als JSON exporteren."
+                            } else {
+                                pendingTranscriptExport = generation to snapshot
+                                saveTranscriptJson.launch("Tuddy-gesprek.json")
+                            }
+                        }
+                    ) { Text("Bewaar JSON…") }
+                    Text(
+                        "Voor eigen archief of verwerking; onvoltooide vertalingen blijven leeg.",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -1186,6 +1245,39 @@ private fun TuddyScreen() {
                                         color = MaterialTheme.colorScheme.primary)
                                 }
                                 Text(line.status, style = MaterialTheme.typography.labelSmall)
+                                TextButton(onClick = {
+                                    val payload = PrivateCaptionCopy.snapshot(
+                                        TranscriptExportRow(
+                                            line.original, line.translated, line.status,
+                                            line.sourceCode, line.targetCode, line.recordedAtMillis
+                                        )
+                                    )
+                                    lastCopiedCaptionId = line.id
+                                    if (payload == null) {
+                                        copyStatus = "Deze regel kan niet veilig worden gekopieerd."
+                                    } else {
+                                        val copied = runCatching {
+                                            val clipboard = context.getSystemService(
+                                                Context.CLIPBOARD_SERVICE
+                                            ) as ClipboardManager
+                                            val clip = ClipData.newPlainText("Tuddy privézin", payload)
+                                            clip.description.extras = PersistableBundle().apply {
+                                                putBoolean("android.content.extra.IS_SENSITIVE", true)
+                                            }
+                                            clipboard.setPrimaryClip(clip)
+                                            true
+                                        }.getOrDefault(false)
+                                        copyStatus = if (copied) {
+                                            "Zin gekopieerd. Het Android-klembord is buiten Tuddy zichtbaar."
+                                        } else {
+                                            "Kopiëren niet gelukt."
+                                        }
+                                    }
+                                }) { Text("Kopieer deze zin") }
+                                if (lastCopiedCaptionId == line.id && copyStatus.isNotBlank()) {
+                                    Text(copyStatus, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                         }
                     }
