@@ -91,7 +91,7 @@ internal fun SessionCaptionStudyDialog(
     onDismiss: () -> Unit,
     initialCaptionId: Long? = null
 ) {
-    val available = remember(captions) {
+    val allFinished = remember(captions) {
         captions.asSequence()
             .filter { it.status == "Lokaal vertaald" &&
                 it.original.isNotBlank() && it.translated.isNotBlank() &&
@@ -100,6 +100,16 @@ internal fun SessionCaptionStudyDialog(
             }
             .distinctBy { it.id }
             .toList().takeLast(80)
+    }
+    // Speaker identities are NEVER inferred. These are solely labels that the
+    // person explicitly set in the active conversation.
+    var speakerChoice by remember { mutableStateOf<String?>(null) }
+    val available = remember(allFinished, speakerChoice) {
+        if (speakerChoice == null) allFinished
+        else allFinished.filter { line ->
+            if (speakerChoice == "?") line.speaker == null
+            else line.speaker == speakerChoice
+        }
     }
     var shuffleVersion by remember { mutableIntStateOf(0) }
     var batchOffset by remember(initialCaptionId, available) {
@@ -162,6 +172,20 @@ internal fun SessionCaptionStudyDialog(
                 Text("${available.size} afgeronde tweetalige zinnen · maximaal 80 " +
                     "meest recente · groepjes van ${SessionPracticeRound.BATCH_SIZE}",
                     style = MaterialTheme.typography.labelMedium)
+                if (allFinished.any { it.speaker == "A" || it.speaker == "B" }) {
+                    Text("Optioneel: oefen alleen een handmatig gelabelde spreker.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(null to "Iedereen", "A" to "A", "B" to "B",
+                            "?" to "Onbekend").forEach { (choice, label) ->
+                            TextButton(
+                                enabled = speakerChoice != choice,
+                                onClick = { speakerChoice = choice }
+                            ) { Text(if (speakerChoice == choice) "$label ✓" else label) }
+                        }
+                    }
+                }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TextButton(onClick = { reverse = !reverse },
@@ -175,8 +199,11 @@ internal fun SessionCaptionStudyDialog(
                     }, enabled = deck.size > 1) { Text("↻ Schud") }
                 }
                 if (available.isEmpty()) {
-                    Text("Geen afzonderlijk lokaal voltooide vertaling beschikbaar. " +
-                        "Herkenning alleen of een onvoltooide vertaling is geen leerantwoord.")
+                    Text(if (allFinished.isEmpty())
+                        "Geen afzonderlijk lokaal voltooide vertaling beschikbaar. " +
+                            "Herkenning alleen of een onvoltooide vertaling is geen leerantwoord."
+                        else "Voor dit handmatige sprekerlabel zijn geen afgeronde " +
+                            "tweetalige leerkaarten. Kies Iedereen.")
                 } else if (current != null) {
                     Text("Beoordeeld ${round.attempts} keer · " +
                         "nog ${round.pending.size} kaart(en) inclusief eventuele herkansing",
