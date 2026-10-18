@@ -1,6 +1,7 @@
 package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +12,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -19,12 +22,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,6 +42,9 @@ import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.SubtitleDraftFormat
+import com.livelingo.android.TargetCatalog
+import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
 
 /** Explicitly opened, ephemeral subtitle document editor, never the live transcript. */
 @Composable
@@ -58,6 +70,35 @@ internal fun PrivateSubtitleFileDialog(
     val found = draft.mapIndexed { idx, row -> idx to row }
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
     val current = found.getOrNull(shownIndex)?.second
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    var chosenVoiceLanguage by remember { mutableStateOf<String?>(null) }
+    var voicePickerOpen by remember { mutableStateOf(false) }
+    var spokenNotice by remember { mutableStateOf("") }
+    DisposableEffect(speaker, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE)
+                speaker.stop()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); speaker.close() }
+    }
+    LaunchedEffect(current?.text, current?.startMillis, current?.endMillis) {
+        speaker.stop()
+        spokenNotice = ""
+    }
+    fun pronounceCue(slow: Boolean) {
+        val lang = chosenVoiceLanguage ?: return
+        val safe = current?.text?.replace('\n', ' ')?.trim().orEmpty()
+        if (safe.isBlank() || safe.length > 400) {
+            spokenNotice = "Alleen geselecteerde tekst tot 400 tekens kan lokaal worden voorgelezen."
+        } else speaker.speak(safe, lang,
+            if (slow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL) {
+            spokenNotice = it
+        }
+    }
+
     fun nudgeSelected(start: Long, end: Long) {
         val selected = found.getOrNull(shownIndex)?.first ?: return
         val updated = PrivateSubtitleDraftEditor.adjustCue(draft, selected, start, end)
@@ -147,6 +188,48 @@ internal fun PrivateSubtitleFileDialog(
                         lineHeight = if (large) 40.sp else 30.sp,
                         modifier = Modifier.fillMaxWidth().weight(1f)
                             .verticalScroll(rememberScrollState()))
+                    Text("Uitspraak · kies de taal van deze bestandsregel zelf",
+                        style = MaterialTheme.typography.labelSmall)
+                    Box {
+                        TextButton(onClick = { voicePickerOpen = true }) {
+                            val label = TargetCatalog.targets.firstOrNull {
+                                it.code == chosenVoiceLanguage
+                            }?.title ?: "Kies eerst taal voor lokaal voorlezen…"
+                            Text(label)
+                        }
+                        DropdownMenu(
+                            expanded = voicePickerOpen,
+                            onDismissRequest = { voicePickerOpen = false }
+                        ) {
+                            TargetCatalog.targets.forEach { language ->
+                                DropdownMenuItem(
+                                    text = { Text(language.title) },
+                                    onClick = {
+                                        speaker.stop()
+                                        chosenVoiceLanguage = language.code
+                                        spokenNotice = ""
+                                        voicePickerOpen = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(enabled = chosenVoiceLanguage != null &&
+                            current.text.length <= 400,
+                            onClick = { pronounceCue(false) }) { Text("🔊 Hoor lokaal") }
+                        TextButton(enabled = chosenVoiceLanguage != null &&
+                            current.text.length <= 400,
+                            onClick = { pronounceCue(true) }) { Text("Rustig") }
+                        TextButton(onClick = {
+                            speaker.stop()
+                            spokenNotice = "Uitspraak gestopt."
+                        }) { Text("■ Stop") }
+                    }
+                    if (spokenNotice.isNotBlank()) {
+                        Text(spokenNotice, style = MaterialTheme.typography.bodySmall)
+                    }
                     OutlinedButton(onClick = {
                         editIndex = found[shownIndex].first
                         editValue = current.text
