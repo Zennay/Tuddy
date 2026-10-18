@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: alles wat je vandaag offline kunt oefenen
+
+Op het hoofdscherm opent **🧠 Vandaag offline oefenen** één overzicht van
+je vrijwillige herhaalschema's voor basiswoorden en zelfgeschreven
+Kurmanji/Sorani/Pasjtoe-zinnen. Je ziet het aantal kaarten dat vandaag
+klaarstaat, kunt beide onderdelen direct oefenen of beheren, en ziet
+anders de eerstvolgende geplande datum. Toestemming blijft per onderdeel
+afzonderlijk; Tuddy start geen microfoon, modeldownload, account of
+automatische herinnering. [Zo gebruik je het overzicht](docs/UNIFIED_DAILY_STUDY_HUB.md).
+
+
 ## Nieuw: eigen Kurmanji-, Sorani- en Pasjtoe-zinnen herhalen
 
 Naast vrij oefenen kun je je **zelfgeschreven** zinnen vrijwillig voor
