@@ -54,6 +54,9 @@ internal fun MyOwnWordsPanel(
     var meaning by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
     var practiceOpen by remember { mutableStateOf(false) }
+    var plannedReviewOpen by remember { mutableStateOf(false) }
+    var consentStartReview by remember { mutableStateOf(false) }
+    var consentEraseReview by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<OwnWord?>(null) }
     var pendingDelete by remember { mutableStateOf<OwnWord?>(null) }
     var revision by remember { mutableIntStateOf(0) }
@@ -202,6 +205,58 @@ internal fun MyOwnWordsPanel(
             it.ownMeaning.contains(query.trim(), ignoreCase = true))
     }
 
+    if (plannedReviewOpen) {
+        ScheduledOwnWordReviewPanel(
+            deck = deck,
+            onChanged = { revision++; onChanged() },
+            onDismiss = { plannedReviewOpen = false }
+        )
+        return
+    }
+    if (consentStartReview) {
+        AlertDialog(
+            onDismissRequest = { consentStartReview = false },
+            title = { Text("Eigen woorden lokaal plannen?") },
+            text = { Text("Tuddy bewaart pas na jouw keuze per bewust opgeslagen eigen " +
+                "woord een lokale vingerafdruk, niveau en herhaaldatum. " +
+                "Geen cloud, opname, taalcontrole, account of meldingen. " +
+                "Je kunt de planning later apart verwijderen zonder woorden te wissen.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val started = deck.enableReviews()
+                    if (started) { revision++; onChanged() }
+                    notice = if (started) "Herhaalplanning gestart. Je woorden staan klaar."
+                        else "Herhaalplanning starten is mislukt."
+                    consentStartReview = false
+                }) { Text("Start alleen lokaal") }
+            },
+            dismissButton = {
+                TextButton(onClick = { consentStartReview = false }) { Text("Annuleren") }
+            }
+        )
+        return
+    }
+    if (consentEraseReview) {
+        AlertDialog(
+            onDismissRequest = { consentEraseReview = false },
+            title = { Text("Herhaalplanning eigen woorden wissen?") },
+            text = { Text("Dit wist de optionele lokale datums en niveaus definitief. " +
+                "De zelfgeschreven woorden, betekenissen en back-ups blijven bestaan.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val cleared = deck.disableReviews()
+                    if (cleared) { revision++; onChanged() }
+                    notice = if (cleared) "Herhaalplanning eigen woorden gewist."
+                        else "Wissen mislukt; probeer opnieuw."
+                    consentEraseReview = false
+                }) { Text("Wis alleen planning") }
+            },
+            dismissButton = {
+                TextButton(onClick = { consentEraseReview = false }) { Text("Annuleren") }
+            }
+        )
+        return
+    }
     if (practiceOpen) {
         OwnWordPracticePanel(
             notes = items.orEmpty(),
@@ -447,6 +502,36 @@ internal fun MyOwnWordsPanel(
                         "antwoord pas na een tik; resultaten verdwijnen bij sluiten.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (!deck.reviewsEnabled()) {
+                    OutlinedButton(
+                        enabled = items?.isNotEmpty() == true,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { consentStartReview = true }
+                    ) { Text("Start privé herhaalplanning eigen woorden…") }
+                    Text("Deze extra planning staat standaard uit.",
+                        style = MaterialTheme.typography.bodySmall)
+                } else {
+                    val scheduled = deck.scheduledReviews().orEmpty()
+                    val dueCount = scheduled.count {
+                        it.dueDay <= java.time.LocalDate.now().toEpochDay()
+                    }
+                    OutlinedButton(
+                        enabled = dueCount > 0,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { plannedReviewOpen = true }
+                    ) { Text("Herhaal mijn eigen woorden vandaag · $dueCount") }
+                    val next = scheduled.filter {
+                        it.dueDay > java.time.LocalDate.now().toEpochDay()
+                    }.minOfOrNull { it.dueDay }
+                    Text(if (dueCount > 0) "$dueCount eigen woorden klaar voor vandaag."
+                        else if (next != null) "Volgende herhaling: " +
+                            java.time.LocalDate.ofEpochDay(next).toString()
+                        else "Nog geen eigen woorden gepland.",
+                        style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { consentEraseReview = true }) {
+                        Text("Wis herhaalplanning eigen woorden")
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(
                         enabled = items?.isNotEmpty() == true,
