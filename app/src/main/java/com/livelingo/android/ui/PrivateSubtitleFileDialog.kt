@@ -66,6 +66,7 @@ internal fun PrivateSubtitleFileDialog(
     onChooseAudio: (List<PrivateSubtitleCue>) -> Unit,
     onChooseSecondFile: (List<PrivateSubtitleCue>) -> Unit,
     pendingSecondFile: Pair<List<PrivateSubtitleCue>, List<PrivateSubtitleCue>>?,
+    secondFileError: String?,
     onSecondFileReceived: () -> Unit,
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit
 ) {
@@ -118,8 +119,9 @@ internal fun PrivateSubtitleFileDialog(
     // MainActivity survives Android's external document picker; this editor
     // is intentionally cleared on ON_STOP. Restore only the user-selected
     // bounded draft plus a parsed second source after that chooser returns.
-    LaunchedEffect(pendingSecondFile) {
-        pendingSecondFile?.let { (previous, imported) ->
+    LaunchedEffect(pendingSecondFile, secondFileError) {
+        if (pendingSecondFile != null) {
+            val (previous, imported) = pendingSecondFile
             if (draft == previous) {
                 pendingImport = PendingSubtitleImport(previous.toList(), imported.toList())
                 importMode = SubtitleCombineMode.APPEND_AFTER_LAST
@@ -128,6 +130,9 @@ internal fun PrivateSubtitleFileDialog(
             } else {
                 notice = "Het concept veranderde tijdens de bestandskeuze. Kies opnieuw."
             }
+            onSecondFileReceived()
+        } else if (secondFileError != null) {
+            notice = secondFileError
             onSecondFileReceived()
         }
     }
