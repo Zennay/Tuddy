@@ -14,6 +14,17 @@ onbekende woorden worden niet toegevoegd of automatisch vertaald.
    woorden. Je kunt dezelfde set opnieuw doen of bij meer dan 20 woorden
    naar het volgende blok.
 
+## Oefenen per taal en kaarten schudden
+
+In dezelfde privé-oefendialoog kun je kiezen voor **Alle**, **NL**,
+**EN**, **DE**, **FR** of **ES**. De selectie beperkt de maximaal 20
+kaarten van de volgende ronde tot expliciet bewaarde woorden in die taal.
+Heeft de gekozen taal geen opgeslagen woorden, dan meldt het scherm dat
+zonder op een andere taal terug te vallen. **Schud kaarten** begint een
+nieuwe tijdelijke ronde met een gewijzigde volgorde; je hoeft geen
+woorden te verwijderen of opnieuw te bewaren. Je kiest zelf wanneer je
+wisselt of opnieuw begint. De volgorde en beoordeling worden niet bewaard.
+
 ## Privacy en grenzen
 
 Oefenscore, antwoorden, tempo, volgorde en moeilijke woorden leven **alleen
