@@ -147,3 +147,28 @@ niet gevalideerd. Niet alle 59 ML Kit-teksttalen hebben lokaal een
 geïnstalleerde Android-stem; Kurmanji/Sorani/Pasjtoe krijgen geen
 verzonnen tekst- of spraakondersteuning. TTS-uitspraak is ongeschikt als
 enige basis voor gevoelige medische, juridische of asielbesluiten.
+
+
+### Eigen Kurmanji-, Sorani- en Pasjtoe-zinnen offline bewaren
+
+Open onder **Offline basiswoorden** de knop
+**Mijn eigen Kurmanji/Sorani/Pasjtoe zinnen**. Je kunt daar maximaal
+80 persoonlijke zinnen met je **eigen** Nederlandse of Engelse
+betekenis typen, bewust opslaan, terugzoeken, individueel verwijderen
+of na bevestiging allemaal wissen. Kurmanji gebruikt Latijns schrift;
+Sorani en Pasjtoe krijgen expliciet RTL-tekstweergave. De enige
+permanente data zijn door jou bewust ingevoerde zinnen in de
+app-private Android-opslag; Android-backup blijft uitgeschakeld.
+Uit het gesprek wordt **niets automatisch opgeslagen** of naar deze
+lijst overgenomen; de app verstuurt geen van deze zinnen naar een server.
+
+Deze zelfgeschreven en niet-gecontroleerde notities worden **nooit
+voorgesteld als automatisch vertaalde resultaten**. De apart gelabelde
+vijf ingebouwde beginnerzinnen blijven dezelfde beperkte,
+handmatig gereviewde preview. Er worden geen Koerdische/Pasjtoe ASR-
+of ML Kit-vertaalmodellen gedownload of voorgewend. Vrije offline
+spraak en vertaling voor alle drie talen, native-speaker controle,
+modellicenties en toestelacceptatie uit
+[issue #2](https://github.com/Zennay/Tuddy/issues/2) blijven open.
+Gebruik eigen notities zonder menselijke tolk niet voor gevoelige
+medische, juridische of asielbeslissingen.
