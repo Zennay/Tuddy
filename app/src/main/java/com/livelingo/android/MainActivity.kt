@@ -1329,6 +1329,7 @@ private fun TuddyScreen(
                 pendingCaptionShare = null
                 pendingSpeakerExport = null
                 editingCaptionId = null
+                pendingCaptionLanguageChange = null // dismiss sensitive caption tool on background
                 captionCorrectionDraft = ""
                 pendingSingleCaptionDelete = null
                 pendingStudyErase = false
