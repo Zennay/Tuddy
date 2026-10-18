@@ -226,6 +226,7 @@ private fun TuddyScreen(
     // The export snapshot exists only between an explicit Save tap and the
     // Android document picker result; no automatic disk/history persistence.
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
+    var subtitleConsentOpen by remember { mutableStateOf(false) }
     var exportStatus by remember { mutableStateOf("") }
     // The read-only archive is not part of the current live conversation.
     var previewArchiveRows by remember { mutableStateOf<List<TranscriptExportRow>?>(null) }
@@ -323,6 +324,14 @@ private fun TuddyScreen(
             lines[index].original.contains(normalizedHistoryQuery, ignoreCase = true) ||
                 lines[index].translated.contains(normalizedHistoryQuery, ignoreCase = true)
         }
+
+    fun captureSubtitleDraft(): ByteArray? =
+        PrivateSubtitleDraftExport.snapshot(lines.map { line ->
+            TranscriptExportRow(
+                line.original, line.translated, line.status,
+                line.sourceCode, line.targetCode, line.recordedAtMillis
+            )
+        })
 
     fun captureSpeakerTranscript(): ByteArray? {
         val completed = lines.filter {
@@ -997,6 +1006,34 @@ private fun TuddyScreen(
         }
     }
 
+    val saveSubtitleDraft = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/x-subrip")
+    ) { uri ->
+        val pending = pendingTranscriptExport
+        pendingTranscriptExport = null
+        if (uri != null && pending != null && pending.first == generation) {
+            // Do not export an outdated snapshot after the Android picker
+            // returns: the live conversation may have been revised meanwhile.
+            val current = captureSubtitleDraft()
+            if (current == null || !current.contentEquals(pending.second)) {
+                exportStatus = "Het gesprek is gewijzigd. Kies opnieuw ondertitels bewaren."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use {
+                        it.write(pending.second)
+                        it.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                if (saved) {
+                    exportStatus = "SRT-ondertitelconcept opgeslagen. Controleer alle tijden in je video-editor."
+                } else {
+                    error = "SRT niet opgeslagen. Kies een andere locatie."
+                }
+            }
+        }
+    }
+
     val openTranscriptArchive = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1260,6 +1297,44 @@ private fun TuddyScreen(
                 fontScale = captionSize.scale,
                 onStop = { stop() },
                 onClose = { focusMode = false }
+            )
+        }
+        if (subtitleConsentOpen) {
+            AlertDialog(
+                onDismissRequest = { subtitleConsentOpen = false },
+                title = { Text("Tweetalig ondertitelconcept bewaren?") },
+                text = {
+                    Text(
+                        "Tuddy kent alleen de voltooiingstijd van een herkende zin: " +
+                            "dit is geen echte audio- of woordtijdlijn. SRT-tijden " +
+                            "zijn ruwe schattingen en moeten handmatig worden " +
+                            "gesynchroniseerd in een video-editor. Alleen afgeronde " +
+                            "zinnen komen erin, met de vertaling waar deze lokaal " +
+                            "klaar is. Na jouw keuze kan Androids opslagprovider " +
+                            "de ondertitels extern bewaren of synchroniseren. " +
+                            "Controleer of het gesprek gedeeld mag worden."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        subtitleConsentOpen = false
+                        if (!listening) {
+                            val snapshot = captureSubtitleDraft()
+                            if (snapshot == null) {
+                                exportStatus = "Geen veilig afgeronde zinnen voor een SRT-concept."
+                            } else {
+                                exportStatus = ""
+                                pendingTranscriptExport = generation to snapshot
+                                saveSubtitleDraft.launch("Tuddy-ondertitels-concept.srt")
+                            }
+                        }
+                    }) { Text("Ik begrijp dit, kies opslag…") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { subtitleConsentOpen = false }) {
+                        Text("Annuleren")
+                    }
+                }
             )
         }
         val speakerSnapshot = pendingSpeakerExport
@@ -2160,6 +2235,24 @@ private fun TuddyScreen(
                     ) { Text("Bewaar JSON…") }
                     Text(
                         "Voor eigen archief of verwerking; onvoltooide vertalingen blijven leeg.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        enabled = !listening && lines.any {
+                            it.status == "Lokaal" || it.status == "Lokaal vertaald"
+                        },
+                        onClick = { subtitleConsentOpen = true }
+                    ) { Text("Bewaar SRT-ondertitelconcept…") }
+                    Text(
+                        "Tweetalige zinnen; geschatte tijden uit spraakafloop, " +
+                            "niet gesynchroniseerd met audio.",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall
                     )
