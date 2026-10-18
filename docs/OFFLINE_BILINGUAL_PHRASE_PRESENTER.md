@@ -46,19 +46,3 @@ De zoekfunctie gebruikt uitsluitend bewust opgeslagen notities uit de
 app-private opslag. Live gesprekken, onvoltooide herkenningsresultaten en
 andere apps worden niet automatisch doorzocht of opgeslagen. De microfoon
 wordt gestopt voordat de gebruiker het scherm met gesprekskaarten opent.
-
-## Eigen gesprekskaart bewust extern delen
-
-In de grote gesprekskaart is **Deel…** beschikbaar. Een aparte
-privacybevestiging legt uit dat een externe app de tekst kan bewaren,
-uploaden of verspreiden. Pas daarna kiest de gebruiker expliciet uit
-**Deel alleen mijn zin** of **Deel zin en eigen betekenis**.
-Vervolgens opent Androids gewone `ACTION_SEND`-deelmenu met uitsluitend
-de geselecteerde inhoud. De gebruiker kiest zelf een bestemming.
-Annuleren verzendt niets.
-
-De tekst komt alleen uit de vooraf bewust opgeslagen eigen zin, niet
-uit een live opgenomen gesprek. Eigen betekenissen worden niet als
-geverifieerde vertalingen gepresenteerd. Een eenmaal gedeelde kopie
-kan niet via Tuddy worden ingetrokken. Er is geen automatische
-clipboardactie, serversynchronisatie, cloudspraak of modeldownload.
