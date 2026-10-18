@@ -2,7 +2,8 @@ package com.livelingo.android
 
 /** Local, non-destructive timing information for a user-opened subtitle file. */
 internal enum class SubtitleTimelineFindingKind {
-    SAME_TIMESPAN, OVERLAP, SHORT_GAP, LONG_GAP, BRIEF_CUE
+    SAME_TIMESPAN, OVERLAP, SHORT_GAP, LONG_GAP, BRIEF_CUE,
+    FAST_READING, LONG_TEXT_LINE
 }
 
 internal data class SubtitleTimelineFinding(
@@ -19,7 +20,9 @@ internal data class SubtitleTimelineOverview(
     val shortGapCount: Int,
     val longGapCount: Int,
     val briefCueCount: Int,
-    val sameSpanCount: Int
+    val sameSpanCount: Int,
+    val fastReadingCount: Int = 0,
+    val longTextLineCount: Int = 0
 )
 
 /** Heuristics describe timing; they are not a media-sync or translation check. */
@@ -27,6 +30,8 @@ internal object PrivateSubtitleTimelineInspector {
     private const val SHORT_GAP_MS = 150L
     private const val LONG_GAP_MS = 10_000L
     private const val BRIEF_CUE_MS = 500L
+    private const val FAST_CHARACTERS_PER_SECOND = 22L
+    private const val MAX_RECOMMENDED_LINE_LENGTH = 42
 
     fun analyze(cues: List<PrivateSubtitleCue>): SubtitleTimelineOverview {
         val found = mutableListOf<SubtitleTimelineFinding>()
@@ -38,11 +43,32 @@ internal object PrivateSubtitleTimelineInspector {
         var longGaps = 0
         var brief = 0
         var identical = 0
+        var fastReading = 0
+        var longLines = 0
         fun record(index: Int, type: SubtitleTimelineFindingKind, label: String) {
             found.add(SubtitleTimelineFinding(index, type, label, cues[index].startMillis))
         }
         cues.forEachIndexed { index, cue ->
-            if (cue.endMillis - cue.startMillis in 1L until BRIEF_CUE_MS) {
+            val duration = cue.endMillis - cue.startMillis
+            val readingChars = cue.text.count { !it.isWhitespace() }
+            // No linguistic classification: these are rough editing indicators,
+            // not a proven reading difficulty or automatic language evaluation.
+            if (duration > 0L &&
+                readingChars.toLong() * 1000L >
+                    FAST_CHARACTERS_PER_SECOND * duration) {
+                fastReading++
+                val perSecond = readingChars.toLong() * 1000L / duration
+                record(index, SubtitleTimelineFindingKind.FAST_READING,
+                    "Geschat " + perSecond + " zichtbare tekens per seconde " +
+                        "(boven 22); bekijk tekst en tijdvak.")
+            }
+            if (cue.text.lines().any { it.length > MAX_RECOMMENDED_LINE_LENGTH }) {
+                longLines++
+                record(index, SubtitleTimelineFindingKind.LONG_TEXT_LINE,
+                    "Minstens één tekstregel is langer dan 42 tekens; " +
+                        "overweeg zelf een regelafbreking.")
+            }
+            if (duration in 1L until BRIEF_CUE_MS) {
                 brief++
                 record(index, SubtitleTimelineFindingKind.BRIEF_CUE,
                     "Regel zichtbaar korter dan 0,5 seconde.")
@@ -78,10 +104,12 @@ internal object PrivateSubtitleTimelineInspector {
         }
         return SubtitleTimelineOverview(
             findings = found,
-            totalFindings = overlaps + shortGaps + longGaps + brief + identical,
+            totalFindings = overlaps + shortGaps + longGaps + brief +
+                identical + fastReading + longLines,
             overlapCount = overlaps, shortGapCount = shortGaps,
             longGapCount = longGaps, briefCueCount = brief,
-            sameSpanCount = identical
+            sameSpanCount = identical,
+            fastReadingCount = fastReading, longTextLineCount = longLines
         )
     }
 }
