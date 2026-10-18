@@ -55,6 +55,8 @@ import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.OfflinePhraseQuickPicker
 import com.livelingo.android.ui.MyOwnWordsPanel
+import com.livelingo.android.ui.SessionMeaningIndexDialog
+import com.livelingo.android.ui.SessionMeaningRow
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
@@ -346,6 +348,7 @@ private fun TuddyScreen(
     var editingMeaning by remember { mutableStateOf<Triple<Long, String, Int>?>(null) }
     var meaningDraft by remember { mutableStateOf("") }
     var meaningNotice by remember { mutableStateOf("") }
+    var meaningIndexOpen by remember { mutableStateOf(false) }
     // One explicitly chosen row; keep its original and revision so confirmation
     // cannot accidentally delete a different or subsequently corrected caption.
     var pendingSingleCaptionDelete by remember {
@@ -1314,6 +1317,7 @@ private fun TuddyScreen(
                 ownWordsOpen = false
                 focusMode = false
                 presentedCaptionId = null
+                meaningIndexOpen = false
                 quickTypedOpen = false
                 twoWayTypedOpen = false // forget private typed draft on background
                 draftFromExternalShare = false
@@ -1346,6 +1350,7 @@ private fun TuddyScreen(
             twoWayTypedOpen = false
             presentedCaptionId = null
             pendingCaptionLanguageChange = null
+            meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             archiveSearchQuery = ""
@@ -1573,6 +1578,38 @@ private fun TuddyScreen(
                         manualText = ""
                     }) { Text("Annuleren") }
                 }
+            )
+        }
+        if (meaningIndexOpen) {
+            SessionMeaningIndexDialog(
+                rows = lines.mapNotNull { line ->
+                    line.personalMeaning?.let { meaning ->
+                        SessionMeaningRow(
+                            line.id, line.original, line.translated, meaning,
+                            line.sourceCode, line.targetCode,
+                            (line.status == "Lokaal" || line.status == "Lokaal vertaald") &&
+                                line.original.isNotBlank()
+                        )
+                    }
+                },
+                onOpenCard = { selectedId ->
+                    meaningIndexOpen = false
+                    if (listening) stop()
+                    captionSpeaker.stop()
+                    presentedCaptionId = selectedId
+                },
+                onEdit = { selectedId ->
+                    meaningIndexOpen = false
+                    if (listening) stop()
+                    val selected = lines.firstOrNull { it.id == selectedId }
+                    if (selected != null) {
+                        editingMeaning = Triple(selected.id, selected.original,
+                            selected.translationRevision)
+                        meaningDraft = selected.personalMeaning ?: ""
+                        meaningNotice = ""
+                    }
+                },
+                onClose = { meaningIndexOpen = false }
             )
         }
         val presented = presentedCaptionId
@@ -2615,6 +2652,7 @@ private fun TuddyScreen(
                         editingMeaning = null
                         meaningDraft = ""
                         meaningNotice = ""
+                        meaningIndexOpen = false
                         correctionNotice = ""
                         pendingSingleCaptionDelete = null
                         captionDeleteNotice = ""
@@ -3558,6 +3596,11 @@ private fun TuddyScreen(
                         enabled = captionPins.isNotEmpty(),
                         onClick = { pinsOpen = true }
                     ) { Text("★ ${captionPins.size} gemarkeerd") }
+                    val ownMeanings = lines.count { it.personalMeaning != null }
+                    TextButton(
+                        enabled = ownMeanings > 0,
+                        onClick = { meaningIndexOpen = true }
+                    ) { Text("✎ ${ownMeanings} eigen uitleg") }
                     if (historySearchOpen && normalizedHistoryQuery.isNotBlank()) {
                         Text("${historyMatches.size} gevonden",
                             style = MaterialTheme.typography.bodySmall,
