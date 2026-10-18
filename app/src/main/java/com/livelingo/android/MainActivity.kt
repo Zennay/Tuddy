@@ -1546,6 +1546,9 @@ private fun TuddyScreen(
                     }
                     added
                 },
+                onSaveCuratedWord = ::saveVerifiedWord,
+                readOwnMeaning = ::readOwnWordMeaning,
+                onSaveOwnMeaning = ::saveOwnWordMeaning,
                 onOpenLimitedPhraseboard = { selected ->
                     if (selected in setOf("kmr", "ckb", "ps")) {
                         // Never add an unsupported code to ML Kit text/speech
