@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: mijn offline gesprekskaarten terugvinden
+
+Je kunt eigen Kurmanji-, Sorani- en Pasjtoe-zinnen nu tegelijk
+doorzoeken, met meerdere zoekwoorden en optioneel alleen favorieten.
+**Toon groot** bladert uitsluitend door de gefilterde resultaten
+(inclusief de gekozen taalvolgorde), niet stilzwijgend door andere
+privézinnen. De teller laat zien of er meer dan 80 kaarten zijn;
+**Toon volgende kaarten** laat die op verzoek zien. Alle betekenissen
+blijven door jezelf geschreven en ongeverifieerd.
+[Bediening en privacy](docs/PRIVATE_PHRASE_DISCOVERY.md).
+
 ## Nieuw: mijn eigen uitlegregels doorzoeken
 
 Heb je in de huidige sessie één of meer eigen betekenissen bij

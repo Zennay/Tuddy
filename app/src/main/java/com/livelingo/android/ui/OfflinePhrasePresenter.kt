@@ -61,11 +61,16 @@ private fun PhraseSide(text: String, code: String, label: String, large: Boolean
 internal fun OfflinePhrasePresenter(
     notes: List<PersonalPhrase>,
     initial: PersonalPhrase,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    mixedLanguageDeck: Boolean = false
 ) {
-    val cards = remember(notes, initial) {
-        notes.filter { it.language == initial.language }
-            .sortedWith(compareBy(PersonalPhrase::phrase))
+    // A quick-picker deck preserves the exact visible filtered order, even
+    // when several languages are selected. Regular single-note callers keep
+    // their original same-language alphabetical navigation.
+    val cards = remember(notes, initial, mixedLanguageDeck) {
+        if (mixedLanguageDeck) notes.toList() else
+            notes.filter { it.language == initial.language }
+                .sortedWith(compareBy(PersonalPhrase::phrase))
     }
     var selectedIndex by remember(cards, initial) {
         mutableIntStateOf(cards.indexOfFirst { it == initial }.coerceAtLeast(0))
@@ -107,11 +112,11 @@ internal fun OfflinePhrasePresenter(
             "Android-deelvenster geopend. Jij kiest of en waar je de zin verstuurt."
         else "Delen niet beschikbaar. Er is geen zin verzonden."
     }
-    val label = when (initial.language) {
+    val label = when (selected?.language) {
         "kmr" -> "Kurmanji"
         "ckb" -> "Sorani"
         "ps" -> "Pasjtoe"
-        else -> initial.language.uppercase()
+        else -> selected?.language?.uppercase() ?: "–"
     }
 
     Dialog(
