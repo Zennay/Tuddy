@@ -54,6 +54,7 @@ import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.FocusCaptionLine
+import com.livelingo.android.ui.LiveInterimWordFocus
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
 import java.io.ByteArrayOutputStream
@@ -2849,12 +2850,15 @@ private fun TuddyScreen(
                             Card {
                                 Column(Modifier.padding(14.dp)) {
                                     Text("● Spreekt nu…", color = MaterialTheme.colorScheme.primary)
+                                    LiveInterimWordFocus(
+                                        text = partial,
+                                        fontScale = captionSize.scale,
+                                        compact = true
+                                    )
                                     Text(
-                                        partial,
-                                        style = MaterialTheme.typography.bodyLarge.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
-                                        )
+                                        "Laatste tekstwoord benadrukt, niet synchroon met audio.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     if (partialTranslation.isNotBlank()) {
                                         Text(partialTranslation,
