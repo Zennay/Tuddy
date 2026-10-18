@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -381,6 +382,20 @@ private fun TuddyScreen() {
             error = "Deze telefoon heeft geen on-device spraakherkenning. Tuddy schakelt niet over naar cloud-spraak."
             return
         }
+        // Android can report that this selected locale is definitely not
+        // installed locally. Never start a doomed mic session or silently use
+        // an online language pack for that known state. Unknown API support
+        // may still attempt createOnDeviceSpeechRecognizer (never network STT).
+        if (speechPackReceipt.tag == source.speechCode &&
+            speechPackReceipt.stage in setOf(
+                SpeechPackStage.DOWNLOADABLE, SpeechPackStage.PENDING,
+                SpeechPackStage.ONLINE_ONLY, SpeechPackStage.UNSUPPORTED
+            )) {
+            listening = false
+            error = "Voor ${source.label} is geen geïnstalleerd lokaal spraakpakket bevestigd. " +
+                "Controleer spraak en bereid het pakket voor via wifi."
+            return
+        }
         if (listening && !forceRestart) return
         try {
             // Every start, including a rapid restart after Android's own end-of-speech,
@@ -651,7 +666,19 @@ private fun TuddyScreen() {
                         previewResult = SafeCommunityPhrasebook.translate(previewSource, previewTarget, previewInput)
                             .fold(onSuccess = { it }, onFailure = { "Niet in deze kleine woordenlijst." })
                     }, enabled = previewInput.isNotBlank()) { Text("Zoek basiswoord lokaal") }
-                    if (previewResult != null) Text(previewResult!!, color = MaterialTheme.colorScheme.primary)
+                    if (previewResult != null) {
+                        Text(
+                            text = previewResult!!,
+                            color = MaterialTheme.colorScheme.primary,
+                            // The manually reviewed Sorani and Pashto phrases
+                            // use Arabic-based scripts; do not guess based on
+                            // the user's phone/system locale.
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = if (previewTarget == "ckb" || previewTarget == "ps")
+                                    TextDirection.Rtl else TextDirection.Ltr
+                            )
+                        )
+                    }
                     Text("Niet geschikt voor medisch, juridisch of asieladvies zonder tolk. Controle door moedertaalsprekers ontbreekt.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
