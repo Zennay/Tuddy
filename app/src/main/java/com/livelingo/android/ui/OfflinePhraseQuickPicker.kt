@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivatePhraseShortcuts
+import com.livelingo.android.PrivatePhraseTopics
 import java.util.Locale
 
 /**
@@ -48,10 +49,14 @@ internal fun OfflinePhraseQuickPicker(
     var query by remember { mutableStateOf("") }
     var presenting by remember { mutableStateOf<PersonalPhrase?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
+    var selectedTopic by remember { mutableStateOf<String?>(null) }
     var pinsRevision by remember { mutableIntStateOf(0) }
     var pinNotice by remember { mutableStateOf("") }
     val context = LocalContext.current
     val shortcuts = remember(context) { PrivatePhraseShortcuts(context) }
+    val topicStore = remember(context) { PrivatePhraseTopics(context) }
+    val topics = topicStore.topics()
+    val filteredTopic = selectedTopic?.takeIf { it == "__without__" || it in topics }
     val availableNotes = phrases.orEmpty()
     val pinnedNotes = remember(phrases, pinsRevision) {
         shortcuts.pinnedNotes(availableNotes)
@@ -60,7 +65,14 @@ internal fun OfflinePhraseQuickPicker(
     // Keep the presentation deck EXACTLY equal to the user's visible filter.
     val terms = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
     val filtered = availableNotes.filter { note ->
-        (!favoritesOnly || note in pinnedNotes) &&
+        val assigned = topicStore.topicFor(note)
+        val matchesTopic = when (filteredTopic) {
+            null -> true
+            "__without__" -> assigned == null
+            else -> assigned == filteredTopic
+        }
+        matchesTopic &&
+            (!favoritesOnly || note in pinnedNotes) &&
             (code == "all" || note.language == code) &&
             terms.all { term ->
                 note.phrase.contains(term, ignoreCase = true) ||
@@ -104,6 +116,28 @@ internal fun OfflinePhraseQuickPicker(
                     names.forEach { (tag, name) ->
                         TextButton(onClick = { code = tag; visibleLimit = 80 }) {
                             Text(if (code == tag) name + " ✓" else name)
+                        }
+                    }
+                }
+                Text("Mijn zelfgekozen thema’s", style = MaterialTheme.typography.labelMedium)
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    TextButton(onClick = { selectedTopic = null; visibleLimit = 80 }) {
+                        Text(if (filteredTopic == null) "Alle thema’s ✓" else "Alle thema’s")
+                    }
+                    TextButton(onClick = {
+                        selectedTopic = "__without__"
+                        visibleLimit = 80
+                    }) {
+                        Text(if (filteredTopic == "__without__") "Zonder thema ✓"
+                            else "Zonder thema")
+                    }
+                    topics.forEach { topic ->
+                        TextButton(onClick = {
+                            selectedTopic = topic
+                            visibleLimit = 80
+                        }) {
+                            Text(if (filteredTopic == topic) "$topic ✓" else topic)
                         }
                     }
                 }
@@ -151,6 +185,8 @@ internal fun OfflinePhraseQuickPicker(
                         Text(item.ownMeaning,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Privéthema: ${topicStore.topicFor(item) ?: "Geen"}",
+                            style = MaterialTheme.typography.labelSmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { presenting = item }) {
                                 Text("Toon groot")
