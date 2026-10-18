@@ -1,5 +1,7 @@
 package com.livelingo.android
 
+import java.util.Locale
+
 /**
  * Combine two manually selected caption tracks into a temporary parallel reading copy.
  *
@@ -15,16 +17,36 @@ internal data class SubtitleTrackPairingPreview(
 )
 
 internal object PrivateSubtitleTrackPairing {
+    private val allowedOffsets = setOf(-10_000L, -5_000L, -2_000L, 0L,
+        2_000L, 5_000L, 10_000L)
+    private fun stamp(millis: Long): String = String.format(Locale.ROOT,
+        "%02d:%02d:%02d,%03d", millis / 3_600_000L,
+        millis / 60_000L % 60, millis / 1000L % 60, millis % 1000L)
+
     fun preview(
         primary: List<PrivateSubtitleCue>,
-        secondary: List<PrivateSubtitleCue>
+        secondary: List<PrivateSubtitleCue>,
+        secondTrackOffsetMs: Long = 0L
     ): SubtitleTrackPairingPreview? {
-        if (primary.isEmpty() || secondary.isEmpty() ||
+        if (secondTrackOffsetMs !in allowedOffsets ||
+            primary.isEmpty() || secondary.isEmpty() ||
             primary.size > 500 || secondary.size > 500 ||
             PrivateSubtitleDraftEditor.snapshot(primary, SubtitleDraftFormat.SRT) == null ||
             PrivateSubtitleDraftEditor.snapshot(secondary, SubtitleDraftFormat.SRT) == null
         ) return null
 
+        // The offset is user-selected and applies only in this temporary draft.
+        // Reject shifts beyond the same limits as the underlying SRT/VTT editor.
+        val adjusted = mutableListOf<PrivateSubtitleCue>()
+        for (cue in secondary) {
+            val start = cue.startMillis + secondTrackOffsetMs
+            val end = cue.endMillis + secondTrackOffsetMs
+            if (start < 0L || end > 359_999_999L) return null
+            adjusted += if (secondTrackOffsetMs == 0L) cue else cue.copy(
+                startMillis = start, endMillis = end,
+                startLabel = stamp(start), endLabel = stamp(end)
+            )
+        }
         val used = BooleanArray(primary.size)
         val matched = arrayOfNulls<String>(primary.size)
         val leftovers = mutableListOf<PrivateSubtitleCue>()
@@ -32,7 +54,7 @@ internal object PrivateSubtitleTrackPairing {
         // Consider secondary cues chronologically. For each, choose the unused
         // source cue with greatest actual interval overlap. A brief crossing of
         // boundaries is not enough to infer that two sentences belong together.
-        for (candidate in secondary) {
+        for (candidate in adjusted) {
             var best = -1
             var bestOverlap = 0L
             primary.forEachIndexed { index, source ->
