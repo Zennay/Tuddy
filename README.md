@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: eigen ongecontroleerde woordbetekenissen oefenen
+
+Bij **Mijn eigen offline woorden** kun je nu ook zelfgeschreven woorden
+oefenen, zonder ze eerst aan een gecontroleerd woordenboek toe te voegen.
+Kies een taal, onthul je eigen betekenis op verzoek, draai de vraagrichting
+om en beoordeel jezelf. Er zijn maximaal twintig kaarten per ronde, met
+bladeren naar volgende woorden. **Scores worden niet opgeslagen.** Dit
+zijn geen geverifieerde vertalingen of taalvaardigheidsresultaten.
+[Bediening en privacy](docs/PRIVATE_OWN_WORD_FLASHCARDS.md).
+
+
 ## Nieuw: alles wat je vandaag offline kunt oefenen
 
 Op het hoofdscherm opent **🧠 Vandaag offline oefenen** één overzicht van
