@@ -28,10 +28,11 @@ internal fun OfflinePhraseSpeechActions(
     originalLabel: String,
     meaningLabel: String,
     speaker: LocalCaptionSpeaker,
-    onNotice: (String) -> Unit
+    onNotice: (String) -> Unit,
+    meaningReady: Boolean = true
 ) {
     val originalPlayable = original.isNotBlank() && original.length <= 400
-    val meaningPlayable = meaning.isNotBlank() && meaning.length <= 400
+    val meaningPlayable = meaningReady && meaning.isNotBlank() && meaning.length <= 400
     Column(modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(modifier = Modifier.fillMaxWidth(),
