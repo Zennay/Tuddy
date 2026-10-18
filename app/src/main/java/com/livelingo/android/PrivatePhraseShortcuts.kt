@@ -43,6 +43,12 @@ internal class PrivatePhraseShortcuts(context: Context) {
     }
 
     @Synchronized
+    fun pinnedNotes(notes: List<PersonalPhrase>): Set<PersonalPhrase> {
+        val hashes = pinned(notes)
+        return notes.filterTo(mutableSetOf()) { fingerprint(it) in hashes }
+    }
+
+    @Synchronized
     fun isPinned(note: PersonalPhrase, notes: List<PersonalPhrase>): Boolean =
         fingerprint(note) in pinned(notes)
 
