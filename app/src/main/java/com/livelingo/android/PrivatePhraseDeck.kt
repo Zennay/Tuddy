@@ -95,7 +95,7 @@ internal class PrivatePhraseDeck(context: Context) {
         }.toSet().size != entries.size) return false
         val value = toJson(entries).toString()
         if (value.length > MAX_JSON) return false
-        val allowedPins = entries.map(PrivatePhraseShortcuts::fingerprint).toSet()
+        val allowedPins = entries.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
         val storedPins = runCatching {
             prefs.getStringSet(PrivatePhraseShortcuts.KEY, emptySet())?.toSet().orEmpty()
         }.getOrDefault(emptySet())
