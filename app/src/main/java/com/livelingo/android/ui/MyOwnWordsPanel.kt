@@ -57,6 +57,7 @@ internal fun MyOwnWordsPanel(
     var revision by remember { mutableIntStateOf(0) }
     var notice by remember { mutableStateOf("") }
     var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingTsvExport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingRestore by remember { mutableStateOf<List<OwnWord>?>(null) }
     var restoreOrigin by remember { mutableStateOf("json") }
     val context = LocalContext.current
@@ -79,6 +80,27 @@ internal fun MyOwnWordsPanel(
                 }.getOrDefault(false)
                 notice = if (saved) "Eigen woorden bewaard op je gekozen locatie."
                     else "Bestand niet opgeslagen. Je privéwoorden blijven behouden."
+            }
+        }
+    }
+    val tsvExportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/tab-separated-values")
+    ) { uri ->
+        val snapshot = pendingTsvExport
+        pendingTsvExport = null
+        if (uri != null && snapshot != null) {
+            if (deck.exportTsvSnapshot()?.contentEquals(snapshot) != true) {
+                notice = "Eigen woorden zijn gewijzigd. Maak de TSV-lijst opnieuw."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                        stream.write(snapshot)
+                        stream.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                notice = if (saved) "Eigen woordenlijst opgeslagen als UTF-8 TSV."
+                    else "TSV niet opgeslagen. Je privéwoorden blijven behouden."
             }
         }
     }
@@ -362,6 +384,23 @@ internal fun MyOwnWordsPanel(
                         ))
                     }
                 ) { Text("Importeer eigen woordenlijst (TSV)…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = items?.isNotEmpty() == true,
+                    onClick = {
+                        val snapshot = deck.exportTsvSnapshot()
+                        if (snapshot == null) {
+                            notice = "Geen geldige eigen woorden voor TSV-export."
+                        } else {
+                            pendingTsvExport = snapshot
+                            tsvExportPicker.launch("tuddy-mijn-eigen-woorden.tsv")
+                        }
+                    }
+                ) { Text("Exporteer mijn eigen woorden (TSV)…") }
+                Text("TSV bevat alleen je zelfgeschreven betekenissen. " +
+                    "Je kunt de lijst buiten Tuddy wijzigen en later bewust " +
+                    "samenvoegen of vervangen. Geen automatische uploads.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("Maak zelf een UTF-8-tekstbestand met kolommen language, word, meaning " +
                     "gescheiden door tabs. Verplicht eerste regel: " +
                     "language<TAB>word<TAB>meaning. Maximaal 120 eigen woorden. " +
