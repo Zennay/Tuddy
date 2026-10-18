@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: één studieoverzicht voor alle drie je eigen oefenstromen
+
+**Vandaag offline oefenen** toont nu ook de vrijwillige herhaalplanning
+voor je **eigen woordbetekenissen**, naast bewaarde basiswoorden en
+zelfgeschreven Kurmanji-/Sorani-/Pasjtoe-zinnen. Bekijk de gezamenlijke
+vandaagteller, open een van de drie kaartreeksen of beheer de
+toestemming en opslag per onderdeel. Niets start automatisch en
+eigen betekenissen zijn niet onafhankelijk gecontroleerd.
+[Handleiding en beperkingen](docs/THREE_LANE_OFFLINE_STUDY_HUB.md).
+
+
 ## Nieuw: één privéthema als afdrukbaar zinnenboek
 
 Na het kiezen van een zelfgemaakt thema kun je nu alleen die zinnen
