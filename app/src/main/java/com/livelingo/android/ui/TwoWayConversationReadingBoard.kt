@@ -46,7 +46,10 @@ internal fun TwoWayConversationReadingBoard(
     onSaveCuratedWord: (String, String) -> Boolean,
     readOwnMeaning: (String, String) -> String?,
     onSaveOwnMeaning: (String, String, String) -> Boolean,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onSubmitTurn: ((String, String, String) -> Boolean)? = null,
+    initialSource: String = "nl",
+    initialTarget: String = "en"
 ) {
     var query by remember { mutableStateOf("") }
     var finishedOnly by remember { mutableStateOf(false) }
@@ -82,7 +85,9 @@ internal fun TwoWayConversationReadingBoard(
 
     if (faceToFace) {
         FaceToFaceConversationDialog(
-            lines = admitted, onBack = { faceToFace = false }
+            lines = admitted, onBack = { faceToFace = false },
+            onSubmitTurn = onSubmitTurn, initialSource = initialSource,
+            initialTarget = initialTarget
         )
         return
     }

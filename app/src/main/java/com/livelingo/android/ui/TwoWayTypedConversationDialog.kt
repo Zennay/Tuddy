@@ -163,7 +163,8 @@ internal fun TwoWayTypedConversationDialog(
             onSaveCuratedWord = onSaveCuratedWord,
             readOwnMeaning = readOwnMeaning,
             onSaveOwnMeaning = onSaveOwnMeaning,
-            onDismiss = { readerOpen = false }
+            onDismiss = { readerOpen = false },
+            onSubmitTurn = onSend, initialSource = from, initialTarget = to
         )
         return
     }
