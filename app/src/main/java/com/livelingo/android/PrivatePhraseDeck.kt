@@ -173,6 +173,16 @@ internal class PrivatePhraseDeck(context: Context) {
                 current != null && previous[hash] == current
             }
         }
+        val savedTopics = runCatching {
+            prefs.getStringSet(PrivatePhraseTopics.ASSIGNMENTS_KEY, emptySet())
+                ?.toSet().orEmpty()
+        }.getOrDefault(emptySet())
+        // A deleted or renamed phrase must never regain an old topic if an
+        // identical phrase is imported much later. Export excludes topic data.
+        val allowedTopics = if (resetReview) emptySet() else savedTopics.filterTo(mutableSetOf()) {
+            row -> row.length > 65 && row.substring(0, 64) in allowedPins &&
+                row[64] == '|'
+        }
         val storedPins = runCatching {
             prefs.getStringSet(PrivatePhraseShortcuts.KEY, emptySet())?.toSet().orEmpty()
         }.getOrDefault(emptySet())
@@ -183,6 +193,7 @@ internal class PrivatePhraseDeck(context: Context) {
                 .putString(KEY, value)
                 .putStringSet(PrivatePhraseShortcuts.KEY, storedPins.intersect(allowedPins))
                 .putStringSet(REVIEW_ROWS, encodeReviews(allowedReviews))
+                .putStringSet(PrivatePhraseTopics.ASSIGNMENTS_KEY, allowedTopics)
                 .commit()
         } catch (_: RuntimeException) { false }
     }
@@ -342,7 +353,9 @@ internal class PrivatePhraseDeck(context: Context) {
     @Synchronized
     fun clear(): Boolean = try {
         prefs.edit().remove(KEY).remove(PrivatePhraseShortcuts.KEY)
-            .remove(REVIEW_OPT_IN).remove(REVIEW_ROWS).commit()
+            .remove(REVIEW_OPT_IN).remove(REVIEW_ROWS)
+            .remove(PrivatePhraseTopics.ASSIGNMENTS_KEY)
+            .remove(PrivatePhraseTopics.TOPICS_KEY).commit()
     }
     catch (_: RuntimeException) { false }
 }
