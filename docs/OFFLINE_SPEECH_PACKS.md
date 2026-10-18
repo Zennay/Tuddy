@@ -17,14 +17,20 @@ show `unknown`, never invent installed coverage.
    Before every model request, Tuddy checks that the active network is Wi-Fi.
    This is an admission check, **not** a guarantee about future Android
    transport policy if Wi-Fi drops. Android itself controls the download.
-4. Android 14+ shows on-device service progress/scheduled/success/failure.
+4. Download errors expose **Opnieuw via wifi** rather than trapping the
+   user in an error state. During a lengthy status check or OS-managed
+   download, **Stop volgen** cancels Tuddy's progress observer, not an
+   Android-owned queued download. If Android reports a known missing,
+   pending, unsupported or online-only pack, Tuddy blocks the microphone
+   start for that selected locale and gives a visible remedy.
+5. Android 14+ shows on-device service progress/scheduled/success/failure.
    After success Tuddy **checks installed coverage again**, rather than
    trusting a progress receipt. Android 13 can request download but cannot
    track completion in this API; use **Controleer spraak** again.
-5. Android 12 and any service not implementing the API remain
+6. Android 12 and any service not implementing the API remain
    unknown/unsupported rather than falsely installed. The microphone path
    remains on-device-only and subject to the device's own speech service.
-6. On source change, Stop, Activity background, or screen disposal,
+7. On source change, Stop, Activity background, or screen disposal,
    stale callbacks from the manager are invalidated and the manager-owned
    recognizer destroyed. No microphone samples, transcript, model contents,
    URLs, or downloaded status are written to disk.
@@ -37,6 +43,9 @@ interpreted as proof of speech coverage. Similarly, seeing `en-US` installed
 is no proof that a generic `en` pack, another locale or a switch from Arabic
 to Pashto is reliable. The requested tag must appear exactly in Android's
 on-device installed list; otherwise users see a partial/unknown status.
+The five manually curated preview expressions for Sorani and Pashto use
+explicit right-to-left typography in the result panel; Kurmanji remains
+left-to-right Latin script.
 
 Kurmanji (`kmr_Latn`), Sorani (`ckb_Arab`, right-to-left) and Pashto
 (`pbt_Arab`, right-to-left) **remain a five-phrase manual-only preview**;
