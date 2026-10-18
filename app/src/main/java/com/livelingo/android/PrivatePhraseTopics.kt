@@ -44,7 +44,8 @@ internal class PrivatePhraseTopics(context: Context) {
      * Each row is fingerprint|theme; malformed or duplicate records are
      * refused rather than letting stale data silently change topic ownership.
      */
-    private fun readAssignments(): Map<String, String>? = try {
+    private fun readAssignments(): Map<String, String>? {
+        return try {
         val rows = prefs.getStringSet(ASSIGNMENTS_KEY, emptySet())?.toSet()
             ?: return null
         if (rows.size > MAX_PHRASES) return null
@@ -59,7 +60,8 @@ internal class PrivatePhraseTopics(context: Context) {
         }
         if (parsed.map { it.first }.toSet().size != parsed.size) return null
         parsed.toMap()
-    } catch (_: RuntimeException) { null }
+        } catch (_: RuntimeException) { null }
+    }
 
     private fun rows(assignments: Map<String, String>): Set<String> =
         assignments.map { (identity, topic) -> "$identity|$topic" }.toSet()
