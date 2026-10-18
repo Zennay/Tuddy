@@ -16,6 +16,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,9 +29,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PersonalPhrasePracticeRound
 import com.livelingo.android.PrivatePhraseShortcuts
+import com.livelingo.android.LocalCaptionSpeaker
 
 /**
  * Optional study of notes typed by the user. No translation engine, online
@@ -50,7 +56,22 @@ internal fun PersonalPhrasePracticePanel(
     var favoritesOnly by remember { mutableStateOf(false) }
     var pinsRevision by remember { mutableIntStateOf(0) }
     var favoriteNotice by remember { mutableStateOf("") }
+    var audioNotice by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    DisposableEffect(speaker, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                speaker.stop()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            speaker.close()
+        }
+    }
     val shortcuts = remember(context) { PrivatePhraseShortcuts(context) }
     val pinnedNotes = remember(notes, pinsRevision) {
         shortcuts.pinnedNotes(notes)
@@ -73,9 +94,14 @@ internal fun PersonalPhrasePracticePanel(
     val card = round.current
     val names = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val isRtl = card?.language == "ckb" || card?.language == "ps"
+    LaunchedEffect(card?.phrase, card?.language, round.revealed, round.attempts,
+        selectedLanguage, shuffleVersion, favoritesOnly, reverse) {
+        speaker.stop()
+        audioNotice = ""
+    }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { speaker.stop(); onDismiss() },
         title = { Text("Oefen mijn eigen zinnen · offline") },
         text = {
             Column(
@@ -174,6 +200,27 @@ internal fun PersonalPhrasePracticePanel(
                         Text(if (card in pinnedNotes) "★ Favoriet verwijderen"
                             else "☆ Bewaar als favoriet")
                     }
+                    OfflinePhraseSpeechActions(
+                        original = if (reverse) card.ownMeaning else card.phrase,
+                        originalLanguage = if (reverse) card.meaningLanguage else card.language,
+                        meaning = if (reverse) card.phrase else card.ownMeaning,
+                        meaningLanguage = if (reverse) card.language else card.meaningLanguage,
+                        originalLabel = "Vraag",
+                        meaningLabel = "Antwoord",
+                        speaker = speaker,
+                        onNotice = { audioNotice = it },
+                        meaningReady = round.revealed
+                    )
+                    if (audioNotice.isNotBlank()) {
+                        Text(audioNotice, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text(
+                        "Hoor het antwoord pas na Toon mijn betekenis. " +
+                            "Alleen reeds geïnstalleerde lokale Android-stemmen, " +
+                            "geen online stem of automatisch doorspelen.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     if (round.revealed) {
                         Text(
                             if (reverse) card.phrase else card.ownMeaning,
@@ -236,7 +283,7 @@ internal fun PersonalPhrasePracticePanel(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Terug naar eigen zinnen") }
+            TextButton(onClick = { speaker.stop(); onDismiss() }) { Text("Terug naar eigen zinnen") }
         }
     )
 }
