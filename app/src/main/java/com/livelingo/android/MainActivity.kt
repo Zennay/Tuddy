@@ -52,6 +52,7 @@ import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
 import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
+import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.FocusCaptionLine
 import com.livelingo.android.ui.LiveInterimWordFocus
@@ -171,7 +172,21 @@ private fun TuddyScreen(
     var savedWordRevision by remember { mutableIntStateOf(0) }
     val savedWordCount = remember(savedWordRevision) { savedVocabulary.entries().size }
     var savedWordsOpen by remember { mutableStateOf(false) }
+    val ownWordDeck = remember(context) { PrivateOwnWordDeck(context) }
+    var ownWordRevision by remember { mutableIntStateOf(0) }
+    var ownWordsOpen by remember { mutableStateOf(false) }
     var savedWordNotice by remember { mutableStateOf("") }
+    fun saveOwnWordMeaning(language: String, word: String, meaning: String): Boolean {
+        val saved = ownWordDeck.save(language, word, meaning)
+        if (saved) ownWordRevision++
+        return saved
+    }
+    fun readOwnWordMeaning(language: String, word: String): String? {
+        // Recompose dependent word cards when a user explicitly edits a note.
+        ownWordRevision
+        return ownWordDeck.find(language, word)?.ownMeaning
+    }
+
     fun saveVerifiedWord(language: String, word: String): Boolean {
         val saved = savedVocabulary.save(language, word)
         savedWordNotice = if (saved) "Woord opgeslagen in je privéwoordenlijst."
@@ -1766,10 +1781,15 @@ private fun TuddyScreen(
             OfflineStudyFlashcards(
                 savedWords = savedVocabulary.entries(),
                 personalPhrases = personalPhrases.entries(),
+                ownWords = remember(ownWordRevision) { ownWordDeck.entries() },
                 speaker = captionSpeaker,
                 onManageWords = {
                     flashcardsOpen = false
                     savedWordsOpen = true
+                },
+                onManageOwnWords = {
+                    flashcardsOpen = false
+                    ownWordsOpen = true
                 },
                 onManagePhrases = {
                     flashcardsOpen = false
@@ -1785,6 +1805,14 @@ private fun TuddyScreen(
                     personalPhrasesOpen = true
                 },
                 onDismiss = { starterPhraseboardOpen = false }
+            )
+        }
+        if (ownWordsOpen) {
+            MyOwnWordsPanel(
+                deck = ownWordDeck,
+                initialLanguage = source.translateCode,
+                onChanged = { ownWordRevision++ },
+                onDismiss = { ownWordsOpen = false }
             )
         }
         if (personalPhrasesOpen) {
@@ -1874,12 +1902,14 @@ private fun TuddyScreen(
         }
         if (pendingStudyErase) {
             val wordTotal = savedVocabulary.entries().size
+            val ownWordTotal = ownWordDeck.entries()?.size
             val phraseTotal = personalPhrases.entries()?.size
             AlertDialog(
                 onDismissRequest = { pendingStudyErase = false },
                 title = { Text("Privé-oefengegevens definitief wissen?") },
                 text = {
-                    Text("Dit wist $wordTotal opgeslagen woorden, " +
+                    Text("Dit wist $wordTotal opgeslagen basiswoorden en " +
+                        "${ownWordTotal?.toString() ?: "een onbekend aantal"} eigen woordnotities, " +
                         "${phraseTotal?.toString() ?: "een onbekend aantal"} eigen oefenzinnen " +
                         "en ${favoritePairs.size} favoriete taalparen uit de lokale app-instellingen. " +
                         "Je huidige tijdelijke gesprek en losse exportbestanden blijven staan. " +
@@ -1890,21 +1920,25 @@ private fun TuddyScreen(
                     TextButton(onClick = {
                         pendingStudyErase = false
                         val wordsCleared = savedVocabulary.clear()
+                        val ownWordsCleared = ownWordDeck.clear()
                         val phrasesCleared = personalPhrases.clear()
                         val favoritesCleared = favoriteStorage.clear()
                         savedWordRevision++
+                        ownWordRevision++
                         favoritePairs = favoriteStorage.entries(allowedSpeechTags)
                         savedWordNotice = ""
                         favoritesNotice = ""
                         savedWordsOpen = false
+                        ownWordsOpen = false
                         personalPhrasesOpen = false
                         flashcardsOpen = false
-                        studyEraseNotice = if (wordsCleared && phrasesCleared && favoritesCleared) {
-                            "Opgeslagen woorden, eigen zinnen en favoriete taalparen gewist. " +
+                        studyEraseNotice = if (wordsCleared && ownWordsCleared && phrasesCleared && favoritesCleared) {
+                            "Opgeslagen basiswoorden, eigen woorden, eigen zinnen en favoriete taalparen gewist. " +
                                 "Gesprek, taalkeuze en eerdere externe exports zijn behouden."
                         } else {
                             "Niet alles kon worden gewist. " +
-                                "Woorden: ${if (wordsCleared) "gewist" else "mislukt"}, " +
+                                "Basiswoorden: ${if (wordsCleared) "gewist" else "mislukt"}, " +
+                                "eigen woorden: ${if (ownWordsCleared) "gewist" else "mislukt"}, " +
                                 "zinnen: ${if (phrasesCleared) "gewist" else "mislukt"}, " +
                                 "favorieten: ${if (favoritesCleared) "gewist" else "mislukt"}. " +
                                 "Probeer opnieuw voor de overgebleven gegevens."
@@ -2077,6 +2111,13 @@ private fun TuddyScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("🧠 Oefenkaarten · mijn opgeslagen woorden en zinnen") }
+                TextButton(
+                    onClick = {
+                        if (listening) stop()
+                        ownWordsOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("✎ Mijn eigen woorden · offline betekenissen") }
                 OutlinedButton(onClick = {
                     favoritesOpen = !favoritesOpen
                     if (favoritesOpen) {
@@ -3008,7 +3049,9 @@ private fun TuddyScreen(
                                         fontWeight = FontWeight.Medium,
                                         fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
                                     ),
-                                    onSaveWord = ::saveVerifiedWord
+                                    onSaveWord = ::saveVerifiedWord,
+                                    readOwnMeaning = ::readOwnWordMeaning,
+                                    saveOwnMeaning = ::saveOwnWordMeaning
                                 )
                                 if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
                                     OfflineWordText(
@@ -3017,7 +3060,9 @@ private fun TuddyScreen(
                                             color = MaterialTheme.colorScheme.primary,
                                             fontSize = MaterialTheme.typography.titleMedium.fontSize * captionSize.scale
                                         ),
-                                        onSaveWord = ::saveVerifiedWord
+                                        onSaveWord = ::saveVerifiedWord,
+                                    readOwnMeaning = ::readOwnWordMeaning,
+                                    saveOwnMeaning = ::saveOwnWordMeaning
                                     )
                                 } else {
                                     Text(
