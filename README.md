@@ -16,6 +16,19 @@ zichtbaar label. De microfoon moet uit staan. Dit is geen echte
 spraakmodelverbetering of menselijke tolkvalidatie.
 [Bediening, privacy en grenzen](docs/CAPTION_CORRECTIONS.md).
 
+## Nieuw: mobiel transcript-eerst gesprekscherm
+
+Op kleinere telefoons blijft de live ondertiteltijdlijn zichtbaar: **Luister,
+Wis gesprek, Volg live, ⛶ Leesmodus en ⇄ Wissel richting** blijven bereikbaar.
+De knop **Gesprekstools · export, sprekers en archief** opent een begrensd,
+intern scrollbaar paneel voor de bestaande spreker-navigatie, eigen TXT/JSON-
+export, privéarchief en eventueel apart gelabelde export, plus nieuwe
+archiefacties. Het paneel is standaard gesloten; ook de taal- en
+modelinstellingen blijven afzonderlijk uitklapbaar. Beide grote panelen
+sluiten elkaar om niet tegelijk de ruimte boven de live tekst op te eisen.
+Alle bestaande privacybevestigingen, documentkiezers en rechten blijven
+onveranderd. Dit is broncode, geen fysiek geïnstalleerde/release-APK.
+
 ## Nieuw: schermvullend live meelezen
 
 Open **⛶ Leesmodus · schermvullende ondertitels** voor een rustige weergave
