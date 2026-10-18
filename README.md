@@ -37,6 +37,17 @@ online fallback. Een eigen stopactie beëindigt de uitspraak.
 Er wordt niets als audio bewaard.
 [Bediening en beperkingen](docs/OFFLINE_PRONUNCIATION_CHOICES.md).
 
+## Nieuw: 5 offline basiswoorden direct bereikbaar
+
+Het gespreksscherm heeft nu **🌍 5 basiswoorden · Kurmanji, Sorani,
+Pasjtoe**. Eén tik toont alle vijf bestaande, exact gebundelde
+basiswoorden (hallo, bedankt, ja, nee, water) in de gekozen taal,
+met Nederlandse of Engelse brontekst. Dit werkt zonder microfoon,
+wifi of taalmodel en biedt een route naar de eigen offline
+oefenzinnen. Het is **geen** vrije vertaalmachine, geen bewijs van
+spraakondersteuning of moedertaalsprekeracceptatie.
+[Overzicht en grenzen](docs/COMMUNITY_STARTER_PHRASEBOARD.md).
+
 ## Nieuw: offline startcheck vanaf het hoofdscherm
 
 De knop **Offline startcheck** laat zien of de gekozen Android-spreektaal
