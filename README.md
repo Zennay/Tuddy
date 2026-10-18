@@ -1,5 +1,15 @@
 # Tuddy 🎙️
 
+## Nieuw: acht weken studieplanning bewust als agenda bewaren
+
+In **Mijn offline studieplanning** kun je nu na een aparte keuze een
+`.ics`-bestand opslaan met uitsluitend **datums en aantallen** van je
+bestaande herhaalplannen. Kies zelf welke ingeschakelde kaartgroepen
+meetellen; geen woorden, eigen betekenissen of gesprekken verlaten de app.
+Een externe provider of agenda-app kan het bestand wel synchroniseren;
+de export wordt niet automatisch bijgewerkt.
+[Uitleg en privacy](docs/PRIVATE_STUDY_CALENDAR_ICS_EXPORT.md).
+
 ## Nieuw: mijn privéthema-indeling bewust overzetten
 
 De thema-manager kan nu naast je bestaande eigen zinnen een

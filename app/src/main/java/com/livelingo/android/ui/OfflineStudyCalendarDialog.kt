@@ -140,6 +140,11 @@ internal fun OfflineStudyCalendarDialog(
                             "om de nieuwste datums te zien.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    PrivateStudyCalendarExportAction(
+                        words = words,
+                        ownWords = ownWords,
+                        phrases = phrases
+                    )
                 }
                 Text(
                     "Eigen woorden en zinnen zijn door jou geschreven, niet " +
