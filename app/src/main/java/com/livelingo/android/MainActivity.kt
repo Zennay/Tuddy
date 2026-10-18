@@ -274,18 +274,6 @@ private fun TuddyScreen(
     var pendingSpeakerExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
-    // Android window flag is present ONLY during a consented listening session.
-    // It never acquires a wake lock, starts the microphone or overrides Stop.
-    DisposableEffect(screenActivity, listening, keepScreenAwakeOn) {
-        val active = screenActivity != null && listening && keepScreenAwakeOn
-        if (active) {
-            screenActivity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-        onDispose {
-            if (active) screenActivity?.window
-                ?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
     var preparingOfflineModel by remember { mutableStateOf(false) }
     var offlineModelStatus by remember { mutableStateOf("") }
     val offlinePreparationEpoch = remember { OfflinePreparationEpoch() }
@@ -1253,6 +1241,19 @@ private fun TuddyScreen(
             pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
             captionSpeaker.close()
+        }
+    }
+
+    // Android window flag is present ONLY during a consented listening session.
+    // It never acquires a wake lock, starts the microphone or overrides Stop.
+    DisposableEffect(screenActivity, listening, keepScreenAwakeOn) {
+        val active = screenActivity != null && listening && keepScreenAwakeOn
+        if (active) {
+            screenActivity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            if (active) screenActivity?.window
+                ?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
