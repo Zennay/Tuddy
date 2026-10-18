@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
 import com.livelingo.android.ui.SavedWordsPanel
+import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import java.text.DateFormat
 import java.util.Date
 
@@ -135,6 +136,8 @@ private fun TuddyScreen() {
     var targetQuery by remember { mutableStateOf("") }
     // A deliberately separate offline phrase preview: never passed to ML Kit or ASR.
     var previewTarget by remember { mutableStateOf("kmr") }
+    val personalPhrases = remember(context) { PrivatePhraseDeck(context) }
+    var personalPhrasesOpen by remember { mutableStateOf(false) }
     var previewSource by remember { mutableStateOf("nl") }
     var previewMenuOpen by remember { mutableStateOf(false) }
     var previewInput by remember { mutableStateOf("") }
@@ -672,6 +675,13 @@ private fun TuddyScreen() {
     }
 
     MaterialTheme(colorScheme = colors) {
+        if (personalPhrasesOpen) {
+            MyOfflinePhrasesPanel(
+                deck = personalPhrases,
+                initialLanguage = previewTarget,
+                onDismiss = { personalPhrasesOpen = false }
+            )
+        }
         if (savedWordsOpen) {
             SavedWordsPanel(
                 deck = savedVocabulary,
@@ -923,6 +933,12 @@ private fun TuddyScreen() {
                             )
                         )
                     }
+                    OutlinedButton(onClick = { personalPhrasesOpen = true }) {
+                        Text("Mijn eigen Kurmanji/Sorani/Pasjtoe zinnen")
+                    }
+                    Text("Je kunt zelf zinnen en eigen betekenissen offline opslaan. " +
+                        "Tuddy vertaalt of controleert jouw eigen zinnen niet automatisch.",
+                        style = MaterialTheme.typography.bodySmall)
                     Text("Niet geschikt voor medisch, juridisch of asieladvies zonder tolk. Controle door moedertaalsprekers ontbreekt.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1190,7 +1206,9 @@ private fun TuddyScreen() {
                     }
                 }
                 Text(
-                    "Privacy: gesprekken blijven tijdelijk, behalve bij expliciete export. Opgeslagen basiswoorden blijven privé op je telefoon. Voorlezen gebruikt uitsluitend stemmen die Android als offline meldt; toestelondersteuning en uitspraak zijn niet gegarandeerd.",
+                    "Privacy: gesprekken blijven tijdelijk, behalve bij expliciete export. " +
+                        "Alleen bewust bewaarde basiswoorden en zelf ingevoerde zinnen worden privé op je telefoon opgeslagen. " +
+                        "Eigen zinnen zijn niet automatisch vertaald of gecontroleerd. Voorlezen gebruikt Android-gemelde offline stemmen.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
