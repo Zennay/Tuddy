@@ -10,10 +10,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,6 +39,7 @@ internal fun OfflineStarterPhraseboard(
         mutableStateOf(initialTarget.takeIf { it in setOf("kmr", "ckb", "ps") } ?: "kmr")
     }
     var source by remember { mutableStateOf("nl") }
+    var expandedIndex by remember { mutableStateOf<Int?>(null) }
     val choices = listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val starter = listOf(
         "hallo" to "hello",
@@ -45,6 +48,19 @@ internal fun OfflineStarterPhraseboard(
         "nee" to "no",
         "water" to "water"
     )
+
+    // The large-reader is a separate deliberate mode, not a new model or
+    // hidden side effect of choosing a language.
+    expandedIndex?.let { position ->
+        OfflineStarterPhrasePresenter(
+            phrases = starter,
+            initialIndex = position,
+            initialSource = source,
+            target = target,
+            onDismiss = { expandedIndex = null }
+        )
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -70,7 +86,7 @@ internal fun OfflineStarterPhraseboard(
                     Text(if (source == "nl") "Bronwoorden: Nederlands ⇄"
                         else "Source words: English ⇄")
                 }
-                starter.forEach { (dutch, english) ->
+                starter.forEachIndexed { position, (dutch, english) ->
                     val phrase = if (source == "nl") dutch else english
                     val translated = SafeCommunityPhrasebook.translate(source, target, phrase)
                         .getOrNull() ?: "Geen gecontroleerde invoer beschikbaar."
@@ -84,6 +100,9 @@ internal fun OfflineStarterPhraseboard(
                             ),
                             color = MaterialTheme.colorScheme.primary
                         )
+                        OutlinedButton(onClick = { expandedIndex = position }) {
+                            Text("▣ Toon dit woord groot")
+                        }
                         HorizontalDivider()
                     }
                 }
