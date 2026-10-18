@@ -146,6 +146,17 @@ uitdrukkingen mogen geen verzonnen definities krijgen. Apparaatacceptatie en
 native-speaker review zijn nog niet bewezen.
 
 
+### Tijdelijke markeringen voor een belangrijk gespreksmoment
+
+Je kunt nu een afgeronde tweetalige uitspraak **☆ Markeer** geven,
+via **★ gemarkeerd** direct terugvinden, naar de oorspronkelijke
+tijdlijnpositie springen en de geselecteerde regels bewust als TXT
+opslaan. Maximaal 80 markeringen horen alleen bij dit gesprek en
+verdwijnen bij **Wis gesprek**, als de oudste zin uit het geheugen
+rolt of bij app-afsluiting. Er is geen automatische opslag of netwerk,
+en lopende vertalingen zijn nooit als afgerond gelabeld.
+[Lees de privacy- en gebruiksinstructies](docs/SESSION_CAPTION_BOOKMARKS.md).
+
 ### Nieuwe offline woordoefening
 
 Via **Mijn woorden → Oefen opgeslagen woorden** kun je nu echt oefenen
