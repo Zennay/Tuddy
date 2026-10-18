@@ -44,22 +44,29 @@ internal fun FocusTranscriptDialog(
     fontScale: Float,
     onStop: () -> Unit,
     onClose: () -> Unit,
-    archiveMode: Boolean = false
+    archiveMode: Boolean = false,
+    pinnedCaptionIds: Set<Long> = emptySet(),
+    onTogglePin: ((Long) -> String)? = null
 ) {
     val listState = rememberLazyListState()
     var followLive by remember { mutableStateOf(true) }
     var speakerFilter by remember { mutableStateOf<String?>(null) }
     var captionQuery by remember { mutableStateOf("") }
+    var onlyPinned by remember { mutableStateOf(false) }
+    var pinNotice by remember { mutableStateOf("") }
     var speakerMenuOpen by remember { mutableStateOf(false) }
     // Columns only when Android reports adequate width; never crush two
     // full-length languages into half a narrow portrait phone screen.
     val isWide = LocalConfiguration.current.screenWidthDp >= 600
     var preferColumns by remember { mutableStateOf(true) }
     val showColumns = isWide && preferColumns
-    val displayedCaptions = SessionCaptionSearch.filter(
+    val matchedCaptions = SessionCaptionSearch.filter(
         captions, captionQuery, if (archiveMode) null else speakerFilter
     )
-    val showInterim = !archiveMode && speakerFilter == null && captionQuery.isBlank()
+    val displayedCaptions = if (onlyPinned && !archiveMode)
+        matchedCaptions.filter { it.id in pinnedCaptionIds } else matchedCaptions
+    val showInterim = !archiveMode && speakerFilter == null &&
+        captionQuery.isBlank() && !onlyPinned
     val manualScroll = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -71,8 +78,8 @@ internal fun FocusTranscriptDialog(
         }
     }
 
-    LaunchedEffect(captionQuery, speakerFilter) {
-        if (captionQuery.isNotBlank()) listState.scrollToItem(0)
+    LaunchedEffect(captionQuery, speakerFilter, onlyPinned) {
+        if (captionQuery.isNotBlank() || onlyPinned) listState.scrollToItem(0)
     }
 
     LaunchedEffect(speakerFilter, displayedCaptions.size,
@@ -121,7 +128,10 @@ internal fun FocusTranscriptDialog(
                     OutlinedButton(
                         onClick = {
                             captionQuery = ""
-                            if (!archiveMode) speakerFilter = null
+                            if (!archiveMode) {
+                                speakerFilter = null
+                                onlyPinned = false
+                            }
                             followLive = true
                         },
                         enabled = !followLive
@@ -202,6 +212,25 @@ internal fun FocusTranscriptDialog(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if (!archiveMode && onTogglePin != null) {
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = {
+                            onlyPinned = !onlyPinned
+                            if (onlyPinned) followLive = false
+                            pinNotice = ""
+                        }) {
+                            Text(if (onlyPinned) "★ Gemarkeerd (${pinnedCaptionIds.size}) ✓"
+                                else "☆ Alleen gemarkeerd (${pinnedCaptionIds.size})")
+                        }
+                        Text("Tijdelijke sessiebladwijzers",
+                            style = MaterialTheme.typography.labelSmall)
+                    }
+                    if (pinNotice.isNotBlank()) Text(pinNotice,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (isWide) {
                     OutlinedButton(
                         onClick = { preferColumns = !preferColumns },
@@ -233,6 +262,9 @@ internal fun FocusTranscriptDialog(
                         item(key = "empty") {
                             Text(
                                 if (archiveMode) "Geen regels in deze archiefselectie. Sluit en wijzig de zoekterm."
+                                 else if (onlyPinned)
+                                    "Geen gemarkeerde regels voor deze selectie. " +
+                                        "Wis het zoek- of sprekerfilter of voeg een markering toe."
                                  else if (captionQuery.isNotBlank())
                                     "Geen afgeronde regels met deze zoekterm. Wis de zoekopdracht."
                                  else if (speakerFilter == null)
@@ -257,6 +289,15 @@ internal fun FocusTranscriptDialog(
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                if (!archiveMode && onTogglePin != null) {
+                                    TextButton(onClick = {
+                                        pinNotice = onTogglePin(line.id)
+                                    }) {
+                                        Text(if (line.id in pinnedCaptionIds)
+                                            "★ Markering verwijderen" else
+                                            "☆ Markeer voor dit gesprek")
+                                    }
+                                }
                                 line.personalMeaning?.let { own ->
                                     Text("Mijn eigen uitleg (niet geverifieerd; geen export)",
                                         style = MaterialTheme.typography.labelSmall,
