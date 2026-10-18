@@ -71,6 +71,7 @@ internal fun OfflineStudyFlashcards(
     onManageWords: () -> Unit,
     onManageOwnWords: () -> Unit,
     onManagePhrases: () -> Unit,
+    onSaveStudyBook: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var filter by remember { mutableStateOf(PracticeFilter.ALL) }
@@ -206,6 +207,17 @@ internal fun OfflineStudyFlashcards(
                     }
                 }
                 HorizontalDivider()
+                OutlinedButton(
+                    enabled = ownWords != null && personalPhrases != null &&
+                        (savedWords.isNotEmpty() || ownWords.isNotEmpty() ||
+                            personalPhrases.isNotEmpty()),
+                    onClick = onSaveStudyBook,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("▤ Maak één afdrukbaar offline studieboek…") }
+                Text("Combineert je bewaarde basiswoorden, eigen woordbetekenissen " +
+                    "en zinnen in één HTML-bestand na aparte toestemming. " +
+                    "Zelfgeschreven inhoud blijft als ongecontroleerd gemarkeerd.",
+                    style = MaterialTheme.typography.bodySmall)
                 TextButton(onClick = onManageWords, modifier = Modifier.fillMaxWidth()) {
                     Text("Beheer mijn opgeslagen woorden")
                 }
