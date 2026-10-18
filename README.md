@@ -65,6 +65,18 @@ microphone usability, speech model coverage, device performance or release readi
   issue #2 stays open until independently licensed local ASR + MT actually
   works for all three communities.
 
+### Additional offline setup: actual ML Kit text-model inventory
+
+A second operator action, **Controleer tekst**, now queries the on-device
+ML Kit downloaded translation models for the selected pair. The screen
+shows exactly which non-English models are missing. After **Model via wifi**
+Tuddy automatically reads the inventory again; completing a download
+request is not by itself a readiness claim. Stale callbacks are canceled
+on Stop, backgrounding and language changes. Model inventory and speech
+readiness remain independent.
+
+See [offline text readiness](docs/OFFLINE_TEXT_MODEL_READINESS.md).
+
 ### Open release and product gates
 
 1. Use [docs/DEVICE_VALIDATION.md](docs/DEVICE_VALIDATION.md) with the exact
