@@ -146,6 +146,19 @@ uitdrukkingen mogen geen verzonnen definities krijgen. Apparaatacceptatie en
 native-speaker review zijn nog niet bewezen.
 
 
+### Nieuwe offline woordoefening
+
+Via **Mijn woorden → Oefen opgeslagen woorden** kun je nu echt oefenen
+met maximaal 20 eerder bewaarde, lokaal gecontroleerde woorden per ronde.
+Na **Toon betekenis** beoordeel je zelf **Ik wist het** of **Nog oefenen**;
+lastige woorden keren maximaal tweemaal terug. Je ziet je voortgang en
+eindoverzicht, kunt een nieuwe ronde doen of de volgende set oefenen.
+Oefenresultaten blijven alleen in RAM gedurende het oefenvenster;
+gesprekken, audio, scores en leerhistorie gaan nooit naar een server
+of het bestaande JSON-back-upbestand. Dit is geen automatische
+spaced-repetition-over-dagen of formele taaltoets.
+[Uitleg en beperkingen](docs/OFFLINE_WORD_PRACTICE.md).
+
 ### Woorden oefenen én back-uppen op eigen verzoek
 
 De bestaande knop **Mijn woorden** biedt nu ook **Bewaar back-up…** en

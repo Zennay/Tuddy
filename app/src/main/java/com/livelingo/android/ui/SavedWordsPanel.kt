@@ -48,6 +48,7 @@ internal fun SavedWordsPanel(
             it.language.contains(searchTerm, ignoreCase = true)
     }
     var confirmDelete by remember { mutableStateOf(false) }
+    var practiceOpen by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingImport by remember { mutableStateOf<List<String>?>(null) }
     var transferStatus by remember { mutableStateOf("") }
@@ -99,6 +100,14 @@ internal fun SavedWordsPanel(
         }
     }
 
+    if (practiceOpen) {
+        WordPracticePanel(
+            savedWords = allWords,
+            onDismiss = { practiceOpen = false }
+        )
+        return
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Mijn opgeslagen woorden") },
@@ -112,6 +121,11 @@ internal fun SavedWordsPanel(
                         "Je gesprekken worden niet opgeslagen en niets gaat naar een server.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                OutlinedButton(
+                    enabled = allWords.isNotEmpty(),
+                    onClick = { practiceOpen = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Oefen opgeslagen woorden") }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         enabled = allWords.isNotEmpty(),
