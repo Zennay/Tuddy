@@ -209,6 +209,9 @@ private fun TuddyScreen() {
     }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
+    // Hide secondary actions by default so live captions remain usable on
+    // compact phones. A bounded drawer keeps every existing export operation.
+    var conversationToolsOpen by remember { mutableStateOf(false) }
     var directionNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
     // Local search stays in memory, never persisted or sent to an API.
@@ -1306,6 +1309,24 @@ private fun TuddyScreen() {
                     Text(directionNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
                 }
+                OutlinedButton(
+                    onClick = {
+                        conversationToolsOpen = !conversationToolsOpen
+                        if (conversationToolsOpen) showSettings = false
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (conversationToolsOpen)
+                        "Verberg gesprekstools"
+                    else
+                        "Gesprekstools · export, sprekers en archief")
+                }
+                if (conversationToolsOpen) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 256.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
@@ -1431,6 +1452,8 @@ private fun TuddyScreen() {
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+                    }
+                }
                 if (exportStatus.isNotBlank()) Text(
                     exportStatus,
                     color = MaterialTheme.colorScheme.primary,
@@ -1464,7 +1487,10 @@ private fun TuddyScreen() {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 OutlinedButton(
-                    onClick = { showSettings = !showSettings },
+                    onClick = {
+                        showSettings = !showSettings
+                        if (showSettings) conversationToolsOpen = false
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(if (showSettings) "Verberg taal- en modelinstellingen" else "Taal- en modelinstellingen")
