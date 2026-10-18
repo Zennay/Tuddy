@@ -2018,6 +2018,13 @@ private fun TuddyScreen(
                     subtitleAudioPreview = null
                     openSubtitleAudio.launch(arrayOf("audio/*"))
                 },
+                onApplyAdjustedCues = { adjustedCues ->
+                    // A separate RAM-only candidate from explicit audio-preview consent.
+                    // Existing editor owns its own undo/redo and explicit SAF save flow.
+                    subtitleAudioPreview = null
+                    subtitleFileCues = adjustedCues.toList()
+                    editedSubtitleSaveNotice = null
+                },
                 onDismiss = {
                     subtitleAudioPreview = null
                     // Reopen the exact temporary draft as an editable copy.
