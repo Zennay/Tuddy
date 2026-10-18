@@ -44,6 +44,7 @@ internal fun DailyStudyHub(
     var wordReviewOpen by remember { mutableStateOf(false) }
     var phraseReviewOpen by remember { mutableStateOf(false) }
     var ownWordReviewOpen by remember { mutableStateOf(false) }
+    var dailyBookOpen by remember { mutableStateOf(false) }
     var viewRevision by remember { mutableIntStateOf(0) }
 
     if (wordReviewOpen) {
@@ -63,6 +64,15 @@ internal fun DailyStudyHub(
         return
     }
 
+    if (dailyBookOpen) {
+        PrivateDueStudyBookDialog(
+            words = words,
+            phrases = phrases,
+            ownWords = ownWords,
+            onDismiss = { dailyBookOpen = false }
+        )
+        return
+    }
     if (ownWordReviewOpen) {
         ScheduledOwnWordReviewPanel(
             deck = ownWords,
@@ -108,6 +118,17 @@ internal fun DailyStudyHub(
                     "$totalDue kaarten voor vandaag",
                     style = MaterialTheme.typography.headlineSmall
                 )
+                if (totalDue > 0) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { dailyBookOpen = true }
+                    ) { Text("▤ Bewaar mijn kaarten van vandaag…") }
+                    Text(
+                        "Alleen na afzonderlijke keuze van kaartgroepen en " +
+                            "een externe Android-opslaglocatie.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 if (totalDue == 0) {
                     Text(
                         if (nearest != null) "Volgende geplande herhaling: " +
