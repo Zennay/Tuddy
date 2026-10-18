@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: mijn eigen gesprekszinnen per thema ordenen
+
+In **Mijn eigen offline zinnen** kun je nu zelf maximaal twaalf
+privéthema's maken, hernoemen en verwijderen. Deel elke zelfgeschreven
+Kurmanji-, Sorani- of Pasjtoe-zin bewust in, filter erop en oefen
+alleen het gekozen thema. Verwijdering van een thema laat de zinnen
+en herhaaldatums intact. Deze lokale indeling staat los van export
+en bevat geen automatisch vertaalde of gecontroleerde betekenissen.
+[Handleiding en privacy](docs/PRIVATE_PHRASE_TOPICS.md).
+
+
 ## Nieuw: eigen ongecontroleerde woordbetekenissen oefenen
 
 Bij **Mijn eigen offline woorden** kun je nu ook zelfgeschreven woorden
