@@ -702,10 +702,8 @@ private fun TuddyScreen() {
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
-                stop()
-                previewArchiveRows = null
-            }
+            if (event == Lifecycle.Event.ON_STOP) stop()
+            if (event == Lifecycle.Event.ON_STOP) previewArchiveRows = null
             if (event == Lifecycle.Event.ON_STOP) {
                 speechPackReceipt = SpeechPackReceipt(source.speechCode, SpeechPackStage.UNCHECKED,
                     "Na terugkeer uit de achtergrond moet pakketstatus opnieuw worden gecontroleerd.")
