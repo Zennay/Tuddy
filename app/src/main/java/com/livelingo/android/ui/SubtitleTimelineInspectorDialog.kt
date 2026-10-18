@@ -40,7 +40,9 @@ internal fun SubtitleTimelineInspectorDialog(
         SubtitleTimelineFindingKind.SAME_TIMESPAN to "Zelfde tijd",
         SubtitleTimelineFindingKind.SHORT_GAP to "Kort gat",
         SubtitleTimelineFindingKind.LONG_GAP to "Lang gat",
-        SubtitleTimelineFindingKind.BRIEF_CUE to "Korte cue"
+        SubtitleTimelineFindingKind.BRIEF_CUE to "Korte cue",
+        SubtitleTimelineFindingKind.FAST_READING to "Snel lezen",
+        SubtitleTimelineFindingKind.LONG_TEXT_LINE to "Lange regel"
     )
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -56,6 +58,12 @@ internal fun SubtitleTimelineInspectorDialog(
                 Text("Korte tussenruimtes: " + overview.shortGapCount +
                     " · lange tussenruimtes: " + overview.longGapCount +
                     " · heel korte regels: " + overview.briefCueCount)
+                Text("Mogelijk te snel leesbaar: " + overview.fastReadingCount +
+                    " · tekstregels langer dan 42 tekens: " + overview.longTextLineCount)
+                Text("Leesbaarheid is een ruwe tekst/tijdschatting (22 tekens/s), " +
+                    "geen vastgestelde taal-, vertaal- of toegankelijkheidsscore. " +
+                    "Tweetalige regels kunnen bewust meer tekst bevatten.",
+                    style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 LazyColumn(modifier = Modifier.heightIn(max = 90.dp)) {
                     items(groups) { pair ->
