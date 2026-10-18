@@ -1459,7 +1459,7 @@ private fun TuddyScreen(
             TwoWayTypedConversationDialog(
                 initialSource = source.translateCode,
                 initialTarget = target.translateCode,
-                recentLines = lines.takeLast(6).map { row ->
+                recentLines = lines.takeLast(80).map { row ->
                     TypedConversationLine(row.original, row.translated, row.status,
                         row.sourceCode, row.targetCode)
                 },
