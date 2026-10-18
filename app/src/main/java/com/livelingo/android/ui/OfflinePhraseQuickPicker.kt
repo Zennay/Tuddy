@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -74,6 +75,7 @@ internal fun OfflinePhraseQuickPicker(
         OfflinePhrasePresenter(
             notes = shown,
             initial = chosen,
+            mixedLanguageDeck = true,
             onDismiss = { presenting = null }
         )
         return
@@ -94,7 +96,8 @@ internal fun OfflinePhraseQuickPicker(
                         "Tuddy heeft ze niet automatisch vertaald of gecontroleerd.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     TextButton(onClick = { code = "all"; visibleLimit = 80 }) {
                         Text(if (code == "all") "Alle ✓" else "Alle")
                     }
