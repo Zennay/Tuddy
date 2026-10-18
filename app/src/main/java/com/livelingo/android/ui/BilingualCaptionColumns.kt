@@ -23,7 +23,8 @@ internal fun BilingualCaptionColumns(
     targetCode: String,
     status: String,
     fontScale: Float,
-    isInterim: Boolean
+    isInterim: Boolean,
+    searchQuery: String = ""
 ) {
     val translated = status == "Lokaal vertaald" || status == "Lokaal"
     val originalStyle = MaterialTheme.typography.titleLarge.copy(
@@ -44,7 +45,7 @@ internal fun BilingualCaptionColumns(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                Text(original, style = originalStyle)
+                SessionCaptionSearchText(original, searchQuery, originalStyle)
             }
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -53,7 +54,7 @@ internal fun BilingualCaptionColumns(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (isInterim) {
                 if (translation.isNotBlank())
-                    Text(translation, style = translatedStyle)
+                    SessionCaptionSearchText(translation, searchQuery, translatedStyle)
                 else
                     Text("Wacht op lokaal resultaat",
                         style = MaterialTheme.typography.bodyMedium,
