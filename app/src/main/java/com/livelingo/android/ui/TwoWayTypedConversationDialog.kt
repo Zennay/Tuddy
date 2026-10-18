@@ -37,6 +37,7 @@ import com.livelingo.android.OfflineTextStage
 import com.livelingo.android.OfflineTypedCaptionPolicy
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.TypedConversationModelController
+import com.livelingo.android.UnavailableTextLanguageCatalog
 
 /** A temporary UI-only view of the last conversation lines, not an archive. */
 internal data class TypedConversationLine(
@@ -61,6 +62,7 @@ internal fun TwoWayTypedConversationDialog(
     retryableCount: (String, String) -> Int,
     onRetryMissing: (String, String) -> Int,
     onSend: (String, String, String) -> Boolean,
+    onOpenLimitedPhraseboard: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var from by remember { mutableStateOf(initialSource.takeIf { it in TargetCatalog.codes } ?: "nl") }
@@ -78,6 +80,7 @@ internal fun TwoWayTypedConversationDialog(
     var favoritesOpen by remember { mutableStateOf(false) }
     var confirmEraseFavorites by remember { mutableStateOf(false) }
     var favoriteModelsOpen by remember { mutableStateOf(false) }
+    var pendingLimitedPreviewCode by remember { mutableStateOf<String?>(null) }
     var favoriteNotice by remember { mutableStateOf("") }
     var favoritesRevision by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
@@ -150,6 +153,31 @@ internal fun TwoWayTypedConversationDialog(
         TypedFavoriteOfflineModelsDialog(
             savedPairs = pinnedPairs,
             onDismiss = { favoriteModelsOpen = false }
+        )
+        return
+    }
+
+    val previewCode = pendingLimitedPreviewCode
+    if (previewCode != null) {
+        AlertDialog(
+            onDismissRequest = { pendingLimitedPreviewCode = null },
+            title = { Text("Onverstuurd tekstconcept verlaten?") },
+            text = {
+                Text("De bestaande tekst voor je tweeweg-gesprek wordt niet " +
+                    "opgeslagen. Wil je deze editor verlaten om uitsluitend " +
+                    "de vijf vaste, niet geverifieerde basiswoorden te bekijken?")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingLimitedPreviewCode = null
+                    onOpenLimitedPhraseboard(previewCode)
+                }) { Text("Verlaat concept · open basiswoorden") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingLimitedPreviewCode = null }) {
+                    Text("Bewaar concept hier")
+                }
+            }
         )
         return
     }
@@ -232,13 +260,43 @@ internal fun TwoWayTypedConversationDialog(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
-                        TargetCatalog.search(search).take(15).forEach { choice ->
+                        val available = TargetCatalog.search(search)
+                        available.take(15).forEach { choice ->
                             TextButton(onClick = {
                                 if (chooser == "source") from = choice.code else to = choice.code
                                 chooser = null
                                 search = ""
                                 info = ""
                             }) { Text(choice.title + " (" + choice.code + ")") }
+                        }
+                        // Legacy v0.4 listed these as desired languages. Keep
+                        // them VISIBLE but never select them as an ML Kit code.
+                        val unavailable = UnavailableTextLanguageCatalog.search(search)
+                        if (search.isNotBlank() && unavailable.isNotEmpty()) {
+                            Text("Gevraagd maar niet beschikbaar als offline model",
+                                style = MaterialTheme.typography.labelMedium)
+                            unavailable.forEach { item ->
+                                Text(item.title + " (" + item.code + ")",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error)
+                                Text(item.reason,
+                                    style = MaterialTheme.typography.bodySmall)
+                                if (item.hasFivePhrasePreview) {
+                                    TextButton(onClick = {
+                                        if (draft.isBlank()) {
+                                            onOpenLimitedPhraseboard(item.code)
+                                        } else {
+                                            pendingLimitedPreviewCode = item.code
+                                        }
+                                    }) {
+                                        Text("Bekijk 5 basiswoorden · geen vrije vertaling")
+                                    }
+                                }
+                            }
+                        } else if (search.isNotBlank() && available.isEmpty()) {
+                            Text("Geen ondersteunde teksttaal gevonden. " +
+                                "Geen automatisch model beschikbaar.",
+                                style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     TextButton(onClick = { chooser = null }) { Text("Sluit taallijst") }

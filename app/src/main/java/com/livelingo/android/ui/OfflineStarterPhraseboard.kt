@@ -29,10 +29,13 @@ import com.livelingo.android.model.SafeCommunityPhrasebook
  */
 @Composable
 internal fun OfflineStarterPhraseboard(
+    initialTarget: String = "kmr",
     onOpenPersonalPhrases: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var target by remember { mutableStateOf("kmr") }
+    var target by remember(initialTarget) {
+        mutableStateOf(initialTarget.takeIf { it in setOf("kmr", "ckb", "ps") } ?: "kmr")
+    }
     var source by remember { mutableStateOf("nl") }
     val choices = listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val starter = listOf(
