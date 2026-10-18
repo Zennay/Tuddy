@@ -4,6 +4,17 @@
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
+## Nieuw: afdrukbaar offline tweetalig zinnenboek
+
+Bij **Mijn eigen offline zinnen** kan de gebruiker een zelfstandig
+HTML-zinnenboek bewaren van zelfgeschreven Kurmanji/Sorani/Pasjtoe-zinnen
+en hun eigen NL/EN-betekenissen, als afdrukbare tweetalige kaarten.
+Kies bewust één taal of alle talen en de Android-opslaglocatie.
+Zinnen en betekenissen worden **niet als geverifieerd gepresenteerd**;
+er is geen internet of extra model nodig. Het externe bestand is
+geen Tuddy-back-up en valt niet onder het wissen van de app.
+[Bediening en privacy](docs/PRIVATE_PRINTABLE_PHRASEBOOK.md).
+
 ## Nieuw: eigen gesprekskaarten direct zoeken
 
 Op het hoofdscherm opent **▣ Mijn gesprekskaarten · direct zoeken en tonen**
