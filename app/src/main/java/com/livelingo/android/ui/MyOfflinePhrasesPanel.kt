@@ -31,6 +31,7 @@ import java.io.ByteArrayOutputStream
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivatePhraseDeck
+import com.livelingo.android.PrivatePrintablePhrasebook
 
 /**
  * User-authored, editable offline study notes. No model calls, chat-log import
@@ -57,6 +58,9 @@ internal fun MyOfflinePhrasesPanel(
     var editingPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
+    var printableConsent by remember { mutableStateOf(false) }
+    var printableAllLanguages by remember { mutableStateOf(false) }
+    var pendingPrintable by remember { mutableStateOf<Pair<String?, ByteArray>?>(null) }
     val context = LocalContext.current
     val createBackup = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -75,6 +79,33 @@ internal fun MyOfflinePhrasesPanel(
                 else "Opslaan is mislukt. Je lokale zinnen blijven behouden."
         }
     }
+    // No bytes leave app-private memory until a consciously chosen SAF location.
+    val createPrintable = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri ->
+        val pending = pendingPrintable
+        pendingPrintable = null
+        if (uri != null && pending != null) {
+            val current = deck.entries()?.let {
+                PrivatePrintablePhrasebook.snapshot(it, pending.first)
+            }
+            if (current == null || !current.contentEquals(pending.second)) {
+                info = "Eigen zinnen zijn gewijzigd. Kies opnieuw afdrukbaar zinnenboek."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                        stream.write(pending.second)
+                        stream.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                info = if (saved)
+                    "Afdrukbaar zinnenboek opgeslagen. Controleer inhoud en opslaglocatie."
+                else "Het afdrukbare zinnenboek kon niet worden opgeslagen."
+            }
+        }
+    }
+
     val openBackup = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -237,6 +268,17 @@ internal fun MyOfflinePhrasesPanel(
                             "application/octet-stream"))
                     }) { Text("Herstel back-up…") }
                 }
+                OutlinedButton(
+                    enabled = phrases?.isNotEmpty() == true,
+                    onClick = {
+                        printableAllLanguages = false
+                        printableConsent = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("▤ Maak afdrukbaar tweetalig zinnenboek…") }
+                Text("Maak een zelfstandig HTML-zinnenboek voor bekijken of afdrukken " +
+                    "zonder internet. Alleen jouw eigen zinnen, niet geverifieerd.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("Back-up is optioneel. De gekozen bestandsprovider kan online synchroniseren; " +
                     "Tuddy uploadt zelf niets. Import overschrijft pas na jouw bevestiging.",
                     style = MaterialTheme.typography.bodySmall)
@@ -305,6 +347,64 @@ internal fun MyOfflinePhrasesPanel(
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Sluiten") } }
     )
+    if (printableConsent) {
+        val included = phrases.orEmpty().filter {
+            printableAllLanguages || it.language == language
+        }
+        AlertDialog(
+            onDismissRequest = { printableConsent = false },
+            title = { Text("Eigen zinnenboek extern bewaren?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "De " + included.size + " zelfgeschreven zinnen en jouw eigen " +
+                            "betekenissen komen in één zelfstandig HTML-bestand. " +
+                            "Geen gecontroleerde vertalingen. Een Android-provider " +
+                            "kan het bestand buiten Tuddy bewaren, synchroniseren " +
+                            "of delen. Dit bestand valt niet onder 'Wis gesprek' " +
+                            "of 'Wis oefengegevens'. Bewaar geen privégesprekken."
+                    )
+                    TextButton(onClick = {
+                        printableAllLanguages = !printableAllLanguages
+                    }) {
+                        Text(if (printableAllLanguages)
+                            "✓ Alle drie talen (" + (phrases?.size ?: 0) + " zinnen)"
+                        else "✓ Alleen " + labels[language] + " (" + included.size + " zinnen)")
+                    }
+                    Text("Bestand is zonder JavaScript of online lettertypen. " +
+                        "De tekst wordt als afdrukbare kaarten opgemaakt.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = included.isNotEmpty(),
+                    onClick = {
+                        printableConsent = false
+                        val selection = if (printableAllLanguages) null else language
+                        val snapshot = phrases?.let {
+                            PrivatePrintablePhrasebook.snapshot(it, selection)
+                        }
+                        if (snapshot == null) {
+                            info = "Kan geen veilig zinnenboek maken. " +
+                                "Controleer de eigen zinnenlijst."
+                        } else {
+                            pendingPrintable = selection to snapshot
+                            createPrintable.launch(
+                                if (selection == null) "Tuddy-mijn-zinnenboek.html"
+                                else "Tuddy-zinnenboek-" + selection + ".html"
+                            )
+                        }
+                    }
+                ) { Text("Ik begrijp dit, kies opslag…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { printableConsent = false }) {
+                    Text("Annuleren")
+                }
+            }
+        )
+    }
     if (pendingImport != null) {
         val imported = pendingImport!!
         val ownedKeys = phrases.orEmpty().map {
