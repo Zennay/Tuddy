@@ -189,6 +189,11 @@ private fun TuddyScreen(
     val savedVocabulary = remember(context) { PrivateVocabularyDeck(context) }
     var savedWordRevision by remember { mutableIntStateOf(0) }
     val savedWordCount = remember(savedWordRevision) { savedVocabulary.entries().size }
+    val scheduledReviewDueCount = remember(savedWordRevision) {
+        if (savedVocabulary.reviewsEnabled()) savedVocabulary.scheduledReviews()
+            .count { it.dueDay <= java.time.LocalDate.now().toEpochDay() }
+        else 0
+    }
     var savedWordsOpen by remember { mutableStateOf(false) }
     val ownWordDeck = remember(context) { PrivateOwnWordDeck(context) }
     var ownWordRevision by remember { mutableIntStateOf(0) }
@@ -2877,12 +2882,12 @@ private fun TuddyScreen(
                         flashcardsOpen = false
                         studyEraseNotice = if (wordsCleared && ownWordsCleared &&
                             phrasesCleared && favoritesCleared && typedFavoritesCleared) {
-                            "Opgeslagen basiswoorden, eigen woorden, eigen zinnen, " +
+                            "Opgeslagen basiswoorden, hun herhaalplanning, eigen woorden, eigen zinnen, " +
                                 "spraakfavorieten en tekstfavorieten gewist. " +
                                 "Gesprek, taalkeuze en eerdere externe exports zijn behouden."
                         } else {
                             "Niet alles kon worden gewist. " +
-                                "Basiswoorden: ${if (wordsCleared) "gewist" else "mislukt"}, " +
+                                "Basiswoorden en herhaalplanning: ${if (wordsCleared) "gewist" else "mislukt"}, " +
                                 "eigen woorden: ${if (ownWordsCleared) "gewist" else "mislukt"}, " +
                                 "zinnen: ${if (phrasesCleared) "gewist" else "mislukt"}, " +
                                 "spraakfavorieten: ${if (favoritesCleared) "gewist" else "mislukt"}, " +
@@ -3378,7 +3383,9 @@ private fun TuddyScreen(
                         Text("Mijn woorden ($savedWordCount)")
                     }
                     Text(
-                        "Zelf bewaarde basiswoorden · offline",
+                        if (savedVocabulary.reviewsEnabled())
+                            "Zelf bewaarde basiswoorden · offline · $scheduledReviewDueCount vandaag"
+                        else "Zelf bewaarde basiswoorden · offline",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
