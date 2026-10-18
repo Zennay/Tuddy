@@ -216,6 +216,8 @@ private fun TuddyScreen() {
     }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
+    // Secondary export/history actions are collapsed on compact screens.
+    var conversationToolsOpen by remember { mutableStateOf(false) }
     var directionNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
     // Local search stays in memory, never persisted or sent to an API.
@@ -1444,20 +1446,12 @@ private fun TuddyScreen() {
                         Text(if (follow) "Live ✓" else "Volg live")
                     }
                 }
-                OutlinedButton(
-                    onClick = { quickTypedOpen = true },
-                    enabled = !listening,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("✍ Typ zin · zonder microfoon") }
-                OutlinedButton(
-                    onClick = { focusMode = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("⛶ Leesmodus · schermvullende ondertitels") }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    OutlinedButton(onClick = { focusMode = true }) { Text("⛶ Leesmodus") }
                     OutlinedButton(
                         enabled = reverseDirection != null,
                         onClick = {
@@ -1494,6 +1488,7 @@ private fun TuddyScreen() {
                                 offlineModelStatus = ""
                                 error = ""
                                 showSettings = true
+                                conversationToolsOpen = false
                                 directionNotice = "Richting: ${nextSource.label} → ${previousSource.label}. " +
                                     "Microfoon gestopt. Controleer spraak- en tekstmodellen, " +
                                     "tik daarna opnieuw op Luister." +
@@ -1501,17 +1496,32 @@ private fun TuddyScreen() {
                             }
                         }
                     ) { Text("⇄ Wissel richting") }
-                    Text(
-                        "Tweewegspraak voor elf mogelijke spraaktalen; "  +
-                            "geen automatische download of cloudfallback.",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
                 }
+                TextButton(
+                    onClick = { quickTypedOpen = true },
+                    enabled = !listening,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("✍ Typ zin · zonder microfoon") }
                 if (directionNotice.isNotBlank()) {
                     Text(directionNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
                 }
+                OutlinedButton(
+                    onClick = {
+                        conversationToolsOpen = !conversationToolsOpen
+                        if (conversationToolsOpen) showSettings = false
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (conversationToolsOpen) "Verberg gesprekstools"
+                        else "Gesprekstools · export, sprekers en archief")
+                }
+                if (conversationToolsOpen) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 256.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
@@ -1637,6 +1647,8 @@ private fun TuddyScreen() {
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+                    }
+                }
                 if (exportStatus.isNotBlank()) Text(
                     exportStatus,
                     color = MaterialTheme.colorScheme.primary,
@@ -1670,7 +1682,10 @@ private fun TuddyScreen() {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 OutlinedButton(
-                    onClick = { showSettings = !showSettings },
+                    onClick = {
+                        showSettings = !showSettings
+                        if (showSettings) conversationToolsOpen = false
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(if (showSettings) "Verberg taal- en modelinstellingen" else "Taal- en modelinstellingen")
