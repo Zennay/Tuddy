@@ -34,6 +34,12 @@ import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivatePhraseTopics
 import com.livelingo.android.PrivatePrintablePhrasebook
 
+private data class PendingTopicPhrasebook(
+    val language: String?,
+    val topic: String?,
+    val bytes: ByteArray
+)
+
 /**
  * User-authored, editable offline study notes. No model calls, chat-log import
  * or claims that any phrase has been translated/checked by native speakers.
@@ -69,9 +75,15 @@ internal fun MyOfflinePhrasesPanel(
     var pendingTsvExport by remember { mutableStateOf<ByteArray?>(null) }
     var printableConsent by remember { mutableStateOf(false) }
     var printableAllLanguages by remember { mutableStateOf(false) }
-    var pendingPrintable by remember { mutableStateOf<Pair<String?, ByteArray>?>(null) }
+    var printableOnlySelectedTopic by remember { mutableStateOf(false) }
+    var pendingPrintable by remember { mutableStateOf<PendingTopicPhrasebook?>(null) }
     val context = LocalContext.current
     val phraseTopics = remember(context) { PrivatePhraseTopics(context) }
+    fun matchesTopic(record: PersonalPhrase, topic: String?): Boolean = when (topic) {
+        null -> true
+        "__without__" -> phraseTopics.topicFor(record) == null
+        else -> phraseTopics.topicFor(record) == topic
+    }
     val createBackup = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -121,15 +133,17 @@ internal fun MyOfflinePhrasesPanel(
         val pending = pendingPrintable
         pendingPrintable = null
         if (uri != null && pending != null) {
-            val current = deck.entries()?.let {
-                PrivatePrintablePhrasebook.snapshot(it, pending.first)
+            val current = deck.entries()?.filter { note ->
+                matchesTopic(note, pending.topic)
+            }?.let { notes ->
+                PrivatePrintablePhrasebook.snapshot(notes, pending.language)
             }
-            if (current == null || !current.contentEquals(pending.second)) {
+            if (current == null || !current.contentEquals(pending.bytes)) {
                 info = "Eigen zinnen zijn gewijzigd. Kies opnieuw afdrukbaar zinnenboek."
             } else {
                 val saved = runCatching {
                     context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
-                        stream.write(pending.second)
+                        stream.write(pending.bytes)
                         stream.flush()
                         true
                     } ?: false
@@ -410,6 +424,7 @@ internal fun MyOfflinePhrasesPanel(
                     enabled = phrases?.isNotEmpty() == true,
                     onClick = {
                         printableAllLanguages = false
+                        printableOnlySelectedTopic = selectedTopic != null
                         printableConsent = true
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -601,7 +616,8 @@ internal fun MyOfflinePhrasesPanel(
     }
     if (printableConsent) {
         val included = phrases.orEmpty().filter {
-            printableAllLanguages || it.language == language
+            (printableAllLanguages || it.language == language) &&
+                (!printableOnlySelectedTopic || matchesTopic(it, selectedTopic))
         }
         AlertDialog(
             onDismissRequest = { printableConsent = false },
@@ -623,6 +639,18 @@ internal fun MyOfflinePhrasesPanel(
                             "✓ Alle drie talen (" + (phrases?.size ?: 0) + " zinnen)"
                         else "✓ Alleen " + labels[language] + " (" + included.size + " zinnen)")
                     }
+                    if (selectedTopic != null) {
+                        TextButton(onClick = {
+                            printableOnlySelectedTopic = !printableOnlySelectedTopic
+                        }) {
+                            Text(if (printableOnlySelectedTopic)
+                                "✓ Alleen zichtbare themagroep (${included.size})"
+                            else "○ Alle thema’s (ook buiten huidige filter)")
+                        }
+                    }
+                    Text("Bewaar alléén de gekozen selectie op een externe locatie. " +
+                        "De eigen themanamen staan niet in het HTML-bestand.",
+                        style = MaterialTheme.typography.bodySmall)
                     Text("Bestand is zonder JavaScript of online lettertypen. " +
                         "De tekst wordt als afdrukbare kaarten opgemaakt.",
                         style = MaterialTheme.typography.bodySmall)
@@ -634,16 +662,21 @@ internal fun MyOfflinePhrasesPanel(
                     onClick = {
                         printableConsent = false
                         val selection = if (printableAllLanguages) null else language
-                        val snapshot = phrases?.let {
-                            PrivatePrintablePhrasebook.snapshot(it, selection)
+                        val topic = if (printableOnlySelectedTopic) selectedTopic else null
+                        val selectedNotes = phrases.orEmpty().filter { note ->
+                            matchesTopic(note, topic)
                         }
+                        val snapshot = PrivatePrintablePhrasebook.snapshot(
+                            selectedNotes, selection
+                        )
                         if (snapshot == null) {
                             info = "Kan geen veilig zinnenboek maken. " +
                                 "Controleer de eigen zinnenlijst."
                         } else {
-                            pendingPrintable = selection to snapshot
+                            pendingPrintable = PendingTopicPhrasebook(selection, topic, snapshot)
                             createPrintable.launch(
-                                if (selection == null) "Tuddy-mijn-zinnenboek.html"
+                                if (topic != null) "Tuddy-zinnenboek-geselecteerd-thema.html"
+                                else if (selection == null) "Tuddy-mijn-zinnenboek.html"
                                 else "Tuddy-zinnenboek-" + selection + ".html"
                             )
                         }
