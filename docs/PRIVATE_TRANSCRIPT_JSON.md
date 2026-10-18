@@ -50,6 +50,22 @@ conversation history. Other apps, input methods or platform clipboard history
 may access its contents. Tuddy does not guarantee automatic removal from the
 clipboard. Avoid copying sensitive medical, legal or asylum conversations.
 
+## Read a saved JSON archive privately
+
+Choose **Open JSON-archief…** and select an existing `Tuddy-gesprek.json`
+with Android's document picker. Tuddy reads at most 256 KiB, validates the
+format and completed/uncompleted translation states, and shows the archived
+bilingual captions in an independently labelled **read-only** dialog.
+Close the dialog to discard its temporary in-memory preview. The selected
+document is never copied to app storage, persisted as conversation history,
+used as live speech evidence, or sent to a translation model.
+
+Invalid, oversized, malformed or unsupported archives display an error
+without changing the current conversation. An archive selected from external
+storage is **user-provided text**, not independent evidence that the device
+recorded/transcribed/translated the conversation. There is no automatic import,
+merge, restore, cloud download, background backup or persistent archive list.
+
 ## Boundaries
 
 - At most 500 captions, 4096 UTF-16 units per field and 256 KiB in the
