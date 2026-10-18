@@ -1,5 +1,17 @@
 # Tuddy 🎙️
 
+## Nieuw: een eigen voorbereide zin gebruiken in een tekstgesprek
+
+In het offline **tweeweg-tekstgesprek** kun je nu bewust een
+eerder zelfgeschreven **Nederlandse of Engelse betekenis** van
+een privézin als **onverstuurd concept** overnemen. Een bestaande
+concepttekst wordt nooit zonder bevestiging vervangen. De
+Kurmanji-/Sorani-/Pasjtoe-bronzin wordt niet als ondersteund
+automatisch tekstmodel gepresenteerd. Alleen na jouw aparte
+verzendtik probeert Tuddy een ondersteunde lokale tekstvertaling.
+[Bediening en veiligheidsgrens](docs/PREPARED_PRIVATE_TWO_WAY_DRAFTS.md).
+
+
 ## Nieuw: zelf je kaarten op papier oefenen
 
 Kies bij **Bewaar mijn kaarten van vandaag…** ook voor een afdrukbaar
