@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +22,8 @@ import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivateStudyCalendar
 import com.livelingo.android.PrivateVocabularyDeck
 
+private data class PendingCalendar(val groups: Set<String>, val bytes: ByteArray)
+
 /**
  * Explicit SAF export for the existing read-only eight-week study calendar.
  * Calendar entries include counts only; this does not register reminders or
@@ -33,7 +36,13 @@ internal fun PrivateStudyCalendarExportAction(
     phrases: PrivatePhraseDeck
 ) {
     val context = LocalContext.current
-    var pending by remember { mutableStateOf<ByteArray?>(null) }
+    val available = buildSet {
+        if (words.reviewsEnabled()) add("curated")
+        if (ownWords.reviewsEnabled()) add("own")
+        if (phrases.reviewsEnabled()) add("phrases")
+    }
+    var selected by remember { mutableStateOf(available) }
+    var pending by remember { mutableStateOf<PendingCalendar?>(null) }
     var message by remember { mutableStateOf("") }
 
     val createDocument = rememberLauncherForActivityResult(
@@ -42,13 +51,16 @@ internal fun PrivateStudyCalendarExportAction(
         val previous = pending
         pending = null
         if (uri != null && previous != null) {
-            val current = PrivateStudyCalendar.snapshot(words, ownWords, phrases)
-            if (current == null || !current.contentEquals(previous)) {
+            val current = PrivateStudyCalendar.snapshot(
+                words, ownWords, phrases, previous.groups
+            )
+            if (selected != previous.groups ||
+                current == null || !current.contentEquals(previous.bytes)) {
                 message = "De planning is veranderd. Kies opnieuw Bewaar als agenda."
             } else {
                 val saved = runCatching {
                     context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
-                        stream.write(previous)
+                        stream.write(previous.bytes)
                         stream.flush()
                         true
                     } ?: false
@@ -63,14 +75,39 @@ internal fun PrivateStudyCalendarExportAction(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
+        Text(
+            "Selecteer zelf welke al ingeschakelde kaartgroepen in het " +
+                "agendabestand mogen meetellen:",
+            style = MaterialTheme.typography.bodySmall
+        )
+        listOf(
+            "curated" to "Bewaarde basiswoorden",
+            "own" to "Mijn eigen woorden",
+            "phrases" to "Mijn eigen zinnen"
+        ).forEach { (group, title) ->
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = group in available,
+                onClick = {
+                    selected = if (group in selected) selected - group
+                        else selected + group
+                }
+            ) {
+                Text((if (group in selected) "☑ " else "☐ ") + title +
+                    if (group !in available) " (planning uit)" else "")
+            }
+        }
         Button(
             modifier = Modifier.fillMaxWidth(),
+            enabled = selected.isNotEmpty(),
             onClick = {
-                val bytes = PrivateStudyCalendar.snapshot(words, ownWords, phrases)
+                val bytes = PrivateStudyCalendar.snapshot(
+                    words, ownWords, phrases, selected
+                )
                 if (bytes == null) {
                     message = "Geen geldige, leesbare geplande kaarten om te exporteren."
                 } else {
-                    pending = bytes
+                    pending = PendingCalendar(selected.toSet(), bytes)
                     message = ""
                     createDocument.launch("Tuddy-studieplanning-8-weken.ics")
                 }
