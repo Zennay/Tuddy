@@ -21,6 +21,7 @@ internal fun PrivateSubtitleDocumentMenu(
     canInsert: Boolean,
     canRestore: Boolean,
     onFindReplace: () -> Unit,
+    onWrapLines: () -> Unit,
     onShiftEarlier: () -> Unit,
     onShiftLater: () -> Unit,
     onRestore: () -> Unit,
@@ -33,6 +34,8 @@ internal fun PrivateSubtitleDocumentMenu(
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text("Zoek en vervang…") },
                 onClick = { open = false; onFindReplace() })
+            DropdownMenuItem(text = { Text("Lange regels afbreken…") },
+                onClick = { open = false; onWrapLines() })
             DropdownMenuItem(text = { Text("Alle tijden 0,5 s eerder") },
                 onClick = { open = false; onShiftEarlier() })
             DropdownMenuItem(text = { Text("Alle tijden 0,5 s later") },

@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PrivateSubtitleBatchReplace
+import com.livelingo.android.PrivateSubtitleLineWrap
 import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
@@ -87,6 +88,8 @@ internal fun PrivateSubtitleFileDialog(
     var requestSave by remember { mutableStateOf<SubtitleDraftFormat?>(null) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
+    var wrapOpen by remember { mutableStateOf(false) }
+    var wrapWidth by remember { mutableIntStateOf(42) }
     var batchFind by remember { mutableStateOf("") }
     var batchWith by remember { mutableStateOf("") }
     var batchMatchCase by remember { mutableStateOf(false) }
@@ -266,6 +269,7 @@ internal fun PrivateSubtitleFileDialog(
                             batchFind = query.take(100)
                             batchOpen = true
                         },
+                        onWrapLines = { wrapWidth = 42; wrapOpen = true },
                         onShiftEarlier = {
                             val result = PrivateSubtitleDraftEditor.shift(draft, -500L)
                             if (result == null) notice = "Kan niet eerder: negatieve tijdcode."
@@ -784,6 +788,60 @@ internal fun PrivateSubtitleFileDialog(
             },
             dismissButton = {
                 TextButton(onClick = { clipOpen = false }) { Text("Annuleren") }
+            }
+        )
+    }
+    if (wrapOpen) {
+        val proposed = PrivateSubtitleLineWrap.preview(draft, wrapWidth)
+        AlertDialog(
+            onDismissRequest = { wrapOpen = false },
+            title = { Text("Lange ondertitelregels afbreken") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Voeg alleen op gewone spaties regelafbrekingen toe. " +
+                        "Tekst, woordvolgorde en tijdcodes blijven behouden. " +
+                        "Kies een gewenste maximale regelbreedte; langere woorden " +
+                        "blijven intact. Dit is geen taalkundige of audioanalyse.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(32, 42, 50).forEach { option ->
+                            OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                onClick = { wrapWidth = option }) {
+                                Text((if (wrapWidth == option) "✓ " else "") +
+                                    "$option tekens")
+                            }
+                        }
+                    }
+                    Text(if (proposed == null)
+                        "Dit voorstel overschrijdt de veilige documentgrenzen."
+                        else "${proposed.changedCues} regels aangepast, " +
+                            "${proposed.addedBreaks} nieuwe regelafbrekingen. " +
+                            "${proposed.remainingLongCues} regels blijven langer " +
+                            "dan de gekozen breedte (bijvoorbeeld lange woorden " +
+                            "of de limiet van acht regels per cue).",
+                        style = MaterialTheme.typography.bodyMedium)
+                    Text("Alleen dit tijdelijke concept verandert. Terug/Opnieuw " +
+                        "blijven werken; uitsluitend Bewaar kopie… schrijft " +
+                        "later naar een door jou gekozen bestandsprovider.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = proposed != null && proposed.changedCues > 0,
+                    onClick = {
+                        val confirmed = PrivateSubtitleLineWrap.preview(draft, wrapWidth)
+                        if (confirmed != null && confirmed.changedCues > 0) {
+                            applyChange(confirmed.cues)
+                            shownIndex = -1
+                            notice = "${confirmed.addedBreaks} afbrekingen toegevoegd " +
+                                "aan ${confirmed.changedCues} regels in tijdelijk concept."
+                        }
+                        wrapOpen = false
+                    }) { Text("Pas afbrekingen tijdelijk toe") }
+            },
+            dismissButton = {
+                TextButton(onClick = { wrapOpen = false }) { Text("Annuleren") }
             }
         )
     }
