@@ -15,6 +15,19 @@ voltooide export- en deelacties worden ingetrokken, maar bestaande externe
 kopieën en klembordinhoud kunnen niet achteraf worden gewist.
 [Privacy en bediening](docs/PRIVATE_SINGLE_CAPTION_DELETE.md).
 
+## Nieuw: offline startcheck vanaf het hoofdscherm
+
+De knop **Offline startcheck** laat zien of de gekozen Android-spreektaal
+daadwerkelijk lokaal beschikbaar is én of de benodigde ML Kit-tekstmodellen
+al op dit toestel staan. Je kunt beide statussen apart of samen opnieuw
+controleren. Ontbrekende pakketten kunnen uitsluitend via een expliciete
+wifi-downloadknop worden voorbereid. Het venster leidt ook naar de
+taalinstellingen en naar de modus **Typ zin zonder microfoon**.
+Android 12 meldt geen verifieerbare spraakpakketlijst en wordt daarom
+niet als 'klaar' weergegeven. De controle bewijst geen werkende
+vliegtuigmodus of vrij te vertalen Koerdische/Pasjtoe spraak.
+[Bediening en beperkingen](docs/OFFLINE_START_CHECK.md).
+
 ## Nieuw: lokaal opgeslagen oefengegevens bewust wissen
 
 Onder **Taal- en modelinstellingen → Privacy** kun je na afzonderlijke

@@ -54,6 +54,7 @@ import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.FocusCaptionLine
+import com.livelingo.android.ui.OfflineReadinessDialog
 import java.io.ByteArrayOutputStream
 import java.text.DateFormat
 import java.util.Date
@@ -251,6 +252,7 @@ private fun TuddyScreen(
     }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
+    var offlineReadinessOpen by remember { mutableStateOf(false) }
     // Secondary export/history actions are collapsed on compact screens.
     var conversationToolsOpen by remember { mutableStateOf(false) }
     var directionNotice by remember { mutableStateOf("") }
@@ -423,6 +425,29 @@ private fun TuddyScreen(
     // stale UI completions are suppressed and the client is always closed.
     // Local read-only inventory. A green speech model is not evidence
     // that both ML Kit TEXT language models are present, or vice versa.
+    fun checkSpeechPackNow() {
+        if (!offlineAvailable || listening) return
+        val tag = source.speechCode
+        speechPacks.check(tag) { receipt ->
+            if (source.speechCode == receipt.tag &&
+                lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                speechPackReceipt = receipt
+            }
+        }
+    }
+
+    fun downloadSpeechPackNow() {
+        if (listening || source.speechCode != speechPackReceipt.tag ||
+            !speechPackReceipt.canDownload) return
+        val tag = source.speechCode
+        speechPacks.download(tag) { receipt ->
+            if (source.speechCode == receipt.tag &&
+                lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                speechPackReceipt = receipt
+            }
+        }
+    }
+
     fun checkTextPair() {
         val from = source.translateCode
         val to = target.translateCode
@@ -962,6 +987,7 @@ private fun TuddyScreen(
                 installedTextModels = null
             }
             if (event == Lifecycle.Event.ON_STOP) {
+                offlineReadinessOpen = false
                 focusMode = false
                 quickTypedOpen = false
                 draftFromExternalShare = false
@@ -1049,6 +1075,41 @@ private fun TuddyScreen(
     }
 
     MaterialTheme(colorScheme = colors) {
+        if (offlineReadinessOpen) {
+            OfflineReadinessDialog(
+                spokenLabel = source.label,
+                targetLabel = target.label,
+                speechTag = source.speechCode,
+                sourceTextCode = source.translateCode,
+                targetTextCode = target.translateCode,
+                speechServicePresent = offlineAvailable,
+                speech = speechPackReceipt,
+                textModel = textReceipt,
+                isListening = listening,
+                isPreparingText = preparingOfflineModel,
+                isModelStorageBusy = modelStorageBusy,
+                downloadNotice = offlineModelStatus,
+                onCheckBoth = {
+                    checkSpeechPackNow()
+                    checkTextPair()
+                },
+                onCheckSpeech = { checkSpeechPackNow() },
+                onDownloadSpeech = { downloadSpeechPackNow() },
+                onCheckText = { checkTextPair() },
+                onPrepareText = { prepareOfflinePair() },
+                onEditLanguages = {
+                    offlineReadinessOpen = false
+                    conversationToolsOpen = false
+                    favoritesOpen = false
+                    showSettings = true
+                },
+                onOpenTyped = {
+                    offlineReadinessOpen = false
+                    quickTypedOpen = true
+                },
+                onDismiss = { offlineReadinessOpen = false }
+            )
+        }
         if (quickTypedOpen) {
             AlertDialog(
                 onDismissRequest = {
@@ -1712,6 +1773,25 @@ private fun TuddyScreen(
                 Text("Spreektaal: ${source.label}  ·  Vertaling: ${target.label}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary)
+                val currentSpeechReady = offlineAvailable &&
+                    speechPackReceipt.tag == source.speechCode &&
+                    speechPackReceipt.stage == SpeechPackStage.READY
+                val currentTextReady = textReceipt.source == source.translateCode &&
+                    textReceipt.target == target.translateCode &&
+                    textReceipt.stage == OfflineTextStage.READY
+                OutlinedButton(
+                    onClick = {
+                        offlineReadinessOpen = true
+                        showSettings = false
+                        conversationToolsOpen = false
+                        favoritesOpen = false
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (currentSpeechReady && currentTextReady)
+                        "Offline startcheck · beide modellen aanwezig"
+                    else "Offline startcheck · controleer spraak én tekst")
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val canStart = offlineAvailable && !listening
                     Button(
@@ -2384,27 +2464,13 @@ private fun TuddyScreen(
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         OutlinedButton(
-                            onClick = {
-                                speechPacks.check(source.speechCode) { result ->
-                                    if (source.speechCode == result.tag &&
-                                        lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-                                        speechPackReceipt = result
-                                    }
-                                }
-                            },
+                            onClick = { checkSpeechPackNow() },
                             enabled = offlineAvailable && !listening &&
                                 speechPackReceipt.stage !in setOf(
                                     SpeechPackStage.CHECKING, SpeechPackStage.DOWNLOADING)
                         ) { Text("Controleer spraak") }
                         if (speechPackReceipt.tag == source.speechCode && speechPackReceipt.canDownload) {
-                            Button(onClick = {
-                                speechPacks.download(source.speechCode) { result ->
-                                    if (source.speechCode == result.tag &&
-                                        lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-                                        speechPackReceipt = result
-                                    }
-                                }
-                            }, enabled = !listening) {
+                            Button(onClick = { downloadSpeechPackNow() }, enabled = !listening) {
                                 Text(if (speechPackReceipt.stage == SpeechPackStage.ERROR)
                                     "Opnieuw via wifi" else "Download via wifi")
                             }
