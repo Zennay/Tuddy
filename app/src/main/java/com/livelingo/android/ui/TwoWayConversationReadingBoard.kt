@@ -38,6 +38,9 @@ import androidx.compose.ui.window.DialogProperties
 @Composable
 internal fun TwoWayConversationReadingBoard(
     lines: List<TypedConversationLine>,
+    onSaveCuratedWord: (String, String) -> Boolean,
+    readOwnMeaning: (String, String) -> String?,
+    onSaveOwnMeaning: (String, String, String) -> Boolean,
     onDismiss: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
@@ -79,6 +82,10 @@ internal fun TwoWayConversationReadingBoard(
                         style = MaterialTheme.typography.titleLarge)
                     TextButton(onClick = onDismiss) { Text("Sluiten") }
                 }
+                Text("Tik op een woord voor de kleine ingebouwde offline woordkaart. " +
+                    "Een eigen betekenis wordt pas na jouw invoer en bewaarknop " +
+                    "in je privéwoordenlijst opgeslagen.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("Alleen dit tijdelijke gesprek · geen automatische opslag, " +
                     "deling of cloudspraak. Lokale vertalingen kunnen fouten bevatten.",
                     style = MaterialTheme.typography.bodySmall)
@@ -125,23 +132,35 @@ internal fun TwoWayConversationReadingBoard(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Text(row.original, modifier = Modifier.fillMaxWidth(),
+                            OfflineWordText(
+                                text = row.original,
+                                language = row.source,
                                 style = MaterialTheme.typography.bodyLarge.copy(
                                     fontSize = if (large) 30.sp else 21.sp,
                                     lineHeight = if (large) 39.sp else 29.sp,
                                     fontWeight = FontWeight.Medium,
                                     textDirection = dir(row.source)
-                                ))
+                                ),
+                                onSaveWord = onSaveCuratedWord,
+                                readOwnMeaning = readOwnMeaning,
+                                saveOwnMeaning = onSaveOwnMeaning
+                            )
                             if (completed(row)) {
                                 if (row.status == "Lokaal vertaald" &&
                                     row.translated.isNotBlank()) {
-                                    Text(row.translated, modifier = Modifier.fillMaxWidth(),
-                                        color = MaterialTheme.colorScheme.primary,
+                                    OfflineWordText(
+                                        text = row.translated,
+                                        language = row.target,
                                         style = MaterialTheme.typography.bodyLarge.copy(
+                                            color = MaterialTheme.colorScheme.primary,
                                             fontSize = if (large) 30.sp else 21.sp,
                                             lineHeight = if (large) 39.sp else 29.sp,
                                             textDirection = dir(row.target)
-                                        ))
+                                        ),
+                                        onSaveWord = onSaveCuratedWord,
+                                        readOwnMeaning = readOwnMeaning,
+                                        saveOwnMeaning = onSaveOwnMeaning
+                                    )
                                 } else {
                                     Text("Geen afzonderlijke vertaling",
                                         style = MaterialTheme.typography.bodySmall)
