@@ -439,9 +439,9 @@ private fun TuddyScreen(
             updateLine(id, "Dit teksttaalpaar wordt lokaal niet ondersteund.", "Fout", token, revision)
             return
         }
-        val index = lines.indexOfFirst { it.id == id && it.translationRevision == revision }
-        if (index < 0) return
-        lines[index] = lines[index].copy(sourceCode = from)
+        val row = lines.indexOfFirst { it.id == id && it.translationRevision == revision }
+        if (row < 0) return
+        lines[row] = lines[row].copy(sourceCode = from)
         if (from == targetCode) {
             updateLine(id, text, "Lokaal", token, revision)
             return
@@ -2893,7 +2893,26 @@ private fun TuddyScreen(
                     )
                     Button(
                         onClick = {
-                            if (submitTypedCaption()) follow = true
+                            val sentence = OfflineTypedCaptionPolicy.normalize(manualText)
+                                ?: return@Button
+                            val id = System.nanoTime()
+                            val token = generation
+                            val selectedSource = source.translateCode
+                            val selectedTarget = target.translateCode
+                            lines.add(Line(id, sentence, "Vertalen…", "Bezig",
+                                selectedSource, selectedTarget))
+                            repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
+                                val removed = lines.removeAt(0)
+                                manuallyAssignedSpeakers.remove(removed.id)
+                                captionPins = captionPins - removed.id
+                                if (editingCaptionId == removed.id) {
+                                    editingCaptionId = null
+                                    captionCorrectionDraft = ""
+                                }
+                            }
+                            manualText = ""
+                            translate(sentence, id, selectedTarget, selectedSource, token)
+                            follow = true
                         },
                         enabled = OfflineTypedCaptionPolicy.normalize(manualText) != null
                     ) { Text("Vertaal tekst lokaal") }
