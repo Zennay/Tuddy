@@ -177,6 +177,8 @@ private fun TuddyScreen() {
     // Privacy gate: no caption is handed to Android's external share chooser
     // until the user confirms the exact selected line in this session.
     var pendingCaptionShare by remember { mutableStateOf<Triple<Int, Long, String>?>(null) }
+    // A separate, opt-in speaker-labelled text export; ordinary archives stay unchanged.
+    var pendingSpeakerExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
@@ -215,6 +217,21 @@ private fun TuddyScreen() {
             lines[index].original.contains(normalizedHistoryQuery, ignoreCase = true) ||
                 lines[index].translated.contains(normalizedHistoryQuery, ignoreCase = true)
         }
+
+    fun captureSpeakerTranscript(): ByteArray? {
+        val completed = lines.filter {
+            it.status == "Lokaal vertaald" || it.status == "Lokaal"
+        }
+        if (completed.none {
+                manuallyAssignedSpeakers[it.id] == "A" || manuallyAssignedSpeakers[it.id] == "B"
+            }) return null
+        return PrivateSpeakerTranscriptExport.snapshot(completed.map { line ->
+            TranscriptExportRow(
+                line.original, line.translated, line.status,
+                line.sourceCode, line.targetCode, line.recordedAtMillis
+            ) to manuallyAssignedSpeakers[line.id]
+        })
+    }
 
     fun jumpToSpeaker(label: String) {
         val matches = lines.indices.filter { manuallyAssignedSpeakers[lines[it].id] == label }
@@ -741,6 +758,7 @@ private fun TuddyScreen() {
                 previewArchiveRows = null
                 archiveSearchQuery = ""
                 pendingCaptionShare = null
+                pendingSpeakerExport = null
             }
             if (event == Lifecycle.Event.ON_STOP) {
                 speechPackReceipt = SpeechPackReceipt(source.speechCode, SpeechPackStage.UNCHECKED,
@@ -755,6 +773,7 @@ private fun TuddyScreen() {
             previewArchiveRows = null
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
+            pendingSpeakerExport = null
             manuallyAssignedSpeakers.clear()
             captionSpeaker.close()
         }
@@ -782,6 +801,38 @@ private fun TuddyScreen() {
     }
 
     MaterialTheme(colorScheme = colors) {
+        val speakerSnapshot = pendingSpeakerExport
+        if (speakerSnapshot != null) {
+            AlertDialog(
+                onDismissRequest = { pendingSpeakerExport = null },
+                title = { Text("Handmatig gelabeld gesprek bewaren?") },
+                text = {
+                    Text(
+                        "Alleen jij hebt de sprekerlabels A/B gekozen. Ze herkennen geen echte " +
+                            "personen. Je gaat de afgeronde uitspraken inclusief labels " +
+                            "als TXT buiten het tijdelijke Tuddy-geheugen opslaan. " +
+                            "De gekozen Android-bestandsprovider kan het document " +
+                            "synchroniseren of met anderen delen. Controleer gevoelige gegevens."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pendingSpeakerExport = null
+                        val current = captureSpeakerTranscript()
+                        if (listening || speakerSnapshot.first != generation ||
+                            current == null || !current.contentEquals(speakerSnapshot.second)) {
+                            exportStatus = "Het gesprek of de labels zijn gewijzigd. Kies opnieuw exporteren."
+                        } else {
+                            pendingTranscriptExport = generation to current
+                            saveTranscript.launch("Tuddy-handmatige-sprekers.txt")
+                        }
+                    }) { Text("Ik begrijp dit, kies opslag…") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingSpeakerExport = null }) { Text("Annuleren") }
+                }
+            )
+        }
         val share = pendingCaptionShare
         if (share != null) {
             AlertDialog(
@@ -1048,6 +1099,7 @@ private fun TuddyScreen() {
                         copyStatus = ""
                         lastCopiedCaptionId = null
                         pendingCaptionShare = null
+                        pendingSpeakerExport = null
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
@@ -1160,6 +1212,33 @@ private fun TuddyScreen() {
                     ) { Text("Open JSON-archief…") }
                     Text(
                         "Bekijk een bewaard gesprek zonder je live gesprek te vervangen.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        enabled = !listening && lines.any {
+                            (it.status == "Lokaal vertaald" || it.status == "Lokaal") &&
+                                (manuallyAssignedSpeakers[it.id] == "A" ||
+                                    manuallyAssignedSpeakers[it.id] == "B")
+                        },
+                        onClick = {
+                            val snapshot = captureSpeakerTranscript()
+                            if (snapshot == null) {
+                                exportStatus = "Geen afgerond gesprek met veilige sprekerlabels om te bewaren."
+                            } else {
+                                exportStatus = ""
+                                pendingSpeakerExport = generation to snapshot
+                            }
+                        }
+                    ) { Text("Bewaar gesprek met sprekerlabels…") }
+                    Text(
+                        "Afzonderlijke toestemming · alleen afgeronde zinnen · TXT",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall
                     )
