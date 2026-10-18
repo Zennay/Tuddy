@@ -91,6 +91,18 @@ nog steeds uitsluitend generiek Arabische tekstvertaling, **geen**
 bewezen dialect-specifieke ASR/MT-dekking.
 [Bediening en beperkingen](docs/LEVANTINE_SPEECH_CANDIDATES.md).
 
+## Nieuw: optionele limiet voor microfoonopvang
+
+Onder **Taal- en modelinstellingen → Privacy** kun je een
+maximale luistersessie van **5, 15 of 30 minuten** kiezen,
+of **Geen** voor bestaande werking. De timer loopt door
+over automatische herkenner-herstarts en stopt bij
+aflopen echt de on-device microfoon; het tijdelijke
+gesprek blijft behouden. Een wijziging tijdens luisteren
+begint opnieuw vanaf het moment van kiezen.
+Alleen de gekozen minutenwaarde wordt privé opgeslagen.
+[Werking en grenzen](docs/MICROPHONE_SESSION_LIMIT.md).
+
 ## Nieuw: optioneel trilsignaal bij nieuwe spraakzin
 
 Via **Taal- en modelinstellingen → Toegankelijkheid** kun je een
