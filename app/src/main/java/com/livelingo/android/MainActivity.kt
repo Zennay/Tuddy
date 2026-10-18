@@ -1458,6 +1458,32 @@ private fun TuddyScreen(
                     TypedConversationLine(row.original, row.translated, row.status,
                         row.sourceCode, row.targetCode)
                 },
+                retryableCount = { from, to ->
+                    lines.count { it.sourceCode == from && it.targetCode == to &&
+                        it.status == "Model ontbreekt" }
+                },
+                onRetryMissing = { from, to ->
+                    if (listening || from !in TargetCatalog.codes ||
+                        to !in TargetCatalog.codes || from == to) 0
+                    else {
+                        val candidates = lines.filter {
+                            it.sourceCode == from && it.targetCode == to &&
+                                it.status == "Model ontbreekt"
+                        }.take(12)
+                        candidates.forEach { row ->
+                            val index = lines.indexOfFirst { it.id == row.id }
+                            if (index >= 0 && lines[index] == row) {
+                                // Fence stale async completions from old attempts.
+                                lines[index] = row.copy(translated = "Vertalen…",
+                                    status = "Bezig",
+                                    translationRevision = row.translationRevision + 1)
+                                translate(row.original, row.id, to, from, generation,
+                                    explicitlyChosenSource = true)
+                            }
+                        }
+                        candidates.size
+                    }
+                },
                 onSend = { sentence, from, to ->
                     val added = appendTypedTurn(sentence, from, to)
                     if (added) follow = true
