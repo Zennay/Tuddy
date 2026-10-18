@@ -5,13 +5,7 @@ import android.media.MediaPlayer
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -61,6 +55,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var prepared by remember { mutableStateOf(false) }
     var playing by remember { mutableStateOf(false) }
     var positionMs by remember { mutableLongStateOf(0L) }
+    var dragPositionMs by remember { mutableLongStateOf(-1L) }
     var durationMs by remember { mutableLongStateOf(0L) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
 
@@ -70,6 +65,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         prepared = false
         playing = false
         positionMs = 0L
+        dragPositionMs = -1L
         durationMs = 0L
         if (old != null) runCatching {
             old.setOnPreparedListener(null)
@@ -175,8 +171,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
         }
     }
 
+    val displayTimeMs = if (dragPositionMs >= 0L) dragPositionMs else positionMs
     val activeIndex = if (prepared) cues.indexOfLast {
-        positionMs >= it.startMillis && positionMs < it.endMillis
+        displayTimeMs >= it.startMillis && displayTimeMs < it.endMillis
     } else -1
     val active = cues.getOrNull(activeIndex)
     val nextIndex = cues.indexOfFirst { it.startMillis > positionMs + 250L }
@@ -227,12 +224,16 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (prepared) {
                     Slider(
-                        value = positionMs.coerceIn(0L, durationMs).toFloat(),
-                        onValueChange = { seekTo(it.toLong()) },
+                        value = displayTimeMs.coerceIn(0L, durationMs).toFloat(),
+                        onValueChange = { dragPositionMs = it.toLong() },
+                        onValueChangeFinished = {
+                            if (dragPositionMs >= 0L) seekTo(dragPositionMs)
+                            dragPositionMs = -1L
+                        },
                         valueRange = 0f..durationMs.toFloat(),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Text("${clock(positionMs)} / ${clock(durationMs)}",
+                    Text("${clock(displayTimeMs)} / ${clock(durationMs)}",
                         style = MaterialTheme.typography.labelLarge)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
