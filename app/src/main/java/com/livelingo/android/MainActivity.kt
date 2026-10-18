@@ -26,6 +26,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -150,6 +154,19 @@ private fun TuddyScreen() {
     var automaticSpeechSource by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    // Only a real user scroll should pause lyric-style following. Programmatic
+    // scrollToItem / animateScrollToItem uses non-user nested-scroll sources and
+    // must not pause itself while tracking a live utterance.
+    val manualHistoryScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source == NestedScrollSource.UserInput && available.y != 0f) {
+                    follow = false
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
     fun updateLine(id: Long, translation: String, status: String, token: Int) {
         if (token != generation) return
@@ -957,10 +974,17 @@ private fun TuddyScreen() {
                     }
                 }
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+                if (!follow) {
+                    Text(
+                        "Teruggelezen: automatisch volgen is gepauzeerd. Tik op Volg live om de laatste regel te zien.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 HorizontalDivider()
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier.weight(1f).fillMaxWidth().nestedScroll(manualHistoryScroll),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (lines.isEmpty() && partial.isBlank()) {
