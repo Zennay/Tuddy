@@ -1863,6 +1863,16 @@ private fun TuddyScreen(
                         microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
                     }
                 },
+                onCycleManualSpeaker = { id ->
+                    // Manual, ephemeral labels; never automatic diarization.
+                    if (lines.any { it.id == id }) {
+                        when (manuallyAssignedSpeakers[id]) {
+                            null -> manuallyAssignedSpeakers[id] = "A"
+                            "A" -> manuallyAssignedSpeakers[id] = "B"
+                            else -> manuallyAssignedSpeakers.remove(id)
+                        }
+                    }
+                },
                 pinnedCaptionIds = captionPins,
                 onTogglePin = { id ->
                     val before = captionPins
