@@ -56,6 +56,7 @@ import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.FocusCaptionLine
 import com.livelingo.android.ui.LiveInterimWordFocus
 import com.livelingo.android.ui.OfflineStarterPhraseboard
+import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
 import java.io.ByteArrayOutputStream
@@ -212,6 +213,7 @@ private fun TuddyScreen(
     val personalPhrases = remember(context) { PrivatePhraseDeck(context) }
     var personalPhrasesOpen by remember { mutableStateOf(false) }
     var starterPhraseboardOpen by remember { mutableStateOf(false) }
+    var flashcardsOpen by remember { mutableStateOf(false) }
     var previewSource by remember { mutableStateOf("nl") }
     var previewMenuOpen by remember { mutableStateOf(false) }
     var previewInput by remember { mutableStateOf("") }
@@ -1018,6 +1020,7 @@ private fun TuddyScreen(
             if (event == Lifecycle.Event.ON_STOP) {
                 offlineReadinessOpen = false
                 starterPhraseboardOpen = false
+                flashcardsOpen = false
                 focusMode = false
                 quickTypedOpen = false
                 draftFromExternalShare = false
@@ -1044,6 +1047,7 @@ private fun TuddyScreen(
             generation++
             modelStorage.invalidate()
             starterPhraseboardOpen = false
+            flashcardsOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             archiveSearchQuery = ""
@@ -1656,6 +1660,21 @@ private fun TuddyScreen(
                 }
             )
         }
+        if (flashcardsOpen) {
+            OfflineStudyFlashcards(
+                savedWords = savedVocabulary.entries(),
+                personalPhrases = personalPhrases.entries(),
+                onManageWords = {
+                    flashcardsOpen = false
+                    savedWordsOpen = true
+                },
+                onManagePhrases = {
+                    flashcardsOpen = false
+                    personalPhrasesOpen = true
+                },
+                onDismiss = { flashcardsOpen = false }
+            )
+        }
         if (starterPhraseboardOpen) {
             OfflineStarterPhraseboard(
                 onOpenPersonalPhrases = {
@@ -1776,6 +1795,7 @@ private fun TuddyScreen(
                         favoritesNotice = ""
                         savedWordsOpen = false
                         personalPhrasesOpen = false
+                        flashcardsOpen = false
                         studyEraseNotice = if (wordsCleared && phrasesCleared && favoritesCleared) {
                             "Opgeslagen woorden, eigen zinnen en favoriete taalparen gewist. " +
                                 "Gesprek, taalkeuze en eerdere externe exports zijn behouden."
@@ -1947,6 +1967,13 @@ private fun TuddyScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("🌍 5 basiswoorden · Kurmanji, Sorani, Pasjtoe") }
+                TextButton(
+                    onClick = {
+                        if (listening) stop()
+                        flashcardsOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🧠 Oefenkaarten · mijn opgeslagen woorden en zinnen") }
                 OutlinedButton(onClick = {
                     favoritesOpen = !favoritesOpen
                     if (favoritesOpen) {

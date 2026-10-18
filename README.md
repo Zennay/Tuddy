@@ -37,6 +37,18 @@ online fallback. Een eigen stopactie beëindigt de uitspraak.
 Er wordt niets als audio bewaard.
 [Bediening en beperkingen](docs/OFFLINE_PRONUNCIATION_CHOICES.md).
 
+## Nieuw: privé-oefenkaarten zonder internet
+
+Met **🧠 Oefenkaarten** oefen je de woorden die je bewust hebt
+bewaard uit de ingebouwde woordenlijst en je eigen notities
+voor Kurmanji, Sorani en Pasjtoe. Wissel tussen kaarten voor
+woorden, eigen zinnen of alles. Bekijk eerst het antwoord en
+geef zelf **Ken ik ✓** of **Nog eens** aan; lastige kaarten komen
+in dezelfde sessie terug. Eigen betekenissen zijn niet door Tuddy
+vertaald of gecontroleerd. Geen score wordt opgeslagen en niets
+wordt verstuurd.
+[Bediening en grenzen](docs/OFFLINE_STUDY_FLASHCARDS.md).
+
 ## Nieuw: bewegende woordfocus in het gewone gesprek
 
 De actuele voorlopige spraakregel krijgt nu ook buiten de fullscreen
