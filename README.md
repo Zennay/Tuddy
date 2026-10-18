@@ -11,6 +11,74 @@ nooit je eigen teksten. Het JSON-bestand bevat themanamen en
 herleidbare SHA-256-identiteiten: dat is **geen encryptie**.
 [Uitleg en privacy](docs/PRIVATE_PHRASE_TOPIC_BACKUP.md).
 
+## Nieuw: favorieten en thema’s bij voorbereide teksten
+
+Bij **Gebruik mijn voorbereide eigen tekst…** kun je nu ook
+filteren op je eerder bewaarde gespreksfavorieten en zelfgekozen
+privéthema's. Daardoor vind je snel de eigen NL/EN-betekenis
+die je als **onverstuurd** concept wilt overnemen.
+De indeling blijft ongewijzigd en er vindt geen automatische
+Kurmanji/Sorani/Pasjtoe-vertaling plaats.
+[Bediening en privacy](docs/PREPARED_PRIVATE_TWO_WAY_DRAFTS.md).
+
+
+## Nieuw: alle geplande kaarten in één gemengde offline ronde
+
+In **Vandaag offline oefenen** kun je nu basiswoorden, eigen zinnen
+en zelfgeschreven woordbetekenissen door elkaar oefenen zonder tussen
+drie schermen te wisselen. De antwoorden verschijnen pas na een tik.
+Je beoordeelt elke kaart afzonderlijk; die keuze wordt uitsluitend
+in de al bestaande privéplanning bewaard. Overslaan laat de kaart
+onbeoordeeld. Er ontstaat geen gezamenlijk leerprofiel of
+automatische vertaalgarantie.
+[Werking en privacy](docs/MIXED_OFFLINE_DAILY_REVIEW.md).
+
+
+## Nieuw: een eigen voorbereide zin gebruiken in een tekstgesprek
+
+In het offline **tweeweg-tekstgesprek** kun je nu bewust een
+eerder zelfgeschreven **Nederlandse of Engelse betekenis** van
+een privézin als **onverstuurd concept** overnemen. Een bestaande
+concepttekst wordt nooit zonder bevestiging vervangen. De
+Kurmanji-/Sorani-/Pasjtoe-bronzin wordt niet als ondersteund
+automatisch tekstmodel gepresenteerd. Alleen na jouw aparte
+verzendtik probeert Tuddy een ondersteunde lokale tekstvertaling.
+[Bediening en veiligheidsgrens](docs/PREPARED_PRIVATE_TWO_WAY_DRAFTS.md).
+
+
+## Nieuw: zelf je kaarten op papier oefenen
+
+Kies bij **Bewaar mijn kaarten van vandaag…** ook voor een afdrukbaar
+oefenblad: eerst alleen de vragen met ruimte voor jouw antwoorden,
+daarna de eigen betekenissen op een aparte sleutelpagina.
+Het bestand werkt geheel offline en gebruikt alleen de bewust gekozen
+kaarten die vandaag aan de beurt zijn. De betekenissen bij
+zelfgeschreven woorden of zinnen blijven ongeverifieerd.
+[Uitleg](docs/PRINTABLE_DAILY_PRACTICE_WORKSHEET.md).
+
+
+## Nieuw: alleen de oefenkaarten van vandaag afdrukken
+
+Vanuit **Vandaag offline oefenen** kun je bewust één of meer
+leergroepen kiezen en daarvan een zelfstandig, offline HTML-studieblad
+bewaren via de Android-bestandskiezer. Alleen de vandaag aan-de-beurt
+zijnde kaarten worden meegenomen. Als het lokale materiaal tijdens
+de bestandskeuze verandert, weigert Tuddy de verouderde export.
+Zelfgeschreven betekenissen blijven ongeverifieerd en de externe
+opslaglocatie is jouw verantwoordelijkheid.
+[Meer informatie](docs/DUE_TODAY_OFFLINE_STUDY_BOOK.md).
+
+
+## Nieuw: één studieoverzicht voor alle drie je eigen oefenstromen
+
+**Vandaag offline oefenen** toont nu ook de vrijwillige herhaalplanning
+voor je **eigen woordbetekenissen**, naast bewaarde basiswoorden en
+zelfgeschreven Kurmanji-/Sorani-/Pasjtoe-zinnen. Bekijk de gezamenlijke
+vandaagteller, open een van de drie kaartreeksen of beheer de
+toestemming en opslag per onderdeel. Niets start automatisch en
+eigen betekenissen zijn niet onafhankelijk gecontroleerd.
+[Handleiding en beperkingen](docs/THREE_LANE_OFFLINE_STUDY_HUB.md).
+
 
 ## Nieuw: één privéthema als afdrukbaar zinnenboek
 

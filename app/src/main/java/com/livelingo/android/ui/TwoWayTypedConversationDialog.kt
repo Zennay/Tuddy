@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
+import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivateTypedLanguagePairs
 import com.livelingo.android.TypedLanguagePair
 import com.livelingo.android.OfflineTextReceipt
@@ -83,11 +84,13 @@ internal fun TwoWayTypedConversationDialog(
     var favoritesOpen by remember { mutableStateOf(false) }
     var confirmEraseFavorites by remember { mutableStateOf(false) }
     var favoriteModelsOpen by remember { mutableStateOf(false) }
+    var preparedMeaningPickerOpen by remember { mutableStateOf(false) }
     var pendingLimitedPreviewCode by remember { mutableStateOf<String?>(null) }
     var favoriteNotice by remember { mutableStateOf("") }
     var favoritesRevision by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     val favorites = remember(context) { PrivateTypedLanguagePairs(context) }
+    val selfAuthoredPhrases = remember(context) { PrivatePhraseDeck(context) }
     val pinnedPairs = remember(favoritesRevision) { favorites.entries() }
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     var speechNotice by remember { mutableStateOf("") }
@@ -154,6 +157,33 @@ internal fun TwoWayTypedConversationDialog(
                 )
             },
             onDismiss = { studyOpen = false }
+        )
+        return
+    }
+    if (preparedMeaningPickerOpen) {
+        PrivatePreparedMeaningPicker(
+            deck = selfAuthoredPhrases,
+            hasUnsentDraft = draft.isNotBlank(),
+            onChosen = { ownMeaning, writtenLanguage ->
+                // Only NL/EN user-authored meanings are admitted here; the
+                // corresponding Kurdish/Pashto source is NEVER translated by
+                // a model that does not support those languages.
+                if (writtenLanguage in setOf("nl", "en") &&
+                    OfflineTypedCaptionPolicy.normalize(ownMeaning) != null) {
+                    from = writtenLanguage
+                    draft = ownMeaning
+                    externalShareReview = false
+                    info = if (from == to)
+                        "Je eigen betekenis staat als ONVERSTUURD concept klaar. " +
+                            "Kies nog een andere ondersteunde doeltaal vóór lokaal vertalen."
+                    else "Eigen, niet geverifieerde betekenis overgenomen als " +
+                        "ONVERSTUURD concept. Controleer en tik zelf op toevoegen."
+                } else {
+                    info = "Eigen betekenis is ongeldig. Je concept is niet veranderd."
+                }
+                preparedMeaningPickerOpen = false
+            },
+            onDismiss = { preparedMeaningPickerOpen = false }
         )
         return
     }
@@ -438,6 +468,20 @@ internal fun TwoWayTypedConversationDialog(
                     Text("Kies twee verschillende teksttalen voor een vertaling.",
                         color = MaterialTheme.colorScheme.error)
                 }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !preparing,
+                    onClick = {
+                        speaker.stop()
+                        speechNotice = ""
+                        preparedMeaningPickerOpen = true
+                    }
+                ) { Text("▤ Gebruik mijn voorbereide eigen tekst…") }
+                Text(
+                    "Neemt alleen jouw opgeslagen NL/EN-betekenis als concept over. " +
+                        "Nooit automatisch verzenden, geen Kurmanji/Pasjtoe-model.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 OutlinedTextField(
                     value = draft,
                     onValueChange = { if (it.length <= OfflineTypedCaptionPolicy.MAX_INPUT_UNITS) draft = it },

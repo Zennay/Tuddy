@@ -20,25 +20,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.livelingo.android.PrivateOwnWordDeck
 import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivateVocabularyDeck
 import java.time.LocalDate
 
 /**
- * A single device-only entry point for two separately consented study plans.
+ * A single device-only entry point for three separately consented study plans.
  * This screen never enables reviews, starts speech, or persists a transcript.
  */
 @Composable
 internal fun DailyStudyHub(
     words: PrivateVocabularyDeck,
     phrases: PrivatePhraseDeck,
+    ownWords: PrivateOwnWordDeck,
     onManageWords: () -> Unit,
     onManagePhrases: () -> Unit,
+    onManageOwnWords: () -> Unit,
     onWordChanged: () -> Unit,
+    onOwnWordChanged: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var wordReviewOpen by remember { mutableStateOf(false) }
     var phraseReviewOpen by remember { mutableStateOf(false) }
+    var ownWordReviewOpen by remember { mutableStateOf(false) }
+    var dailyBookOpen by remember { mutableStateOf(false) }
+    var mixedRoundOpen by remember { mutableStateOf(false) }
     var viewRevision by remember { mutableIntStateOf(0) }
 
     if (wordReviewOpen) {
@@ -58,17 +65,52 @@ internal fun DailyStudyHub(
         return
     }
 
+    if (mixedRoundOpen) {
+        MixedDailyReviewPanel(
+            words = words,
+            ownWords = ownWords,
+            phrases = phrases,
+            onWordChanged = { viewRevision++; onWordChanged() },
+            onOwnWordChanged = { viewRevision++; onOwnWordChanged() },
+            onPhraseChanged = { viewRevision++ },
+            onDismiss = { mixedRoundOpen = false }
+        )
+        return
+    }
+    if (dailyBookOpen) {
+        PrivateDueStudyBookDialog(
+            words = words,
+            phrases = phrases,
+            ownWords = ownWords,
+            onDismiss = { dailyBookOpen = false }
+        )
+        return
+    }
+    if (ownWordReviewOpen) {
+        ScheduledOwnWordReviewPanel(
+            deck = ownWords,
+            onChanged = { viewRevision++; onOwnWordChanged() },
+            onDismiss = { ownWordReviewOpen = false }
+        )
+        return
+    }
+
     // Re-read only local app-private metadata after an intentional evaluation.
     viewRevision
     val today = LocalDate.now().toEpochDay()
     val wordPlanEnabled = words.reviewsEnabled()
     val phrasePlanEnabled = phrases.reviewsEnabled()
+    val ownWordPlanEnabled = ownWords.reviewsEnabled()
     val wordReview = if (wordPlanEnabled) words.scheduledReviews() else emptyList()
     val phraseReview = if (phrasePlanEnabled) phrases.scheduledReviews() else emptyList()
+    val ownWordReview = if (ownWordPlanEnabled) ownWords.scheduledReviews() else emptyList()
     val wordDue = wordReview.count { it.dueDay <= today }
     val phraseDue = phraseReview.orEmpty().count { it.dueDay <= today }
+    val ownWordDue = ownWordReview.orEmpty().count { it.dueDay <= today }
+    val totalDue = wordDue + phraseDue + ownWordDue
     val nearest = (wordReview.map { it.dueDay } +
-        phraseReview.orEmpty().map { it.dueDay })
+        phraseReview.orEmpty().map { it.dueDay } +
+        ownWordReview.orEmpty().map { it.dueDay })
         .filter { it > today }.minOrNull()
 
     AlertDialog(
@@ -81,15 +123,35 @@ internal fun DailyStudyHub(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "Eén overzicht van twee aparte, vrijwillige herhaalplannen. " +
+                    "Eén overzicht van drie aparte, vrijwillige herhaalplannen. " +
                         "Geen account, meldingen, taalmodel, opname of cloudsync.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    "${wordDue + phraseDue} kaarten voor vandaag",
+                    "$totalDue kaarten voor vandaag",
                     style = MaterialTheme.typography.headlineSmall
                 )
-                if (wordDue + phraseDue == 0) {
+                if (totalDue > 0) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { mixedRoundOpen = true }
+                    ) { Text("🧠 Mix alle kaarten van vandaag · één ronde") }
+                    Text(
+                        "Wisselt tussen leergroepen. Je beoordeelt elke kaart zelf; " +
+                            "overslaan laat de bestaande herhaaldatum intact.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { dailyBookOpen = true }
+                    ) { Text("▤ Bewaar mijn kaarten van vandaag…") }
+                    Text(
+                        "Alleen na afzonderlijke keuze van kaartgroepen en " +
+                            "een externe Android-opslaglocatie.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (totalDue == 0) {
                     Text(
                         if (nearest != null) "Volgende geplande herhaling: " +
                             LocalDate.ofEpochDay(nearest).toString()
@@ -135,6 +197,27 @@ internal fun DailyStudyHub(
                 TextButton(onClick = onManagePhrases) {
                     Text(if (phrasePlanEnabled) "Beheer eigen zinnen en planning"
                         else "Voeg eigen zinnen toe / kies opt-in")
+                }
+                HorizontalDivider()
+                Text("Mijn zelfgeschreven woordbetekenissen",
+                    style = MaterialTheme.typography.titleMedium)
+                Text(
+                    if (ownWordReview == null)
+                        "De lokale lijst is niet leesbaar. Beheer deze in Mijn eigen woorden."
+                    else if (ownWordPlanEnabled)
+                        "$ownWordDue vandaag · ${ownWordReview.size} lokaal gepland"
+                    else "Planning staat uit en wordt niet stilzwijgend ingeschakeld.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = ownWordDue > 0 && ownWordReview != null,
+                    onClick = { ownWordReviewOpen = true }
+                ) { Text("Oefen eigen woordbetekenissen ($ownWordDue)") }
+                TextButton(onClick = onManageOwnWords) {
+                    Text(if (ownWordPlanEnabled)
+                        "Beheer eigen woorden en planning"
+                    else "Voeg eigen woorden toe / kies opt-in")
                 }
                 Text(
                     "Eigen zinnen en betekenissen zijn niet onafhankelijk " +
