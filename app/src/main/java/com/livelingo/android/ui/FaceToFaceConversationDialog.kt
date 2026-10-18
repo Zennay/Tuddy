@@ -11,6 +11,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Button
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,6 +72,33 @@ internal fun FaceToFaceConversationDialog(
     val index = if (followNewest) completed.lastIndex
         else chosenIndex.coerceIn(0, completed.lastIndex.coerceAtLeast(0))
     val selected = completed.getOrNull(index)
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    var audioNotice by remember { mutableStateOf("") }
+    var slowVoice by remember { mutableStateOf(false) }
+    DisposableEffect(speaker, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE)
+                speaker.stop()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); speaker.close() }
+    }
+    LaunchedEffect(selected?.original, selected?.translated, selected?.source,
+        selected?.target) {
+        speaker.stop()
+        audioNotice = ""
+    }
+    fun pronounce(text: String?, code: String?) {
+        val line = text?.replace('\n', ' ')?.trim().orEmpty()
+        if (line.isBlank() || line.length > 400 || code == null) {
+            audioNotice = "Deze zin kan niet veilig met een lokale stem worden voorgelezen."
+        } else speaker.speak(line, code,
+            if (slowVoice) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL) {
+            audioNotice = it
+        }
+    }
     val rtlLanguages = setOf("ar", "fa", "ur", "he", "ps", "ckb")
     fun direction(code: String): TextDirection =
         if (code.substringBefore('-') in rtlLanguages) TextDirection.Rtl
@@ -139,6 +174,7 @@ internal fun FaceToFaceConversationDialog(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         TextButton(onClick = {
+                            speaker.stop()
                             translatedOnFarSide = !translatedOnFarSide
                         }) { Text("↕ Wissel kanten") }
                         TextButton(onClick = { largeText = !largeText }) {
@@ -148,6 +184,44 @@ internal fun FaceToFaceConversationDialog(
                             followNewest = true
                         }) { Text("↓ Nieuwste") }
                         TextButton(onClick = onBack) { Text("Terug") }
+                    }
+                    if (selected != null) {
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(
+                                enabled = selected.original.length <= 400 &&
+                                    selected.translated.length <= 400,
+                                onClick = {
+                                    val code = if (translatedOnFarSide) selected.target
+                                        else selected.source
+                                    val value = if (translatedOnFarSide) selected.translated
+                                        else selected.original
+                                    pronounce(value, code)
+                                }
+                            ) { Text("🔊 Tegenover") }
+                            TextButton(
+                                enabled = selected.original.length <= 400 &&
+                                    selected.translated.length <= 400,
+                                onClick = {
+                                    val code = if (translatedOnFarSide) selected.source
+                                        else selected.target
+                                    val value = if (translatedOnFarSide) selected.original
+                                        else selected.translated
+                                    pronounce(value, code)
+                                }
+                            ) { Text("🔊 Hier") }
+                            TextButton(onClick = {
+                                speaker.stop()
+                                slowVoice = !slowVoice
+                            }) { Text(if (slowVoice) "Langzaam ✓" else "Rustig") }
+                            TextButton(onClick = {
+                                speaker.stop()
+                                audioNotice = "Voorlezen gestopt."
+                            }) { Text("■ Stop") }
+                        }
+                        if (audioNotice.isNotBlank()) {
+                            Text(audioNotice, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                     if (onSubmitTurn != null) {
                         Row(modifier = Modifier.fillMaxWidth(),
@@ -182,6 +256,7 @@ internal fun FaceToFaceConversationDialog(
                                 val normalized = OfflineTypedCaptionPolicy.normalize(input)
                                 if (normalized != null &&
                                     onSubmitTurn(normalized, turnFrom, turnTo)) {
+                                    speaker.stop()
                                     input = ""
                                     val previous = turnFrom
                                     turnFrom = turnTo
