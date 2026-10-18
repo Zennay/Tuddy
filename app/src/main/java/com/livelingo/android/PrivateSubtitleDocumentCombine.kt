@@ -39,7 +39,8 @@ internal object PrivateSubtitleDocumentCombine {
     fun preview(
         current: List<PrivateSubtitleCue>,
         incoming: List<PrivateSubtitleCue>,
-        mode: SubtitleCombineMode
+        mode: SubtitleCombineMode,
+        secondTrackOffsetMs: Long = 0L
     ): SubtitleCombinePreview? {
         if (current.isEmpty() || incoming.isEmpty() ||
             (mode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES &&
@@ -49,7 +50,8 @@ internal object PrivateSubtitleDocumentCombine {
         ) return null
 
         if (mode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
-            val paired = PrivateSubtitleTrackPairing.preview(current, incoming) ?: return null
+            val paired = PrivateSubtitleTrackPairing.preview(
+                current, incoming, secondTrackOffsetMs) ?: return null
             return SubtitleCombinePreview(
                 cues = paired.cues,
                 importedCount = incoming.size,
