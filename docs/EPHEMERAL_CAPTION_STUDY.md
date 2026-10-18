@@ -11,6 +11,10 @@ geen opgeslagen woordenboek of automatische controle.
    **🧠 Oefen vanaf deze zin** kiezen, zodat die zin de eerste kaart is.
    Of open een getypt tweeweggesprek en tik daar op de tijdelijke
    oefenknop; je onverstuurde tekstconcept blijft staan.
+   Je kunt ook bewust **Open JSON-archief…** kiezen, daar
+   naar tekst zoeken en **🧠 Oefen gevonden archiefzinnen**
+   openen. Alleen de zichtbare en afgeronde archiefregels worden
+   gebruikt: geen wijziging aan je live gesprek of privéwoorden.
 2. Alleen regels met status **Lokaal vertaald** en een werkelijk
    aanwezige, afzonderlijke bronzin en vertaling mogen meedoen.
    Louter herkende tekst of een nog lopend vertaalresultaat wordt
