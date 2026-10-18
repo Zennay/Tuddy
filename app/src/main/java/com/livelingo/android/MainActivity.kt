@@ -247,6 +247,8 @@ private fun TuddyScreen(
     var exportStatus by remember { mutableStateOf("") }
     // The read-only archive is not part of the current live conversation.
     var previewArchiveRows by remember { mutableStateOf<List<TranscriptExportRow>?>(null) }
+    var archiveSubtitleConsentOpen by remember { mutableStateOf(false) }
+    var pendingArchiveSubtitleExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var archiveSearchQuery by remember { mutableStateOf("") }
     var pendingArchiveGeneration by remember { mutableStateOf<Int?>(null) }
     // The user selects one completed row from a read-only, unverified
@@ -1051,6 +1053,30 @@ private fun TuddyScreen(
         }
     }
 
+    // The consented snapshot survives SAF's external picker, which causes
+    // ON_STOP to clear the read-only archive preview but not the user's export.
+    val saveArchivedSubtitleDraft = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/x-subrip")
+    ) { uri ->
+        val pending = pendingArchiveSubtitleExport
+        pendingArchiveSubtitleExport = null
+        if (uri != null && pending != null && pending.first == generation) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(pending.second)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            if (saved) {
+                exportStatus = "Archief als SRT-concept opgeslagen. " +
+                    "Tijden zijn geschat; lijn de zinnen zelf uit met de audio."
+            } else {
+                error = "Archief-SRT niet opgeslagen. Kies een andere locatie."
+            }
+        }
+    }
+
     val openTranscriptArchive = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1075,6 +1101,8 @@ private fun TuddyScreen(
                 PrivateTranscriptArchive.read(bytes)
             }.getOrNull()
             pendingArchiveExcerpt = null
+            archiveSubtitleConsentOpen = false
+            pendingArchiveSubtitleExport = null
             archiveExcerptNotice = ""
             if (loaded == null) {
                 previewArchiveRows = null
@@ -1602,6 +1630,7 @@ private fun TuddyScreen(
                 onDismissRequest = {
                     pendingArchiveExcerpt = null
                     previewArchiveRows = null
+                    archiveSubtitleConsentOpen = false
                     archiveSearchQuery = ""
                     archiveExcerptNotice = ""
                 },
@@ -1614,6 +1643,17 @@ private fun TuddyScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(Modifier.height(10.dp))
+                        TextButton(
+                            enabled = !listening && archive.any {
+                                it.status == "Lokaal vertaald" || it.status == "Lokaal"
+                            },
+                            onClick = { archiveSubtitleConsentOpen = true }
+                        ) { Text("Bewaar dit archief als SRT-concept…") }
+                        Text(
+                            "Alleen afgeronde archiefzinnen; geschatte herkenningstijden, " +
+                                "niet synchroon met de oorspronkelijke audio.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         OutlinedTextField(
                             value = archiveSearchQuery,
                             onValueChange = {
@@ -1690,6 +1730,46 @@ private fun TuddyScreen(
             )
         }
 
+        if (archiveSubtitleConsentOpen && archive != null) {
+            val finishedCount = archive.count {
+                it.status == "Lokaal vertaald" || it.status == "Lokaal"
+            }
+            AlertDialog(
+                onDismissRequest = { archiveSubtitleConsentOpen = false },
+                title = { Text("Afgerond archief als ondertitelconcept bewaren?") },
+                text = {
+                    Text("Van de " + archive.size + " regels kunnen " + finishedCount +
+                        " afgeronde uitspraken worden omgezet naar een SRT-concept. " +
+                        "De archiefgegevens zijn niet onafhankelijk gecontroleerd. " +
+                        "Tuddy kent slechts voltooiingstijden van spraakherkenning, " +
+                        "geen werkelijke begin- of eindtijden van de audio. " +
+                        "De tijden zijn ruwe schattingen en moeten door jou in een " +
+                        "video-editor opnieuw worden uitgelijnd. Een externe " +
+                        "Android-bestandsprovider kan de inhoud bewaren of synchroniseren. " +
+                        "Controleer de toestemming om dit gesprek te delen."
+                    )
+                },
+                confirmButton = {
+                    TextButton(enabled = finishedCount > 0 && !listening, onClick = {
+                        archiveSubtitleConsentOpen = false
+                        // Never merge an imported archive into the live conversation.
+                        val snapshot = PrivateSubtitleDraftExport.snapshot(archive)
+                        if (snapshot == null) {
+                            archiveExcerptNotice = "Dit archief kan niet veilig " +
+                                "naar een SRT-concept worden omgezet."
+                        } else {
+                            pendingArchiveSubtitleExport = generation to snapshot
+                            saveArchivedSubtitleDraft.launch("Tuddy-archief-ondertitelconcept.srt")
+                        }
+                    }) { Text("Ik begrijp dit, kies opslag…") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { archiveSubtitleConsentOpen = false }) {
+                        Text("Annuleren")
+                    }
+                }
+            )
+        }
         if (pinsOpen) {
             val pinnedLines = lines.filter { it.id in captionPins }
             AlertDialog(
