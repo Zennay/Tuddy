@@ -34,3 +34,19 @@ zijn: er wordt niets automatisch op spraakwoorden uitgelijnd.
 ## Android-bestandskiezer en veilig terugkeren naar de editor
 
 Tuddy gebruikt voor de audio een **bestandskiezer die aan de hoofdactiviteit hangt**. Als Android de app tijdens de externe bestandskeuze op de achtergrond zet, verdwijnen de open editor en eventuele live microfoon zoals de privacyregels voorschrijven. Alleen het exact op dat moment door jou gekozen tijdelijke SRT/VTT-concept wordt voor die expliciete pickeractie kort in RAM behouden; na een geldige audioselectie opent een zelfstandige afspeelmodus. **Annuleren** keert terug naar dat concept. **Sluiten** in de audiomodus opent datzelfde tijdelijke tekst-/tijdcodeconcept weer; eerdere editor-undo-stappen worden niet meeverhuisd. Niets hiervan overleeft procesafsluiting of wordt ongevraagd naar schijf geschreven. Audio wordt nooit automatisch afgespeeld na terugkeer.
+
+## Zoek een passage en spring rechtstreeks naar audio
+
+Bij geladen audio kun je **⌕ Zoek passage en spring naar ondertitel…**
+openen. De speler wordt eerst gepauzeerd. Zoek lokaal op een woord of
+begintijd in de maximaal 500 cues van het bewust geselecteerde SRT/VTT
+document. Je ziet de overeenkomende tekst, regelnummers en tijdcodes.
+Tik een regel om de audiopositie naar die **zelf aangeleverde begintijd**
+te verplaatsen; een eerdere fragmentherhaling wordt uitgeschakeld.
+Regels die pas ná het einde van het gekozen audiobestand beginnen zijn
+zichtbaar maar niet selecteerbaar. Lege resultaten geven een duidelijke
+melding; **Terug naar audio** verandert het gekozen bronbestand niet.
+
+De zoekterm bestaat alleen in de tijdelijke afspeelmodus. Er wordt geen
+audio doorzocht, geen spraak herkend en geen tijdcode tegen geluid
+geverifieerd. De functie verstuurt geen tekst naar een server.

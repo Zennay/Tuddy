@@ -8,7 +8,11 @@ import android.os.SystemClock
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -64,6 +68,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var lastLoopAtMs by remember { mutableLongStateOf(0L) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
+    var cuePickerOpen by remember { mutableStateOf(false) }
+    var cueQuery by remember { mutableStateOf("") }
 
     fun closeAudio() {
         val old = player
@@ -75,6 +81,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         durationMs = 0L
         playbackSpeed = 1f
         loopCueIndex = -1
+        cuePickerOpen = false
+        cueQuery = ""
         lastLoopAtMs = 0L
         if (old != null) runCatching {
             old.setOnPreparedListener(null)
@@ -317,6 +325,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         OutlinedButton(onClick = { seekTo(cues[nextIndex].startMillis) },
                             enabled = nextIndex >= 0) { Text("Volgende ▶") }
                     }
+                    OutlinedButton(
+                        onClick = {
+                            pauseAudio()
+                            cueQuery = ""
+                            cuePickerOpen = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("⌕ Zoek passage en spring naar ondertitel…") }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf(0.75f to "Rustig 0,75×", 1f to "1×",
@@ -375,5 +391,77 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     style = MaterialTheme.typography.labelSmall)
             }
         }
+    }
+    if (cuePickerOpen && prepared) {
+        val matchingCues = remember(cues, cueQuery) {
+            val term = cueQuery.trim()
+            cues.mapIndexed { index, cue -> index to cue }
+                .filter { term.isBlank() ||
+                    it.second.text.contains(term, ignoreCase = true) ||
+                    it.second.startLabel.contains(term, ignoreCase = true) }
+        }
+        AlertDialog(
+            onDismissRequest = { cuePickerOpen = false },
+            title = { Text("Zoek in mijn ondertitels") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "Zoek alleen in het zelf geopende SRT/VTT-bestand. " +
+                            "Tik een regel om de audio op zijn eigen begintijd te zetten. " +
+                            "Geen automatische spraak-/woorduitlijning.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedTextField(
+                        value = cueQuery,
+                        onValueChange = { cueQuery = it.take(100) },
+                        label = { Text("Tekst of begintijd zoeken") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text("${matchingCues.size} van ${cues.size} regels",
+                        style = MaterialTheme.typography.labelMedium)
+                    if (matchingCues.isEmpty()) {
+                        Text("Geen ondertitelregels gevonden; probeer een ander woord.",
+                            style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp),
+                            verticalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            items(matchingCues, key = { it.first }) { (index, cue) ->
+                                val isInAudio = cue.startMillis < durationMs
+                                TextButton(
+                                    enabled = isInAudio,
+                                    onClick = {
+                                        loopCueIndex = -1
+                                        seekTo(cue.startMillis)
+                                        cuePickerOpen = false
+                                        notice = "Naar ondertitelregel ${index + 1} gesprongen."
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Text("Regel ${index + 1} · ${cue.startLabel}" +
+                                            if (isInAudio) "" else " · buiten audio",
+                                            style = MaterialTheme.typography.labelMedium)
+                                        Text(cue.text, maxLines = 2,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                textDirection = TextDirection.ContentOrRtl
+                                            ))
+                                    }
+                                }
+                                HorizontalDivider()
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { cuePickerOpen = false }) { Text("Terug naar audio") }
+            }
+        )
     }
 }
