@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -119,6 +120,13 @@ private fun TuddyScreen() {
     var preparingOfflineModel by remember { mutableStateOf(false) }
     var offlineModelStatus by remember { mutableStateOf("") }
     val offlinePreparationEpoch = remember { OfflinePreparationEpoch() }
+    // Device-native ASR pack coverage is independent of the ML Kit text
+    // translation model and of the five-entry community word preview.
+    val speechPacks = remember(context) { OnDeviceSpeechPackController(context) }
+    var speechPackReceipt by remember {
+        mutableStateOf(SpeechPackReceipt(spoken[0].speechCode, SpeechPackStage.UNCHECKED,
+            "Controleer afzonderlijk of Android het gekozen offline spraakpakket bezit."))
+    }
     var follow by remember { mutableStateOf(true) }
     var generation by remember { mutableIntStateOf(0) }
     val voiceSessions = remember { VoiceSessionGeneration() }
@@ -340,6 +348,7 @@ private fun TuddyScreen() {
 
     fun stop() {
         offlinePreparationEpoch.invalidate() // A stale model receipt never applies after Stop/background.
+        speechPacks.cancel() // Old device coverage/download callbacks cannot change a new session.
         voiceSessions.invalidate() // Stop/background immediately invalidates prior callbacks.
         pendingRestart?.let(restartHandler::removeCallbacks)
         pendingRestart = null
@@ -371,6 +380,20 @@ private fun TuddyScreen() {
         if (!offlineAvailable) {
             listening = false
             error = "Deze telefoon heeft geen on-device spraakherkenning. Tuddy schakelt niet over naar cloud-spraak."
+            return
+        }
+        // Android can report that this selected locale is definitely not
+        // installed locally. Never start a doomed mic session or silently use
+        // an online language pack for that known state. Unknown API support
+        // may still attempt createOnDeviceSpeechRecognizer (never network STT).
+        if (speechPackReceipt.tag == source.speechCode &&
+            speechPackReceipt.stage in setOf(
+                SpeechPackStage.DOWNLOADABLE, SpeechPackStage.PENDING,
+                SpeechPackStage.ONLINE_ONLY, SpeechPackStage.UNSUPPORTED
+            )) {
+            listening = false
+            error = "Voor ${source.label} is geen geïnstalleerd lokaal spraakpakket bevestigd. " +
+                "Controleer spraak en bereid het pakket voor via wifi."
             return
         }
         if (listening && !forceRestart) return
@@ -503,6 +526,10 @@ private fun TuddyScreen() {
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) stop()
+            if (event == Lifecycle.Event.ON_STOP) {
+                speechPackReceipt = SpeechPackReceipt(source.speechCode, SpeechPackStage.UNCHECKED,
+                    "Na terugkeer uit de achtergrond moet pakketstatus opnieuw worden gecontroleerd.")
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
@@ -546,6 +573,8 @@ private fun TuddyScreen() {
                                         .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, it.speechCode)
                                         .apply()
                                     offlineModelStatus = ""
+                                    speechPackReceipt = SpeechPackReceipt(it.speechCode, SpeechPackStage.UNCHECKED,
+                                        "Voor deze spreektaal is nog geen lokale pakketcontrole uitgevoerd.")
                                     sourceOpen = false
                                 })
                             }
@@ -637,7 +666,19 @@ private fun TuddyScreen() {
                         previewResult = SafeCommunityPhrasebook.translate(previewSource, previewTarget, previewInput)
                             .fold(onSuccess = { it }, onFailure = { "Niet in deze kleine woordenlijst." })
                     }, enabled = previewInput.isNotBlank()) { Text("Zoek basiswoord lokaal") }
-                    if (previewResult != null) Text(previewResult!!, color = MaterialTheme.colorScheme.primary)
+                    if (previewResult != null) {
+                        Text(
+                            text = previewResult!!,
+                            color = MaterialTheme.colorScheme.primary,
+                            // The manually reviewed Sorani and Pashto phrases
+                            // use Arabic-based scripts; do not guess based on
+                            // the user's phone/system locale.
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = if (previewTarget == "ckb" || previewTarget == "ps")
+                                    TextDirection.Rtl else TextDirection.Ltr
+                            )
+                        )
+                    }
                     Text("Niet geschikt voor medisch, juridisch of asieladvies zonder tolk. Controle door moedertaalsprekers ontbreekt.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -719,6 +760,62 @@ private fun TuddyScreen() {
                     },
                     style = MaterialTheme.typography.bodySmall
                 )
+                // Android 13+ exposes actual installed, pending and supported
+                // on-device recognition languages. Never infer speech readiness
+                // from a successful ML Kit text-model download.
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Offline spraakpakket · ${source.label}",
+                        style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        if (speechPackReceipt.tag == source.speechCode) speechPackReceipt.detail
+                        else "Spraaktaal gewijzigd: controleer het nieuwe pakket.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                speechPacks.check(source.speechCode) { result ->
+                                    if (source.speechCode == result.tag &&
+                                        lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                                        speechPackReceipt = result
+                                    }
+                                }
+                            },
+                            enabled = offlineAvailable && !listening &&
+                                speechPackReceipt.stage !in setOf(
+                                    SpeechPackStage.CHECKING, SpeechPackStage.DOWNLOADING)
+                        ) { Text("Controleer spraak") }
+                        if (speechPackReceipt.tag == source.speechCode && speechPackReceipt.canDownload) {
+                            Button(onClick = {
+                                speechPacks.download(source.speechCode) { result ->
+                                    if (source.speechCode == result.tag &&
+                                        lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                                        speechPackReceipt = result
+                                    }
+                                }
+                            }, enabled = !listening) {
+                                Text(if (speechPackReceipt.stage == SpeechPackStage.ERROR)
+                                    "Opnieuw via wifi" else "Download via wifi")
+                            }
+                        }
+                        if (speechPackReceipt.tag == source.speechCode &&
+                            speechPackReceipt.stage in setOf(
+                                SpeechPackStage.CHECKING, SpeechPackStage.DOWNLOADING
+                            )) {
+                            TextButton(onClick = {
+                                speechPacks.cancel()
+                                speechPackReceipt = SpeechPackReceipt(source.speechCode,
+                                    SpeechPackStage.REQUESTED,
+                                    "Statuscontrole gestopt. Android kan de download alsnog voortzetten; controleer opnieuw.")
+                            }) { Text("Stop volgen") }
+                        }
+                    }
+                    Text("Alleen de door Android gemelde lokale spreektaal. Geen cloudfallback; " +
+                        "Android beheert de download en kan deze inplannen. " +
+                        "Pakketstatus zegt niets over vrije Koerdische/Pasjtoe vertaling.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 if (!offlineAvailable) {
                     Text("Geen lokale spraakherkenning op dit apparaat. Geen cloudfallback.", color = MaterialTheme.colorScheme.error)
                 }
