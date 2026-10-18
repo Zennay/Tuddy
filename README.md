@@ -1,5 +1,15 @@
 # Tuddy 🎙️
 
+## Nieuw: woord bekijken zolang je het indrukt
+
+De v0.4-functie **vasthouden-en-loslaten** is terug als tijdelijke
+offline preview: houd een woord in een ondertitel of getypt
+gesprek vast om snel de beperkte ingebouwde betekenis en je
+eigen, niet geverifieerde uitleg te zien. Laat los om te
+sluiten. **Kort tikken** opent nog steeds de uitgebreide
+woordkaart, inclusief bewerken en lokaal voorlezen.
+[Bediening en privacy](docs/TRANSIENT_OFFLINE_WORD_PEEK.md).
+
 ## Nieuw: bewaarde woorden lokaal horen en oefenen
 
 In **Mijn opgeslagen woorden** kun je elk lokaal bewaard woord
