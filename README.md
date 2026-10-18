@@ -19,6 +19,16 @@ een gewijzigde offset stopt de oude herhaling zodat geen onverwacht
 fragment wordt herhaald. Dit is persoonlijke luisteroefening zonder
 automatische audioanalyse, spraakherkenning of externe opslag.
 
+Heb je precies de juiste passage gevonden, dan kun je binnen hetzelfde
+A–B-paneel kiezen voor **Maak A–B als afzonderlijk ondertitelconcept…**.
+Tuddy toont eerst hoeveel regels worden meegenomen, de geselecteerde
+A- en B-regels en het nieuwe einde wanneer de ondertiteltijdlijn vanaf
+**00:00** begint. Pas na je eigen bevestiging gaan uitsluitend de
+geselecteerde, eventueel handmatig tijdgecorrigeerde ondertitelregels
+naar de tijdelijke editor. Je kunt daar bewust een **nieuw** SRT/VTT-
+bestand kiezen via Android **Opslaan als**. Er wordt geen audioclip gemaakt,
+geen origineel overschreven en geen derde partij benaderd.
+
 ## Nieuw: handmatig ondertitels gelijkzetten met je eigen audio
 
 Als de gesproken tekst niet gelijkloopt met de SRT/VTT-tijdcodes, open
