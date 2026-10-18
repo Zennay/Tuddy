@@ -281,14 +281,23 @@ internal fun PrivateSubtitleFileDialog(
                 } else {
                     Text("${current.startLabel} → ${current.endLabel}",
                         style = MaterialTheme.typography.labelLarge)
-                    Text(current.text,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            textDirection = TextDirection.ContentOrRtl),
-                        fontSize = if (large) 30.sp else 22.sp,
-                        lineHeight = if (large) 40.sp else 30.sp,
-                        modifier = Modifier.fillMaxWidth().weight(1f)
-                            .verticalScroll(rememberScrollState()))
-                    Text("Uitspraak · kies de taal van deze bestandsregel zelf",
+                    Box(modifier = Modifier.fillMaxWidth().weight(1f)
+                        .verticalScroll(rememberScrollState())) {
+                        OfflineWordText(
+                            text = current.text,
+                            language = chosenVoiceLanguage,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = TextDirection.ContentOrRtl,
+                                fontSize = if (large) 30.sp else 22.sp,
+                                lineHeight = if (large) 40.sp else 30.sp),
+                            allowSpeech = false
+                        )
+                    }
+                    Text("Tik een woord voor een beperkte lokale woordenkaart. " +
+                        "Kies zelf de teksttaal; geen internetwoordenboek of " +
+                        "geverifieerde betekenis.",
+                        style = MaterialTheme.typography.labelSmall)
+                    Text("Woordkaart en uitspraak · kies de teksttaal zelf",
                         style = MaterialTheme.typography.labelSmall)
                     Box {
                         TextButton(onClick = { voicePickerOpen = true }) {
