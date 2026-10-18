@@ -26,6 +26,7 @@ internal class PrivatePhraseTopics(context: Context) {
 
     private fun validName(value: String): Boolean =
         value.length in 1..MAX_NAME_LENGTH && value == value.trim() &&
+            !value.startsWith("__") &&
             value.none { character ->
                 character == '|' || Character.isISOControl(character) ||
                     Character.isSurrogate(character) ||
