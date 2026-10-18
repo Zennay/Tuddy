@@ -117,6 +117,10 @@ private fun TuddyScreen() {
     var previewMenuOpen by remember { mutableStateOf(false) }
     var previewInput by remember { mutableStateOf("") }
     var manualText by remember { mutableStateOf("") }
+    // The export snapshot exists only between an explicit Save tap and the
+    // Android document picker result; no automatic disk/history persistence.
+    var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
+    var exportStatus by remember { mutableStateOf("") }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
@@ -550,6 +554,27 @@ private fun TuddyScreen() {
         }
     }
 
+    val saveTranscript = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingTranscriptExport
+        pendingTranscriptExport = null
+        if (uri != null && pending != null && pending.first == generation) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(pending.second)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            if (saved) {
+                exportStatus = "Gesprek opgeslagen op de door jou gekozen locatie."
+            } else {
+                error = "Gesprek niet opgeslagen. Kies een andere locatie en probeer opnieuw."
+            }
+        }
+    }
+
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -603,6 +628,8 @@ private fun TuddyScreen() {
                     ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
                     OutlinedButton(onClick = {
                         generation++
+                        pendingTranscriptExport = null
+                        exportStatus = ""
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
@@ -615,6 +642,41 @@ private fun TuddyScreen() {
                         Text(if (follow) "Live ✓" else "Volg live")
                     }
                 }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        enabled = lines.isNotEmpty() && !listening,
+                        onClick = {
+                            exportStatus = ""
+                            val snapshot = PrivateTranscriptExport.snapshot(
+                                lines.map { line ->
+                                    TranscriptExportRow(
+                                        line.original, line.translated, line.status,
+                                        line.sourceCode, line.targetCode
+                                    )
+                                }
+                            )
+                            if (snapshot == null) {
+                                error = "Kan dit gesprek niet veilig exporteren. Wis ongeldige tekst en probeer opnieuw."
+                            } else {
+                                pendingTranscriptExport = generation to snapshot
+                                saveTranscript.launch("Tuddy-gesprek.txt")
+                            }
+                        }
+                    ) { Text("Bewaar gesprek…") }
+                    Text(
+                        "Alleen op verzoek. Externe opslag kan synchroniseren.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (exportStatus.isNotBlank()) Text(
+                    exportStatus,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall
+                )
                 OutlinedButton(
                     onClick = { showSettings = !showSettings },
                     modifier = Modifier.fillMaxWidth()
@@ -954,7 +1016,7 @@ private fun TuddyScreen() {
                     }
                 }
                 Text(
-                    "Privacy: alleen lokaal spraakherkennen en vertalen. Taalmodellen eerst via wifi downloaden. Gesprek staat alleen in tijdelijk geheugen en wordt niet opgeslagen.",
+                    "Privacy: lokale spraak en vertaling; modellen via wifi voorbereiden. Gesprekken blijven in tijdelijk geheugen, tenzij je zelf Bewaar gesprek kiest. De gekozen opslaglocatie kan synchroniseren.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
