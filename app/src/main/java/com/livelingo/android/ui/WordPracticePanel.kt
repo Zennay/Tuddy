@@ -45,7 +45,8 @@ import com.livelingo.android.LocalSpeechPace
 @Composable
 internal fun WordPracticePanel(
     savedWords: List<SavedWord>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    allowSpeech: Boolean = true
 ) {
     var selectedLanguage by remember { mutableStateOf("all") }
     var shuffleVersion by remember { mutableIntStateOf(0) }
@@ -76,9 +77,9 @@ internal fun WordPracticePanel(
         }
     }
     LaunchedEffect(current?.word, current?.language, selectedLanguage,
-        shuffleVersion, round.attempts) {
+        shuffleVersion, round.attempts, allowSpeech) {
         speaker.stop()
-        audioNotice = ""
+        audioNotice = if (allowSpeech) "" else "Voorlezen uit terwijl de microfoon luistert."
     }
 
     AlertDialog(
@@ -140,6 +141,7 @@ internal fun WordPracticePanel(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(
                             modifier = Modifier.weight(1f),
+                            enabled = allowSpeech,
                             onClick = {
                                 speaker.speak(current.word, current.language,
                                     LocalSpeechPace.NORMAL) { audioNotice = it }
@@ -147,6 +149,7 @@ internal fun WordPracticePanel(
                         ) { Text("🔊 Hoor woord") }
                         TextButton(
                             modifier = Modifier.weight(1f),
+                            enabled = allowSpeech,
                             onClick = {
                                 speaker.speak(current.word, current.language,
                                     LocalSpeechPace.SLOW) { audioNotice = it }
