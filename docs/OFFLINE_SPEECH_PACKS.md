@@ -9,7 +9,9 @@ show `unknown`, never invent installed coverage.
 
 ## In-app workflow
 
-1. Pick an existing spoken source (NL, EN, DE, FR, ES, Arabic).
+1. Pick a spoken source candidate (NL, EN, DE, FR, ES, Arabic, Farsi,
+   Ukrainian, Turkish, Russian or Urdu). New choices are locale hints, NOT
+   proof that this phone has an installed on-device recognition pack.
 2. Tap **Controleer spraak**. The on-device recognition service returns one
    of: installed, download offered, pending, online-only, unsupported or
    unknown. The app does not create the normal network speech recognizer.

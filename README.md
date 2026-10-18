@@ -37,7 +37,7 @@ De microfoon stopt eerst; de nieuwe richting vereist opnieuw controle van
 de echte offline spraak- en tekstmodellen op het apparaat. Iedere voltooide
 ondertitel blijft zijn **eigen** taalrichting tonen. 59 tekstdoelen zijn
 niet hetzelfde als 59 on-device spraaktalen: de knop is alleen beschikbaar
-voor de zes bestaande Android-spraaktalen. Zie
+voor elf expliciet kiesbare spreektaalkandidaten (NL/EN/DE/FR/ES/AR/FA/UK/TR/RU/UR). Android moet het lokale spraakpakket voor iedere kandidaat daadwerkelijk beschikbaar hebben; de picker bewijst dat niet. Zie
 [de handleiding voor tweeweg-gesprekken](docs/TWO_WAY_OFFLINE_CONVERSATION.md).
 Dit bewijst geen telefoonacceptatie of Koerdische/Pasjtoe vrije vertaling.
 
