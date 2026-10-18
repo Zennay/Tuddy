@@ -79,6 +79,7 @@ internal fun TwoWayTypedConversationDialog(
     val pinnedPairs = remember(favoritesRevision) { favorites.entries() }
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     var speechNotice by remember { mutableStateOf("") }
+    var readerOpen by remember { mutableStateOf(false) }
     val models = remember { TypedConversationModelController() }
 
     DisposableEffect(models, speaker) {
@@ -124,6 +125,16 @@ internal fun TwoWayTypedConversationDialog(
     val rtlLanguages = setOf("ar", "fa", "ur", "he")
     fun title(code: String): String = TargetCatalog.targets
         .firstOrNull { it.code == code }?.title ?: code
+
+    // Keep the same unsent typed draft and selected language direction while
+    // switching to a larger read-only presentation of this RAM conversation.
+    if (readerOpen) {
+        TwoWayConversationReadingBoard(
+            lines = recentLines,
+            onDismiss = { readerOpen = false }
+        )
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -310,6 +321,16 @@ internal fun TwoWayTypedConversationDialog(
                 HorizontalDivider()
                 Text("Laatste gespreksregels · alleen tijdelijk geheugen",
                     style = MaterialTheme.typography.titleSmall)
+                OutlinedButton(onClick = {
+                    speaker.stop()
+                    speechNotice = ""
+                    readerOpen = true
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Text("▣ Toon tijdelijk gesprek groot · zoek en lees")
+                }
+                Text("Grotere leesweergave toont maximaal 80 RAM-regels en " +
+                    "komt terug naar deze onopgeslagen invoer.",
+                    style = MaterialTheme.typography.bodySmall)
                 recentLines.takeLast(6).forEach { row ->
                     Text(row.source.uppercase() + " → " + row.target.uppercase() +
                         " · " + row.status, style = MaterialTheme.typography.labelSmall)
