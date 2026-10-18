@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OwnWord
 import com.livelingo.android.PrivateOwnWordDeck
+import com.livelingo.android.PrivatePrintableOwnWordbook
 import com.livelingo.android.TargetCatalog
 import java.io.ByteArrayOutputStream
 import java.util.Locale
@@ -58,6 +59,9 @@ internal fun MyOwnWordsPanel(
     var notice by remember { mutableStateOf("") }
     var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
     var pendingTsvExport by remember { mutableStateOf<ByteArray?>(null) }
+    var printableConsent by remember { mutableStateOf(false) }
+    var printableAllLanguages by remember { mutableStateOf(false) }
+    var pendingPrintable by remember { mutableStateOf<Pair<String?, ByteArray>?>(null) }
     var pendingRestore by remember { mutableStateOf<List<OwnWord>?>(null) }
     var restoreOrigin by remember { mutableStateOf("json") }
     val context = LocalContext.current
@@ -101,6 +105,31 @@ internal fun MyOwnWordsPanel(
                 }.getOrDefault(false)
                 notice = if (saved) "Eigen woordenlijst opgeslagen als UTF-8 TSV."
                     else "TSV niet opgeslagen. Je privéwoorden blijven behouden."
+            }
+        }
+    }
+    val printablePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri ->
+        val pending = pendingPrintable
+        pendingPrintable = null
+        if (uri != null && pending != null) {
+            val current = deck.entries()?.let {
+                PrivatePrintableOwnWordbook.snapshot(it, pending.first)
+            }
+            if (current == null || !current.contentEquals(pending.second)) {
+                notice = "Eigen woorden zijn gewijzigd. Kies opnieuw afdrukbaar woordenboek."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                        stream.write(pending.second)
+                        stream.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                notice = if (saved)
+                    "Afdrukbaar woordenboek opgeslagen. Controleer de bestandslocatie."
+                else "Afdrukbaar woordenboek kon niet worden opgeslagen."
             }
         }
     }
@@ -228,6 +257,50 @@ internal fun MyOwnWordsPanel(
             dismissButton = { TextButton(onClick = { pendingRestore = null }) {
                 Text("Annuleren")
             } }
+        )
+        return
+    }
+
+    if (printableConsent) {
+        AlertDialog(
+            onDismissRequest = { printableConsent = false },
+            title = { Text("Mijn eigen woorden afdrukbaar bewaren?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Alleen jouw zelf ingevoerde woorden en betekenissen, " +
+                        "niet door Tuddy gecontroleerd. De Android-bestandsprovider " +
+                        "kan deze tekst buiten de app bewaren of synchroniseren.")
+                    TextButton(onClick = { printableAllLanguages = false }) {
+                        Text(if (!printableAllLanguages) "Huidige taal · " +
+                            language.uppercase() + " ✓" else "Huidige taal · " +
+                            language.uppercase())
+                    }
+                    TextButton(onClick = { printableAllLanguages = true }) {
+                        Text(if (printableAllLanguages) "Alle eigen talen ✓"
+                            else "Alle eigen talen")
+                    }
+                    Text("Het HTML-bestand bevat geen scripts, online lettertypen " +
+                        "of gelinkte bronnen en is zelfstandig offline afdrukbaar.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    printableConsent = false
+                    val selected = if (printableAllLanguages) null else language
+                    val snapshot = deck.entries()?.let {
+                        PrivatePrintableOwnWordbook.snapshot(it, selected)
+                    }
+                    if (snapshot == null) {
+                        notice = "Geen geldige woorden voor dit afdrukbare woordenboek."
+                    } else {
+                        pendingPrintable = selected to snapshot
+                        printablePicker.launch("tuddy-mijn-eigen-woorden.html")
+                    }
+                }) { Text("Ik begrijp dit, kies opslag…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { printableConsent = false }) { Text("Annuleren") }
+            }
         )
         return
     }
@@ -397,6 +470,17 @@ internal fun MyOwnWordsPanel(
                         }
                     }
                 ) { Text("Exporteer mijn eigen woorden (TSV)…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = items?.isNotEmpty() == true,
+                    onClick = {
+                        printableAllLanguages = false
+                        printableConsent = true
+                    }
+                ) { Text("▤ Maak afdrukbaar eigen woordenboek…") }
+                Text("Maak één zelfstandig offline HTML-woordenboek voor " +
+                    "bekijken of afdrukken. Alleen jouw ongecontroleerde eigen notities.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("TSV bevat alleen je zelfgeschreven betekenissen. " +
                     "Je kunt de lijst buiten Tuddy wijzigen en later bewust " +
                     "samenvoegen of vervangen. Geen automatische uploads.",
