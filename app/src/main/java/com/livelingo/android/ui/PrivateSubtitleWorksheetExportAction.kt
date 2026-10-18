@@ -38,8 +38,8 @@ internal fun PrivateSubtitleWorksheetExportAction(
         val previous = pending
         pending = null
         if (uri != null && previous != null) {
-            val fresh = PrivateSubtitleRecallWorksheet.snapshot(selected)
-            if (previous.cues != selected || fresh == null ||
+            val fresh = PrivateSubtitleRecallWorksheet.snapshot(selected.take(24))
+            if (previous.cues != selected.take(24) || fresh == null ||
                 !fresh.contentEquals(previous.bytes)
             ) {
                 notice = "De ondertitelselectie is gewijzigd. Kies opnieuw exporteren."
