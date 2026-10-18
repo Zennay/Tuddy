@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import com.livelingo.android.OwnWord
 import com.livelingo.android.SavedWord
 import java.text.Normalizer
 import java.util.Locale
+import kotlin.random.Random
 
 /**
  * Fully on-device practice of already saved information. User-provided
@@ -51,6 +53,7 @@ private data class PracticeCard(
 
 private enum class PracticeFilter { ALL, WORDS, OWN_PHRASES }
 private enum class PracticeMode { REVEAL, TYPE }
+private enum class PracticeLength(val limit: Int) { QUICK(12), FOCUSED(30), ALL(200) }
 
 /** Case/spacing/width normalization only: exact typed text, NOT meaning verification. */
 private fun literalAnswerMatches(typed: String, expected: String): Boolean {
@@ -72,9 +75,11 @@ internal fun OfflineStudyFlashcards(
 ) {
     var filter by remember { mutableStateOf(PracticeFilter.ALL) }
     var mode by remember { mutableStateOf(PracticeMode.REVEAL) }
+    var length by remember { mutableStateOf(PracticeLength.QUICK) }
+    var shuffleSeed by remember { mutableIntStateOf(0) }
     var voiceNotice by remember { mutableStateOf("") }
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
-    val cards = remember(savedWords, personalPhrases, ownWords, filter, mode) {
+    val allCards = remember(savedWords, personalPhrases, ownWords, filter, mode) {
         val wordCards = if (filter != PracticeFilter.OWN_PHRASES) savedWords.mapNotNull { saved ->
             val definition = saved.entry.definition.trim()
             if (definition.isEmpty() || definition.length > 250) null
@@ -113,6 +118,11 @@ internal fun OfflineStudyFlashcards(
         } else emptyList()
         (wordCards + ownWordCards + phraseCards).take(200)
     }
+    val cards = remember(allCards, length, shuffleSeed) {
+        val ordered = if (shuffleSeed == 0) allCards
+            else allCards.shuffled(Random(shuffleSeed))
+        ordered.take(length.limit)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -145,6 +155,28 @@ internal fun OfflineStudyFlashcards(
                         Text(if (mode == PracticeMode.TYPE) "Antwoord typen ✓" else "Antwoord typen")
                     }
                 }
+                Text("Oefenronde · kies hoeveel kaarten je nu wilt oefenen",
+                    style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    listOf(
+                        PracticeLength.QUICK to "12 kaarten",
+                        PracticeLength.FOCUSED to "30 kaarten",
+                        PracticeLength.ALL to "Alle"
+                    ).forEach { (choice, label) ->
+                        TextButton(onClick = { length = choice }) {
+                            Text(if (length == choice) label + " ✓" else label)
+                        }
+                    }
+                }
+                TextButton(
+                    enabled = allCards.size > 1,
+                    onClick = { shuffleSeed++ },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("↻ Nieuwe willekeurige oefenset") }
+                Text("In deze ronde: ${cards.size} van ${allCards.size} beschikbare kaarten. " +
+                    "Een lastige kaart keert maximaal twee keer terug. " +
+                    "Na sluiten verdwijnen je antwoorden en tellers.",
+                    style = MaterialTheme.typography.bodySmall)
                 if (mode == PracticeMode.TYPE) {
                     Text("Typ het opgeslagen woord of de eigen zin. Tuddy vergelijkt " +
                         "alleen de letterlijke tekst (hoofdletters en spaties tellen niet). " +
@@ -204,14 +236,16 @@ private fun PracticeCardsSession(
     var mastered by remember(cards, typedMode) { mutableIntStateOf(0) }
     var retries by remember(cards, typedMode) { mutableIntStateOf(0) }
     var skipped by remember(cards, typedMode) { mutableIntStateOf(0) }
+    val repeatsByCard = remember(cards, typedMode) { mutableStateMapOf<PracticeCard, Int>() }
 
     fun nextCard(remembered: Boolean, repeat: Boolean = false) {
         if (pending.isEmpty()) return
         speaker.stop()
         onVoiceNotice("")
         val first = pending.removeAt(0)
-        if (repeat) {
+        if (repeat && (repeatsByCard[first] ?: 0) < 2) {
             pending.add(first)
+            repeatsByCard[first] = (repeatsByCard[first] ?: 0) + 1
             retries++
         } else if (remembered) {
             mastered++
@@ -298,7 +332,7 @@ private fun PracticeCardsSession(
                 style = MaterialTheme.typography.bodySmall
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!matches) {
+                if (!matches && (repeatsByCard[card] ?: 0) < 2) {
                     OutlinedButton(onClick = { nextCard(false, repeat = true) }) {
                         Text("Nog eens")
                     }
@@ -311,8 +345,10 @@ private fun PracticeCardsSession(
             Text("Beoordeel zelf of je dit wist. Tuddy corrigeert geen eigen zinnen.",
                 style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { nextCard(false, repeat = true) }) {
-                    Text("Nog eens")
+                if ((repeatsByCard[card] ?: 0) < 2) {
+                    OutlinedButton(onClick = { nextCard(false, repeat = true) }) {
+                        Text("Nog eens")
+                    }
                 }
                 Button(onClick = { nextCard(true) }) { Text("Ken ik ✓") }
             }
