@@ -23,6 +23,24 @@ als **onverstuurd concept** openen.
 Als bron- en doeltaal daardoor gelijk worden, is verzenden
 uitgeschakeld totdat je zelf de doeltaal wijzigt.
 
+
+## Zoeken op mijn eigen thema en favorieten
+
+De voorbereid-tekstkiezer biedt nu zonder nieuwe opslag ook
+**★ Alleen mijn favorieten** en **Filter mijn zelfgekozen thema's**.
+Daarmee kun je zoeken in bijvoorbeeld alleen je favoriete
+zelfgeschreven zinnen uit het thema *arts* of *werk*, of uitsluitend
+de nog niet ingedeelde zinnen. De ingestelde filters beperken alleen
+welke kaarten je ziet; ze wijzigen nooit de oorspronkelijke eigen
+zinnen, betekenissen, favorieten of themanamen.
+
+Het thema en de favorietmarkering komen uit de bestaande lokale
+privézinnenlijst. Bij een lege combinatie meldt de kiezer dat er
+geen overeenkomstige zinnen zijn, zonder een andere groep
+stilzwijgend te selecteren. Ook met filters wordt uitsluitend de
+eigen Nederlandse/Engelse betekenis overgenomen als **onverstuurd
+concept** na dezelfde expliciete bevestiging.
+
 ## Veiligheid en privacy
 
 - De oorspronkelijke Kurmanji-, Sorani- of Pasjtoe-zin wordt
