@@ -96,6 +96,8 @@ internal fun PrivateSubtitleFileDialog(
     var clipOpen by remember { mutableStateOf(false) }
     var clipStart by remember { mutableStateOf("") }
     var clipEnd by remember { mutableStateOf("") }
+    var excerptOpen by remember { mutableStateOf(false) }
+    var excerptCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var practiceOpen by remember { mutableStateOf(false) }
     var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var sourceAtPicker by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
@@ -313,6 +315,17 @@ internal fun PrivateSubtitleFileDialog(
                         practiceOpen = true
                     }
                 ) { Text("▣ Oefen deze gevonden ondertitelregels…") }
+                PrivateSubtitleWorksheetExportAction(
+                    selected = found.map { it.second }.take(24)
+                )
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = query.isNotBlank() && found.isNotEmpty(),
+                    onClick = {
+                        excerptCues = found.map { it.second }.toList()
+                        excerptOpen = true
+                    }
+                ) { Text("↳ Bewaar alleen gevonden regels als SRT/VTT…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = draft.size < 500,
@@ -453,6 +466,14 @@ internal fun PrivateSubtitleFileDialog(
                     style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+
+    if (excerptOpen) {
+        PrivateSubtitleExcerptDialog(
+            selected = excerptCues,
+            onSaveCopy = onSaveCopy,
+            onDismiss = { excerptOpen = false }
+        )
     }
 
     if (practiceOpen) {

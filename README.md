@@ -10,6 +10,15 @@ een afzonderlijke Android-bestandskeuze. Het oorspronkelijke document
 blijft intact.
 [Werking en grenzen](docs/FILTERED_OFFLINE_SUBTITLE_EXCERPT.md).
 
+## Nieuw: afdrukbaar oefenblad van eigen ondertitels
+
+Je kunt geselecteerde regels uit een bewust geopend SRT/VTT-bestand
+ook als veilig, volledig offline HTML-oefenblad bewaren. Eerst de
+tijdcode, starthint en schrijfruimte; daarna een apart antwoordblad.
+Alleen een afzonderlijke Android-bestandskeuze schrijft een nieuwe
+kopie. Tijdcodes en tekst zijn niet automatisch geverifieerd.
+[Uitleg](docs/OFFLINE_SUBTITLE_PRINTABLE_WORKSHEET.md).
+
 ## Nieuw: eigen SRT/VTT-ondertitels oefenen
 
 Gebruik een bewust geopend ondertitelbestand nu ook als tijdelijke
