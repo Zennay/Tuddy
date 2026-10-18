@@ -98,6 +98,7 @@ class MainActivity : ComponentActivity() {
             SharedPlainTextIntent.read(intent) else null
         // Do not keep the original other-app text in Activity Intent extras.
         intent?.removeExtra(Intent.EXTRA_TEXT)
+        intent?.removeExtra(Intent.EXTRA_PROCESS_TEXT)
         setContent {
             TuddyScreen(
                 incomingExternalText = pendingExternalText,
@@ -110,6 +111,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         pendingExternalText = SharedPlainTextIntent.read(intent)
         intent.removeExtra(Intent.EXTRA_TEXT)
+        intent.removeExtra(Intent.EXTRA_PROCESS_TEXT)
         setIntent(intent)
     }
 }

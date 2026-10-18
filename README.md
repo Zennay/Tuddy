@@ -37,6 +37,8 @@ worden privé bewaard, geen transcript of stemgegevens.
 ## Nieuw: tekst vanuit een andere Android-app delen
 
 **Delen → Tuddy** verschijnt voor één platte tekst in het Android-deelmenu.
+Ook via **tekst selecteren → Tuddy** kan geselecteerde tekst uit andere
+Android-apps via de systeemactie 'Tekst verwerken' worden geopend.
 De gedeelde tekst wordt eerst als **bewerkbaar, tijdelijk concept** getoond;
 pas na **Vertaal lokaal** volgt de bestaande offline ML Kit-tekstvertaling.
 Annuleren of de app verlaten wist het open concept. Ongeldige en te lange
