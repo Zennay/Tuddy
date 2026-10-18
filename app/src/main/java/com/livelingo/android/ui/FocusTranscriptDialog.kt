@@ -44,6 +44,8 @@ internal fun FocusTranscriptDialog(
     fontScale: Float,
     onStop: () -> Unit,
     onClose: () -> Unit,
+    onStart: (() -> Unit)? = null,
+    canStartOffline: Boolean = false,
     archiveMode: Boolean = false,
     pinnedCaptionIds: Set<Long> = emptySet(),
     onTogglePin: ((Long) -> String)? = null
@@ -137,8 +139,24 @@ internal fun FocusTranscriptDialog(
                         enabled = !followLive
                     ) { Text(if (archiveMode) "↓ Laatste archiefregel" else
                         if (followLive) "Live ✓" else "Volg live") }
-                    if (listening && !archiveMode) {
-                        OutlinedButton(onClick = onStop) { Text("■ Stop microfoon") }
+                }
+                if (!archiveMode) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = listening || (canStartOffline && onStart != null),
+                        onClick = {
+                            if (listening) onStop() else onStart?.invoke()
+                        }
+                    ) {
+                        Text(if (listening) "■ Stop microfoon" else
+                            "🎙 Start offline luisteren")
+                    }
+                    if (!listening && !canStartOffline) {
+                        Text("Offline spraakpakket of modelbeheer nog niet gereed; " +
+                            "start eerst via de bestaande toestelvoorbereiding. " +
+                            "Geen cloudspraakfallback.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 if (!archiveMode) {
