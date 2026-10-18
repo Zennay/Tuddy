@@ -1,7 +1,5 @@
 package com.livelingo.android.ui
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +44,6 @@ import com.livelingo.android.PrivateSubtitleBatchReplace
 import com.livelingo.android.PrivateSubtitleLineWrap
 import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateSubtitleCue
-import com.livelingo.android.PrivateSubtitleFileReader
 import com.livelingo.android.PrivateSubtitleDocumentCombine
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
@@ -55,7 +52,6 @@ import com.livelingo.android.SubtitleDraftFormat
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
-import java.io.ByteArrayOutputStream
 
 private data class PendingSubtitleImport(
     val existing: List<PrivateSubtitleCue>,
@@ -68,6 +64,9 @@ internal fun PrivateSubtitleFileDialog(
     cues: List<PrivateSubtitleCue>,
     onDismiss: () -> Unit,
     onChooseAudio: (List<PrivateSubtitleCue>) -> Unit,
+    onChooseSecondFile: (List<PrivateSubtitleCue>) -> Unit,
+    pendingSecondFile: Pair<List<PrivateSubtitleCue>, List<PrivateSubtitleCue>>?,
+    onSecondFileReceived: () -> Unit,
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
@@ -108,7 +107,6 @@ internal fun PrivateSubtitleFileDialog(
     var inspectorOpen by remember { mutableStateOf(false) }
     var twoAnchorOpen by remember { mutableStateOf(false) }
     var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
-    var sourceAtPicker by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var pendingImport by remember { mutableStateOf<PendingSubtitleImport?>(null) }
     var importMode by remember { mutableStateOf(SubtitleCombineMode.APPEND_AFTER_LAST) }
     var secondTrackOffsetMs by remember { mutableStateOf(0L) }
@@ -117,41 +115,20 @@ internal fun PrivateSubtitleFileDialog(
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
     val current = found.getOrNull(shownIndex)?.second
     val context = LocalContext.current
-    val importPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        val original = sourceAtPicker
-        sourceAtPicker = null
-        if (uri != null && original != null) {
-            if (draft != original) {
-                notice = "Het concept is intussen gewijzigd. Kies het tweede bestand opnieuw."
+    // MainActivity survives Android's external document picker; this editor
+    // is intentionally cleared on ON_STOP. Restore only the user-selected
+    // bounded draft plus a parsed second source after that chooser returns.
+    LaunchedEffect(pendingSecondFile) {
+        pendingSecondFile?.let { (previous, imported) ->
+            if (draft == previous) {
+                pendingImport = PendingSubtitleImport(previous.toList(), imported.toList())
+                importMode = SubtitleCombineMode.APPEND_AFTER_LAST
+                secondTrackOffsetMs = 0L
+                notice = ""
             } else {
-                // Bound the input before parsing. Never read arbitrarily large documents.
-                val bytes = runCatching {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        val buffer = ByteArray(8192)
-                        val output = ByteArrayOutputStream()
-                        while (true) {
-                            val count = input.read(buffer)
-                            if (count < 0) break
-                            if (output.size() + count > PrivateSubtitleFileReader.MAX_BYTES)
-                                return@use null
-                            output.write(buffer, 0, count)
-                        }
-                        output.toByteArray()
-                    }
-                }.getOrNull()
-                val imported = bytes?.let(PrivateSubtitleFileReader::read)
-                if (imported == null) {
-                    notice = "Bestand geweigerd: kies een geldig UTF-8 SRT/VTT-document " +
-                        "van maximaal 256 KiB en 500 ondertitelregels."
-                } else {
-                    pendingImport = PendingSubtitleImport(original.toList(), imported.toList())
-                    importMode = SubtitleCombineMode.APPEND_AFTER_LAST
-                    secondTrackOffsetMs = 0L
-                    notice = ""
-                }
+                notice = "Het concept veranderde tijdens de bestandskeuze. Kies opnieuw."
             }
+            onSecondFileReceived()
         }
     }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -362,11 +339,10 @@ internal fun PrivateSubtitleFileDialog(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = draft.size < 500,
                     onClick = {
-                        sourceAtPicker = draft.toList()
                         notice = ""
-                        // MIME labels vary between providers; the reader rejects
-                        // anything that is not a safe SRT or WebVTT text document.
-                        importPicker.launch(arrayOf("*/*"))
+                        // Android's external picker is Activity-owned to survive
+                        // ON_STOP; parser and merge preview remain fail-closed.
+                        onChooseSecondFile(draft.toList())
                     }
                 ) { Text("＋ Tweede SRT/VTT-document toevoegen…") }
                 Row(modifier = Modifier.fillMaxWidth(),
