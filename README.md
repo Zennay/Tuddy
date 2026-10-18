@@ -1,5 +1,15 @@
 # Tuddy 🎙️
 
+## Nieuw: handmatig woord voor woord lezen
+
+In een grote, afgeronde gesprekskaart kun je bewust **▸ Lees woord voor woord**
+kiezen. Blader met **← Woord** en **Woord →** door de bestaande oorspronkelijke
+tekst of een daadwerkelijk lokaal voltooide vertaling. Elke taal begint bij
+het eerste tekstwoord, en nieuwe zinnen starten opnieuw. De markering is
+**niet** gesynchroniseerd met audio en stelt geen uitgelijnde vertaling of
+native-speakercontrole voor.
+[Bediening en beperkingen](docs/MANUAL_WORD_STEP_CAPTION.md).
+
 ## Nieuw: vijf basiswoorden extra groot presenteren
 
 De vijf ingebouwde offline Kurmanji-, Sorani- en Pasjtoe-woorden
