@@ -101,6 +101,8 @@ internal fun PrivateSubtitleFileDialog(
     var excerptCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var practiceOpen by remember { mutableStateOf(false) }
     var retimingOpen by remember { mutableStateOf(false) }
+    var inspectorOpen by remember { mutableStateOf(false) }
+    var twoAnchorOpen by remember { mutableStateOf(false) }
     var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var sourceAtPicker by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var pendingImport by remember { mutableStateOf<PendingSubtitleImport?>(null) }
@@ -334,6 +336,15 @@ internal fun PrivateSubtitleFileDialog(
                 ) { Text("⏱ Tijdcodes van alle regels aanpassen…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
+                    onClick = { inspectorOpen = true }
+                ) { Text("⌁ Bekijk de ondertiteltijdlijn…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = draft.size >= 2,
+                    onClick = { twoAnchorOpen = true }
+                ) { Text("⌁ Tijdlijn uitlijnen met twee ankers…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = draft.size < 500,
                     onClick = {
                         sourceAtPicker = draft.toList()
@@ -480,6 +491,32 @@ internal fun PrivateSubtitleFileDialog(
             selected = excerptCues,
             onSaveCopy = onSaveCopy,
             onDismiss = { excerptOpen = false }
+        )
+    }
+
+    if (twoAnchorOpen) {
+        SubtitleTwoAnchorTimelineDialog(
+            draft = draft,
+            onApply = { updated ->
+                applyChange(updated)
+                shownIndex = -1
+                notice = "Twee handmatige tijdankers toegepast. Herstel via Terug."
+                twoAnchorOpen = false
+            },
+            onDismiss = { twoAnchorOpen = false }
+        )
+    }
+
+    if (inspectorOpen) {
+        SubtitleTimelineInspectorDialog(
+            cues = draft,
+            onSelectCue = { selected ->
+                query = ""
+                shownIndex = selected
+                notice = "Regel " + (selected + 1) + " geopend vanuit tijdlijnoverzicht."
+                inspectorOpen = false
+            },
+            onDismiss = { inspectorOpen = false }
         )
     }
 
