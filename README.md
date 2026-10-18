@@ -65,10 +65,13 @@ Met **🧠 Oefenkaarten** oefen je de woorden die je bewust hebt
 bewaard uit de ingebouwde woordenlijst en je eigen notities
 voor Kurmanji, Sorani en Pasjtoe. Wissel tussen kaarten voor
 woorden, eigen zinnen of alles. Bekijk eerst het antwoord en
-geef zelf **Ken ik ✓** of **Nog eens** aan; lastige kaarten komen
-in dezelfde sessie terug. Eigen betekenissen zijn niet door Tuddy
-vertaald of gecontroleerd. Geen score wordt opgeslagen en niets
-wordt verstuurd.
+geef zelf **Ken ik ✓** of **Nog eens** aan. Kies nu ook
+**Antwoord typen** om een woord of eigen zin letterlijk te reconstrueren,
+je invoer zonder netwerk met je opgeslagen antwoord te vergelijken,
+en moeilijke kaarten te herhalen of over te slaan. Dit beoordeelt
+alleen tekstgelijkheid, niet de werkelijke betekenis of uitspraak.
+Eigen betekenissen zijn niet door Tuddy vertaald of gecontroleerd.
+Geen score of getypt antwoord wordt opgeslagen of verstuurd.
 [Bediening en grenzen](docs/OFFLINE_STUDY_FLASHCARDS.md).
 
 ## Nieuw: bewegende woordfocus in het gewone gesprek
