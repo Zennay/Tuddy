@@ -75,6 +75,10 @@ internal fun PrivateSubtitleFileDialog(
     var batchFind by remember { mutableStateOf("") }
     var batchWith by remember { mutableStateOf("") }
     var batchMatchCase by remember { mutableStateOf(false) }
+    var insertOpen by remember { mutableStateOf(false) }
+    var insertStart by remember { mutableStateOf("") }
+    var insertEnd by remember { mutableStateOf("") }
+    var insertContent by remember { mutableStateOf("") }
     val found = draft.mapIndexed { idx, row -> idx to row }
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
     val current = found.getOrNull(shownIndex)?.second
@@ -182,6 +186,14 @@ internal fun PrivateSubtitleFileDialog(
                         notice = "Bewerkingen weggegooid; origineel ongewijzigd."
                     }) { Text("Herstel") }
                 }
+                OutlinedButton(enabled = draft.size < 500,
+                    modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            insertStart = current?.endLabel?.replace(',', '.') ?: "00:00:00.000"
+                            insertEnd = ""
+                            insertContent = ""
+                            insertOpen = true
+                        }) { Text("+ Nieuwe ondertitel…") }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     OutlinedButton(onClick = { requestSave = SubtitleDraftFormat.SRT }) {
@@ -327,6 +339,69 @@ internal fun PrivateSubtitleFileDialog(
         }
     }
 
+    if (insertOpen) {
+        val start = PrivateSubtitleTimelineNavigation.timestamp(insertStart)
+        val end = PrivateSubtitleTimelineNavigation.timestamp(insertEnd)
+        val ready = start != null && end != null && end > start &&
+            insertContent.trim().isNotBlank()
+        AlertDialog(
+            onDismissRequest = { insertOpen = false },
+            title = { Text("Nieuwe ondertitel · zelf toevoegen") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("Typ begin, einde en eigen tekst. Er is geen audio-, " +
+                        "taal- of tijdsynchronisatie; alle waarden kies je zelf.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = insertStart,
+                        onValueChange = { insertStart = it.take(13) },
+                        label = { Text("Begintijd · hh:mm:ss.000") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = insertEnd,
+                        onValueChange = { insertEnd = it.take(13) },
+                        label = { Text("Eindtijd · hh:mm:ss.000") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = insertContent,
+                        onValueChange = { if (it.length <= 2400) insertContent = it },
+                        label = { Text("Zelfgeschreven ondertitelregel") },
+                        minLines = 2, maxLines = 5,
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            textDirection = TextDirection.ContentOrRtl))
+                    Text(
+                        if (!ready) "Voer een geldige begintijd, een latere eindtijd " +
+                            "en niet-lege tekst in."
+                        else "Tijdcodes worden op volgorde gezet; bestaande " +
+                            "regels en hun tijdcodes blijven intact.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = ready, onClick = {
+                    val updated = PrivateSubtitleDraftEditor.insertCue(
+                        draft, start!!, end!!, insertContent.trim())
+                    if (updated == null) {
+                        notice = "Nieuwe ondertitel geweigerd: te lang of documentgrens bereikt."
+                    } else {
+                        draft = updated
+                        edited = true
+                        query = ""
+                        shownIndex = updated.indexOfFirst {
+                            it.startMillis == start && it.endMillis == end &&
+                                it.text == insertContent.trim()
+                        }
+                        notice = "Nieuwe handmatige cue toegevoegd; niet bewaard."
+                    }
+                    insertOpen = false
+                }) { Text("Voeg alleen aan concept toe") }
+            },
+            dismissButton = {
+                TextButton(onClick = { insertOpen = false }) { Text("Annuleren") }
+            }
+        )
+    }
     if (batchOpen) {
         val proposed = PrivateSubtitleBatchReplace.preview(
             draft, batchFind, batchWith, batchMatchCase)
