@@ -79,6 +79,14 @@ import java.io.ByteArrayOutputStream
 import java.text.DateFormat
 import java.util.Date
 
+/** One explicit HTML worksheet save handoff; never persisted by Tuddy. */
+private data class PendingSubtitleWorksheetSave(
+    val session: Int,
+    val draft: List<PrivateSubtitleCue>,
+    val selected: List<PrivateSubtitleCue>,
+    val bytes: ByteArray
+)
+
 private data class LanguageChoice(val label: String, val speechCode: String, val translateCode: String)
 private val spoken = listOf(
     LanguageChoice("Nederlands", "nl-NL", TranslateLanguage.DUTCH),
@@ -309,6 +317,10 @@ private fun TuddyScreen(
         mutableStateOf<Pair<List<PrivateSubtitleCue>, List<PrivateSubtitleCue>>?>(null)
     }
     var secondSubtitleError by remember { mutableStateOf<String?>(null) }
+    var pendingSubtitleWorksheet by remember {
+        mutableStateOf<PendingSubtitleWorksheetSave?>(null)
+    }
+    var subtitleWorksheetNotice by remember { mutableStateOf<String?>(null) }
     // Exact, user-authorized draft retained only across Android's audio picker.
     var pendingSubtitleAudio by remember {
         mutableStateOf<Pair<Int, List<PrivateSubtitleCue>>?>(null)
@@ -1460,6 +1472,37 @@ private fun TuddyScreen(
         }
     }
 
+    // CreateDocument must outlive its editor Composable: Android may
+    // trigger ON_STOP while DocumentsUI chooses a destination.
+    val saveSubtitleWorksheet = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri ->
+        val pending = pendingSubtitleWorksheet
+        pendingSubtitleWorksheet = null
+        if (pending != null && pending.session == generation) {
+            subtitleFileCues = pending.draft
+            val fresh = PrivateSubtitleRecallWorksheet.snapshot(pending.selected)
+            if (fresh == null || !fresh.contentEquals(pending.bytes)) {
+                subtitleWorksheetNotice = "Oefenblad niet opgeslagen: de selectie is gewijzigd."
+            } else if (uri == null) {
+                subtitleWorksheetNotice = "Opslaan geannuleerd; ondertitelconcept intact."
+            } else if (uri.scheme != "content") {
+                subtitleWorksheetNotice = "Ongeldige documentlocatie; niets opgeslagen."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                        stream.write(pending.bytes)
+                        stream.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                subtitleWorksheetNotice = if (saved)
+                    "Het offline oefenblad is bewaard op je gekozen locatie."
+                else "Opslaan is mislukt; je ondertitelconcept is ongewijzigd."
+            }
+        }
+    }
+
     val openSubtitleAudio = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1509,6 +1552,7 @@ private fun TuddyScreen(
                 subtitleFileCues = null
                 importedSecondSubtitle = null
                 secondSubtitleError = null
+                subtitleWorksheetNotice = null
                 subtitleAudioPreview = null
                 archiveStudyOpen = false
                 archiveReaderOpen = false
@@ -1551,6 +1595,8 @@ private fun TuddyScreen(
             pendingSecondSubtitle = null
             importedSecondSubtitle = null
             secondSubtitleError = null
+            pendingSubtitleWorksheet = null
+            subtitleWorksheetNotice = null
             pendingSubtitleAudio = null
             subtitleAudioPreview = null
             pendingSubtitleOpenGeneration = null
@@ -1908,6 +1954,20 @@ private fun TuddyScreen(
                 onSecondFileReceived = {
                     importedSecondSubtitle = null
                     secondSubtitleError = null
+                },
+                worksheetNotice = subtitleWorksheetNotice,
+                onWorksheetNoticeRead = { subtitleWorksheetNotice = null },
+                onSaveWorksheetCopy = { draftCues, selectedCues ->
+                    val chosen = selectedCues.take(24).toList()
+                    val bytes = PrivateSubtitleRecallWorksheet.snapshot(chosen)
+                    if (bytes == null) {
+                        error = "Ongeldige ondertitels; kan geen veilig oefenblad maken."
+                    } else {
+                        pendingSubtitleWorksheet = PendingSubtitleWorksheetSave(
+                            generation, draftCues.toList(), chosen, bytes
+                        )
+                        saveSubtitleWorksheet.launch("Tuddy-ondertitels-oefenblad.html")
+                    }
                 },
                 onSaveCopy = { editedCues, format ->
                     val snapshot = PrivateSubtitleDraftEditor.snapshot(editedCues, format)
