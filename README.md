@@ -26,6 +26,17 @@ kiest daarna zélf of hij het ontbrekende model via wifi voorbereidt.
 Ook bij tijdelijk onbekende modelstatus is er geen cloudfallback.
 [Exact gedrag en grenzen](docs/EXPLICIT_MODEL_DOWNLOAD_ONLY.md).
 
+## Nieuw: uitspraak oefenen met lokaal Android-voorlezen
+
+Bij elke ondertitel kun je via **🔊 Lokaal voorlezen · kies tempo**
+de oorspronkelijke zin of een afgeronde vertaling laten uitspreken,
+in normaal of rustig tempo. De app biedt alleen al geïnstalleerde,
+niet-netwerkafhankelijke Android TTS-stemmen aan. Ontbreekt een
+bruikbare lokale stem, dan blijft voorlezen uit en volgt **geen**
+online fallback. Een eigen stopactie beëindigt de uitspraak.
+Er wordt niets als audio bewaard.
+[Bediening en beperkingen](docs/OFFLINE_PRONUNCIATION_CHOICES.md).
+
 ## Nieuw: offline startcheck vanaf het hoofdscherm
 
 De knop **Offline startcheck** laat zien of de gekozen Android-spreektaal
