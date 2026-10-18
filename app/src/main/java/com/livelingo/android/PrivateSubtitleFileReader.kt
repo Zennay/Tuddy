@@ -53,8 +53,20 @@ internal object PrivateSubtitleFileReader {
         val blocks = normalized.trim().split(Regex("""\n[ \t]*\n"""))
         if (blocks.isEmpty()) return null
         val firstBlock = blocks[0].trim()
-        val isWebVtt = vttHeader.matches(firstBlock)
-        if (!isWebVtt && firstBlock.startsWith("WEBVTT")) return null
+        val headerLines = firstBlock.lines()
+        val firstLine = headerLines.firstOrNull().orEmpty()
+        val headerIsVtt = vttHeader.matches(firstLine) && !firstLine.contains("-->")
+        // Some real WebVTT subtitle providers put Kind/Language header fields
+        // before the first blank line. These are descriptive only: reject
+        // timestamp-map or unknown directives rather than misaligning cues.
+        val supportedHeader = headerLines.size <= 8 &&
+            headerLines.drop(1).all { line ->
+                line.length <= 200 &&
+                    (line.startsWith("Kind: ") || line.startsWith("Language: ")) &&
+                    !line.contains("-->")
+            }
+        val isWebVtt = headerIsVtt && supportedHeader
+        if (!isWebVtt && firstLine.startsWith("WEBVTT")) return null
         val payloadBlocks = if (isWebVtt) blocks.drop(1) else blocks
         if (payloadBlocks.isEmpty() || payloadBlocks.size > MAX_CUES + 100) return null
         val cues = mutableListOf<PrivateSubtitleCue>()
