@@ -292,6 +292,8 @@ private fun TuddyScreen(
     // Explicitly opened SRT/WebVTT file; separate from the active transcript.
     var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
     var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    // A user-confirmed immutable copy survives the Android document picker only.
+    var pendingSubtitleDraft by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     // The user selects one completed row from a read-only, unverified
     // imported archive. No clipboard/share side effects before consent.
     var pendingArchiveExcerpt by remember {
@@ -1308,6 +1310,24 @@ private fun TuddyScreen(
         }
     }
 
+    val saveEditedSubtitle = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingSubtitleDraft
+        pendingSubtitleDraft = null
+        if (uri != null && pending != null && pending.first == generation) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(pending.second)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            exportStatus = if (saved) "Nieuwe ondertitelkopie bewaard op jouw gekozen locatie."
+                else "Opslaan mislukt; het originele ondertitelbestand blijft behouden."
+        }
+    }
+
     val openTranscriptArchive = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1452,6 +1472,7 @@ private fun TuddyScreen(
             archiveReaderOpen = false
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
+            pendingSubtitleDraft = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
             quickTypedOpen = false
@@ -1784,7 +1805,18 @@ private fun TuddyScreen(
         subtitleFileCues?.let { opened ->
             PrivateSubtitleFileDialog(
                 cues = opened,
-                onDismiss = { subtitleFileCues = null }
+                onDismiss = { subtitleFileCues = null },
+                onSaveCopy = { editedCues, format ->
+                    val snapshot = PrivateSubtitleDraftEditor.snapshot(editedCues, format)
+                    if (snapshot == null) {
+                        error = "Kan geen veilige nieuwe ondertitelkopie maken."
+                    } else {
+                        pendingSubtitleDraft = generation to snapshot
+                        saveEditedSubtitle.launch(if (format == SubtitleDraftFormat.WEBVTT)
+                            "Tuddy-handmatig-ondertitelconcept.vtt"
+                        else "Tuddy-handmatig-ondertitelconcept.srt")
+                    }
+                }
             )
         }
         if (liveTableOpen) {
