@@ -1,5 +1,7 @@
 package com.livelingo.android.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,11 +24,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OwnWord
 import com.livelingo.android.PrivateOwnWordDeck
 import com.livelingo.android.TargetCatalog
+import java.io.ByteArrayOutputStream
+import java.util.Locale
 
 /**
  * Human-authored offline word notes, strictly separated from vetted glossary
@@ -51,11 +56,125 @@ internal fun MyOwnWordsPanel(
     var pendingDelete by remember { mutableStateOf<OwnWord?>(null) }
     var revision by remember { mutableIntStateOf(0) }
     var notice by remember { mutableStateOf("") }
+    var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingRestore by remember { mutableStateOf<List<OwnWord>?>(null) }
+    val context = LocalContext.current
+    val backupPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val snapshot = pendingBackup
+        pendingBackup = null
+        if (uri != null && snapshot != null) {
+            val fresh = deck.exportSnapshot()
+            if (fresh == null || !fresh.contentEquals(snapshot)) {
+                notice = "Eigen woorden zijn gewijzigd. Kies opnieuw back-up bewaren."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                        stream.write(snapshot)
+                        stream.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                notice = if (saved) "Eigen woorden bewaard op je gekozen locatie."
+                    else "Bestand niet opgeslagen. Je privéwoorden blijven behouden."
+            }
+        }
+    }
+    val restorePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        pendingRestore = null
+        if (uri != null) {
+            val imported = runCatching {
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: throw IllegalArgumentException("onleesbaar")
+                val output = ByteArrayOutputStream()
+                input.use { stream ->
+                    val buffer = ByteArray(4096)
+                    while (true) {
+                        val size = stream.read(buffer)
+                        if (size < 0) break
+                        if (size == 0 || output.size() + size > PrivateOwnWordDeck.MAX_BACKUP_BYTES)
+                            throw IllegalArgumentException("bestand te groot")
+                        output.write(buffer, 0, size)
+                    }
+                }
+                deck.previewImport(output.toByteArray())
+            }.getOrNull()
+            if (imported == null) {
+                notice = "Back-up geweigerd: onbekende versie, ongeldig of te groot. " +
+                    "Je bestaande woorden zijn behouden."
+            } else {
+                pendingRestore = imported
+                notice = "Back-up ingelezen. Kies hieronder bewust samenvoegen of vervangen."
+            }
+        }
+    }
     val items = remember(revision) { deck.entries() }
     val filtered = items.orEmpty().filter {
         it.language == language && (query.isBlank() ||
             it.word.contains(query.trim(), ignoreCase = true) ||
             it.ownMeaning.contains(query.trim(), ignoreCase = true))
+    }
+
+    val restore = pendingRestore
+    if (restore != null) {
+        val existing = items.orEmpty().map {
+            it.language + "|" + it.word.lowercase(Locale.ROOT)
+        }.toSet()
+        val newCount = restore.count {
+            it.language + "|" + it.word.lowercase(Locale.ROOT) !in existing
+        }
+        val duplicateCount = restore.size - newCount
+        val canMerge = items != null && items.size + newCount <= PrivateOwnWordDeck.MAX_ENTRIES
+        AlertDialog(
+            onDismissRequest = { pendingRestore = null },
+            title = { Text("Eigen woorden herstellen?") },
+            text = {
+                Text("Dit bestand bevat " + restore.size + " zelfgeschreven woorden. " +
+                    newCount + " zijn nieuw, " + duplicateCount + " staan al lokaal. " +
+                    "Samenvoegen bewaart altijd je huidige betekenis bij dubbele woorden. " +
+                    (if (canMerge) "Samenvoegen past binnen de limiet."
+                    else "Samenvoegen kan niet door een onleesbare lijst of capaciteitslimiet.") +
+                    " Vervangen wist eerst al je huidige eigen woordbetekenissen. " +
+                    "Deze teksten zijn nooit geverifieerde vertalingen.")
+            },
+            confirmButton = {
+                Column {
+                    TextButton(enabled = canMerge, onClick = {
+                        val saved = deck.mergeImported(restore)
+                        notice = if (saved) "Nieuwe eigen woorden toegevoegd; lokale betekenissen behouden."
+                            else "Samenvoegen mislukt; je huidige woorden zijn behouden."
+                        if (saved) {
+                            revision++
+                            onChanged()
+                            editing = null
+                            word = ""
+                            meaning = ""
+                        }
+                        pendingRestore = null
+                    }) { Text("Voeg alleen nieuwe woorden toe") }
+                    TextButton(onClick = {
+                        val saved = deck.replaceImported(restore)
+                        notice = if (saved) "Eigen woorden zijn na jouw keuze vervangen."
+                            else "Vervangen is mislukt; je huidige lijst is behouden."
+                        if (saved) {
+                            revision++
+                            onChanged()
+                            editing = null
+                            word = ""
+                            meaning = ""
+                        }
+                        pendingRestore = null
+                    }) { Text("Vervang volledige eigen lijst") }
+                }
+            },
+            dismissButton = { TextButton(onClick = { pendingRestore = null }) {
+                Text("Annuleren")
+            } }
+        )
+        return
     }
 
     if (pendingDelete != null) {
@@ -180,6 +299,27 @@ internal fun MyOwnWordsPanel(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (editing == null) "Bewaar mijn betekenis" else "Bewaar wijziging") }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(
+                        enabled = items?.isNotEmpty() == true,
+                        onClick = {
+                            val snapshot = deck.exportSnapshot()
+                            if (snapshot == null) {
+                                notice = "Geen veilige eigen woorden beschikbaar voor export."
+                            } else {
+                                pendingBackup = snapshot
+                                backupPicker.launch("tuddy-mijn-eigen-woorden.json")
+                            }
+                        }
+                    ) { Text("Bewaar back-up…") }
+                    OutlinedButton(onClick = {
+                        pendingRestore = null
+                        restorePicker.launch(arrayOf("application/json", "text/plain"))
+                    }) { Text("Herstel back-up…") }
+                }
+                Text("Back-ups zijn optioneel en bevatten alleen je eigen woordnotities. " +
+                    "De gekozen Android-bestandsprovider kan ze extern opslaan of synchroniseren.",
+                    style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 Text("Mijn woorden in " + language.uppercase() +
                     ": " + filtered.size, style = MaterialTheme.typography.titleSmall)
