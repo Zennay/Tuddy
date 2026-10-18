@@ -16,13 +16,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.PrivatePhraseShortcuts
+import java.util.Locale
 
 /**
  * One-tap offline access to the user's deliberate study notes as big,
@@ -41,11 +45,22 @@ internal fun OfflinePhraseQuickPicker(
     }
     var query by remember { mutableStateOf("") }
     var presenting by remember { mutableStateOf<PersonalPhrase?>(null) }
-    val shown = phrases.orEmpty().filter { note ->
+    var favoritesOnly by remember { mutableStateOf(false) }
+    var pinsRevision by remember { mutableIntStateOf(0) }
+    var pinNotice by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val shortcuts = remember(context) { PrivatePhraseShortcuts(context) }
+    val availableNotes = phrases.orEmpty()
+    val pinnedNotes = remember(phrases, pinsRevision) {
+        shortcuts.pinnedNotes(availableNotes)
+    }
+    val shown = availableNotes.filter { note ->
+        (!favoritesOnly || note in pinnedNotes) &&
         note.language == code && (query.isBlank() ||
             note.phrase.contains(query.trim(), ignoreCase = true) ||
             note.ownMeaning.contains(query.trim(), ignoreCase = true))
-    }.take(80)
+    }.sortedWith(compareByDescending<PersonalPhrase> { it in pinnedNotes }
+        .thenBy { it.phrase.lowercase(Locale.ROOT) }).take(80)
 
     val chosen = presenting
     if (chosen != null) {
@@ -79,6 +94,15 @@ internal fun OfflinePhraseQuickPicker(
                         }
                     }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
+                        Text(if (favoritesOnly) "★ Alleen favorieten"
+                            else "☆ Favorieten (" + pinnedNotes.size + ")")
+                    }
+                }
+                if (pinNotice.isNotBlank()) {
+                    Text(pinNotice, style = MaterialTheme.typography.bodySmall)
+                }
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it.take(90) },
@@ -107,10 +131,25 @@ internal fun OfflinePhraseQuickPicker(
                         Text(item.ownMeaning,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { presenting = item }
-                        ) { Text("Toon deze zin groot") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { presenting = item }) {
+                                Text("Toon groot")
+                            }
+                            TextButton(onClick = {
+                                val changed = shortcuts.toggle(item, availableNotes)
+                                if (changed == null) {
+                                    pinNotice = "Niet opgeslagen. Maximaal " +
+                                        PrivatePhraseShortcuts.MAX_PINS +
+                                        " favorieten, of lokale opslag niet beschikbaar."
+                                } else {
+                                    pinsRevision++
+                                    pinNotice = if (changed) "Gesprekszin als favoriet bewaard."
+                                        else "Favoriet verwijderd."
+                                }
+                            }) {
+                                Text(if (item in pinnedNotes) "★ Bewaard" else "☆ Favoriet")
+                            }
+                        }
                     }
                 }
                 HorizontalDivider()
