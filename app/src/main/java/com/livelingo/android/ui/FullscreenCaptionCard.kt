@@ -94,6 +94,9 @@ internal fun FullscreenCaptionCard(
         else card?.original.orEmpty()
     val wordCount = remember(studyText) { Regex("\\S+").findAll(studyText).count() }
     val safeWordIndex = currentWord.coerceIn(0, (wordCount - 1).coerceAtLeast(0))
+    val selectedTextWord = remember(studyText, safeWordIndex) {
+        Regex("\\S+").findAll(studyText).elementAtOrNull(safeWordIndex)?.value ?: ""
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -189,6 +192,13 @@ internal fun FullscreenCaptionCard(
                                     }
                                 ) { Text(if (stepTranslation) "Vertaling ✓" else "Vertaling") }
                             }
+                            Text(
+                                "Geselecteerd tekstwoord: " +
+                                    (selectedTextWord.ifBlank { "geen" }) +
+                                    " · handmatige positie, geen audiotiming",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
