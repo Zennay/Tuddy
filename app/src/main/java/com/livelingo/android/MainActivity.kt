@@ -673,7 +673,7 @@ private fun TuddyScreen() {
         if (uri != null && intendedGeneration != null && intendedGeneration == generation) {
             val loaded = runCatching {
                 val stream = context.contentResolver.openInputStream(uri)
-                    ?: error("Cannot read selected document")
+                    ?: throw IllegalArgumentException("Cannot read selected document")
                 val bytes = stream.use { input ->
                     val buffer = ByteArray(8192)
                     val collected = ByteArrayOutputStream()
@@ -681,7 +681,7 @@ private fun TuddyScreen() {
                         val count = input.read(buffer)
                         if (count < 0) break
                         if (count == 0) continue
-                        if (collected.size() + count > 262_144) error("Archive exceeds read limit")
+                        if (collected.size() + count > 262_144) throw IllegalArgumentException("Archive exceeds read limit")
                         collected.write(buffer, 0, count)
                     }
                     collected.toByteArray()
