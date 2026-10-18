@@ -18,10 +18,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivatePhraseDeck
+import com.livelingo.android.PrivatePhraseShortcuts
+import com.livelingo.android.PrivatePhraseTopics
 
 /**
  * Deliberately copies only the user's *own NL/EN meaning* to an UNSENT editor
@@ -35,13 +38,27 @@ internal fun PrivatePreparedMeaningPicker(
     onChosen: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     val stored = remember { deck.entries() }
+    val shortcuts = remember(context) { PrivatePhraseShortcuts(context) }
+    val topicStore = remember(context) { PrivatePhraseTopics(context) }
+    val favoriteNotes = remember(stored) { shortcuts.pinnedNotes(stored.orEmpty()) }
+    val availableTopics = remember(stored) { topicStore.topics() }
     var search by remember { mutableStateOf("") }
     var language by remember { mutableStateOf("all") }
+    var favoritesOnly by remember { mutableStateOf(false) }
+    var topicFilter by remember { mutableStateOf<String?>(null) }
+    var topicFiltersOpen by remember { mutableStateOf(false) }
     var shownCount by remember { mutableIntStateOf(20) }
     var pendingReplace by remember { mutableStateOf<PersonalPhrase?>(null) }
     val match = stored.orEmpty().filter { phrase ->
+        val matchingTopic = when (topicFilter) {
+            null -> true
+            "__without__" -> topicStore.topicFor(phrase) == null
+            else -> topicStore.topicFor(phrase) == topicFilter
+        }
         (language == "all" || phrase.language == language) &&
+            (!favoritesOnly || phrase in favoriteNotes) && matchingTopic &&
             (search.isBlank() || phrase.phrase.contains(search.trim(), ignoreCase = true) ||
                 phrase.ownMeaning.contains(search.trim(), ignoreCase = true))
     }
@@ -114,6 +131,45 @@ internal fun PrivatePreparedMeaningPicker(
                             Text((if (language == code) "✓ " else "") + label)
                         }
                     }
+                    TextButton(onClick = {
+                        favoritesOnly = !favoritesOnly
+                        shownCount = 20
+                    }) {
+                        Text(if (favoritesOnly) "★ Alleen favorieten ✓"
+                            else "☆ Alleen mijn favorieten (${favoriteNotes.size})")
+                    }
+                    TextButton(onClick = { topicFiltersOpen = !topicFiltersOpen }) {
+                        Text(if (topicFiltersOpen) "Sluit themakeuze"
+                            else "Filter mijn zelfgekozen thema’s")
+                    }
+                    if (topicFiltersOpen) {
+                        TextButton(onClick = {
+                            topicFilter = null
+                            shownCount = 20
+                        }) {
+                            Text(if (topicFilter == null) "Alle thema’s ✓" else "Alle thema’s")
+                        }
+                        TextButton(onClick = {
+                            topicFilter = "__without__"
+                            shownCount = 20
+                        }) {
+                            Text(if (topicFilter == "__without__") "Zonder thema ✓"
+                                else "Zonder thema")
+                        }
+                        availableTopics.forEach { topic ->
+                            TextButton(onClick = {
+                                topicFilter = topic
+                                shownCount = 20
+                            }) {
+                                Text(if (topicFilter == topic) "$topic ✓" else topic)
+                            }
+                        }
+                        Text(
+                            "Thema’s en favorieten komen alleen uit je eerder " +
+                                "bewust bewaarde eigen zinnen; niets wordt hier gewijzigd.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Text("${match.size} zelfgeschreven zinnen gevonden · " +
                         "maximaal ${minOf(match.size, shownCount)} zichtbaar",
                         style = MaterialTheme.typography.labelSmall)
@@ -129,11 +185,21 @@ internal fun PrivatePreparedMeaningPicker(
                         Text("Mijn eigen betekenis (${item.meaningLanguage.uppercase()}): " +
                             item.ownMeaning,
                             style = MaterialTheme.typography.bodySmall)
+                        val assignedTopic = topicStore.topicFor(item)
+                        Text(
+                            (if (item in favoriteNotes) "★ Favoriet · " else "") +
+                                "Thema: ${assignedTopic ?: "Niet ingedeeld"}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
                         TextButton(onClick = {
                             if (hasUnsentDraft) pendingReplace = item else {
                                 onChosen(item.ownMeaning, item.meaningLanguage)
                             }
                         }) { Text("Gebruik alleen mijn eigen betekenis als concept") }
+                    }
+                    if (match.isEmpty()) {
+                        Text("Geen eigen zinnen gevonden voor deze combinatie van filters.",
+                            style = MaterialTheme.typography.bodySmall)
                     }
                     if (shownCount < match.size) {
                         TextButton(onClick = { shownCount += 20 }) {
