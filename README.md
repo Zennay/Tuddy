@@ -16,6 +16,19 @@ zichtbaar label. De microfoon moet uit staan. Dit is geen echte
 spraakmodelverbetering of menselijke tolkvalidatie.
 [Bediening, privacy en grenzen](docs/CAPTION_CORRECTIONS.md).
 
+## Nieuw: schermvullend live meelezen
+
+Open **⛶ Leesmodus · schermvullende ondertitels** voor een rustige weergave
+van de oorspronkelijke spraak en, zodra werkelijk lokaal voltooid, de
+vertaling in grote kaarten. Live tussenresultaten blijven expliciet
+onafgerond. Wanneer je zelf omhoog scrolt, stopt het automatisch volgen;
+met **Volg live** spring je terug naar de nieuwste regel. **■ Stop
+microfoon** stopt de reeds actieve herkenning ook vanuit deze weergave;
+**Sluiten** keert terug zonder bestaande ondertitels te wissen.
+Het scherm gebruikt dezelfde gekozen ondertitelgrootte, bewaart geen
+gesprekken, kent geen automatische speaker-ID en vraagt geen extra
+Android-rechten. Een fysieke toestelproef en getekende release blijven open.
+
 ## Nieuw: veilige tweeweg-gesprekken
 
 Met **⇄ Wissel richting** kun je bij ondersteunde spreektaalparen zonder
