@@ -74,3 +74,36 @@ Een mislukt bestand of een te grote samenvoeging verandert niets aan
 de huidige lijst. Na export blijft de externe kopie buiten Tuddy's
 verwijderfunctie vallen. Androids platformbackup voor de app blijft uit;
 dit is uitsluitend een handmatige, expliciete back-up.
+
+## Een eigen woordenlijst in één keer toevoegen (TSV)
+
+Bij **Mijn eigen offline woorden → Importeer eigen woordenlijst (TSV)…**
+kun je een door jezelf gemaakt UTF-8-tekstbestand kiezen. De
+kolomnamen op de eerste regel zijn **verplicht** en de scheiding is
+steeds een echte tab (niet een komma, puntkomma of spatie):
+
+```text
+language	word	meaning
+nl	huis	Een gebouw waar iemand woont
+kmr	av	Mijn eigen omschrijving
+ps	کور	Mijn eigen Pasjtoe-notitie
+```
+
+Dit zijn slechts voorbeeldnotities, **geen door Tuddy gecontroleerde
+vertalingen**. De invoerder is zelf verantwoordelijk voor de juiste taal
+en betekenis. Ondersteund zijn de aanwezige tekst-taalcodes en
+Kurmanji (`kmr`), Sorani (`ckb`) en Pasjtoe (`ps`)
+als **eigen tekst**, niet als automatische modeldekking.
+
+Tuddy leest hoogstens **50.000 bytes** / **120 woorden**, weigert
+ongeldige UTF-8, onbekende taal, dubbele woordidentiteiten, extra
+kolommen, verkeerd ingevulde tekens en ongewenste regeleinden.
+Er wordt niets opgeslagen op het moment van het openen van het bestand.
+
+Na een geldige invoer volgt dezelfde aparte keuze als bij JSON-herstel:
+**Voeg alleen nieuwe woorden toe** (bestaande lokaal geschreven
+betekenissen behouden) of **Vervang volledige eigen lijst**
+(overschrijven na expliciete bevestiging). Als de lijst te groot is of
+niet kan worden opgeslagen, blijft je bestaande privéwoordenboek
+ongewijzigd. Er is geen automatische servercommunicatie of
+achtergrondimport.
