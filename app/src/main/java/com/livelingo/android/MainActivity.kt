@@ -369,6 +369,10 @@ private fun TuddyScreen() {
     fun stop() {
         offlinePreparationEpoch.invalidate() // A stale model receipt never applies after Stop/background.
         textInventory.invalidate() // Late inventory callbacks never publish after Stop/background.
+        if (textReceipt.stage == OfflineTextStage.CHECKING) {
+            textReceipt = OfflineTextReceipt(source.translateCode, target.translateCode,
+                OfflineTextStage.UNCHECKED, "Controle onderbroken; tik opnieuw op Controleer tekst.")
+        }
         speechPacks.cancel() // Old device coverage/download callbacks cannot change a new session.
         voiceSessions.invalidate() // Stop/background immediately invalidates prior callbacks.
         pendingRestart?.let(restartHandler::removeCallbacks)
@@ -785,6 +789,13 @@ private fun TuddyScreen() {
                         OutlinedButton(onClick = { prepareOfflinePair() }, enabled = !preparingOfflineModel) {
                             Text(if (preparingOfflineModel) "Voorbereiden…" else "Model via wifi")
                         }
+                    }
+                    if (textReceipt.stage == OfflineTextStage.CHECKING) {
+                        TextButton(onClick = {
+                            textInventory.invalidate()
+                            textReceipt = OfflineTextReceipt(source.translateCode, target.translateCode,
+                                OfflineTextStage.UNCHECKED, "Tekstcontrole gestopt. Probeer opnieuw.")
+                        }) { Text("Stop tekstcontrole") }
                     }
                     Text(
                         if (textReceipt.source == source.translateCode &&
