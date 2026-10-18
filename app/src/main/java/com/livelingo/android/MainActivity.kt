@@ -1018,6 +1018,15 @@ private fun TuddyScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+                        if (draftFromExternalShare) {
+                            TextButton(onClick = {
+                                // Keep the already-reviewed draft in RAM while the
+                                // user adjusts the actual target/source picker.
+                                quickTypedOpen = false
+                                showSettings = true
+                                conversationToolsOpen = false
+                            }) { Text("Wijzig talen · bewaar dit concept") }
+                        }
                         OutlinedTextField(
                             value = manualText,
                             onValueChange = { candidate ->
