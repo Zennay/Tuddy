@@ -198,46 +198,49 @@ internal fun PrivateSubtitleFileDialog(
                     Text("${found.size} van ${draft.size} regels" +
                         (if (edited) " · niet bewaard" else ""),
                         style = MaterialTheme.typography.labelMedium)
-                    TextButton(onClick = {
-                        batchFind = query.take(100)
-                        batchOpen = true
-                    }) { Text("Zoek en vervang…") }
-                }
-                Row(modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(onClick = {
-                        val next = PrivateSubtitleDraftEditor.shift(draft, -500L)
-                        if (next == null) notice = "Kan niet eerder: negatieve tijdcode."
-                        else { applyChange(next); notice = "0,5 s eerder gezet." }
-                    }) { Text("−0,5 s") }
-                    TextButton(onClick = {
-                        val next = PrivateSubtitleDraftEditor.shift(draft, 500L)
-                        if (next == null) notice = "Kan niet later: tijdgrens bereikt."
-                        else { applyChange(next); notice = "0,5 s later gezet." }
-                    }) { Text("+0,5 s") }
-                    TextButton(enabled = edited, onClick = {
-                        draft = cues
-                        edited = false
-                        undoHistory = emptyList()
-                        redoHistory = emptyList()
-                        shownIndex = -1
-                        notice = "Bewerkingen weggegooid; origineel ongewijzigd."
-                    }) { Text("Herstel") }
-                }
-                OutlinedButton(enabled = draft.size < 500,
-                    modifier = Modifier.fillMaxWidth(),
-                        onClick = {
+                    PrivateSubtitleDocumentMenu(
+                        canInsert = draft.size < 500,
+                        canRestore = edited,
+                        onFindReplace = {
+                            batchFind = query.take(100)
+                            batchOpen = true
+                        },
+                        onShiftEarlier = {
+                            val result = PrivateSubtitleDraftEditor.shift(draft, -500L)
+                            if (result == null) notice = "Kan niet eerder: negatieve tijdcode."
+                            else {
+                                applyChange(result)
+                                notice = "Alle tijden 0,5 s eerder."
+                            }
+                        },
+                        onShiftLater = {
+                            val result = PrivateSubtitleDraftEditor.shift(draft, 500L)
+                            if (result == null) notice = "Kan niet later: tijdgrens bereikt."
+                            else {
+                                applyChange(result)
+                                notice = "Alle tijden 0,5 s later."
+                            }
+                        },
+                        onRestore = {
+                            draft = cues
+                            edited = false
+                            undoHistory = emptyList()
+                            redoHistory = emptyList()
+                            shownIndex = -1
+                            notice = "Origineel hersteld; tijdelijke bewerkingen weggegooid."
+                        },
+                        onInsert = {
                             insertStart = current?.endLabel?.replace(',', '.') ?: "00:00:00.000"
                             insertEnd = ""
                             insertContent = ""
                             insertOpen = true
-                        }) { Text("+ Nieuwe ondertitel…") }
-                OutlinedButton(onClick = {
-                    clipStart = "00:00:00.000"
-                    clipEnd = draft.lastOrNull()?.endLabel?.replace(',', '.') ?: ""
-                    clipOpen = true
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Text("✂ Maak een ondertitelclip…")
+                        },
+                        onClip = {
+                            clipStart = "00:00:00.000"
+                            clipEnd = draft.lastOrNull()?.endLabel?.replace(',', '.') ?: ""
+                            clipOpen = true
+                        }
+                    )
                 }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -339,51 +342,28 @@ internal fun PrivateSubtitleFileDialog(
                     if (spokenNotice.isNotBlank()) {
                         Text(spokenNotice, style = MaterialTheme.typography.bodySmall)
                     }
-                    OutlinedButton(onClick = {
-                        editIndex = found[shownIndex].first
-                        editValue = current.text
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text("✎ Corrigeer deze regel handmatig")
-                    }
-                    Text("Tijden van alleen deze regel · stap 0,5 s",
-                        style = MaterialTheme.typography.labelSmall)
-                    Row(modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = { nudgeSelected(-500L, 0L) }) {
-                            Text("Begin −0,5 s")
-                        }
-                        TextButton(onClick = { nudgeSelected(500L, 0L) }) {
-                            Text("Begin +0,5 s")
-                        }
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = { nudgeSelected(0L, -500L) }) {
-                            Text("Eind −0,5 s")
-                        }
-                        TextButton(onClick = { nudgeSelected(0L, 500L) }) {
-                            Text("Eind +0,5 s")
-                        }
-                        TextButton(enabled = draft.size > 1,
-                            onClick = { deleteIndex = found[shownIndex].first }) {
-                            Text("Wis regel…")
-                        }
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(enabled = draft.size < 500,
-                            onClick = {
-                                val rowIndex = found[shownIndex].first
-                                val cut = current.text.indexOf(' ', current.text.length / 2)
-                                splitFirst = if (cut > 0) current.text.substring(0, cut) else current.text
-                                splitSecond = if (cut > 0) current.text.substring(cut + 1) else ""
-                                splitIndex = rowIndex
-                            }) { Text("Splits deze regel…") }
-                        TextButton(enabled = found[shownIndex].first < draft.lastIndex,
-                            onClick = { mergeIndex = found[shownIndex].first }) {
-                            Text("Combineer volgende…")
-                        }
-                    }
+                    PrivateSubtitleCueMenu(
+                        canSplit = draft.size < 500,
+                        canMerge = found[shownIndex].first < draft.lastIndex,
+                        canDelete = draft.size > 1,
+                        onCorrectText = {
+                            editIndex = found[shownIndex].first
+                            editValue = current.text
+                        },
+                        onStartEarlier = { nudgeSelected(-500L, 0L) },
+                        onStartLater = { nudgeSelected(500L, 0L) },
+                        onEndEarlier = { nudgeSelected(0L, -500L) },
+                        onEndLater = { nudgeSelected(0L, 500L) },
+                        onSplit = {
+                            val index = found[shownIndex].first
+                            val cut = current.text.indexOf(' ', current.text.length / 2)
+                            splitFirst = if (cut > 0) current.text.substring(0, cut) else current.text
+                            splitSecond = if (cut > 0) current.text.substring(cut + 1) else ""
+                            splitIndex = index
+                        },
+                        onMerge = { mergeIndex = found[shownIndex].first },
+                        onDelete = { deleteIndex = found[shownIndex].first }
+                    )
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween) {
                         TextButton(enabled = shownIndex > 0,
@@ -510,8 +490,7 @@ internal fun PrivateSubtitleFileDialog(
                     val confirmed = PrivateSubtitleClip.extract(
                         draft, from!!, to!!)
                     if (confirmed != null) {
-                        draft = confirmed.cues
-                        edited = true
+                        applyChange(confirmed.cues)
                         query = ""
                         shownIndex = -1
                         notice = "Clip met ${confirmed.retainedCount} regels als " +
