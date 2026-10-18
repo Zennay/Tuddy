@@ -859,9 +859,9 @@ private fun TuddyScreen(
                     "De microfoon is daarom gestopt."
             }
         } catch (exception: Exception) {
-            microphoneLimit.cancel()
             // startListening may throw after a recognizer was allocated.
             // Do not leave that session eligible for callbacks or reuse.
+            microphoneLimit.cancel()
             voiceSessions.invalidate()
             pendingRestart?.let(restartHandler::removeCallbacks)
             pendingRestart = null
