@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: mijn eigen woordbetekenissen later opnieuw oefenen
+
+Zelfgeschreven woordbetekenissen kunnen nu, na **aparte toestemming**,
+aan een privé herhaalplanning meedoen. Je ziet je antwoord pas
+na een tik, kiest zelf of het moeilijk of bekend was en krijgt
+woorden op latere dagen terug. Een gewijzigde betekenis begint opnieuw;
+je kunt alle datums wissen zonder je notities kwijt te raken.
+Geen account, cloud, microfoon of kwaliteitsclaim over eigen vertalingen.
+[Uitleg en privacy](docs/PRIVATE_OWN_WORD_REVIEW.md).
+
+
 ## Nieuw: eigen ongecontroleerde woordbetekenissen oefenen
 
 Bij **Mijn eigen offline woorden** kun je nu ook zelfgeschreven woorden
