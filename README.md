@@ -1,5 +1,27 @@
 # Tuddy 🎙️
 
+## Nieuw: handmatig ondertitels gelijkzetten met je eigen audio
+
+Als de gesproken tekst niet gelijkloopt met de SRT/VTT-tijdcodes, open
+**▶ Eigen audio met tijdcodes afspelen…** en gebruik de tijdcorrectie in
+stappen van **0,25, 1 of 5 seconden** (tot maximaal **±30 seconden**).
+Een *positieve* correctie toont ondertitels later dan in het bronbestand.
+De actieve ondertitel, zoeken en springen naar een regel en één regel
+herhalen volgen dezelfde tijdelijke correctie.
+
+Wil je vanaf één herkenbaar beginpunt precies gelijkzetten? Pauzeer
+bij het begin van een zin, open **⌕ Zoek passage**, zoek de betreffende
+ondertitel en kies **Gebruik als tijdanker op huidige audiopositie**.
+Deze actie wordt geweigerd als de benodigde verschuiving groter dan
+30 seconden is. Met **Herstel de oorspronkelijke tijdcodes (0 s)**
+keer je direct terug naar het originele timingoverzicht.
+
+Dit is bewust uitsluitend een luisterhulpmiddel in het huidige scherm:
+Tuddy bewerkt geen originele SRT/VTT-cues, bewaart geen offset op schijf
+en doet geen automatische spraak-/woorduitlijning. Sluiten of andere
+audio kiezen wist de correctie. De gekozen Android-bestandsprovider
+kan zelf mediabestanden downloaden of synchroniseren.
+
 ## Nieuw: eigen audio beluisteren met SRT/VTT-tijdcodes
 
 Open een SRT/VTT in de tijdelijke ondertiteleditor en kies **▶ Eigen audio

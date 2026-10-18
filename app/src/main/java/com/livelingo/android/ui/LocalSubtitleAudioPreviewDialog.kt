@@ -65,6 +65,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var dragPositionMs by remember { mutableLongStateOf(-1L) }
     var durationMs by remember { mutableLongStateOf(0L) }
     var playbackSpeed by remember { mutableStateOf(1f) }
+    // Playback-only calibration. A positive offset shows subtitles later than source timecodes.
+    var subtitleOffsetMs by remember { mutableLongStateOf(0L) }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var lastLoopAtMs by remember { mutableLongStateOf(0L) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
@@ -81,6 +83,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         durationMs = 0L
         playbackSpeed = 1f
         loopCueIndex = -1
+        subtitleOffsetMs = 0L
         cuePickerOpen = false
         cueQuery = ""
         lastLoopAtMs = 0L
@@ -102,12 +105,26 @@ internal fun LocalSubtitleAudioPreviewDialog(
         playing = false
     }
 
+    fun cueStart(cue: PrivateSubtitleCue) = cue.startMillis + subtitleOffsetMs
+    fun cueEnd(cue: PrivateSubtitleCue) = cue.endMillis + subtitleOffsetMs
+    fun cuePlayable(cue: PrivateSubtitleCue) =
+        cueStart(cue) >= 0L && cueStart(cue) < durationMs && cueEnd(cue) <= durationMs
+
+    fun shiftSubtitles(deltaMs: Long) {
+        val shifted = (subtitleOffsetMs + deltaMs).coerceIn(-30_000L, 30_000L)
+        if (shifted == subtitleOffsetMs) return
+        subtitleOffsetMs = shifted
+        loopCueIndex = -1
+        lastLoopAtMs = 0L
+        notice = "Verschuiving aangepast; dit wijzigt je SRT/VTT-bestand niet."
+    }
+
     fun seekTo(position: Long) {
         val current = player ?: return
         if (!prepared || durationMs <= 0L) return
         val target = position.coerceIn(0L, durationMs)
         val loop = cues.getOrNull(loopCueIndex)
-        if (loop != null && target !in loop.startMillis until loop.endMillis)
+        if (loop != null && target !in cueStart(loop) until cueEnd(loop))
             loopCueIndex = -1
         runCatching { current.seekTo(target.toInt()) }
             .onSuccess { positionMs = target }
@@ -164,12 +181,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             val cue = cues.getOrNull(loopCueIndex)
                             val loopAllowed = cue != null &&
                                 cue.endMillis - cue.startMillis >= 750L &&
-                                cue.startMillis < durationMs &&
-                                cue.endMillis <= durationMs
+                                cuePlayable(cue)
                             val replayed = if (loopAllowed && cue != null) runCatching {
-                                finished.seekTo(cue.startMillis.toInt())
+                                val start = cueStart(cue)
+                                finished.seekTo(start.toInt())
                                 finished.start()
-                                positionMs = cue.startMillis
+                                positionMs = start
                                 true
                             }.getOrDefault(false) else false
                             if (!replayed) {
@@ -218,15 +235,16 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 val loop = cues.getOrNull(loopCueIndex)
                 val elapsed = SystemClock.elapsedRealtime()
                 if (loop != null && loop.endMillis - loop.startMillis >= 750L &&
-                    loop.endMillis <= durationMs && now >= loop.endMillis &&
+                    cuePlayable(loop) && now >= cueEnd(loop) &&
                     elapsed - lastLoopAtMs >= 450L) {
+                    val start = cueStart(loop)
                     val rewound = runCatching {
-                        current.seekTo(loop.startMillis.toInt())
+                        current.seekTo(start.toInt())
                         true
                     }.getOrDefault(false)
                     if (rewound) {
                         lastLoopAtMs = elapsed
-                        positionMs = loop.startMillis
+                        positionMs = start
                     }
                 }
             }
@@ -236,11 +254,17 @@ internal fun LocalSubtitleAudioPreviewDialog(
 
     val displayTimeMs = if (dragPositionMs >= 0L) dragPositionMs else positionMs
     val activeIndex = if (prepared) cues.indexOfLast {
-        displayTimeMs >= it.startMillis && displayTimeMs < it.endMillis
+        displayTimeMs >= cueStart(it) && displayTimeMs < cueEnd(it)
     } else -1
     val active = cues.getOrNull(activeIndex)
-    val nextIndex = cues.indexOfFirst { it.startMillis > positionMs + 250L }
-    val previousIndex = cues.indexOfLast { it.startMillis < positionMs - 500L }
+    val nextIndex = cues.indexOfFirst {
+        val start = cueStart(it)
+        start > positionMs + 250L && start in 0L until durationMs
+    }
+    val previousIndex = cues.indexOfLast {
+        val start = cueStart(it)
+        start < positionMs - 500L && start in 0L until durationMs
+    }
 
     fun clock(millis: Long): String {
         val wholeSeconds = millis.coerceAtLeast(0L) / 1000L
@@ -303,7 +327,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
-                        OutlinedButton(onClick = { seekTo(cues[previousIndex].startMillis) },
+                        OutlinedButton(onClick = { seekTo(cueStart(cues[previousIndex])) },
                             enabled = previousIndex >= 0) { Text("◀ Vorige") }
                         OutlinedButton(onClick = {
                             val current = player ?: return@OutlinedButton
@@ -322,7 +346,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 }
                             }
                         }) { Text(if (playing) "Ⅱ Pauze" else "▶ Afspelen") }
-                        OutlinedButton(onClick = { seekTo(cues[nextIndex].startMillis) },
+                        OutlinedButton(onClick = { seekTo(cueStart(cues[nextIndex])) },
                             enabled = nextIndex >= 0) { Text("Volgende ▶") }
                     }
                     OutlinedButton(
@@ -343,11 +367,31 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             }
                         }
                     }
+                    Text("Tijdcorrectie: " + (if (subtitleOffsetMs > 0L) "+" else "") +
+                        String.format(Locale.ROOT, "%.2f", subtitleOffsetMs / 1000.0) +
+                        " s · positief = ondertitels later",
+                        style = MaterialTheme.typography.labelLarge)
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        listOf(-5000L to "−5s", -1000L to "−1s", -250L to "−0,25s",
+                            250L to "+0,25s", 1000L to "+1s", 5000L to "+5s")
+                            .forEach { (delta, label) ->
+                                TextButton(onClick = { shiftSubtitles(delta) },
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(horizontal = 0.dp)
+                                ) { Text(label, style = MaterialTheme.typography.labelSmall) }
+                            }
+                    }
+                    OutlinedButton(
+                        onClick = { shiftSubtitles(-subtitleOffsetMs) },
+                        enabled = subtitleOffsetMs != 0L,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Herstel de oorspronkelijke tijdcodes (0 s)") }
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = loopCueIndex >= 0 || (active != null &&
                             active.endMillis - active.startMillis >= 750L &&
-                            active.endMillis <= durationMs),
+                            cuePlayable(active)),
                         onClick = {
                             loopCueIndex = if (loopCueIndex >= 0) -1 else activeIndex
                             lastLoopAtMs = 0L
@@ -360,13 +404,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     Text("Herhalen gebruikt alleen de door jou ingevoerde tijdcodes " +
                         "(minimaal 0,75 s). Geen automatische woord- of audiouitlijning.",
                         style = MaterialTheme.typography.labelSmall)
-                    Text("Verschuiving? Pas de tijdcodes in de editor aan; " +
+                    Text("Tijdcorrectie geldt alleen voor deze audiosessie; " +
                         "de originele SRT/VTT wordt niet overschreven.",
                         style = MaterialTheme.typography.labelSmall)
                     HorizontalDivider()
                     Text(if (activeIndex >= 0)
                         "Regel ${activeIndex + 1} van ${cues.size} · " +
-                            "${active?.startLabel} → ${active?.endLabel}"
+                            "${active?.startLabel} → ${active?.endLabel}" +
+                            " · in audio ${clock(cueStart(active!!))}"
                     else "Geen ondertitel actief op deze audiopositie.",
                         style = MaterialTheme.typography.labelLarge)
                     Column(
@@ -410,8 +455,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 ) {
                     Text(
                         "Zoek alleen in het zelf geopende SRT/VTT-bestand. " +
-                            "Tik een regel om de audio op zijn eigen begintijd te zetten. " +
-                            "Geen automatische spraak-/woorduitlijning.",
+                            "Spring naar een regel óf kies één regel als tijdanker: " +
+                            "de geselecteerde cue begint dan op je huidige audiopositie " +
+                            "(maximaal ±30 seconden verschil). Dit is handmatige correctie.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedTextField(
@@ -432,12 +478,13 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             verticalArrangement = Arrangement.spacedBy(7.dp)
                         ) {
                             items(matchingCues, key = { it.first }) { (index, cue) ->
-                                val isInAudio = cue.startMillis < durationMs
+                                val start = cueStart(cue)
+                                val isInAudio = start >= 0L && start < durationMs
                                 TextButton(
                                     enabled = isInAudio,
                                     onClick = {
                                         loopCueIndex = -1
-                                        seekTo(cue.startMillis)
+                                        seekTo(start)
                                         cuePickerOpen = false
                                         notice = "Naar ondertitelregel ${index + 1} gesprongen."
                                     },
@@ -445,13 +492,34 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 ) {
                                     Column(modifier = Modifier.fillMaxWidth()) {
                                         Text("Regel ${index + 1} · ${cue.startLabel}" +
-                                            if (isInAudio) "" else " · buiten audio",
+                                            if (isInAudio) " · audio ${clock(start)}"
+                                            else " · buiten audio",
                                             style = MaterialTheme.typography.labelMedium)
                                         Text(cue.text, maxLines = 2,
                                             style = MaterialTheme.typography.bodyMedium.copy(
                                                 textDirection = TextDirection.ContentOrRtl
                                             ))
                                     }
+                                }
+
+                                val anchorOffset = positionMs - cue.startMillis
+                                val canAnchor = anchorOffset in -30_000L..30_000L
+                                OutlinedButton(
+                                    enabled = canAnchor,
+                                    onClick = {
+                                        pauseAudio()
+                                        // Neither seek the player nor mutate the original subtitle cues.
+                                        shiftSubtitles(anchorOffset - subtitleOffsetMs)
+                                        loopCueIndex = -1
+                                        cuePickerOpen = false
+                                        notice = "Ondertitelregel " + (index + 1) +
+                                            " gekoppeld aan de huidige audiopositie (" +
+                                            clock(positionMs) + "); alleen tijdelijke preview."
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (canAnchor) "Gebruik als tijdanker op huidige audiopositie"
+                                        else "Buiten bereik van ±30 s: geen tijdanker mogelijk")
                                 }
                                 HorizontalDivider()
                             }
