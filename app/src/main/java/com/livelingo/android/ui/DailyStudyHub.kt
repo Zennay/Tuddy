@@ -46,6 +46,7 @@ internal fun DailyStudyHub(
     var ownWordReviewOpen by remember { mutableStateOf(false) }
     var dailyBookOpen by remember { mutableStateOf(false) }
     var viewRevision by remember { mutableIntStateOf(0) }
+    var forecastOpen by remember { mutableStateOf(false) }
 
     if (wordReviewOpen) {
         ScheduledWordReviewPanel(
@@ -64,6 +65,15 @@ internal fun DailyStudyHub(
         return
     }
 
+    if (forecastOpen) {
+        UpcomingReviewForecastDialog(
+            words = words,
+            ownWords = ownWords,
+            phrases = phrases,
+            onDismiss = { forecastOpen = false }
+        )
+        return
+    }
     if (dailyBookOpen) {
         PrivateDueStudyBookDialog(
             words = words,
@@ -117,6 +127,15 @@ internal fun DailyStudyHub(
                 Text(
                     "$totalDue kaarten voor vandaag",
                     style = MaterialTheme.typography.headlineSmall
+                )
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { forecastOpen = true }
+                ) { Text("▦ Bekijk mijn komende 14 dagen") }
+                Text(
+                    "Leesbare, lokale vooruitblik per dag en kaartgroep. " +
+                        "Zelfbeoordeling kan toekomstige datums wijzigen.",
+                    style = MaterialTheme.typography.bodySmall
                 )
                 if (totalDue > 0) {
                     OutlinedButton(
