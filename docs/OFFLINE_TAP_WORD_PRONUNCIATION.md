@@ -12,6 +12,7 @@ voorlezen:
 - Als je het woord in de woordkaart wijzigt, stopt de vorige uitspraak.
   Sluiten of Android naar de achtergrond sturen stopt de dienst en
   ruimt de tijdelijke TTS-engine op.
+- **Tijdens actief microfoonluisteren zijn de voorleesknoppen uitgeschakeld.** Start pas na stoppen van de herkenningssessie; opnieuw luisteren stopt eventueel nog lopende woordaudio.
 - Alleen met een voor deze taal reeds geïnstalleerde Android-stem die
   het toestel als niet-netwerkafhankelijk meldt. Ontbreekt de stem,
   dan verschijnt een melding en er wordt niets gedownload.
