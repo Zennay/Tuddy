@@ -68,7 +68,11 @@ private val spoken = listOf(
     LanguageChoice("Deutsch", "de-DE", TranslateLanguage.GERMAN),
     LanguageChoice("Français", "fr-FR", TranslateLanguage.FRENCH),
     LanguageChoice("Español", "es-ES", TranslateLanguage.SPANISH),
-    LanguageChoice("العربية", "ar-SA", TranslateLanguage.ARABIC),
+    LanguageChoice("العربية · algemeen", "ar-SA", TranslateLanguage.ARABIC),
+    // Historical v0.4 source hints for Levantine regional recognizer packs.
+    // Candidates only: local Android speech-pack presence must be checked.
+    LanguageChoice("العربية · Syrië (pakketkandidaat)", "ar-SY", TranslateLanguage.ARABIC),
+    LanguageChoice("العربية · Palestina (pakketkandidaat)", "ar-PS", TranslateLanguage.ARABIC),
     // Extra opt-in source candidates from the archived v0.4 locale hints.
     // They are NOT assertions that this phone has installed speech packs.
     LanguageChoice("فارسی · Farsi", "fa-IR", "fa"),
@@ -2293,6 +2297,14 @@ private fun TuddyScreen(
                         }
                     }
                 }
+                if (source.speechCode == "ar-SY" || source.speechCode == "ar-PS") {
+                    Text("Dit is alleen een regionale Android-spraakkandidaat; " +
+                        "Tuddy moet het exact passende lokale pakket op dit toestel nog bevestigen. " +
+                        "ML Kit-tekstvertaling gebruikt generiek Arabisch (ar), " +
+                        "geen bewezen Syrisch/Palestijns dialectmodel.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Automatische spraaktaal (Android 14+)",
                         style = MaterialTheme.typography.bodySmall,
@@ -2307,7 +2319,7 @@ private fun TuddyScreen(
                     )
                 }
                 if (automaticSpeechSource) {
-                    Text("Alleen de elf gekozen spraakkandidaten; elk offline spraakpakket moet op dit toestel echt aanwezig zijn. " +
+                    Text("Alleen de dertien regionale spraakkandidaten; elk offline spraakpakket moet op dit toestel echt aanwezig zijn. " +
                         "Detectie is niet gegarandeerd en gebruikt nooit cloudspraak.",
                         style = MaterialTheme.typography.bodySmall)
                 }

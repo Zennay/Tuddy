@@ -50,6 +50,16 @@ spraakondersteuning of moedertaalsprekeracceptatie.
 
 ## Nieuw: offline startcheck vanaf het hoofdscherm
 
+## Nieuw: Syrische en Palestijnse Arabische spraakkandidaten
+
+Naast algemeen Arabisch zijn `ar-SY` en `ar-PS` nu apart kiesbaar
+als **Android-regiokandidaten** uit het originele LiveLingo-v0.4-
+bronarchief. Tuddy controleert per kandidaat de werkelijk aanwezige
+lokale Android-spraakpakketten en weigert cloudfallback. ML Kit biedt
+nog steeds uitsluitend generiek Arabische tekstvertaling, **geen**
+bewezen dialect-specifieke ASR/MT-dekking.
+[Bediening en beperkingen](docs/LEVANTINE_SPEECH_CANDIDATES.md).
+
 ## Nieuw: optionele privéweergave
 
 Via **Taal- en modelinstellingen → Privacy · privéweergave** kun je
@@ -189,7 +199,7 @@ De microfoon stopt eerst; de nieuwe richting vereist opnieuw controle van
 de echte offline spraak- en tekstmodellen op het apparaat. Iedere voltooide
 ondertitel blijft zijn **eigen** taalrichting tonen. 59 tekstdoelen zijn
 niet hetzelfde als 59 on-device spraaktalen: de knop is alleen beschikbaar
-voor elf expliciet kiesbare spreektaalkandidaten (NL/EN/DE/FR/ES/AR/FA/UK/TR/RU/UR). Android moet het lokale spraakpakket voor iedere kandidaat daadwerkelijk beschikbaar hebben; de picker bewijst dat niet. Zie
+voor dertien expliciet kiesbare regionale spraakkandidaten: elf oorspronkelijke talen (NL/EN/DE/FR/ES/AR/FA/UK/TR/RU/UR), met voor Arabisch ook de afzonderlijke historische regiocodes ar-SY en ar-PS. Android moet het exacte lokale spraakpakket voor iedere kandidaat daadwerkelijk melden; de picker bewijst dat niet. Zie
 [de handleiding voor tweeweg-gesprekken](docs/TWO_WAY_OFFLINE_CONVERSATION.md).
 Dit bewijst geen telefoonacceptatie of Koerdische/Pasjtoe vrije vertaling.
 
