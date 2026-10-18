@@ -73,6 +73,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var rangeStartIndex by remember { mutableIntStateOf(-1) }
     var rangeEndIndex by remember { mutableIntStateOf(-1) }
     var rangeRepeating by remember { mutableStateOf(false) }
+    var rangeToolsOpen by remember { mutableStateOf(false) }
     var lastLoopAtMs by remember { mutableLongStateOf(0L) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
@@ -92,6 +93,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         rangeStartIndex = -1
         rangeEndIndex = -1
         rangeRepeating = false
+        rangeToolsOpen = false
         subtitleOffsetMs = 0L
         cuePickerOpen = false
         confirmApplyOpen = false
@@ -405,16 +407,18 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         String.format(Locale.ROOT, "%.2f", subtitleOffsetMs / 1000.0) +
                         " s · positief = ondertitels later",
                         style = MaterialTheme.typography.labelLarge)
-                    Row(modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        listOf(-5000L to "−5s", -1000L to "−1s", -250L to "−0,25s",
-                            250L to "+0,25s", 1000L to "+1s", 5000L to "+5s")
-                            .forEach { (delta, label) ->
+                    listOf(
+                        listOf(-5000L to "−5s", -1000L to "−1s", -250L to "−0,25s"),
+                        listOf(250L to "+0,25s", 1000L to "+1s", 5000L to "+5s")
+                    ).forEach { controls ->
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            controls.forEach { (delta, label) ->
                                 TextButton(onClick = { shiftSubtitles(delta) },
-                                    modifier = Modifier.weight(1f),
-                                    contentPadding = PaddingValues(horizontal = 0.dp)
+                                    modifier = Modifier.weight(1f)
                                 ) { Text(label, style = MaterialTheme.typography.labelSmall) }
                             }
+                        }
                     }
                     OutlinedButton(
                         onClick = { shiftSubtitles(-subtitleOffsetMs) },
@@ -452,6 +456,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     Text("Herhalen gebruikt alleen de door jou ingevoerde tijdcodes " +
                         "(minimaal 0,75 s). Geen automatische woord- of audiouitlijning.",
                         style = MaterialTheme.typography.labelSmall)
+                    TextButton(onClick = { rangeToolsOpen = !rangeToolsOpen },
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text(if (rangeToolsOpen) "▴ Verberg A–B-passageoefening"
+                            else "▾ Oefen een A–B-passage van meerdere regels")
+                    }
+                    if (rangeToolsOpen) {
                     HorizontalDivider()
                     Text("Oefen meerdere ondertitelregels achter elkaar: markeer eerst " +
                         "A (beginregel), daarna B (eindregel). Start vervolgens A–B-herhaling.",
@@ -508,8 +518,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         else "↻ Herhaal mijn A–B-passage") }
                     Text("A–B-herhaling is tijdelijk en bevat alleen de door jou gekozen " +
                         "ondertitelregels, geen automatische audioanalyse.",
-
                         style = MaterialTheme.typography.labelSmall)
+                    }
                     Text("Tijdcorrectie geldt alleen voor deze audiosessie; " +
                         "de originele SRT/VTT wordt niet overschreven.",
                         style = MaterialTheme.typography.labelSmall)
