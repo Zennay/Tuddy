@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: eigen Kurmanji-, Sorani- en Pasjtoe-zinnen herhalen
+
+Naast vrij oefenen kun je je **zelfgeschreven** zinnen vrijwillig voor
+herhaling plannen. Pas na aparte toestemming blijven per zin enkel een
+lokale hash, herhaaldatum en niveau bewaard. De eigen betekenis blijft
+verborgen tot je haar aantikt. Bekende zinnen komen later terug;
+lastige morgen. Je kunt de planning afzonderlijk wissen.
+**Eigen betekenissen zijn niet automatisch vertaald of gecontroleerd.**
+[Bediening en privacy](docs/PRIVATE_PHRASE_REVIEW_SCHEDULE.md).
+
+
 ## Nieuw: eigen JSON-archief groot lezen
 
 Open bewust een eerder opgeslagen privé-JSON-archief, zoek in
