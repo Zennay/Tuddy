@@ -29,6 +29,18 @@ Het scherm gebruikt dezelfde gekozen ondertitelgrootte, bewaart geen
 gesprekken, kent geen automatische speaker-ID en vraagt geen extra
 Android-rechten. Een fysieke toestelproef en getekende release blijven open.
 
+## Nieuw: veilige tweeweg-gesprekken
+
+Met **⇄ Wissel richting** kun je bij ondersteunde spreektaalparen zonder
+gespreksverlies de oorspronkelijke spreek- en vertaaltaal omdraaien.
+De microfoon stopt eerst; de nieuwe richting vereist opnieuw controle van
+de echte offline spraak- en tekstmodellen op het apparaat. Iedere voltooide
+ondertitel blijft zijn **eigen** taalrichting tonen. 59 tekstdoelen zijn
+niet hetzelfde als 59 on-device spraaktalen: de knop is alleen beschikbaar
+voor de zes bestaande Android-spraaktalen. Zie
+[de handleiding voor tweeweg-gesprekken](docs/TWO_WAY_OFFLINE_CONVERSATION.md).
+Dit bewijst geen telefoonacceptatie of Koerdische/Pasjtoe vrije vertaling.
+
 ## Nieuw: privégesprek exporteren als JSON
 
 Naast de bestaande tekstexport heeft het gesprekscherm nu **Bewaar JSON…**.

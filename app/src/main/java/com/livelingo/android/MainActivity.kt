@@ -202,6 +202,7 @@ private fun TuddyScreen() {
     }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
+    var directionNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
@@ -220,6 +221,10 @@ private fun TuddyScreen() {
     var automaticSpeechSource by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val reverseDirection = ConversationDirectionSwitch.plan(
+        source.speechCode, source.translateCode, target.translateCode,
+        spoken.map { it.speechCode to it.translateCode }
+    )
     val normalizedHistoryQuery = historySearchQuery.trim()
     val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
         else lines.indices.filter { index ->
@@ -1221,6 +1226,7 @@ private fun TuddyScreen() {
                         pinsNotice = ""
                         historySearchQuery = ""
                         historySearchOpen = false
+                        directionNotice = ""
                         previewInput = ""
                         manualText = ""
                         previewResult = null
@@ -1234,6 +1240,65 @@ private fun TuddyScreen() {
                     onClick = { focusMode = true },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("⛶ Leesmodus · schermvullende ondertitels") }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        enabled = reverseDirection != null,
+                        onClick = {
+                            val reversed = reverseDirection
+                            val previousSource = source
+                            val nextSource = reversed?.let { next ->
+                                spoken.firstOrNull { it.speechCode == next.sourceSpeechTag }
+                            }
+                            if (reversed != null && nextSource != null) {
+                                stop()
+                                pendingCaptionShare = null
+                                pendingSpeakerExport = null
+                                pendingTranscriptExport = null
+                                source = nextSource
+                                target = LanguageChoice(
+                                    previousSource.label, reversed.targetTextCode,
+                                    reversed.targetTextCode
+                                )
+                                val persisted = runCatching {
+                                    languageSettings.edit()
+                                        .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, nextSource.speechCode)
+                                        .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, reversed.targetTextCode)
+                                        .commit()
+                                }.getOrDefault(false)
+                                textReceipt = OfflineTextReceipt(
+                                    nextSource.translateCode, reversed.targetTextCode,
+                                    OfflineTextStage.UNCHECKED,
+                                    "Gespreksrichting gewijzigd: controleer beide tekstmodellen."
+                                )
+                                speechPackReceipt = SpeechPackReceipt(
+                                    nextSource.speechCode, SpeechPackStage.UNCHECKED,
+                                    "Nieuwe spreekrichting: controleer het lokale Android-spraakpakket."
+                                )
+                                offlineModelStatus = ""
+                                error = ""
+                                showSettings = true
+                                directionNotice = "Richting: ${nextSource.label} → ${previousSource.label}. " +
+                                    "Microfoon gestopt. Controleer spraak- en tekstmodellen, " +
+                                    "tik daarna opnieuw op Luister." +
+                                    if (persisted) "" else " Deze keuze geldt alleen voor deze sessie."
+                            }
+                        }
+                    ) { Text("⇄ Wissel richting") }
+                    Text(
+                        "Tweewegspraak voor zes geselecteerde spraaktalen; " +
+                            "geen automatische download of cloudfallback.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (directionNotice.isNotBlank()) {
+                    Text(directionNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
@@ -1793,6 +1858,11 @@ private fun TuddyScreen() {
                                 Text(
                                     DateFormat.getTimeInstance(DateFormat.SHORT)
                                         .format(Date(line.recordedAtMillis)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "Origineel: ${line.sourceCode.uppercase()}  →  vertaling: ${line.targetCode.uppercase()}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
