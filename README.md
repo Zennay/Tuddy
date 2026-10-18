@@ -1,5 +1,24 @@
 # Tuddy 🎙️
 
+## Nieuw: eigen uitleg naast een afgeronde gesprekszin
+
+Tuddy heeft nu een tweede, onafhankelijke mogelijkheid om een zin te
+verduidelijken: na het stoppen van de microfoon kun je bij een
+gespreksregel op **✎ Eigen uitleg** drukken en je eigen korte
+interpretatie (max. 280 tekens) toevoegen. De originele woorden en de
+automatische offline modelvertaling blijven zichtbaar en onveranderd.
+Je notitie krijgt overal de waarschuwing **niet geverifieerd**,
+ook in de grote tweetalige gesprekskaart en leesmodus. Je kunt haar
+later wijzigen of wissen.
+
+Een notitie verdwijnt wanneer je de originele zin corrigeert, die
+regel verwijdert of het gesprek wist. Hij blijft alleen in het
+tijdelijke sessiegeheugen; er is geen opslag, netwerk, nieuw model,
+verificatieclaim of automatische export. **De notitie verschijnt niet
+in bestaande gesprek-/SRT-/WebVTT-bestanden of deelacties.**
+[Werking en privacygrenzen](docs/SESSION_MANUAL_MEANING.md).
+
+
 **Tuddy** is the Android-first, privacy-focused realtime translation and language-learning app previously prototyped as **LiveLingo**.
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
