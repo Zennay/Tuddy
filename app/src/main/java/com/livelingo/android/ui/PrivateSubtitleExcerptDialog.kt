@@ -35,7 +35,7 @@ internal fun PrivateSubtitleExcerptDialog(
     val proposed = PrivateSubtitleFilteredExcerpt.prepare(selected, timing)
     val bytes = proposed?.let { PrivateSubtitleDraftEditor.snapshot(it, format) }
     val lengthMillis = if (proposed != null)
-        proposed.last().endMillis - proposed.first().startMillis else 0L
+        proposed.maxOf { it.endMillis } - proposed.first().startMillis else 0L
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -63,8 +63,8 @@ internal fun PrivateSubtitleExcerptDialog(
                         format = if (format == SubtitleDraftFormat.SRT)
                             SubtitleDraftFormat.WEBVTT else SubtitleDraftFormat.SRT
                     }) {
-                    Text("Bestand: " + if (format == SubtitleDraftFormat.SRT)
-                        "SRT · wissel naar VTT" else "WebVTT · wissel naar SRT")
+                    Text("Bestand: " + (if (format == SubtitleDraftFormat.SRT)
+                        "SRT · wissel naar VTT" else "WebVTT · wissel naar SRT"))
                 }
                 Text(
                     if (bytes == null)
