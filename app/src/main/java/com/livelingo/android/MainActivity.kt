@@ -1766,6 +1766,7 @@ private fun TuddyScreen(
             OfflineStudyFlashcards(
                 savedWords = savedVocabulary.entries(),
                 personalPhrases = personalPhrases.entries(),
+                speaker = captionSpeaker,
                 onManageWords = {
                     flashcardsOpen = false
                     savedWordsOpen = true

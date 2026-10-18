@@ -38,6 +38,22 @@ opgeslagen, er is geen automatische verbetering en de oefening
 heeft geen netwerkverbinding of microfoon nodig. De gebruiker
 kan steeds terug naar **Omdraaien**.
 
+## Optioneel lokaal voorlezen bij een open kaart
+
+Na het tonen of vergelijken van het antwoord verschijnen **🔊 Normaal**,
+**🔊 Rustig** en **Stop stem**. Tuddy leest het reeds opgeslagen woord of
+je eigen zin uit met de bestaande Android TTS-module, uitsluitend wanneer
+het toestel een passende, al geïnstalleerde en als niet-netwerk vereist
+gemarkeerde stem heeft. Er wordt geen ontbrekende stem opgehaald, geen
+internet- of cloudstem gebruikt en geen audio opgeslagen.
+
+Het antwoord wordt **nooit** voorgelezen voordat je de kaart onthult;
+anders zou de typ-oefening onbedoeld het antwoord voorzeggen. Een volgende
+kaart, andere modus, sluiten van de oefening of Android-achtergrondstop
+beëindigt de uitspraak. Bij Kurmanji, Sorani of Pasjtoe kan een bruikbare
+lokale stem ontbreken; dan blijft Tuddy stil en toont de reden. De
+uitspraak is niet onafhankelijk gecontroleerd door een moedertaalspreker.
+
 **Informatiegrenzen:** woorden komen uitsluitend uit de lokale
 curated glossary. De tekst in je eigen zinnen, inclusief de eigen
 betekenis, is **niet geverifieerd** door Tuddy en wordt niet
