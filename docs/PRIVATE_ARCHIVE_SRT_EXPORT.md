@@ -40,3 +40,12 @@ Android-permissies, opnamebestanden of cloud-API's gebruikt.
 
 Dit levert geen fysieke toestelacceptatie, getekende productie-APK of
 onafhankelijk bewezen Kurmanji/Sorani/Pasjtoe ASR/MT.
+
+## Zelfde SRT-exportkeuzes als een live gesprek
+
+Ook bij een geopend JSON-archief kies je **Beide**, **Origineel** of
+**Vertaling**, een ruwe startverschuiving en een maximale cue-duur.
+Het scherm toont hoeveel archiefregels bij de huidige tekstkeuze
+beschikbaar zijn. Alleen volledig afgeronde vertalingen tellen mee
+voor **Vertaling**. Geen van deze keuzes doet alsof Tuddy de
+werkelijke audiotijdstempels heeft gemeten.
