@@ -48,6 +48,10 @@ internal fun PrivateSubtitleFileDialog(
     var edited by remember(cues) { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var deleteIndex by remember { mutableStateOf<Int?>(null) }
+    var splitIndex by remember { mutableStateOf<Int?>(null) }
+    var mergeIndex by remember { mutableStateOf<Int?>(null) }
+    var splitFirst by remember { mutableStateOf("") }
+    var splitSecond by remember { mutableStateOf("") }
     var editValue by remember { mutableStateOf("") }
     var requestSave by remember { mutableStateOf<SubtitleDraftFormat?>(null) }
     var notice by remember { mutableStateOf("") }
@@ -175,6 +179,21 @@ internal fun PrivateSubtitleFileDialog(
                     }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(enabled = draft.size < 500,
+                            onClick = {
+                                val rowIndex = found[shownIndex].first
+                                val cut = current.text.indexOf(' ', current.text.length / 2)
+                                splitFirst = if (cut > 0) current.text.substring(0, cut) else current.text
+                                splitSecond = if (cut > 0) current.text.substring(cut + 1) else ""
+                                splitIndex = rowIndex
+                            }) { Text("Splits deze regel…") }
+                        TextButton(enabled = found[shownIndex].first < draft.lastIndex,
+                            onClick = { mergeIndex = found[shownIndex].first }) {
+                            Text("Combineer volgende…")
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
                         TextButton(enabled = shownIndex > 0,
                             onClick = { shownIndex-- }) { Text("← Vorige") }
                         TextButton(onClick = { large = !large }) {
@@ -193,6 +212,73 @@ internal fun PrivateSubtitleFileDialog(
         }
     }
 
+    val splitting = splitIndex
+    if (splitting != null) {
+        AlertDialog(onDismissRequest = { splitIndex = null },
+            title = { Text("Splits één ondertitel in twee") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Kies zelf twee zinsdelen. De bestaande tijdsduur " +
+                        "wordt gelijk gedeeld; dit is geen gecontroleerde audiotiming.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = splitFirst,
+                        onValueChange = { if (it.length <= 2400) splitFirst = it },
+                        label = { Text("Eerste deel") }, modifier = Modifier.fillMaxWidth(),
+                        minLines = 2, maxLines = 4)
+                    OutlinedTextField(
+                        value = splitSecond,
+                        onValueChange = { if (it.length <= 2400) splitSecond = it },
+                        label = { Text("Tweede deel") }, modifier = Modifier.fillMaxWidth(),
+                        minLines = 2, maxLines = 4)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val next = PrivateSubtitleDraftEditor.splitCue(
+                        draft, splitting, splitFirst.trim(), splitSecond.trim())
+                    if (next == null) {
+                        notice = "Splitsing geweigerd: tekst/tijdsduur of cuevolgorde ongeldig."
+                    } else {
+                        draft = next
+                        edited = true
+                        shownIndex = -1
+                        notice = "Regel in twee bewerkbare regels gesplitst."
+                    }
+                    splitIndex = null
+                }) { Text("Splits tijdelijk") }
+            },
+            dismissButton = {
+                TextButton(onClick = { splitIndex = null }) { Text("Annuleren") }
+            }
+        )
+    }
+    val merging = mergeIndex
+    if (merging != null) {
+        AlertDialog(onDismissRequest = { mergeIndex = null },
+            title = { Text("Volgende ondertitel samenvoegen?") },
+            text = { Text("De twee teksten worden samengevoegd in één cue, " +
+                "van het eerste begin tot het tweede einde. Dit is alleen " +
+                "een wijziging in je tijdelijke document, geen audio-uitlijning. " +
+                "Herstel zet het oorspronkelijke bestand terug.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val next = PrivateSubtitleDraftEditor.mergeWithNext(draft, merging)
+                    if (next == null) notice = "Samenvoegen geweigerd: te veel tekst of ongeldige tijd."
+                    else {
+                        draft = next
+                        edited = true
+                        shownIndex = -1
+                        notice = "Beide regels tot één tijdelijke cue samengevoegd."
+                    }
+                    mergeIndex = null
+                }) { Text("Voeg samen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mergeIndex = null }) { Text("Annuleren") }
+            }
+        )
+    }
     val requestedDelete = deleteIndex
     if (requestedDelete != null) {
         AlertDialog(onDismissRequest = { deleteIndex = null },
