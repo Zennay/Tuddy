@@ -37,6 +37,15 @@ online fallback. Een eigen stopactie beëindigt de uitspraak.
 Er wordt niets als audio bewaard.
 [Bediening en beperkingen](docs/OFFLINE_PRONUNCIATION_CHOICES.md).
 
+## Nieuw: bewegende woordfocus in het gewone gesprek
+
+De actuele voorlopige spraakregel krijgt nu ook buiten de fullscreen
+leesmodus een bewegende nadruk op het **laatste herkende tekstwoord**.
+Het hergebruikt dezelfde Unicode-tekstfocus als de grote leesmodus,
+maar met compactere letters. Dit is geen exacte audio-tijdsynchronisatie
+en markeert de vertaling niet op verzonnen woordposities.
+[Bediening en grenzen](docs/INLINE_LIVE_WORD_FOCUS.md).
+
 ## Nieuw: optionele privéweergave
 
 Via **Taal- en modelinstellingen → Privacy · privéweergave** kun je
@@ -48,6 +57,8 @@ wordt voor deze functie opgeslagen. Externe camera's of andere
 toestelafwijkingen kunnen nooit volledig worden tegengehouden.
 [Bediening en beperkingen](docs/PRIVATE_SCREEN_SHIELD.md).
 
+
+## Nieuw: offline startcheck vanaf het hoofdscherm
 
 De knop **Offline startcheck** laat zien of de gekozen Android-spreektaal
 daadwerkelijk lokaal beschikbaar is én of de benodigde ML Kit-tekstmodellen
