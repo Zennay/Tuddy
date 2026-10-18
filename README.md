@@ -1,5 +1,14 @@
 # Tuddy 🎙️
 
+## Nieuw: vijf basiswoorden extra groot presenteren
+
+De vijf ingebouwde offline Kurmanji-, Sorani- en Pasjtoe-woorden
+kun je vanuit het basiswoordenbord nu **▣ groot tonen**, met
+**Vorige / Volgende**, bronkeuze Nederlands/Engels,
+volgordewissel en groter/kleiner schrift. Alleen de bestaande vijf
+niet-onafhankelijk-gecontroleerde voorbeelden; geen extra taalmodel
+of microfoon. [Meer informatie](docs/FULLSCREEN_OFFLINE_STARTER_CARDS.md).
+
 ## Nieuw: mijn eigen uitlegregels doorzoeken
 
 Heb je in de huidige sessie één of meer eigen betekenissen bij
