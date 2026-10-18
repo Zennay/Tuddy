@@ -330,6 +330,7 @@ private fun TuddyScreen(
     var conversationToolsOpen by remember { mutableStateOf(false) }
     var directionNotice by remember { mutableStateOf("") }
     val favoriteStorage = remember(context) { PrivateLanguagePairFavorites(context) }
+    val typedFavoriteStorage = remember(context) { PrivateTypedLanguagePairs(context) }
     val allowedSpeechTags = remember { spoken.map { it.speechCode } }
     var favoritePairs by remember {
         mutableStateOf(favoriteStorage.entries(allowedSpeechTags))
@@ -2614,6 +2615,7 @@ private fun TuddyScreen(
             val wordTotal = savedVocabulary.entries().size
             val ownWordTotal = ownWordDeck.entries()?.size
             val phraseTotal = personalPhrases.entries()?.size
+            val typedFavoriteTotal = typedFavoriteStorage.entries().size
             AlertDialog(
                 onDismissRequest = { pendingStudyErase = false },
                 title = { Text("Privé-oefengegevens definitief wissen?") },
@@ -2621,7 +2623,8 @@ private fun TuddyScreen(
                     Text("Dit wist $wordTotal opgeslagen basiswoorden en " +
                         "${ownWordTotal?.toString() ?: "een onbekend aantal"} eigen woordnotities, " +
                         "${phraseTotal?.toString() ?: "een onbekend aantal"} eigen oefenzinnen " +
-                        "en ${favoritePairs.size} favoriete taalparen uit de lokale app-instellingen. " +
+                        "en ${favoritePairs.size} spraakfavorieten plus " +
+                        "$typedFavoriteTotal favoriete teksttaalparen uit de lokale app-instellingen. " +
                         "Je huidige tijdelijke gesprek en losse exportbestanden blijven staan. " +
                         "Tuddy kan eerdere gedeelde of extern opgeslagen kopieën niet terughalen. " +
                         "Deze actie heeft geen herstelknop.")
@@ -2633,6 +2636,7 @@ private fun TuddyScreen(
                         val ownWordsCleared = ownWordDeck.clear()
                         val phrasesCleared = personalPhrases.clear()
                         val favoritesCleared = favoriteStorage.clear()
+                        val typedFavoritesCleared = typedFavoriteStorage.clear()
                         savedWordRevision++
                         ownWordRevision++
                         favoritePairs = favoriteStorage.entries(allowedSpeechTags)
@@ -2642,15 +2646,18 @@ private fun TuddyScreen(
                         ownWordsOpen = false
                         personalPhrasesOpen = false
                         flashcardsOpen = false
-                        studyEraseNotice = if (wordsCleared && ownWordsCleared && phrasesCleared && favoritesCleared) {
-                            "Opgeslagen basiswoorden, eigen woorden, eigen zinnen en favoriete taalparen gewist. " +
+                        studyEraseNotice = if (wordsCleared && ownWordsCleared &&
+                            phrasesCleared && favoritesCleared && typedFavoritesCleared) {
+                            "Opgeslagen basiswoorden, eigen woorden, eigen zinnen, " +
+                                "spraakfavorieten en tekstfavorieten gewist. " +
                                 "Gesprek, taalkeuze en eerdere externe exports zijn behouden."
                         } else {
                             "Niet alles kon worden gewist. " +
                                 "Basiswoorden: ${if (wordsCleared) "gewist" else "mislukt"}, " +
                                 "eigen woorden: ${if (ownWordsCleared) "gewist" else "mislukt"}, " +
                                 "zinnen: ${if (phrasesCleared) "gewist" else "mislukt"}, " +
-                                "favorieten: ${if (favoritesCleared) "gewist" else "mislukt"}. " +
+                                "spraakfavorieten: ${if (favoritesCleared) "gewist" else "mislukt"}, " +
+                                "tekstfavorieten: ${if (typedFavoritesCleared) "gewist" else "mislukt"}. " +
                                 "Probeer opnieuw voor de overgebleven gegevens."
                         }
                     }) { Text("Wis mijn oefengegevens") }
