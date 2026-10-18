@@ -50,3 +50,19 @@ privégesprek zonder microfoon bekijken en na aparte toestemming vanuit
 datzelfde venster een SRT-concept maken. Ook hier zijn de tijden geschat
 en moeten ze met audio worden uitgelijnd.
 [Bediening en privacy](PRIVATE_ARCHIVE_SRT_EXPORT.md).
+
+## Inhoud en timing vooraf instellen
+
+In de afzonderlijke exportbevestiging kies je nu één van drie sporen:
+**Beide**, **Origineel**, of **Vertaling**. Bij alleen de vertaling
+worden regels zonder echt afgeronde lokale vertaling **overgeslagen**;
+er wordt nooit een vertaling verzonnen of het origineel als vertaling
+verkocht. Het standaardspoor blijft tweetalig.
+
+Voor montage kun je ook een **ruwe** verschuiving van de eerste
+herkenningsvoltooiing kiezen (0, 5, 10, 30 of 60 seconden) en een
+maximale conceptregelduur (2, 3,5, 5 of 7 seconden). De volgende cue
+begint nooit vóór het einde van de vorige. Dit zijn slechts handmatige
+startaannames, **geen gemeten audiobegintijden of echte synchronisatie**.
+Pas de tijden na export altijd verder aan met de originele opname.
+Er worden geen nieuwe metingen of geverifieerde vertalingen geclaimd.
