@@ -62,6 +62,9 @@ internal fun TwoWayTypedConversationDialog(
     retryableCount: (String, String) -> Int,
     onRetryMissing: (String, String) -> Int,
     onSend: (String, String, String) -> Boolean,
+    onSaveCuratedWord: (String, String) -> Boolean,
+    readOwnMeaning: (String, String) -> String?,
+    onSaveOwnMeaning: (String, String, String) -> Boolean,
     onOpenLimitedPhraseboard: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -144,6 +147,9 @@ internal fun TwoWayTypedConversationDialog(
     if (readerOpen) {
         TwoWayConversationReadingBoard(
             lines = recentLines,
+            onSaveCuratedWord = onSaveCuratedWord,
+            readOwnMeaning = readOwnMeaning,
+            onSaveOwnMeaning = onSaveOwnMeaning,
             onDismiss = { readerOpen = false }
         )
         return
@@ -450,6 +456,10 @@ internal fun TwoWayTypedConversationDialog(
                 HorizontalDivider()
                 Text("Laatste gespreksregels · alleen tijdelijk geheugen",
                     style = MaterialTheme.typography.titleSmall)
+                Text("Tik op een woord in de bron of afgeronde vertaling " +
+                    "voor de offline woordkaart. Alleen een bewuste bewaarknop " +
+                    "legt je eigen betekenis vast.",
+                    style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick = {
                     speaker.stop()
                     speechNotice = ""
@@ -463,20 +473,35 @@ internal fun TwoWayTypedConversationDialog(
                 recentLines.takeLast(6).forEach { row ->
                     Text(row.source.uppercase() + " → " + row.target.uppercase() +
                         " · " + row.status, style = MaterialTheme.typography.labelSmall)
-                    Text(row.original, style = MaterialTheme.typography.bodyLarge.copy(
-                        textDirection = if (row.source in rtlLanguages)
-                            TextDirection.Rtl else TextDirection.Ltr
-                    ))
+                    OfflineWordText(
+                        text = row.original,
+                        language = row.source,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            textDirection = if (row.source in rtlLanguages)
+                                TextDirection.Rtl else TextDirection.Ltr
+                        ),
+                        onSaveWord = onSaveCuratedWord,
+                        readOwnMeaning = readOwnMeaning,
+                        saveOwnMeaning = onSaveOwnMeaning
+                    )
                     TextButton(onClick = {
                         speaker.speak(row.original, row.source, LocalSpeechPace.NORMAL) {
                             speechNotice = it
                         }
                     }) { Text("🔊 Origineel lokaal voorlezen") }
                     if (row.status == "Lokaal vertaald" || row.status == "Lokaal") {
-                        Text(row.translated, style = MaterialTheme.typography.bodyMedium.copy(
-                            textDirection = if (row.target in rtlLanguages)
-                                TextDirection.Rtl else TextDirection.Ltr
-                        ), color = MaterialTheme.colorScheme.primary)
+                        OfflineWordText(
+                            text = row.translated,
+                            language = row.target,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.primary,
+                                textDirection = if (row.target in rtlLanguages)
+                                    TextDirection.Rtl else TextDirection.Ltr
+                            ),
+                            onSaveWord = onSaveCuratedWord,
+                            readOwnMeaning = readOwnMeaning,
+                            saveOwnMeaning = onSaveOwnMeaning
+                        )
                         if (row.status == "Lokaal vertaald" &&
                             row.translated.isNotBlank()) {
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
