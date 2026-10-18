@@ -56,6 +56,7 @@ internal fun PrivateSubtitleCueMenu(
     canMerge: Boolean,
     canDelete: Boolean,
     onCorrectText: () -> Unit,
+    onExactTime: () -> Unit,
     onStartEarlier: () -> Unit,
     onStartLater: () -> Unit,
     onEndEarlier: () -> Unit,
@@ -70,6 +71,8 @@ internal fun PrivateSubtitleCueMenu(
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text("Tekst corrigeren…") },
                 onClick = { open = false; onCorrectText() })
+            DropdownMenuItem(text = { Text("⏱ Tijdcodes exact invoeren…") },
+                onClick = { open = false; onExactTime() })
             DropdownMenuItem(text = { Text("Begin 0,5 s eerder") },
                 onClick = { open = false; onStartEarlier() })
             DropdownMenuItem(text = { Text("Begin 0,5 s later") },

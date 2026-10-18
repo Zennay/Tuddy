@@ -77,6 +77,7 @@ internal fun PrivateSubtitleFileDialog(
     var undoHistory by remember(cues) { mutableStateOf(emptyList<List<PrivateSubtitleCue>>()) }
     var redoHistory by remember(cues) { mutableStateOf(emptyList<List<PrivateSubtitleCue>>()) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
+    var exactTimeIndex by remember { mutableStateOf<Int?>(null) }
     var deleteIndex by remember { mutableStateOf<Int?>(null) }
     var splitIndex by remember { mutableStateOf<Int?>(null) }
     var mergeIndex by remember { mutableStateOf<Int?>(null) }
@@ -439,6 +440,7 @@ internal fun PrivateSubtitleFileDialog(
                             editIndex = found[shownIndex].first
                             editValue = current.text
                         },
+                        onExactTime = { exactTimeIndex = found[shownIndex].first },
                         onStartEarlier = { nudgeSelected(-500L, 0L) },
                         onStartLater = { nudgeSelected(500L, 0L) },
                         onEndEarlier = { nudgeSelected(0L, -500L) },
@@ -840,6 +842,21 @@ internal fun PrivateSubtitleFileDialog(
             }
         )
     }
+    val timedIndex = exactTimeIndex
+    if (timedIndex != null) {
+        SubtitleExactCueTimingDialog(
+            draft = draft,
+            selectedIndex = timedIndex,
+            onApply = { updated ->
+                applyChange(updated)
+                shownIndex = -1
+                notice = "Exacte ondertiteltijd aangepast; wijziging is herstelbaar."
+                exactTimeIndex = null
+            },
+            onDismiss = { exactTimeIndex = null }
+        )
+    }
+
     val position = editIndex
     if (position != null) {
         AlertDialog(onDismissRequest = { editIndex = null },
