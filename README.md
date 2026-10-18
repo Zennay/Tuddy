@@ -1,5 +1,13 @@
 # Tuddy 🎙️
 
+## Nieuw: eigen SRT/VTT-ondertitels oefenen
+
+Gebruik een bewust geopend ondertitelbestand nu ook als tijdelijke
+oefenkaarten: filter regels, onthul de volledige tekst op verzoek en
+oefen moeilijke zinnen opnieuw. Er wordt geen leerprofiel of
+automatische vertaling van gemaakt en alle antwoorden blijven in RAM.
+[Handleiding](docs/OFFLINE_SUBTITLE_RECALL.md).
+
 ## Nieuw: acht weken studieplanning bewust als agenda bewaren
 
 In **Mijn offline studieplanning** kun je nu na een aparte keuze een
