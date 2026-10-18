@@ -77,6 +77,7 @@ internal fun PrivateSubtitleFileDialog(
     var undoHistory by remember(cues) { mutableStateOf(emptyList<List<PrivateSubtitleCue>>()) }
     var redoHistory by remember(cues) { mutableStateOf(emptyList<List<PrivateSubtitleCue>>()) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
+    var exactTimeIndex by remember { mutableStateOf<Int?>(null) }
     var deleteIndex by remember { mutableStateOf<Int?>(null) }
     var splitIndex by remember { mutableStateOf<Int?>(null) }
     var mergeIndex by remember { mutableStateOf<Int?>(null) }
@@ -100,6 +101,7 @@ internal fun PrivateSubtitleFileDialog(
     var excerptCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var practiceOpen by remember { mutableStateOf(false) }
     var retimingOpen by remember { mutableStateOf(false) }
+    var inspectorOpen by remember { mutableStateOf(false) }
     var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var sourceAtPicker by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var pendingImport by remember { mutableStateOf<PendingSubtitleImport?>(null) }
@@ -333,6 +335,10 @@ internal fun PrivateSubtitleFileDialog(
                 ) { Text("⏱ Tijdcodes van alle regels aanpassen…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
+                    onClick = { inspectorOpen = true }
+                ) { Text("⌁ Bekijk de ondertiteltijdlijn…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = draft.size < 500,
                     onClick = {
                         sourceAtPicker = draft.toList()
@@ -439,6 +445,7 @@ internal fun PrivateSubtitleFileDialog(
                             editIndex = found[shownIndex].first
                             editValue = current.text
                         },
+                        onExactTime = { exactTimeIndex = found[shownIndex].first },
                         onStartEarlier = { nudgeSelected(-500L, 0L) },
                         onStartLater = { nudgeSelected(500L, 0L) },
                         onEndEarlier = { nudgeSelected(0L, -500L) },
@@ -478,6 +485,19 @@ internal fun PrivateSubtitleFileDialog(
             selected = excerptCues,
             onSaveCopy = onSaveCopy,
             onDismiss = { excerptOpen = false }
+        )
+    }
+
+    if (inspectorOpen) {
+        SubtitleTimelineInspectorDialog(
+            cues = draft,
+            onSelectCue = { selected ->
+                query = ""
+                shownIndex = selected
+                notice = "Regel " + (selected + 1) + " geopend vanuit tijdlijnoverzicht."
+                inspectorOpen = false
+            },
+            onDismiss = { inspectorOpen = false }
         )
     }
 
@@ -840,6 +860,21 @@ internal fun PrivateSubtitleFileDialog(
             }
         )
     }
+    val timedIndex = exactTimeIndex
+    if (timedIndex != null) {
+        SubtitleExactCueTimingDialog(
+            draft = draft,
+            selectedIndex = timedIndex,
+            onApply = { updated ->
+                applyChange(updated)
+                shownIndex = -1
+                notice = "Exacte ondertiteltijd aangepast; wijziging is herstelbaar."
+                exactTimeIndex = null
+            },
+            onDismiss = { exactTimeIndex = null }
+        )
+    }
+
     val position = editIndex
     if (position != null) {
         AlertDialog(onDismissRequest = { editIndex = null },
