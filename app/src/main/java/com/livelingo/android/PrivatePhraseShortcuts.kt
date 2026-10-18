@@ -19,7 +19,7 @@ internal class PrivatePhraseShortcuts(context: Context) {
         const val KEY = "favorite_phrase_hashes_v1"
         const val MAX_PINS = 12
 
-        private fun fingerprint(phrase: PersonalPhrase): String {
+        fun fingerprint(phrase: PersonalPhrase): String {
             val input = (phrase.language + "\u0000" + phrase.phrase)
                 .toByteArray(Charsets.UTF_8)
             return MessageDigest.getInstance("SHA-256").digest(input)
