@@ -1,5 +1,15 @@
 # Tuddy 🎙️
 
+## Nieuw: ondertiteltijdlijn bekijken en rechtstreeks corrigeren
+
+In het bestaande offline SRT/VTT-document zie je met
+**⌁ Bekijk de ondertiteltijdlijn…** direct waar regels overlappen,
+dezelfde tijdcode hebben, kort na elkaar staan of een lange tussenruimte
+hebben. Filter per categorie en tik een signaal om de juiste regel
+te openen, waarna je zelf de exacte tijdcodes kunt bijstellen.
+Dit overzicht wijzigt niets, start geen audioanalyse en bewaart niets.
+[Bediening en grenzen](docs/OFFLINE_SUBTITLE_TIMELINE_INSPECTOR.md).
+
 ## Nieuw: ondertiteltijden exact aanpassen per regel
 
 In de bestaande offline SRT/VTT-editor kun je voor één ondertitel
