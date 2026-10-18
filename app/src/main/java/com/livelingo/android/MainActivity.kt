@@ -51,6 +51,7 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.launch
 import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
+import com.livelingo.android.ui.DailyStudyHub
 import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.OfflinePhraseQuickPicker
@@ -195,6 +196,7 @@ private fun TuddyScreen(
         else 0
     }
     var savedWordsOpen by remember { mutableStateOf(false) }
+    var dailyStudyHubOpen by remember { mutableStateOf(false) }
     val ownWordDeck = remember(context) { PrivateOwnWordDeck(context) }
     var ownWordRevision by remember { mutableIntStateOf(0) }
     var ownWordsOpen by remember { mutableStateOf(false) }
@@ -2877,6 +2879,7 @@ private fun TuddyScreen(
                         savedWordNotice = ""
                         favoritesNotice = ""
                         savedWordsOpen = false
+                        dailyStudyHubOpen = false
                         ownWordsOpen = false
                         personalPhrasesOpen = false
                         flashcardsOpen = false
@@ -2910,6 +2913,22 @@ private fun TuddyScreen(
                 onChanged = { savedWordRevision++ },
                 onDismiss = { savedWordsOpen = false },
                 allowSpeech = !listening
+            )
+        }
+        if (dailyStudyHubOpen) {
+            DailyStudyHub(
+                words = savedVocabulary,
+                phrases = personalPhrases,
+                onManageWords = {
+                    dailyStudyHubOpen = false
+                    savedWordsOpen = true
+                },
+                onManagePhrases = {
+                    dailyStudyHubOpen = false
+                    personalPhrasesOpen = true
+                },
+                onWordChanged = { savedWordRevision++ },
+                onDismiss = { dailyStudyHubOpen = false }
             )
         }
         Surface(Modifier.fillMaxSize()) {
@@ -3374,6 +3393,15 @@ private fun TuddyScreen(
                             pronunciationNotice = "Voorlezen gestopt."
                         }) { Text("Stop stem") }
                     }
+                }
+                OutlinedButton(
+                    onClick = {
+                        if (listening) stop()
+                        dailyStudyHubOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("🧠 Vandaag offline oefenen · woorden en eigen zinnen")
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
