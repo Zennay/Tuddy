@@ -214,9 +214,15 @@ internal fun FocusTranscriptDialog(
                                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Text("Live · nog niet afgerond",
                                         style = MaterialTheme.typography.labelMedium)
-                                    Text(interimOriginal,
-                                        style = MaterialTheme.typography.headlineSmall.copy(
-                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale))
+                                    LiveInterimWordFocus(
+                                        text = interimOriginal,
+                                        fontScale = fontScale
+                                    )
+                                    Text(
+                                        "Laatste tekstwoord benadrukt · geen audio-tijdsynchronisatie.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                     if (interimTranslated.isNotBlank()) {
                                         Text(interimTranslated,
                                             style = MaterialTheme.typography.headlineSmall.copy(
