@@ -206,6 +206,17 @@ internal fun MyOfflinePhrasesPanel(
     val topics = remember(revision) { phraseTopics.topics() }
     val topicCounts = remember(revision) { phraseTopics.counts(phrases.orEmpty()) }
     val selectedTopic = chosenTopicFilter?.takeIf { it == "__without__" || it in topics }
+    // Topic selection also scopes a user-requested study session; search text
+    // affects only the visible list, never silently cuts down practice content.
+    val topicPracticeNotes = remember(revision, selectedTopic) {
+        phrases.orEmpty().filter { note ->
+            when (selectedTopic) {
+                null -> true
+                "__without__" -> phraseTopics.topicFor(note) == null
+                else -> phraseTopics.topicFor(note) == selectedTopic
+            }
+        }
+    }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
 
     if (manageTopicsOpen) {
@@ -248,7 +259,7 @@ internal fun MyOfflinePhrasesPanel(
     }
     if (practiceOpen) {
         PersonalPhrasePracticePanel(
-            notes = phrases.orEmpty(),
+            notes = topicPracticeNotes,
             initialLanguage = language,
             onDismiss = { practiceOpen = false }
         )
@@ -345,10 +356,11 @@ internal fun MyOfflinePhrasesPanel(
                     "Ze worden niet gedeeld of automatisch overgenomen uit gesprekken.",
                     style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(
-                    enabled = phrases?.isNotEmpty() == true,
+                    enabled = topicPracticeNotes.isNotEmpty(),
                     onClick = { practiceOpen = true },
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Oefen mijn eigen zinnen") }
+                ) { Text(if (selectedTopic == null) "Oefen mijn eigen zinnen"
+                    else "Oefen dit thema · ${topicPracticeNotes.size} zinnen") }
                 if (!deck.reviewsEnabled()) {
                     OutlinedButton(
                         enabled = phrases?.isNotEmpty() == true,
