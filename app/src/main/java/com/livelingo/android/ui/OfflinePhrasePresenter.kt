@@ -19,6 +19,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +34,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.PersonalPhrase
 
 @Composable
@@ -79,8 +85,28 @@ internal fun OfflinePhrasePresenter(
     var showMeaningFirst by remember { mutableStateOf(false) }
     var pendingShare by remember { mutableStateOf<PersonalPhrase?>(null) }
     var shareNotice by remember { mutableStateOf("") }
+    var audioNotice by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(speaker, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                speaker.stop()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            speaker.close()
+        }
+    }
     val selected = cards.getOrNull(selectedIndex)
+    LaunchedEffect(selected?.phrase, selected?.ownMeaning, selected?.language) {
+        // Navigating to another private card must never keep reading the last.
+        speaker.stop()
+        audioNotice = ""
+    }
     fun confirmShare(includeOwnMeaning: Boolean) {
         val chosen = pendingShare
         pendingShare = null
@@ -120,7 +146,7 @@ internal fun OfflinePhrasePresenter(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { speaker.stop(); onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
@@ -138,7 +164,7 @@ internal fun OfflinePhrasePresenter(
                 ) {
                     Text("Mijn gesprekskaart · " + label,
                         style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = onDismiss) { Text("Sluiten") }
+                    TextButton(onClick = { speaker.stop(); onDismiss() }) { Text("Sluiten") }
                 }
                 Text(
                     "Door jou geschreven · geen geverifieerde vertaling. " +
@@ -174,6 +200,22 @@ internal fun OfflinePhrasePresenter(
                                 "Eigen betekenis (" + selected.meaningLanguage.uppercase() + ")", large)
                         }
                     }
+                }
+                if (selected != null) {
+                    OfflinePhraseSpeechActions(
+                        original = selected.phrase,
+                        originalLanguage = selected.language,
+                        meaning = selected.ownMeaning,
+                        meaningLanguage = selected.meaningLanguage,
+                        originalLabel = "Eigen zin",
+                        meaningLabel = "Mijn betekenis",
+                        speaker = speaker,
+                        onNotice = { audioNotice = it }
+                    )
+                }
+                if (audioNotice.isNotBlank()) {
+                    Text(audioNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
