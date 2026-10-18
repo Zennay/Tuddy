@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -46,6 +47,11 @@ internal fun FocusTranscriptDialog(
     var followLive by remember { mutableStateOf(true) }
     var speakerFilter by remember { mutableStateOf<String?>(null) }
     var speakerMenuOpen by remember { mutableStateOf(false) }
+    // Columns only when Android reports adequate width; never crush two
+    // full-length languages into half a narrow portrait phone screen.
+    val isWide = LocalConfiguration.current.screenWidthDp >= 600
+    var preferColumns by remember { mutableStateOf(true) }
+    val showColumns = isWide && preferColumns
     val displayedCaptions = when (speakerFilter) {
         "A", "B" -> captions.filter { it.speaker == speakerFilter }
         "?" -> captions.filter { it.speaker == null }
@@ -152,6 +158,20 @@ internal fun FocusTranscriptDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                if (isWide) {
+                    OutlinedButton(
+                        onClick = { preferColumns = !preferColumns },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (showColumns) "▤ Naast elkaar · kies onder elkaar"
+                            else "▥ Onder elkaar · kies naast elkaar")
+                    }
+                } else {
+                    Text("Tip: draai je toestel horizontaal voor twee kolommen met " +
+                        "origineel en vertaling naast elkaar.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (!followLive) {
                     Text("Teruglezen gepauzeerd. Tik op Volg live om verder te volgen.",
                         style = MaterialTheme.typography.bodySmall,
@@ -188,11 +208,22 @@ internal fun FocusTranscriptDialog(
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                Text(line.original,
+                                if (showColumns) {
+                                    BilingualCaptionColumns(
+                                        original = line.original,
+                                        translation = line.translated,
+                                        sourceCode = line.sourceCode,
+                                        targetCode = line.targetCode,
+                                        status = line.status,
+                                        fontScale = fontScale,
+                                        isInterim = false
+                                    )
+                                } else {
+                                    Text(line.original,
                                     style = MaterialTheme.typography.headlineSmall.copy(
                                         fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale
                                     ))
-                                if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
+                                    if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
                                     Text(line.translated,
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             color = MaterialTheme.colorScheme.primary,
@@ -202,6 +233,7 @@ internal fun FocusTranscriptDialog(
                                     Text("[Vertaling niet voltooid: ${line.status}]",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
                             }
                         }
@@ -214,7 +246,18 @@ internal fun FocusTranscriptDialog(
                                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Text("Live · nog niet afgerond",
                                         style = MaterialTheme.typography.labelMedium)
-                                    LiveInterimWordFocus(
+                                    if (showColumns) {
+                                        BilingualCaptionColumns(
+                                            original = interimOriginal,
+                                            translation = interimTranslated,
+                                            sourceCode = "",
+                                            targetCode = "",
+                                            status = "Voorlopig",
+                                            fontScale = fontScale,
+                                            isInterim = true
+                                        )
+                                    } else {
+                                        LiveInterimWordFocus(
                                         text = interimOriginal,
                                         fontScale = fontScale
                                     )
@@ -231,6 +274,7 @@ internal fun FocusTranscriptDialog(
                                     } else {
                                         Text("Vertaling volgt zodra een lokaal model resultaat geeft.",
                                             style = MaterialTheme.typography.bodySmall)
+                                        }
                                     }
                                 }
                             }
