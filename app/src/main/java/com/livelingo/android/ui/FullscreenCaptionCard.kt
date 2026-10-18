@@ -15,12 +15,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
 
 /** Read-only, ephemeral card for finished live captions. No network or export. */
 private enum class CaptionCardSide { BOTH, ORIGINAL, TRANSLATION }
@@ -83,6 +91,22 @@ internal fun FullscreenCaptionCard(
     }
     var side by remember { mutableStateOf(CaptionCardSide.BOTH) }
     var large by remember { mutableStateOf(true) }
+    var audioNotice by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(speaker, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                speaker.stop()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            speaker.close()
+        }
+    }
     val safeIndex = index.coerceIn(0, (finished.size - 1).coerceAtLeast(0))
     val card = finished.getOrNull(safeIndex)
     val translation = card?.translated?.takeIf { it.isNotBlank() && it != card.original }
@@ -97,9 +121,15 @@ internal fun FullscreenCaptionCard(
     val selectedTextWord = remember(studyText, safeWordIndex) {
         Regex("\\S+").findAll(studyText).elementAtOrNull(safeWordIndex)?.value ?: ""
     }
+    // Manual position and voice controls are independent of the microphone:
+    // changing the caption, text side, or selected word cancels old speech.
+    LaunchedEffect(card?.id, side, wordStepper, stepTranslation, safeWordIndex) {
+        speaker.stop()
+        audioNotice = ""
+    }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { speaker.stop(); onDismiss() },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = false
@@ -119,7 +149,7 @@ internal fun FullscreenCaptionCard(
                 ) {
                     Text("Tuddy · Toon gesprekszin",
                         style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = onDismiss) { Text("Sluiten") }
+                    TextButton(onClick = { speaker.stop(); onDismiss() }) { Text("Sluiten") }
                 }
                 Text(
                     "Alleen deze tijdelijke sessie · geen kopie of verzending. " +
@@ -152,6 +182,27 @@ internal fun FullscreenCaptionCard(
                     }
                     TextButton(onClick = { large = !large }) {
                         Text(if (large) "Kleinere letters" else "Grotere letters")
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TextButton(
+                            enabled = card.original.isNotBlank() &&
+                                card.original.length <= 400,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                speaker.speak(card.original, card.sourceCode,
+                                    LocalSpeechPace.NORMAL) { audioNotice = it }
+                            }
+                        ) { Text("🔊 Originele zin") }
+                        TextButton(
+                            enabled = card.status == "Lokaal vertaald" &&
+                                translation != null && translation.length <= 400,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                speaker.speak(translation.orEmpty(), card.targetCode,
+                                    LocalSpeechPace.NORMAL) { audioNotice = it }
+                            }
+                        ) { Text("🔊 Vertaling") }
                     }
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -199,6 +250,33 @@ internal fun FullscreenCaptionCard(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                TextButton(
+                                    enabled = selectedTextWord.isNotBlank() &&
+                                        (!stepTranslation ||
+                                            card.status == "Lokaal vertaald"),
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        speaker.speak(selectedTextWord,
+                                            if (stepTranslation) card.targetCode
+                                            else card.sourceCode,
+                                            LocalSpeechPace.NORMAL) { audioNotice = it }
+                                    }
+                                ) { Text("🔊 Dit woord") }
+                                TextButton(
+                                    enabled = selectedTextWord.isNotBlank() &&
+                                        (!stepTranslation ||
+                                            card.status == "Lokaal vertaald"),
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        speaker.speak(selectedTextWord,
+                                            if (stepTranslation) card.targetCode
+                                            else card.sourceCode,
+                                            LocalSpeechPace.SLOW) { audioNotice = it }
+                                    }
+                                ) { Text("Rustig woord") }
+                            }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -219,6 +297,18 @@ internal fun FullscreenCaptionCard(
                             }
                         }
                     }
+                    TextButton(onClick = {
+                        speaker.stop()
+                        audioNotice = "Lokale voorlezing gestopt."
+                    }) { Text("■ Stop voorlezen") }
+                    if (audioNotice.isNotBlank()) {
+                        Text(audioNotice, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text(
+                        "Uitspraak alleen na tik met lokaal gemelde geïnstalleerde " +
+                            "Android-stem; geen stemdownload of audio-woordtiming.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Column(
                         modifier = Modifier.weight(1f).fillMaxWidth()
                             .verticalScroll(rememberScrollState()),
