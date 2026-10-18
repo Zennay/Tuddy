@@ -4,6 +4,19 @@
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
+## Nieuw: offline tekstmodelopslag beheren
+
+Via **Taal- en modelinstellingen → Beheer offline tekstmodelopslag**
+zie je de echt geïnstalleerde ML Kit-tekstmodellen. Ongebruikte modellen
+kun je **per taal, na afzonderlijke bevestiging** verwijderen. Het actuele
+bron-/doeltaalpaar blijft beschermd. De actie is uitgeschakeld bij luisteren,
+modelvoorbereiding of een al lopende opslagactie; er is geen automatische
+opruiming en geen netwerkspraak. Je huidige gesprek en privéwoorden blijven
+staan, maar later gebruik kan opnieuw een modeldownload via wifi vragen.
+Dit beheert geen Android-spraakpakketten en belooft geen gemeten opslagwinst.
+[Uitleg en beperkingen](docs/OFFLINE_TEXT_MODEL_STORAGE.md).
+Nog geen fysiek toestelbewijs of getekende release.
+
 ## Nieuw: zinnen handmatig corrigeren
 
 Bij een definitieve gespreksregel kun je met **✎ Corrigeer tekst**

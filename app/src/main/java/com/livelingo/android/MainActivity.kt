@@ -202,6 +202,14 @@ private fun TuddyScreen() {
     var offlineModelStatus by remember { mutableStateOf("") }
     val offlinePreparationEpoch = remember { OfflinePreparationEpoch() }
     val textInventory = remember { OfflineTextModelInventory() }
+    // App-local text-model storage; installed packages are queried on demand,
+    // never inferred from the supported-language catalogue.
+    val modelStorage = remember { OfflineTextModelStorage() }
+    var modelStorageOpen by remember { mutableStateOf(false) }
+    var installedTextModels by remember { mutableStateOf<List<String>?>(null) }
+    var modelStorageBusy by remember { mutableStateOf(false) }
+    var modelStorageNotice by remember { mutableStateOf("") }
+    var pendingModelDeletion by remember { mutableStateOf<String?>(null) }
     var textReceipt by remember {
         mutableStateOf(OfflineTextReceipt(spoken[0].translateCode, spoken[1].translateCode,
             OfflineTextStage.UNCHECKED, "Controleer welke tekstmodellen lokaal aanwezig zijn."))
@@ -384,8 +392,48 @@ private fun TuddyScreen() {
         }
     }
 
+    fun refreshInstalledTextModels() {
+        if (modelStorageBusy) return
+        modelStorageBusy = true
+        modelStorageNotice = "Lokaal gedownloade tekstmodellen lezen…"
+        modelStorage.list { codes, message ->
+            modelStorageBusy = false
+            installedTextModels = codes
+            modelStorageNotice = message.ifBlank {
+                if (codes.isNullOrEmpty()) "Geen extra ML Kit-tekstmodellen gevonden."
+                else "${codes.size} lokaal gedownloade tekstmodellen gevonden."
+            }
+        }
+    }
+
+    fun removeUnusedTextModel(code: String) {
+        if (modelStorageBusy || listening || preparingOfflineModel ||
+            code !in installedTextModels.orEmpty() ||
+            code in setOf(source.translateCode, target.translateCode)) return
+        pendingModelDeletion = null
+        sourceOpen = false
+        targetOpen = false
+        modelStorageBusy = true
+        modelStorageNotice = "Gekozen tekstmodel verwijderen…"
+        modelStorage.removeUnused(
+            code,
+            selectedPair = { setOf(source.translateCode, target.translateCode) }
+        ) { success, message ->
+            modelStorageBusy = false
+            modelStorageNotice = message
+            installedTextModels = null  // never keep presenting an old inventory
+            if (success) {
+                // The inventory and currently selected pair are independent;
+                // always re-read actual model status after storage changes.
+                textInventory.invalidate()
+                textReceipt = OfflineTextReceipt(source.translateCode, target.translateCode,
+                    OfflineTextStage.UNCHECKED, "Opslag gewijzigd: controleer het teksttaalpaar opnieuw.")
+            }
+        }
+    }
+
     fun prepareOfflinePair() {
-        if (preparingOfflineModel) return
+        if (preparingOfflineModel || modelStorageBusy) return
         when (OfflineModelPreparationPolicy.decide(
             source.translateCode, target.translateCode, TargetCatalog.codes)) {
             OfflinePairDecision.UNSUPPORTED -> {
@@ -792,7 +840,13 @@ private fun TuddyScreen() {
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) stop()
+            if (event == Lifecycle.Event.ON_STOP) {
+                stop()
+                modelStorage.invalidate()
+                modelStorageBusy = false
+                pendingModelDeletion = null
+                installedTextModels = null
+            }
             if (event == Lifecycle.Event.ON_STOP) {
                 focusMode = false
                 previewArchiveRows = null
@@ -813,6 +867,7 @@ private fun TuddyScreen() {
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             generation++
+            modelStorage.invalidate()
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             archiveSearchQuery = ""
@@ -1295,6 +1350,31 @@ private fun TuddyScreen() {
                 onDismiss = { personalPhrasesOpen = false }
             )
         }
+        val deletionCode = pendingModelDeletion
+        if (deletionCode != null) {
+            val deletionLabel = TargetCatalog.targets.firstOrNull {
+                it.code == deletionCode
+            }?.title ?: deletionCode
+            AlertDialog(
+                onDismissRequest = { pendingModelDeletion = null },
+                title = { Text("Tekstmodel verwijderen?") },
+                text = {
+                    Text("Verwijder het lokale tekstmodel $deletionLabel ($deletionCode)? " +
+                        "Het kan pas weer worden gebruikt na een nieuwe wifi-download. " +
+                        "Gesprekken, opgeslagen woorden en spraakpakketten blijven onaangetast.")
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !modelStorageBusy && !listening && !preparingOfflineModel &&
+                            deletionCode !in setOf(source.translateCode, target.translateCode),
+                        onClick = { removeUnusedTextModel(deletionCode) }
+                    ) { Text("Verwijder model") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingModelDeletion = null }) { Text("Annuleren") }
+                }
+            )
+        }
         if (savedWordsOpen) {
             SavedWordsPanel(
                 deck = savedVocabulary,
@@ -1322,7 +1402,7 @@ private fun TuddyScreen() {
                                 == PackageManager.PERMISSION_GRANTED) start()
                             else microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
                         },
-                        enabled = offlineAvailable,
+                        enabled = offlineAvailable && !modelStorageBusy,
                     ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
                     OutlinedButton(onClick = {
                         generation++
@@ -1366,7 +1446,7 @@ private fun TuddyScreen() {
                 ) {
                     OutlinedButton(onClick = { focusMode = true }) { Text("⛶ Leesmodus") }
                     OutlinedButton(
-                        enabled = reverseDirection != null,
+                        enabled = reverseDirection != null && !modelStorageBusy,
                         onClick = {
                             val reversed = reverseDirection
                             val previousSource = source
@@ -1375,6 +1455,8 @@ private fun TuddyScreen() {
                             }
                             if (reversed != null && nextSource != null) {
                                 stop()
+                                modelStorage.invalidate()
+                                installedTextModels = null
                                 pendingCaptionShare = null
                                 pendingSpeakerExport = null
                                 pendingTranscriptExport = null
@@ -1635,7 +1717,7 @@ private fun TuddyScreen() {
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { sourceOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = { sourceOpen = true }, enabled = !modelStorageBusy, modifier = Modifier.fillMaxWidth()) {
                             Text("Van: ${source.label}", maxLines = 1)
                         }
                         DropdownMenu(expanded = sourceOpen, onDismissRequest = { sourceOpen = false }) {
@@ -1647,6 +1729,8 @@ private fun TuddyScreen() {
                             spoken.forEach {
                                 DropdownMenuItem(text = { Text(it.label) }, onClick = {
                                     stop()
+                                    modelStorage.invalidate()
+                                    installedTextModels = null
                                     source = it
                                     languageSettings.edit()
                                         .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, it.speechCode)
@@ -1662,7 +1746,7 @@ private fun TuddyScreen() {
                         }
                     }
                     Box(Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { targetOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = { targetOpen = true }, enabled = !modelStorageBusy, modifier = Modifier.fillMaxWidth()) {
                             Text("Naar: ${target.label}", maxLines = 1)
                         }
                         DropdownMenu(expanded = targetOpen, onDismissRequest = { targetOpen = false }) {
@@ -1677,6 +1761,8 @@ private fun TuddyScreen() {
                             TargetCatalog.search(targetQuery).take(35).forEach { choice ->
                                 DropdownMenuItem(text = { Text(choice.title) }, onClick = {
                                     stop()
+                                    modelStorage.invalidate()
+                                    installedTextModels = null
                                     target = LanguageChoice(choice.title, choice.code, choice.code)
                                     languageSettings.edit()
                                         .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, choice.code)
@@ -1827,7 +1913,7 @@ private fun TuddyScreen() {
                             enabled = !preparingOfflineModel &&
                                 textReceipt.stage != OfflineTextStage.CHECKING
                         ) { Text("Controleer tekst") }
-                        OutlinedButton(onClick = { prepareOfflinePair() }, enabled = !preparingOfflineModel) {
+                        OutlinedButton(onClick = { prepareOfflinePair() }, enabled = !preparingOfflineModel && !modelStorageBusy) {
                             Text(if (preparingOfflineModel) "Tekstmodel voorbereiden…" else "Tekstmodel offline voorbereiden")
                         }
                     }
@@ -1850,6 +1936,46 @@ private fun TuddyScreen() {
                         },
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+                // Storage is local and independent from speech-pack controls.
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    OutlinedButton(onClick = {
+                        modelStorageOpen = !modelStorageOpen
+                        if (modelStorageOpen && installedTextModels == null)
+                            refreshInstalledTextModels()
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (modelStorageOpen) "Verberg modelopslag" else "Beheer offline tekstmodelopslag")
+                    }
+                    if (modelStorageOpen) {
+                        Text("Dit zijn echt aanwezige ML Kit-tekstmodellen. Het huidige " +
+                            "taalpaar is beschermd; niets wordt automatisch verwijderd.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedButton(onClick = { refreshInstalledTextModels() },
+                            enabled = !modelStorageBusy) {
+                            Text(if (modelStorageBusy) "Bezig…" else "Ververs modellen")
+                        }
+                        if (modelStorageNotice.isNotBlank())
+                            Text(modelStorageNotice, style = MaterialTheme.typography.bodySmall)
+                        installedTextModels?.forEach { code ->
+                            val label = TargetCatalog.targets.firstOrNull { it.code == code }?.title ?: code
+                            val protected = code in setOf(source.translateCode, target.translateCode)
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("$label ($code)" + if (protected) " · actief" else "",
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodySmall)
+                                TextButton(
+                                    enabled = !protected && !listening &&
+                                        !preparingOfflineModel && !modelStorageBusy,
+                                    onClick = { pendingModelDeletion = code }
+                                ) { Text("Verwijder") }
+                            }
+                        }
+                        Text("Opnieuw gebruiken vereist eventueel een wifi-download. " +
+                            "Tuddy claimt geen nauwkeurige bespaarde opslagruimte.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                 }
                 // Android 13+ exposes actual installed, pending and supported
                 // on-device recognition languages. Never infer speech readiness
