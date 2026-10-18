@@ -53,6 +53,7 @@ internal fun MyOwnWordsPanel(
     var word by remember { mutableStateOf("") }
     var meaning by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
+    var practiceOpen by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<OwnWord?>(null) }
     var pendingDelete by remember { mutableStateOf<OwnWord?>(null) }
     var revision by remember { mutableIntStateOf(0) }
@@ -199,6 +200,15 @@ internal fun MyOwnWordsPanel(
         it.language == language && (query.isBlank() ||
             it.word.contains(query.trim(), ignoreCase = true) ||
             it.ownMeaning.contains(query.trim(), ignoreCase = true))
+    }
+
+    if (practiceOpen) {
+        OwnWordPracticePanel(
+            notes = items.orEmpty(),
+            initialLanguage = language,
+            onDismiss = { practiceOpen = false }
+        )
+        return
     }
 
     val restore = pendingRestore
@@ -427,6 +437,16 @@ internal fun MyOwnWordsPanel(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (editing == null) "Bewaar mijn betekenis" else "Bewaar wijziging") }
+                OutlinedButton(
+                    enabled = items?.isNotEmpty() == true,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { practiceOpen = true }
+                ) { Text("🧠 Oefen mijn eigen woorden · zonder opslag") }
+                Text(
+                    "Alleen je eigen, ongeverifieerde betekenissen. Je ziet het " +
+                        "antwoord pas na een tik; resultaten verdwijnen bij sluiten.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(
                         enabled = items?.isNotEmpty() == true,
