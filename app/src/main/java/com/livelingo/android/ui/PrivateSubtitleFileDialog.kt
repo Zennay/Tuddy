@@ -551,7 +551,8 @@ internal fun PrivateSubtitleFileDialog(
             onDismissRequest = { pendingImport = null },
             title = { Text("Tweede ondertitelbestand toevoegen") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(
                         "Tweede bestand: ${stagedImport.imported.size} ondertitelregels. " +
                             "Huidig concept: ${draft.size} regels. Alleen tijdelijk in " +
@@ -572,12 +573,33 @@ internal fun PrivateSubtitleFileDialog(
                         Text((if (importMode == SubtitleCombineMode.KEEP_SOURCE_TIMES)
                             "✓ " else "") + "Originele tijdcodes naast elkaar")
                     }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { importMode = SubtitleCombineMode.PAIR_OVERLAPPING_TIMES }
+                    ) {
+                        Text((if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES)
+                            "✓ " else "") + "Combineer twee teksten bij overlappende tijdcodes")
+                    }
+                    if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
+                        Text("De eerste tekst blijft bovenaan; overlappende tekst uit " +
+                            "bestand twee komt op een tweede regel. Alleen minstens " +
+                            "half overlappende tijdvakken worden één-op-één gekoppeld. " +
+                            "Niet gekoppelde regels blijven apart. Controleer taal en " +
+                            "timing zelf: dit bewijst geen vertaling of synchronisatie.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                     Text(
                         if (!stillCurrent)
                             "Het huidige concept is veranderd: voeg opnieuw toe."
                         else if (proposed == null)
                             "Samenvoegen kan niet: maximaal 500 regels, geldige " +
                                 "tijdcodes en maximaal 256 KiB per export."
+                        else if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES)
+                            "${proposed.pairedCount} regelparen met gedeelde tijdcodes, " +
+                                "${proposed.unpairedSecondTrack} regels uit tweede bestand " +
+                                "apart gehouden, ${proposed.cues.size} regels in resultaat. " +
+                                "Beoordeel eerst tekst en timing; er is geen " +
+                                "audio-/video-uitlijning."
                         else "${proposed.cues.size} regels in de gecombineerde versie. " +
                             "${proposed.adjacentOverlaps} aangrenzende tijdsoverlappingen. " +
                             "Controleer tijdcodes zelf; er is geen audio-/video-uitlijning.",
@@ -603,7 +625,11 @@ internal fun PrivateSubtitleFileDialog(
                         applyChange(updated.cues)
                         query = ""
                         shownIndex = -1
-                        notice = "${updated.importedCount} regels toegevoegd aan " +
+                        notice = if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES)
+                            "${updated.pairedCount} tekstparen gekoppeld; " +
+                                "${updated.unpairedSecondTrack} regels apart behouden. " +
+                                "Gebruik Bewaar kopie… voor een nieuw bestand."
+                        else "${updated.importedCount} regels toegevoegd aan " +
                             "tijdelijk concept. Gebruik Bewaar kopie… voor een nieuw bestand."
                     }
                     pendingImport = null
