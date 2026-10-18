@@ -88,7 +88,8 @@ private data class SessionPracticeRound(
 @Composable
 internal fun SessionCaptionStudyDialog(
     captions: List<FocusCaptionLine>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    initialCaptionId: Long? = null
 ) {
     val available = remember(captions) {
         captions.asSequence()
@@ -101,7 +102,9 @@ internal fun SessionCaptionStudyDialog(
             .toList().takeLast(80)
     }
     var shuffleVersion by remember { mutableIntStateOf(0) }
-    var batchOffset by remember { mutableIntStateOf(0) }
+    var batchOffset by remember(initialCaptionId, available) {
+        mutableIntStateOf(available.indexOfFirst { it.id == initialCaptionId }.coerceAtLeast(0))
+    }
     val deck = remember(available, shuffleVersion) {
         if (shuffleVersion == 0) available
         else available.shuffled(Random(shuffleVersion))
