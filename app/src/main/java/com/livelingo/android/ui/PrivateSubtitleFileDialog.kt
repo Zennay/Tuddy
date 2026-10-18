@@ -47,12 +47,19 @@ internal fun PrivateSubtitleFileDialog(
     var draft by remember(cues) { mutableStateOf(cues) }
     var edited by remember(cues) { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
+    var deleteIndex by remember { mutableStateOf<Int?>(null) }
     var editValue by remember { mutableStateOf("") }
     var requestSave by remember { mutableStateOf<SubtitleDraftFormat?>(null) }
     var notice by remember { mutableStateOf("") }
     val found = draft.mapIndexed { idx, row -> idx to row }
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
     val current = found.getOrNull(shownIndex)?.second
+    fun nudgeSelected(start: Long, end: Long) {
+        val selected = found.getOrNull(shownIndex)?.first ?: return
+        val updated = PrivateSubtitleDraftEditor.adjustCue(draft, selected, start, end)
+        if (updated == null) notice = "Tijd geweigerd: begin/eind of volgorde ongeldig."
+        else { draft = updated; edited = true; notice = "Tijd van deze regel aangepast." }
+    }
 
     Dialog(onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false,
@@ -142,6 +149,30 @@ internal fun PrivateSubtitleFileDialog(
                     }, modifier = Modifier.fillMaxWidth()) {
                         Text("✎ Corrigeer deze regel handmatig")
                     }
+                    Text("Tijden van alleen deze regel · stap 0,5 s",
+                        style = MaterialTheme.typography.labelSmall)
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(onClick = { nudgeSelected(-500L, 0L) }) {
+                            Text("Begin −0,5 s")
+                        }
+                        TextButton(onClick = { nudgeSelected(500L, 0L) }) {
+                            Text("Begin +0,5 s")
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(onClick = { nudgeSelected(0L, -500L) }) {
+                            Text("Eind −0,5 s")
+                        }
+                        TextButton(onClick = { nudgeSelected(0L, 500L) }) {
+                            Text("Eind +0,5 s")
+                        }
+                        TextButton(enabled = draft.size > 1,
+                            onClick = { deleteIndex = found[shownIndex].first }) {
+                            Text("Wis regel…")
+                        }
+                    }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween) {
                         TextButton(enabled = shownIndex > 0,
@@ -162,6 +193,29 @@ internal fun PrivateSubtitleFileDialog(
         }
     }
 
+    val requestedDelete = deleteIndex
+    if (requestedDelete != null) {
+        AlertDialog(onDismissRequest = { deleteIndex = null },
+            title = { Text("Deze ondertitelregel verwijderen?") },
+            text = { Text("Alleen de tijdelijke documentkopie verandert. " +
+                "Het originele bestand blijft ongewijzigd; Herstel kan dit terugdraaien.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val newDraft = PrivateSubtitleDraftEditor.dropCue(draft, requestedDelete)
+                    if (newDraft != null) {
+                        draft = newDraft
+                        edited = true
+                        shownIndex = -1
+                        notice = "Regel verwijderd uit tijdelijke kopie."
+                    } else notice = "De laatste regel kan niet worden verwijderd."
+                    deleteIndex = null
+                }) { Text("Wis alleen deze regel") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteIndex = null }) { Text("Annuleren") }
+            }
+        )
+    }
     val position = editIndex
     if (position != null) {
         AlertDialog(onDismissRequest = { editIndex = null },
