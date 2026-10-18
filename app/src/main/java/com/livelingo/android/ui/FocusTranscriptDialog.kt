@@ -30,7 +30,8 @@ internal data class FocusCaptionLine(
     val status: String,
     val sourceCode: String,
     val targetCode: String,
-    val speaker: String? = null // Manual A/B marker for this session; never an inferred identity.
+    val speaker: String? = null, // Manual A/B marker; not an inferred identity.
+    val personalMeaning: String? = null // Purely human note, never model-verified or exported.
 )
 
 @Composable
@@ -208,6 +209,14 @@ internal fun FocusTranscriptDialog(
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                line.personalMeaning?.let { own ->
+                                    Text("Mijn eigen uitleg (niet geverifieerd; geen export)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(own, style = MaterialTheme.typography.titleMedium.copy(
+                                        fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale
+                                    ))
+                                }
                                 if (showColumns) {
                                     BilingualCaptionColumns(
                                         original = line.original,
