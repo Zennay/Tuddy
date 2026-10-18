@@ -8,6 +8,17 @@ oefen moeilijke zinnen opnieuw. Er wordt geen leerprofiel of
 automatische vertaling van gemaakt en alle antwoorden blijven in RAM.
 [Handleiding](docs/OFFLINE_SUBTITLE_RECALL.md).
 
+## Nieuw: meerdere ondertitelbestanden offline combineren
+
+Open een eigen SRT/VTT-bestand en kies **Tweede SRT/VTT-document
+toevoegen…** om een tweede bestand via Android te selecteren.
+Je bepaalt zelf of de nieuwe regels achteraan aansluiten of hun
+bestaande tijdstempels behouden. Bekijk vooraf de overlap, voeg
+alleen toe aan het tijdelijke bewerkbare concept en bewaar uitsluitend
+na een afzonderlijke keuze een nieuwe kopie. Tijdcodes zijn niet
+automatisch met audio gesynchroniseerd.
+[Bediening en privacy](docs/OFFLINE_MULTIFILE_SUBTITLE_COMPOSITION.md).
+
 ## Nieuw: acht weken studieplanning bewust als agenda bewaren
 
 In **Mijn offline studieplanning** kun je nu na een aparte keuze een
