@@ -4,6 +4,18 @@
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
+## Nieuw: zinnen handmatig corrigeren
+
+Bij een definitieve gespreksregel kun je met **✎ Corrigeer tekst**
+de oorspronkelijke zin in het tijdelijke gesprek herstellen en de
+tekst lokaal opnieuw laten vertalen. Voor regels met **Fout** of
+**Model ontbreekt** is er ook **↻ Probeer opnieuw**, zonder de tekst
+opnieuw in te typen. Oude, vertraagde resultaten kunnen de nieuwere
+correctie niet overschrijven; een handmatige correctie krijgt een
+zichtbaar label. De microfoon moet uit staan. Dit is geen echte
+spraakmodelverbetering of menselijke tolkvalidatie.
+[Bediening, privacy en grenzen](docs/CAPTION_CORRECTIONS.md).
+
 ## Nieuw: privégesprek exporteren als JSON
 
 Naast de bestaande tekstexport heeft het gesprekscherm nu **Bewaar JSON…**.
