@@ -50,6 +50,18 @@ spraakondersteuning of moedertaalsprekeracceptatie.
 
 ## Nieuw: offline startcheck vanaf het hoofdscherm
 
+## Nieuw: optionele privéweergave
+
+Via **Taal- en modelinstellingen → Privacy · privéweergave** kun je
+Androids schermbeveiliging voor Tuddy aan- of uitzetten. Indien aan,
+vraagt de app het besturingssysteem screenshots, standaard
+schermopnames en recente-appsvoorbeelden te blokkeren. De keuze
+blijft lokaal op het toestel bewaard; geen transcript of audio
+wordt voor deze functie opgeslagen. Externe camera's of andere
+toestelafwijkingen kunnen nooit volledig worden tegengehouden.
+[Bediening en beperkingen](docs/PRIVATE_SCREEN_SHIELD.md).
+
+
 De knop **Offline startcheck** laat zien of de gekozen Android-spreektaal
 daadwerkelijk lokaal beschikbaar is én of de benodigde ML Kit-tekstmodellen
 al op dit toestel staan. Je kunt beide statussen apart of samen opnieuw
