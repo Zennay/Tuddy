@@ -105,7 +105,7 @@ internal fun SubtitleRetimingDialog(
         confirmButton = {
             TextButton(enabled = preview != null, onClick = {
                 PrivateSubtitleRetiming.preview(draft, percentage, offsetMs, anchorFirst)
-                    ?.let(onApply)
+                    ?.let { onApply(it.updated) }
             }) { Text("Pas toe in tijdelijk concept") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } }
