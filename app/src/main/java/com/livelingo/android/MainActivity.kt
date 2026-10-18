@@ -246,6 +246,11 @@ private fun TuddyScreen(
     var preparingOfflineModel by remember { mutableStateOf(false) }
     var offlineModelStatus by remember { mutableStateOf("") }
     val offlinePreparationEpoch = remember { OfflinePreparationEpoch() }
+    val microphoneLimit = remember(context) { MicrophoneSessionLimit(context) }
+    var microphoneLimitMinutes by remember(context) {
+        mutableIntStateOf(microphoneLimit.selectedMinutes())
+    }
+    var microphoneLimitNotice by remember { mutableStateOf("") }
     val textInventory = remember { OfflineTextModelInventory() }
     // App-local text-model storage; installed packages are queried on demand,
     // never inferred from the supported-language catalogue.
@@ -671,6 +676,7 @@ private fun TuddyScreen(
     }
 
     fun stop() {
+        microphoneLimit.cancel() // No timeout can outlive Stop or background.
         captionSpeaker.stop() // No device speech output after Stop/background/clear.
         offlinePreparationEpoch.invalidate() // A stale model receipt never applies after Stop/background.
         textInventory.invalidate() // Late inventory callbacks never publish after Stop/background.
@@ -832,7 +838,21 @@ private fun TuddyScreen(
             }
             speech.startListening(intent)
             listening = true
+            // Continuous speech recognizer restarts must NOT extend a
+            // user-chosen capture deadline. Only the original tap arms it.
+            if (!forceRestart && !microphoneLimit.arm {
+                    if (listening) {
+                        stop()
+                        error = "Microfoon automatisch gestopt na de ingestelde tijdslimiet. " +
+                            "Je huidige gesprek blijft bewaard; tik Luister om opnieuw te beginnen."
+                    }
+                }) {
+                stop()
+                error = "De microfoontimer kon niet veilig worden gestart. " +
+                    "De microfoon is daarom gestopt."
+            }
         } catch (exception: Exception) {
+            microphoneLimit.cancel()
             // startListening may throw after a recognizer was allocated.
             // Do not leave that session eligible for callbacks or reuse.
             voiceSessions.invalidate()
@@ -2616,6 +2636,50 @@ private fun TuddyScreen(
                 )
                 if (privateScreenShieldNotice.isNotBlank())
                     Text(privateScreenShieldNotice, style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider()
+                Text("Privacy · maximale microfoonsessieduur",
+                    style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Optioneel: stop langdurig on-device luisteren automatisch. " +
+                        "Dit geldt voor de hele sessie, ook als Android tussendoor " +
+                        "spraakherkenning herstart. Geen limiet is de standaard.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf(0 to "Geen", 5 to "5 min", 15 to "15 min", 30 to "30 min")
+                        .forEach { (minutes, label) ->
+                            TextButton(onClick = {
+                                val stored = microphoneLimit.changeMinutes(minutes)
+                                if (stored) {
+                                    microphoneLimitMinutes = minutes
+                                    val armed = !listening || microphoneLimit.arm {
+                                        if (listening) {
+                                            stop()
+                                            error = "Microfoon automatisch gestopt na de ingestelde " +
+                                                "tijdslimiet. Je gesprek blijft op dit toestel."
+                                        }
+                                    }
+                                    if (!armed) {
+                                        stop()
+                                        microphoneLimitNotice =
+                                            "Microfoon gestopt: de tijdslimiet kon niet veilig starten."
+                                    } else {
+                                        microphoneLimitNotice = "Keuze opgeslagen: " +
+                                            if (minutes == 0) "geen automatische stop."
+                                            else "$minutes minuten. " +
+                                                if (listening) "Huidige sessie telt opnieuw vanaf nu."
+                                                else "Start nieuwe luistermodus om de limiet te gebruiken."
+                                    }
+                                } else {
+                                    microphoneLimitNotice = "Kon de tijdslimiet niet bewaren."
+                                }
+                            }) {
+                                Text(if (microphoneLimitMinutes == minutes) "$label ✓" else label)
+                            }
+                        }
+                }
+                if (microphoneLimitNotice.isNotBlank())
+                    Text(microphoneLimitNotice, style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 Text("Privacy · opgeslagen oefengegevens",
                     style = MaterialTheme.typography.titleSmall)
