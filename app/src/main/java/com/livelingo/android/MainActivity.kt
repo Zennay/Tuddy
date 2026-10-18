@@ -171,6 +171,9 @@ private fun TuddyScreen() {
     var pendingArchiveGeneration by remember { mutableStateOf<Int?>(null) }
     var copyStatus by remember { mutableStateOf("") }
     var lastCopiedCaptionId by remember { mutableStateOf<Long?>(null) }
+    // Privacy gate: no caption is handed to Android's external share chooser
+    // until the user confirms the exact selected line in this session.
+    var pendingCaptionShare by remember { mutableStateOf<Triple<Int, Long, String>?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
@@ -724,6 +727,7 @@ private fun TuddyScreen() {
             if (event == Lifecycle.Event.ON_STOP) {
                 previewArchiveRows = null
                 archiveSearchQuery = ""
+                pendingCaptionShare = null
             }
             if (event == Lifecycle.Event.ON_STOP) {
                 speechPackReceipt = SpeechPackReceipt(source.speechCode, SpeechPackStage.UNCHECKED,
@@ -764,6 +768,62 @@ private fun TuddyScreen() {
     }
 
     MaterialTheme(colorScheme = colors) {
+        val share = pendingCaptionShare
+        if (share != null) {
+            AlertDialog(
+                onDismissRequest = { pendingCaptionShare = null },
+                title = { Text("Deze vertaalde zin extern delen?") },
+                text = {
+                    Text(
+                        "Dit gesprek blijft normaal alleen in Tuddy. Na bevestiging gaat " +
+                            "uitsluitend deze originele en lokaal afgeronde vertaling naar " +
+                            "het Android-deelvenster. De gekozen app of persoon kan de tekst " +
+                            "opslaan, synchroniseren of doorsturen. Deel geen gevoelige gegevens."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pendingCaptionShare = null
+                        val current = lines.firstOrNull { it.id == share.second }
+                        val valid = share.first == generation && current != null &&
+                            (current.status == "Lokaal vertaald" || current.status == "Lokaal") &&
+                            current.translated.isNotBlank() &&
+                            PrivateCaptionCopy.snapshot(
+                                TranscriptExportRow(
+                                    current.original, current.translated, current.status,
+                                    current.sourceCode, current.targetCode,
+                                    current.recordedAtMillis
+                                )
+                            ) == share.third
+                        lastCopiedCaptionId = share.second
+                        if (!valid) {
+                            copyStatus = "Deze vertaling is gewijzigd. Kies de zin opnieuw."
+                        } else {
+                            val opened = runCatching {
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, share.third)
+                                }
+                                context.startActivity(
+                                    Intent.createChooser(intent, "Kies waar je deze zin deelt")
+                                )
+                                true
+                            }.getOrDefault(false)
+                            copyStatus = if (opened) {
+                                "Android-deelvenster geopend; bestemming en verzending kies je zelf."
+                            } else {
+                                "Deelvenster niet beschikbaar; er is niets verzonden."
+                            }
+                        }
+                    }) { Text("Open deelvenster") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingCaptionShare = null }) {
+                        Text("Annuleren")
+                    }
+                }
+            )
+        }
         val archive = previewArchiveRows
         val matchedArchive = if (archive == null) emptyList() else
             PrivateArchiveSearch.filter(archive, archiveSearchQuery)
@@ -973,6 +1033,7 @@ private fun TuddyScreen() {
                         pendingArchiveGeneration = null
                         copyStatus = ""
                         lastCopiedCaptionId = null
+                        pendingCaptionShare = null
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
@@ -1575,6 +1636,24 @@ private fun TuddyScreen() {
                                         }
                                     }
                                 }) { Text("Kopieer deze zin") }
+                                if ((line.status == "Lokaal vertaald" || line.status == "Lokaal") &&
+                                    line.translated.isNotBlank()) {
+                                    TextButton(onClick = {
+                                        val payload = PrivateCaptionCopy.snapshot(
+                                            TranscriptExportRow(
+                                                line.original, line.translated, line.status,
+                                                line.sourceCode, line.targetCode, line.recordedAtMillis
+                                            )
+                                        )
+                                        if (payload == null) {
+                                            lastCopiedCaptionId = line.id
+                                            copyStatus = "Deze zin kan niet veilig worden gedeeld."
+                                        } else {
+                                            pendingCaptionShare = Triple(generation, line.id, payload)
+                                            copyStatus = ""
+                                        }
+                                    }) { Text("Deel deze zin…") }
+                                }
                                 if (lastCopiedCaptionId == line.id && copyStatus.isNotBlank()) {
                                     Text(copyStatus, style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
