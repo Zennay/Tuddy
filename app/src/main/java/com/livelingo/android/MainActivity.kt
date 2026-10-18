@@ -152,6 +152,7 @@ private fun TuddyScreen() {
     var exportStatus by remember { mutableStateOf("") }
     // The read-only archive is not part of the current live conversation.
     var previewArchiveRows by remember { mutableStateOf<List<TranscriptExportRow>?>(null) }
+    var archiveSearchQuery by remember { mutableStateOf("") }
     var pendingArchiveGeneration by remember { mutableStateOf<Int?>(null) }
     var copyStatus by remember { mutableStateOf("") }
     var lastCopiedCaptionId by remember { mutableStateOf<Long?>(null) }
@@ -693,6 +694,7 @@ private fun TuddyScreen() {
                 error = "Geen geldig privégespreksarchief. Het huidige gesprek is niet gewijzigd."
             } else {
                 previewArchiveRows = loaded
+                archiveSearchQuery = ""
                 exportStatus = ""
                 error = ""
             }
@@ -703,7 +705,10 @@ private fun TuddyScreen() {
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) stop()
-            if (event == Lifecycle.Event.ON_STOP) previewArchiveRows = null
+            if (event == Lifecycle.Event.ON_STOP) {
+                previewArchiveRows = null
+                archiveSearchQuery = ""
+            }
             if (event == Lifecycle.Event.ON_STOP) {
                 speechPackReceipt = SpeechPackReceipt(source.speechCode, SpeechPackStage.UNCHECKED,
                     "Na terugkeer uit de achtergrond moet pakketstatus opnieuw worden gecontroleerd.")
@@ -715,6 +720,7 @@ private fun TuddyScreen() {
             generation++
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
+            archiveSearchQuery = ""
             pendingArchiveGeneration = null
             captionSpeaker.close()
         }
@@ -743,9 +749,14 @@ private fun TuddyScreen() {
 
     MaterialTheme(colorScheme = colors) {
         val archive = previewArchiveRows
+        val matchedArchive = if (archive == null) emptyList() else
+            PrivateArchiveSearch.filter(archive, archiveSearchQuery)
         if (archive != null) {
             AlertDialog(
-                onDismissRequest = { previewArchiveRows = null },
+                onDismissRequest = {
+                    previewArchiveRows = null
+                    archiveSearchQuery = ""
+                },
                 title = { Text("Eigen JSON-archief · alleen lezen") },
                 text = {
                     Column {
@@ -755,14 +766,30 @@ private fun TuddyScreen() {
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = archiveSearchQuery,
+                            onValueChange = {
+                                archiveSearchQuery = PrivateArchiveSearch.normalizedQuery(it)
+                            },
+                            label = { Text("Zoek in dit archief") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            "${matchedArchive.size} van ${archive.size} regels zichtbaar · alleen op dit toestel",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        Spacer(Modifier.height(8.dp))
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(archive) { row ->
+                            items(matchedArchive) { row ->
                                 Column {
                                     Text(
-                                        row.sourceCode + " → " + row.targetCode,
+                                        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                                            .format(Date(row.recordedAtMillis)) +
+                                            " · " + row.sourceCode + " → " + row.targetCode,
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                     Text(row.original)
@@ -778,7 +805,10 @@ private fun TuddyScreen() {
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { previewArchiveRows = null }) { Text("Sluiten") }
+                    TextButton(onClick = {
+                        previewArchiveRows = null
+                        archiveSearchQuery = ""
+                    }) { Text("Sluiten") }
                 }
             )
         }
@@ -823,6 +853,7 @@ private fun TuddyScreen() {
                         pendingTranscriptExport = null
                         exportStatus = ""
                         previewArchiveRows = null
+                        archiveSearchQuery = ""
                         pendingArchiveGeneration = null
                         copyStatus = ""
                         lastCopiedCaptionId = null
