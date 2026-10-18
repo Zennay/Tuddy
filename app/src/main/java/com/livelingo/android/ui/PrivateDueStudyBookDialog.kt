@@ -22,13 +22,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateCombinedStudyBook
+import com.livelingo.android.PrivateDailyPracticeWorksheet
 import com.livelingo.android.PrivateOwnWordDeck
 import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivateVocabularyDeck
 import java.time.LocalDate
 
 /** Selected categories and their exact, temporary pre-picker HTML bytes. */
-private data class PendingDailyStudyBook(val groups: Set<String>, val snapshot: ByteArray)
+private data class PendingDailyStudyBook(
+    val groups: Set<String>, val worksheet: Boolean, val snapshot: ByteArray
+)
 
 /**
  * Explicitly export only due-today cards from separately consented schedules.
@@ -50,6 +53,7 @@ internal fun PrivateDueStudyBookDialog(
         if (ownWords.reviewsEnabled()) add("own")
     }
     var selected by remember { mutableStateOf(enabled) }
+    var worksheetMode by remember { mutableStateOf(false) }
     var pending by remember { mutableStateOf<PendingDailyStudyBook?>(null) }
     var notice by remember { mutableStateOf("") }
 
@@ -60,7 +64,7 @@ internal fun PrivateDueStudyBookDialog(
         else -> null
     }
 
-    fun produceSnapshot(chosen: Set<String>): ByteArray? {
+    fun produceSnapshot(chosen: Set<String>, asWorksheet: Boolean): ByteArray? {
         if (chosen.isEmpty() || chosen.any { it !in enabled }) return null
         val currentDay = LocalDate.now().toEpochDay()
         val curated = if ("curated" in chosen)
@@ -72,7 +76,9 @@ internal fun PrivateDueStudyBookDialog(
         val personal = if ("phrases" in chosen)
             phrases.scheduledReviews()?.filter { it.dueDay <= currentDay }?.map { it.phrase }
         else emptyList()
-        return PrivateCombinedStudyBook.snapshot(curated, owned, personal)
+        return if (asWorksheet) PrivateDailyPracticeWorksheet.snapshot(
+            curated, owned, personal
+        ) else PrivateCombinedStudyBook.snapshot(curated, owned, personal)
     }
 
     val createDocument = rememberLauncherForActivityResult(
@@ -81,7 +87,7 @@ internal fun PrivateDueStudyBookDialog(
         val original = pending
         pending = null
         if (uri != null && original != null) {
-            val fresh = produceSnapshot(original.groups)
+            val fresh = produceSnapshot(original.groups, original.worksheet)
             if (fresh == null || !fresh.contentEquals(original.snapshot)) {
                 notice = "De selectie of herhaaldatum is gewijzigd. Maak een nieuw studieblad."
             } else {
@@ -134,6 +140,22 @@ internal fun PrivateDueStudyBookDialog(
                     }
                     Text(detail, style = MaterialTheme.typography.bodySmall)
                 }
+                Text("Kies leesboek of oefenblad",
+                    style = MaterialTheme.typography.labelMedium)
+                TextButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { worksheetMode = !worksheetMode }
+                ) {
+                    Text(if (worksheetMode) "✓ Vragen en antwoorden op aparte pagina's"
+                        else "✓ Leesboek: vraag en betekenis naast elkaar")
+                }
+                Text(
+                    if (worksheetMode)
+                        "Op het oefenblad staan de vragen eerst met schrijfruimte; " +
+                            "de eigen betekenissen staan op een aparte antwoordpagina."
+                    else "Het leesboek toont elke bewaarde vraag direct met betekenis.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 Text(
                     "Alleen zelf bewaarde gegevens. Voor eigen woorden en zinnen " +
                         "zijn dit jouw betekenissen, zonder native-speakercontrole. " +
@@ -153,13 +175,17 @@ internal fun PrivateDueStudyBookDialog(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
-                        val snapshot = produceSnapshot(selected)
+                        val snapshot = produceSnapshot(selected, worksheetMode)
                         if (snapshot == null) {
                             notice = "De selectie is leeg, gewijzigd of niet veilig leesbaar."
                         } else {
-                            pending = PendingDailyStudyBook(selected.toSet(), snapshot)
+                            pending = PendingDailyStudyBook(
+                                selected.toSet(), worksheetMode, snapshot
+                            )
                             notice = ""
-                            createDocument.launch("Tuddy-kaarten-vandaag.html")
+                            createDocument.launch(if (worksheetMode)
+                                "Tuddy-oefenblad-vandaag.html"
+                            else "Tuddy-kaarten-vandaag.html")
                         }
                     }
                 ) { Text("Ik begrijp dit, kies opslag…") }

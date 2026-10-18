@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: zelf je kaarten op papier oefenen
+
+Kies bij **Bewaar mijn kaarten van vandaag…** ook voor een afdrukbaar
+oefenblad: eerst alleen de vragen met ruimte voor jouw antwoorden,
+daarna de eigen betekenissen op een aparte sleutelpagina.
+Het bestand werkt geheel offline en gebruikt alleen de bewust gekozen
+kaarten die vandaag aan de beurt zijn. De betekenissen bij
+zelfgeschreven woorden of zinnen blijven ongeverifieerd.
+[Uitleg](docs/PRINTABLE_DAILY_PRACTICE_WORKSHEET.md).
+
+
 ## Nieuw: alleen de oefenkaarten van vandaag afdrukken
 
 Vanuit **Vandaag offline oefenen** kun je bewust één of meer
