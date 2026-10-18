@@ -9,8 +9,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -91,9 +89,7 @@ internal fun TwoWayTypedConversationDialog(
         .firstOrNull { it.code == code }?.title ?: code
 
     AlertDialog(
-        onDismissRequest = {
-            if (!preparing) onDismiss()
-        },
+        onDismissRequest = onDismiss,
         title = { Text("Tweeweg-tekstgesprek · offline") },
         text = {
             Column(
@@ -241,7 +237,7 @@ internal fun TwoWayTypedConversationDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = !preparing, onClick = onDismiss) {
+            TextButton(onClick = onDismiss) {
                 Text("Terug naar gesprek")
             }
         }
