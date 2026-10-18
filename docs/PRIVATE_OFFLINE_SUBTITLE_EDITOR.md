@@ -32,3 +32,16 @@ De geselecteerde bestandsprovider kan wel zelfstandig synchroniseren.
 Sluiten, teruggaan en de Activity in de achtergrond verwijderen
 de niet-wegschreven tijdelijke wijzigingen. Een gekozen nieuwe
 kopie buiten Tuddy kun je achteraf niet vanuit Tuddy wissen.
+
+## Verder bewerken na een eigen kopie
+
+Android mag Tuddy op de achtergrond zetten wanneer de expliciete
+opslagkiezer geopend wordt. De hoofdactiviteit bewaart daarom enkel
+**voor deze ene keuze** de exacte tijdelijke ondertitelregels, gekozen
+SRT/VTT-formaat en begrensde exportbytes in het geheugen. Na Bewaren
+of Annuleren opent Tuddy het concept opnieuw en meldt het resultaat
+in de editor. De bestaande tijdelijke bewerkingen blijven als tekst
+en tijdcodes behouden, maar de oude Undo/Redo-geschiedenis wordt niet
+hersteld. Nieuwe aanpassingen kun je opnieuw als een **aparte kopie**
+bewaren. Buiten de bewuste bestandskiezer blijven de gewone
+achtergrond- en procesafsluitingsregels gelden; er is geen autosave.
