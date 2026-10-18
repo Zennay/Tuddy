@@ -52,6 +52,7 @@ import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
 import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
+import java.io.ByteArrayOutputStream
 import java.text.DateFormat
 import java.util.Date
 
@@ -149,6 +150,9 @@ private fun TuddyScreen() {
     // Android document picker result; no automatic disk/history persistence.
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var exportStatus by remember { mutableStateOf("") }
+    // The read-only archive is not part of the current live conversation.
+    var previewArchiveRows by remember { mutableStateOf<List<TranscriptExportRow>?>(null) }
+    var pendingArchiveGeneration by remember { mutableStateOf<Int?>(null) }
     var copyStatus by remember { mutableStateOf("") }
     var lastCopiedCaptionId by remember { mutableStateOf<Long?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
@@ -661,10 +665,45 @@ private fun TuddyScreen() {
         }
     }
 
+    val openTranscriptArchive = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val intendedGeneration = pendingArchiveGeneration
+        pendingArchiveGeneration = null
+        if (uri != null && intendedGeneration != null && intendedGeneration == generation) {
+            val loaded = runCatching {
+                val stream = context.contentResolver.openInputStream(uri)
+                    ?: throw IllegalArgumentException("Cannot read selected document")
+                val bytes = stream.use { input ->
+                    val buffer = ByteArray(8192)
+                    val collected = ByteArrayOutputStream()
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        if (count == 0) continue
+                        if (collected.size() + count > 262_144) throw IllegalArgumentException("Archive exceeds read limit")
+                        collected.write(buffer, 0, count)
+                    }
+                    collected.toByteArray()
+                }
+                PrivateTranscriptArchive.read(bytes)
+            }.getOrNull()
+            if (loaded == null) {
+                previewArchiveRows = null
+                error = "Geen geldig privégespreksarchief. Het huidige gesprek is niet gewijzigd."
+            } else {
+                previewArchiveRows = loaded
+                exportStatus = ""
+                error = ""
+            }
+        }
+    }
+
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) stop()
+            if (event == Lifecycle.Event.ON_STOP) previewArchiveRows = null
             if (event == Lifecycle.Event.ON_STOP) {
                 speechPackReceipt = SpeechPackReceipt(source.speechCode, SpeechPackStage.UNCHECKED,
                     "Na terugkeer uit de achtergrond moet pakketstatus opnieuw worden gecontroleerd.")
@@ -675,6 +714,8 @@ private fun TuddyScreen() {
             lifecycleOwner.lifecycle.removeObserver(observer)
             generation++
             stop() // stop() already releases and nulls Android's recognizer
+            previewArchiveRows = null
+            pendingArchiveGeneration = null
             captionSpeaker.close()
         }
     }
@@ -701,6 +742,46 @@ private fun TuddyScreen() {
     }
 
     MaterialTheme(colorScheme = colors) {
+        val archive = previewArchiveRows
+        if (archive != null) {
+            AlertDialog(
+                onDismissRequest = { previewArchiveRows = null },
+                title = { Text("Eigen JSON-archief · alleen lezen") },
+                text = {
+                    Column {
+                        Text(
+                            "Door jou gekozen bestand. Deze tekst is niet onafhankelijk geverifieerd " +
+                                "en wordt niet aan de live opname toegevoegd.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(archive) { row ->
+                                Column {
+                                    Text(
+                                        row.sourceCode + " → " + row.targetCode,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                    Text(row.original)
+                                    Text(
+                                        if (row.status == "Lokaal vertaald") row.translated
+                                        else "[Vertaling niet voltooid]",
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    HorizontalDivider()
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { previewArchiveRows = null }) { Text("Sluiten") }
+                }
+            )
+        }
         if (personalPhrasesOpen) {
             MyOfflinePhrasesPanel(
                 deck = personalPhrases,
@@ -741,6 +822,8 @@ private fun TuddyScreen() {
                         generation++
                         pendingTranscriptExport = null
                         exportStatus = ""
+                        previewArchiveRows = null
+                        pendingArchiveGeneration = null
                         copyStatus = ""
                         lastCopiedCaptionId = null
                         stop()
@@ -815,6 +898,24 @@ private fun TuddyScreen() {
                     ) { Text("Bewaar JSON…") }
                     Text(
                         "Voor eigen archief of verwerking; onvoltooide vertalingen blijven leeg.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TextButton(
+                        enabled = !listening,
+                        onClick = {
+                            pendingArchiveGeneration = generation
+                            openTranscriptArchive.launch(arrayOf("application/json", "text/plain"))
+                        }
+                    ) { Text("Open JSON-archief…") }
+                    Text(
+                        "Bekijk een bewaard gesprek zonder je live gesprek te vervangen.",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall
                     )

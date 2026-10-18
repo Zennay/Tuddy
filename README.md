@@ -8,7 +8,11 @@ It aims to display speech and its translation together like synchronized lyrics,
 
 Naast de bestaande tekstexport heeft het gesprekscherm nu **Bewaar JSON…**.
 Je kiest zelf via Android waar de JSON met maximaal 500 afgeronde regels
-wordt opgeslagen. Per regel blijven originele taal, doeltaal, tijdstempel,
+wordt opgeslagen.
+Met **Open JSON-archief…** kun je een zelf gekozen, eerder opgeslagen bestand
+begrensd en alleen-lezen bekijken, zonder het lopende gesprek te vervangen.
+Ongeldige, gewijzigde of te grote archieven worden geweigerd; de inhoud
+is door de gebruiker aangeleverd en geen bewijs van echte spraakopname. Per regel blijven originele taal, doeltaal, tijdstempel,
 originele tekst en een eventuele **voltooide** vertaling gekoppeld.
 Nog lopende of mislukte vertalingen worden expliciet `null`, niet stilzwijgend
 als voltooid beschouwd. Export is opt-in; er wordt niets automatisch
