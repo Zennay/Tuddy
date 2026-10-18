@@ -19,6 +19,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +28,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
+import com.livelingo.android.PrivateTypedLanguagePairs
+import com.livelingo.android.TypedLanguagePair
 import com.livelingo.android.OfflineTextReceipt
 import com.livelingo.android.OfflineTextStage
 import com.livelingo.android.OfflineTypedCaptionPolicy
@@ -65,9 +71,22 @@ internal fun TwoWayTypedConversationDialog(
     var info by remember { mutableStateOf("") }
     var modelStatus by remember { mutableStateOf<OfflineTextReceipt?>(null) }
     var preparing by remember { mutableStateOf(false) }
+    var favoritesOpen by remember { mutableStateOf(false) }
+    var favoriteNotice by remember { mutableStateOf("") }
+    var favoritesRevision by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    val favorites = remember(context) { PrivateTypedLanguagePairs(context) }
+    val pinnedPairs = remember(favoritesRevision) { favorites.entries() }
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    var speechNotice by remember { mutableStateOf("") }
     val models = remember { TypedConversationModelController() }
 
-    DisposableEffect(models) { onDispose { models.invalidate() } }
+    DisposableEffect(models, speaker) {
+        onDispose {
+            models.invalidate()
+            speaker.close()
+        }
+    }
     LaunchedEffect(from, to) {
         models.invalidate()
         modelStatus = OfflineTextReceipt(from, to, OfflineTextStage.UNCHECKED,
@@ -85,6 +104,22 @@ internal fun TwoWayTypedConversationDialog(
         chooser = null
         search = ""
         info = ""
+        speaker.stop()
+        speechNotice = ""
+    }
+    fun usePinnedPair(pair: TypedLanguagePair) {
+        if (preparing || pair.from !in TargetCatalog.codes ||
+            pair.to !in TargetCatalog.codes || pair.from == pair.to) return
+        from = pair.from
+        to = pair.to
+        // A private draft belongs to the previous source language.
+        draft = ""
+        chooser = null
+        search = ""
+        favoritesOpen = false
+        speaker.stop()
+        speechNotice = ""
+        info = "Favoriet gekozen; controleer of beide lokale tekstmodellen aanwezig zijn."
     }
     val rtlLanguages = setOf("ar", "fa", "ur", "he")
     fun title(code: String): String = TargetCatalog.targets
@@ -146,6 +181,50 @@ internal fun TwoWayTypedConversationDialog(
                     onClick = { switchTurn() },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("⇄ Wissel wie typt · " + to.uppercase() + " → " + from.uppercase()) }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(
+                        enabled = !preparing && from != to &&
+                            TypedLanguagePair(from, to) !in pinnedPairs &&
+                            pinnedPairs.size < PrivateTypedLanguagePairs.MAX_PAIRS,
+                        onClick = {
+                            val saved = favorites.pin(TypedLanguagePair(from, to))
+                            if (saved) favoritesRevision++
+                            favoriteNotice = if (saved)
+                                "Tekstrichting privé bewaard. Geen model of gespreksinhoud opgeslagen."
+                                else "Favoriet kon niet worden bewaard."
+                        }
+                    ) { Text("☆ Bewaar tekstrichting") }
+                    TextButton(onClick = { favoritesOpen = !favoritesOpen }) {
+                        Text(if (favoritesOpen) "Sluit favorieten"
+                            else "★ Favorieten (${pinnedPairs.size})")
+                    }
+                }
+                if (favoritesOpen) {
+                    Text("Alleen taalkeuzes zijn bewaard. Paketten worden nooit als " +
+                        "geïnstalleerd verondersteld.", style = MaterialTheme.typography.bodySmall)
+                    pinnedPairs.forEach { pair ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TextButton(
+                                enabled = !preparing,
+                                onClick = { usePinnedPair(pair) },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("${pair.from.uppercase()} → ${pair.to.uppercase()}") }
+                            TextButton(onClick = {
+                                if (favorites.remove(pair)) {
+                                    favoritesRevision++
+                                    favoriteNotice = "Tekstfavoriet verwijderd."
+                                } else favoriteNotice = "Favoriet kon niet worden verwijderd."
+                            }) { Text("Verwijder") }
+                        }
+                    }
+                    if (pinnedPairs.isEmpty()) {
+                        Text("Nog geen tekstrichtingen opgeslagen.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (favoriteNotice.isNotBlank()) {
+                    Text(favoriteNotice, style = MaterialTheme.typography.bodySmall)
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Na versturen automatisch wisselen",
                         modifier = Modifier.weight(1f),
@@ -238,17 +317,48 @@ internal fun TwoWayTypedConversationDialog(
                         textDirection = if (row.source in rtlLanguages)
                             TextDirection.Rtl else TextDirection.Ltr
                     ))
+                    TextButton(onClick = {
+                        speaker.speak(row.original, row.source, LocalSpeechPace.NORMAL) {
+                            speechNotice = it
+                        }
+                    }) { Text("🔊 Origineel lokaal voorlezen") }
                     if (row.status == "Lokaal vertaald" || row.status == "Lokaal") {
                         Text(row.translated, style = MaterialTheme.typography.bodyMedium.copy(
                             textDirection = if (row.target in rtlLanguages)
                                 TextDirection.Rtl else TextDirection.Ltr
                         ), color = MaterialTheme.colorScheme.primary)
+                        if (row.status == "Lokaal vertaald" &&
+                            row.translated.isNotBlank()) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(onClick = {
+                                    speaker.speak(row.translated, row.target,
+                                        LocalSpeechPace.NORMAL) { speechNotice = it }
+                                }) { Text("🔊 Vertaling") }
+                                TextButton(onClick = {
+                                    speaker.speak(row.translated, row.target,
+                                        LocalSpeechPace.SLOW) { speechNotice = it }
+                                }) { Text("Rustiger") }
+                            }
+                        }
                     } else {
                         Text("Vertaling nog niet voltooid of model ontbreekt.",
                             style = MaterialTheme.typography.bodySmall)
                     }
                     HorizontalDivider()
                 }
+                if (recentLines.isNotEmpty()) {
+                    TextButton(onClick = {
+                        speaker.stop()
+                        speechNotice = "Voorlezen gestopt."
+                    }, modifier = Modifier.fillMaxWidth()) { Text("■ Stop lokale stem") }
+                }
+                if (speechNotice.isNotBlank()) {
+                    Text(speechNotice, style = MaterialTheme.typography.bodySmall)
+                }
+                Text("Voorlezen start alleen nadat jij tikt en uitsluitend met een " +
+                    "door Android als lokaal geïnstalleerd gemelde stem; " +
+                    "zonder stem geen internetfallback.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("Kurmanji, Sorani en Pasjtoe zijn geen ML Kit-teksttalen. " +
                     "Uitvoer kan fouten bevatten; laat gevoelige gesprekken " +
                     "door een mens controleren. Modeldownloads vereisen wifi " +
