@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: favorieten en thema’s bij voorbereide teksten
+
+Bij **Gebruik mijn voorbereide eigen tekst…** kun je nu ook
+filteren op je eerder bewaarde gespreksfavorieten en zelfgekozen
+privéthema's. Daardoor vind je snel de eigen NL/EN-betekenis
+die je als **onverstuurd** concept wilt overnemen.
+De indeling blijft ongewijzigd en er vindt geen automatische
+Kurmanji/Sorani/Pasjtoe-vertaling plaats.
+[Bediening en privacy](docs/PREPARED_PRIVATE_TWO_WAY_DRAFTS.md).
+
+
 ## Nieuw: alle geplande kaarten in één gemengde offline ronde
 
 In **Vandaag offline oefenen** kun je nu basiswoorden, eigen zinnen
