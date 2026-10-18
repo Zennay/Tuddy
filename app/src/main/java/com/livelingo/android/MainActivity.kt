@@ -787,7 +787,7 @@ private fun TuddyScreen() {
                                 textReceipt.stage != OfflineTextStage.CHECKING
                         ) { Text("Controleer tekst") }
                         OutlinedButton(onClick = { prepareOfflinePair() }, enabled = !preparingOfflineModel) {
-                            Text(if (preparingOfflineModel) "Voorbereiden…" else "Model via wifi")
+                            Text(if (preparingOfflineModel) "Tekstmodel voorbereiden…" else "Tekstmodel offline voorbereiden")
                         }
                     }
                     if (textReceipt.stage == OfflineTextStage.CHECKING) {
