@@ -1066,6 +1066,24 @@ private fun TuddyScreen() {
                         Text(if (follow) "Live ✓" else "Volg live")
                     }
                 }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
+                            "De labels zijn geen stemherkenning, worden niet geëxporteerd en " +
+                            "verdwijnen wanneer deze gesprekssessie wordt gewist.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val countA = lines.count { manuallyAssignedSpeakers[it.id] == "A" }
+                        val countB = lines.count { manuallyAssignedSpeakers[it.id] == "B" }
+                        TextButton(enabled = countA > 0, onClick = { jumpToSpeaker("A") }) {
+                            Text("Volgende A ($countA)")
+                        }
+                        TextButton(enabled = countB > 0, onClick = { jumpToSpeaker("B") }) {
+                            Text("Volgende B ($countB)")
+                        }
+                    }
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
