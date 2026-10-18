@@ -38,6 +38,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.PrivateSubtitleCue
+import com.livelingo.android.PrivateSubtitleAudioAlignment
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -54,6 +55,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     cues: List<PrivateSubtitleCue>,
     audioUri: Uri,
     onChangeAudio: () -> Unit,
+    onApplyAdjustedCues: (List<PrivateSubtitleCue>) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -71,6 +73,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var lastLoopAtMs by remember { mutableLongStateOf(0L) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
+    var confirmApplyOpen by remember { mutableStateOf(false) }
     var cueQuery by remember { mutableStateOf("") }
 
     fun closeAudio() {
@@ -85,6 +88,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         loopCueIndex = -1
         subtitleOffsetMs = 0L
         cuePickerOpen = false
+        confirmApplyOpen = false
         cueQuery = ""
         lastLoopAtMs = 0L
         if (old != null) runCatching {
@@ -115,6 +119,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         if (shifted == subtitleOffsetMs) return
         subtitleOffsetMs = shifted
         loopCueIndex = -1
+        confirmApplyOpen = false
         lastLoopAtMs = 0L
         notice = "Verschuiving aangepast; dit wijzigt je SRT/VTT-bestand niet."
     }
@@ -252,6 +257,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
         }
     }
 
+    val adjustedDraft = remember(cues, subtitleOffsetMs) {
+        PrivateSubtitleAudioAlignment.preview(cues, subtitleOffsetMs)
+    }
     val displayTimeMs = if (dragPositionMs >= 0L) dragPositionMs else positionMs
     val activeIndex = if (prepared) cues.indexOfLast {
         displayTimeMs >= cueStart(it) && displayTimeMs < cueEnd(it)
@@ -388,6 +396,19 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Herstel de oorspronkelijke tijdcodes (0 s)") }
                     OutlinedButton(
+                        onClick = {
+                            pauseAudio()
+                            confirmApplyOpen = true
+                        },
+                        enabled = adjustedDraft != null,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Neem deze correctie over in mijn tijdelijke ondertiteleditor…") }
+                    if (subtitleOffsetMs != 0L && adjustedDraft == null) {
+                        Text("Deze verschuiving zou een ondertitel buiten het toegestane " +
+                            "tijdvak brengen. Stel eerst een kleinere correctie in.",
+                            style = MaterialTheme.typography.labelSmall)
+                    }
+                    OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = loopCueIndex >= 0 || (active != null &&
                             active.endMillis - active.startMillis >= 750L &&
@@ -436,6 +457,42 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     style = MaterialTheme.typography.labelSmall)
             }
         }
+    }
+    if (confirmApplyOpen && adjustedDraft != null && subtitleOffsetMs != 0L) {
+        AlertDialog(
+            onDismissRequest = { confirmApplyOpen = false },
+            title = { Text("Gecorrigeerde tijdcodes als eigen concept?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Alle " + adjustedDraft.size +
+                        " ondertitelregels worden in een NIEUW tijdelijk editorconcept " +
+                        "naar deze handmatig gekozen timing verschoven.")
+                    Text("Correctie: " + (if (subtitleOffsetMs > 0L) "+" else "") +
+                        String.format(Locale.ROOT, "%.2f", subtitleOffsetMs / 1000.0) +
+                        " seconden.")
+                    Text("Eerste cue: " + cues.first().startLabel +
+                        " → " + adjustedDraft.first().startLabel)
+                    Text("Laatste cue: " + cues.last().endLabel +
+                        " → " + adjustedDraft.last().endLabel)
+                    Text("Je originele SRT/VTT blijft ongewijzigd. Er is geen " +
+                        "automatische uitlijning gemeten; pas in de editor aan en " +
+                        "kies alleen zelf of je een nieuwe kopie bewaart.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val proposed = adjustedDraft
+                    confirmApplyOpen = false
+                    closeAudio()
+                    onApplyAdjustedCues(proposed)
+                }) { Text("Open tijdelijk gecorrigeerd concept in editor") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmApplyOpen = false }) {
+                    Text("Blijf luisteren zonder aanpassing")
+                }
+            }
+        )
     }
     if (cuePickerOpen && prepared) {
         val matchingCues = remember(cues, cueQuery) {
