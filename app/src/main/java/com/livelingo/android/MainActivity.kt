@@ -64,6 +64,8 @@ import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
+import com.livelingo.android.ui.TwoWayTypedConversationDialog
+import com.livelingo.android.ui.TypedConversationLine
 import java.io.ByteArrayOutputStream
 import java.text.DateFormat
 import java.util.Date
@@ -246,6 +248,7 @@ private fun TuddyScreen(
     var previewInput by remember { mutableStateOf("") }
     var manualText by remember { mutableStateOf("") }
     var quickTypedOpen by remember { mutableStateOf(false) }
+    var twoWayTypedOpen by remember { mutableStateOf(false) }
     var draftFromExternalShare by remember { mutableStateOf(false) }
     // The export snapshot exists only between an explicit Save tap and the
     // Android document picker result; no automatic disk/history persistence.
@@ -989,14 +992,17 @@ private fun TuddyScreen(
             if (saved) "" else " Deze keuze geldt alleen voor deze sessie."
     }
 
-    fun submitTypedCaption(): Boolean {
-        val sentence = OfflineTypedCaptionPolicy.normalize(manualText) ?: return false
+    /**
+     * Shared RAM-only insertion for all user-typed turns. The selected TEXT
+     * language pair does not change the microphone's speech-pack selection.
+     */
+    fun appendTypedTurn(rawText: String, sourceCode: String, targetCode: String): Boolean {
+        val sentence = OfflineTypedCaptionPolicy.normalize(rawText) ?: return false
+        if (listening || sourceCode !in TargetCatalog.codes ||
+            targetCode !in TargetCatalog.codes) return false
         val id = System.nanoTime()
         val token = generation
-        val selectedSource = source.translateCode
-        val selectedTarget = target.translateCode
-        lines.add(Line(id, sentence, "Vertalen…", "Bezig",
-            selectedSource, selectedTarget))
+        lines.add(Line(id, sentence, "Vertalen…", "Bezig", sourceCode, targetCode))
         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
             val removed = lines.removeAt(0)
             manuallyAssignedSpeakers.remove(removed.id)
@@ -1006,9 +1012,17 @@ private fun TuddyScreen(
                 captionCorrectionDraft = ""
             }
         }
-        manualText = ""
-        translate(sentence, id, selectedTarget, selectedSource, token)
+        // Short manually identified phrases must never be silently relabelled
+        // as a different detected language before private local translation.
+        translate(sentence, id, targetCode, sourceCode, token,
+            explicitlyChosenSource = true)
         return true
+    }
+
+    fun submitTypedCaption(): Boolean {
+        val saved = appendTypedTurn(manualText, source.translateCode, target.translateCode)
+        if (saved) manualText = ""
+        return saved
     }
 
     val microphonePermission = rememberLauncherForActivityResult(
@@ -1362,6 +1376,22 @@ private fun TuddyScreen(
                     quickTypedOpen = true
                 },
                 onDismiss = { offlineReadinessOpen = false }
+            )
+        }
+        if (twoWayTypedOpen && !listening) {
+            TwoWayTypedConversationDialog(
+                initialSource = source.translateCode,
+                initialTarget = target.translateCode,
+                recentLines = lines.takeLast(6).map { row ->
+                    TypedConversationLine(row.original, row.translated, row.status,
+                        row.sourceCode, row.targetCode)
+                },
+                onSend = { sentence, from, to ->
+                    val added = appendTypedTurn(sentence, from, to)
+                    if (added) follow = true
+                    added
+                },
+                onDismiss = { twoWayTypedOpen = false }
             )
         }
         if (quickTypedOpen) {
@@ -2345,6 +2375,16 @@ private fun TuddyScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("✍ Typ zin · zonder microfoon") }
                 TextButton(
+                    enabled = !listening,
+                    onClick = {
+                        if (!listening) {
+                            quickTypedOpen = false
+                            twoWayTypedOpen = true
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("⇄ Tweeweg-tekstgesprek · zonder microfoon") }
+                TextButton(
                     onClick = {
                         if (listening) stop()
                         starterPhraseboardOpen = true
@@ -2850,25 +2890,7 @@ private fun TuddyScreen(
                     )
                     Button(
                         onClick = {
-                            val sentence = OfflineTypedCaptionPolicy.normalize(manualText)
-                                ?: return@Button
-                            val id = System.nanoTime()
-                            val token = generation
-                            val selectedSource = source.translateCode
-                            val selectedTarget = target.translateCode
-                            lines.add(Line(id, sentence, "Vertalen…", "Bezig",
-                                selectedSource, selectedTarget))
-                            repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
-                                val removed = lines.removeAt(0)
-                                manuallyAssignedSpeakers.remove(removed.id)
-                                captionPins = captionPins - removed.id
-                                if (editingCaptionId == removed.id) {
-                                    editingCaptionId = null
-                                    captionCorrectionDraft = ""
-                                }
-                            }
-                            manualText = ""
-                            translate(sentence, id, selectedTarget, selectedSource, token)
+                            if (submitTypedCaption()) follow = true
                         },
                         enabled = OfflineTypedCaptionPolicy.normalize(manualText) != null
                     ) { Text("Vertaal tekst lokaal") }
