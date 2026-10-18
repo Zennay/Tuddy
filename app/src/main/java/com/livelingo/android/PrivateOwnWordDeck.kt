@@ -22,6 +22,7 @@ internal class PrivateOwnWordDeck(context: Context) {
     companion object {
         private const val KEY = "own_word_notes"
         const val MAX_ENTRIES = 120
+        const val MAX_BACKUP_BYTES = 50_000
         private const val MAX_JSON = 50_000
         val SUPPORTED_CODES: Set<String> =
             (TargetCatalog.codes + listOf("kmr", "ckb", "ps")).toSet()
@@ -120,6 +121,76 @@ internal class PrivateOwnWordDeck(context: Context) {
         if (entry !in current) return false
         return write(current - entry)
     }
+
+    /**
+     * Explicit user-selected JSON backup. No transcript/audio/provider data
+     * is included, only the user's word, language and their own meaning.
+     */
+    @Synchronized
+    fun exportSnapshot(): ByteArray? {
+        val owned = read() ?: return null
+        if (owned.isEmpty()) return null
+        val array = JSONArray()
+        owned.sortedWith(compareBy(OwnWord::language, OwnWord::word)).forEach { item ->
+            array.put(JSONObject()
+                .put("language", item.language)
+                .put("word", item.word)
+                .put("ownMeaning", item.ownMeaning))
+        }
+        val root = JSONObject()
+            .put("format", "tuddy-own-words-v1")
+            .put("entries", array)
+        return (root.toString() + "\n").toByteArray(Charsets.UTF_8)
+            .takeIf { it.size <= MAX_BACKUP_BYTES }
+    }
+
+    /** Reject wrong versions, malformed UTF-8, duplicate words or huge files. */
+    fun previewImport(bytes: ByteArray): List<OwnWord>? {
+        if (bytes.isEmpty() || bytes.size > MAX_BACKUP_BYTES) return null
+        val source = bytes.toString(Charsets.UTF_8)
+        if (!source.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        return try {
+            val root = JSONObject(source)
+            if (root.length() != 2 ||
+                root.opt("format") != "tuddy-own-words-v1" ||
+                root.opt("entries") !is JSONArray) return null
+            val array = root.getJSONArray("entries")
+            if (array.length() !in 1..MAX_ENTRIES) return null
+            val seen = HashSet<String>()
+            val entries = ArrayList<OwnWord>(array.length())
+            for (i in 0 until array.length()) {
+                val row = array.getJSONObject(i)
+                if (row.length() != 3 || row.opt("language") !is String ||
+                    row.opt("word") !is String || row.opt("ownMeaning") !is String
+                ) return null
+                val item = OwnWord(
+                    row.getString("language"), row.getString("word"),
+                    row.getString("ownMeaning")
+                )
+                if (!valid(item) || !seen.add(key(item))) return null
+                entries.add(item)
+            }
+            entries
+        } catch (_: Exception) { null }
+    }
+
+    /** Merge only previously unseen keys: local edits always win. */
+    @Synchronized
+    fun mergeImported(imported: List<OwnWord>): Boolean {
+        if (imported.isEmpty() || imported.size > MAX_ENTRIES ||
+            imported.any { !valid(it) } ||
+            imported.map(::key).toSet().size != imported.size) return false
+        val current = read() ?: return false
+        val owned = current.map(::key).toSet()
+        val additions = imported.filterNot { key(it) in owned }
+        if (current.size + additions.size > MAX_ENTRIES) return false
+        return if (additions.isEmpty()) true else write(current + additions)
+    }
+
+    /** Overwrite only after a second, informed user confirmation in the UI. */
+    @Synchronized
+    fun replaceImported(imported: List<OwnWord>): Boolean =
+        if (imported.isEmpty()) false else write(imported)
 
     @Synchronized
     fun clear(): Boolean = try { prefs.edit().remove(KEY).commit() }

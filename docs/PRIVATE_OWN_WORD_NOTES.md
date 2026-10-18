@@ -49,3 +49,28 @@ niet-netwerk geregistreerde stemmen; geen cloudspraakfallback.
 Tuddy blijft **Incubate**: dit is geen claim voor vrije offline
 Kurmanji/Sorani/Pasjtoe-ASR/MT, fysieke telefoonacceptatie of een
 getekende Android-productierelease.
+
+## Zelf een back-up maken of herstellen
+
+Via **Mijn eigen woorden → Bewaar back-up…** kun je vrijwillig een
+begrensd JSON-bestand met alleen je eigen woord, taalcode en zelf
+ingevoerde betekenis op een door jou gekozen Android-opslaglocatie bewaren.
+Een provider zoals cloudopslag kan het bestand buiten Tuddy synchroniseren.
+Er worden geen live gespreksteksten, audiobestanden of spraakmodellen
+meegenomen. Als je woordnotities veranderen terwijl de opslagkiezer open
+is, annuleert Tuddy de verouderde export.
+
+Via **Herstel back-up…** kiest de gebruiker zelf een bestand. Tuddy
+weigert ongeldige UTF-8-gegevens, onbekende versie/schema, dubbele
+woordidentiteiten, niet-toegestane talen, ongeldige tekens en bestanden
+boven 50.000 bytes. Vervolgens verschijnt een aparte bevestiging met:
+
+- **Voeg alleen nieuwe woorden toe:** behoud huidige lokaal bewerkte
+  betekenissen bij dubbele woorden; schrijf alle toevoegingen atomair.
+- **Vervang volledige eigen lijst:** vervang bestaande eigen notities
+  uitsluitend na deze afzonderlijke, zichtbare bevestiging.
+
+Een mislukt bestand of een te grote samenvoeging verandert niets aan
+de huidige lijst. Na export blijft de externe kopie buiten Tuddy's
+verwijderfunctie vallen. Androids platformbackup voor de app blijft uit;
+dit is uitsluitend een handmatige, expliciete back-up.
