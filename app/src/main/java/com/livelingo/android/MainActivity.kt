@@ -58,6 +58,7 @@ import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.SessionMeaningIndexDialog
 import com.livelingo.android.ui.SessionMeaningRow
 import com.livelingo.android.ui.PrivateSubtitleFileDialog
+import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
@@ -351,6 +352,7 @@ private fun TuddyScreen(
     var pendingStudyErase by remember { mutableStateOf(false) }
     var studyEraseNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
+    var liveTableOpen by remember { mutableStateOf(false) }
     var sessionCaptionStudyOpen by remember { mutableStateOf(false) }
     var sessionCaptionStudyStartId by remember { mutableStateOf<Long?>(null) }
     var presentedCaptionId by remember { mutableStateOf<Long?>(null) }
@@ -1395,6 +1397,7 @@ private fun TuddyScreen(
                 flashcardsOpen = false
                 ownWordsOpen = false
                 focusMode = false
+                liveTableOpen = false
                 sessionCaptionStudyOpen = false
                 sessionCaptionStudyStartId = null
                 presentedCaptionId = null
@@ -1434,6 +1437,7 @@ private fun TuddyScreen(
             flashcardsOpen = false
             ownWordsOpen = false
             twoWayTypedOpen = false
+            liveTableOpen = false
             sharedTextToTwoWay = null
             presentedCaptionId = null
             sessionCaptionStudyOpen = false
@@ -1781,6 +1785,20 @@ private fun TuddyScreen(
             PrivateSubtitleFileDialog(
                 cues = opened,
                 onDismiss = { subtitleFileCues = null }
+            )
+        }
+        if (liveTableOpen) {
+            FaceToFaceConversationDialog(
+                lines = lines.takeLast(80).map { line ->
+                    TypedConversationLine(
+                        original = line.original,
+                        translated = line.translated,
+                        status = line.status,
+                        source = line.sourceCode,
+                        target = line.targetCode
+                    )
+                },
+                onBack = { liveTableOpen = false }
             )
         }
         if (focusMode) {
@@ -2946,6 +2964,18 @@ private fun TuddyScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(onClick = { focusMode = true }) { Text("⛶ Leesmodus") }
+                    OutlinedButton(
+                        enabled = lines.any {
+                            it.status == "Lokaal vertaald" &&
+                                it.original.isNotBlank() && it.translated.isNotBlank()
+                        },
+                        onClick = {
+                            stop() // table presentation never keeps the mic active
+                            captionSpeaker.stop()
+                            focusMode = false
+                            liveTableOpen = true
+                        }
+                    ) { Text("↕ Tafelmodus") }
                     OutlinedButton(
                         enabled = reverseDirection != null && !modelStorageBusy,
                         onClick = {
