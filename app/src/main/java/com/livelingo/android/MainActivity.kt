@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PersistableBundle
+import android.view.WindowManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -171,6 +172,10 @@ private fun TuddyScreen(
     val captionHaptics = remember(context) { CaptionHapticCues(context) }
     var hapticAlertsOn by remember(context) { mutableStateOf(captionHaptics.enabled()) }
     var hapticNotice by remember { mutableStateOf("") }
+    var keepScreenAwakeOn by remember(context) {
+        mutableStateOf(LiveCaptionScreenAwake.enabled(context))
+    }
+    var keepScreenAwakeNotice by remember { mutableStateOf("") }
     val savedVocabulary = remember(context) { PrivateVocabularyDeck(context) }
     var savedWordRevision by remember { mutableIntStateOf(0) }
     val savedWordCount = remember(savedWordRevision) { savedVocabulary.entries().size }
@@ -1236,6 +1241,19 @@ private fun TuddyScreen(
             pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
             captionSpeaker.close()
+        }
+    }
+
+    // Android window flag is present ONLY during a consented listening session.
+    // It never acquires a wake lock, starts the microphone or overrides Stop.
+    DisposableEffect(screenActivity, listening, keepScreenAwakeOn) {
+        val active = screenActivity != null && listening && keepScreenAwakeOn
+        if (active) {
+            screenActivity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            if (active) screenActivity?.window
+                ?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
@@ -2947,6 +2965,41 @@ private fun TuddyScreen(
                 if (!offlineAvailable) {
                     Text("Geen lokale spraakherkenning op dit apparaat. Geen cloudfallback.", color = MaterialTheme.colorScheme.error)
                 }
+                HorizontalDivider()
+                Text("Toegankelijkheid · scherm aan tijdens live meelezen",
+                    style = MaterialTheme.typography.titleSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        if (keepScreenAwakeOn) "Scherm wakker tijdens luisteren · aan"
+                        else "Scherm wakker tijdens luisteren · uit",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Switch(
+                        checked = keepScreenAwakeOn,
+                        enabled = screenActivity != null,
+                        onCheckedChange = { requested ->
+                            val saved = LiveCaptionScreenAwake.changeEnabled(context, requested)
+                            if (saved) keepScreenAwakeOn = requested
+                            keepScreenAwakeNotice = if (saved)
+                                if (requested) "Scherm blijft aan tijdens actief luisteren."
+                                else "Normale schermslaap hersteld."
+                            else "Voorkeur kon niet worden opgeslagen."
+                        }
+                    )
+                }
+                Text("Uitsluitend terwijl de microfoon actief is en deze keuze aanstaat. " +
+                    "Stop, tijdslimiet, achtergrond of sluiten herstellen het normale " +
+                    "schermgedrag. Dit gebruikt meer batterij en kan gevoelige " +
+                    "ondertitels langer zichtbaar laten. Standaard uit; geen extra " +
+                    "microfoonrechten of schermopslag.",
+                    style = MaterialTheme.typography.bodySmall)
+                if (keepScreenAwakeNotice.isNotBlank())
+                    Text(keepScreenAwakeNotice, style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 Text("Toegankelijkheid · melding bij nieuwe spraakzin",
                     style = MaterialTheme.typography.titleSmall)
