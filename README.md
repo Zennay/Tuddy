@@ -125,3 +125,25 @@ Gesprekken blijven standaard RAM-only; de bestaande expliciete export is een
 afzonderlijke gebruikersactie. Niet bekende woorden en Koerdische/Pasjtoe
 uitdrukkingen mogen geen verzonnen definities krijgen. Apparaatacceptatie en
 native-speaker review zijn nog niet bewezen.
+
+
+### Voorlezen van afgeronde vertalingen (op eigen verzoek)
+
+Bij een definitieve lokaal vertaalde regel kun je nu op
+**Spreek vertaling uit** tikken. Tuddy vraagt pas dan de standaard
+Android TextToSpeech-dienst om **reeds geïnstalleerde** stemmen te tonen.
+De app accepteert uitsluitend stemmen die die dienst zelf als
+`isNetworkConnectionRequired=false` en niet als 'not installed' markeert,
+voor de herkende doeltaal. Als geen passende stem beschikbaar is, wordt
+er niets afgespeeld; Tuddy start geen stemdownload, server-TTS of
+stilzwijgende online fallback. De microfoon moet uitstaan voor de knop
+werkt. **Stop stem**, Stop, achtergrond en app-afsluiting ruimen de
+spreekdienst op.
+
+Dit is een **Android-gerapporteerde offline-capaciteit**, geen
+onafhankelijk bewijs dat alle apparaat-/fabrikantspraakdiensten volledig
+zonder netwerk werken. Een fysiek toestel en vliegtuigmodus zijn nog
+niet gevalideerd. Niet alle 59 ML Kit-teksttalen hebben lokaal een
+geïnstalleerde Android-stem; Kurmanji/Sorani/Pasjtoe krijgen geen
+verzonnen tekst- of spraakondersteuning. TTS-uitspraak is ongeschikt als
+enige basis voor gevoelige medische, juridische of asielbesluiten.
