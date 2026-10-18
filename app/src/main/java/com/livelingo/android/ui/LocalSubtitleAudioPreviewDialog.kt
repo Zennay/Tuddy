@@ -329,12 +329,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     }
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = active != null &&
+                        enabled = loopCueIndex >= 0 || (active != null &&
                             active.endMillis - active.startMillis >= 750L &&
-                            active.endMillis <= durationMs,
+                            active.endMillis <= durationMs),
                         onClick = {
-                            loopCueIndex = if (loopCueIndex == activeIndex) -1
-                                else activeIndex
+                            loopCueIndex = if (loopCueIndex >= 0) -1 else activeIndex
                             lastLoopAtMs = 0L
                         }
                     ) {
