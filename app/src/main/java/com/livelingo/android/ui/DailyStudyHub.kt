@@ -46,6 +46,7 @@ internal fun DailyStudyHub(
     var ownWordReviewOpen by remember { mutableStateOf(false) }
     var dailyBookOpen by remember { mutableStateOf(false) }
     var mixedRoundOpen by remember { mutableStateOf(false) }
+    var calendarOpen by remember { mutableStateOf(false) }
     var viewRevision by remember { mutableIntStateOf(0) }
 
     if (wordReviewOpen) {
@@ -65,6 +66,15 @@ internal fun DailyStudyHub(
         return
     }
 
+    if (calendarOpen) {
+        OfflineStudyCalendarDialog(
+            words = words,
+            phrases = phrases,
+            ownWords = ownWords,
+            onDismiss = { calendarOpen = false }
+        )
+        return
+    }
     if (mixedRoundOpen) {
         MixedDailyReviewPanel(
             words = words,
@@ -131,6 +141,11 @@ internal fun DailyStudyHub(
                     "$totalDue kaarten voor vandaag",
                     style = MaterialTheme.typography.headlineSmall
                 )
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = wordPlanEnabled || phrasePlanEnabled || ownWordPlanEnabled,
+                    onClick = { calendarOpen = true }
+                ) { Text("▦ Bekijk mijn geplande herhalingen · 8 weken") }
                 if (totalDue > 0) {
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
