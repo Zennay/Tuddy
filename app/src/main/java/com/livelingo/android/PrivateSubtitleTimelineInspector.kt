@@ -27,7 +27,6 @@ internal object PrivateSubtitleTimelineInspector {
     private const val SHORT_GAP_MS = 150L
     private const val LONG_GAP_MS = 10_000L
     private const val BRIEF_CUE_MS = 500L
-    private const val MAX_VISIBLE = 160
 
     fun analyze(cues: List<PrivateSubtitleCue>): SubtitleTimelineOverview {
         val found = mutableListOf<SubtitleTimelineFinding>()
@@ -40,9 +39,7 @@ internal object PrivateSubtitleTimelineInspector {
         var brief = 0
         var identical = 0
         fun record(index: Int, type: SubtitleTimelineFindingKind, label: String) {
-            if (found.size < MAX_VISIBLE) {
-                found.add(SubtitleTimelineFinding(index, type, label, cues[index].startMillis))
-            }
+            found.add(SubtitleTimelineFinding(index, type, label, cues[index].startMillis))
         }
         cues.forEachIndexed { index, cue ->
             if (cue.endMillis - cue.startMillis in 1L until BRIEF_CUE_MS) {
