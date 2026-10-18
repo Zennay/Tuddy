@@ -16,6 +16,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -115,6 +117,10 @@ private fun TuddyScreen() {
     var previewMenuOpen by remember { mutableStateOf(false) }
     var previewInput by remember { mutableStateOf("") }
     var manualText by remember { mutableStateOf("") }
+    // The export snapshot exists only between an explicit Save tap and the
+    // Android document picker result; no automatic disk/history persistence.
+    var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
+    var exportStatus by remember { mutableStateOf("") }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
@@ -133,6 +139,7 @@ private fun TuddyScreen() {
             "Controleer afzonderlijk of Android het gekozen offline spraakpakket bezit."))
     }
     var follow by remember { mutableStateOf(true) }
+    var showSettings by remember { mutableStateOf(false) }
     var generation by remember { mutableIntStateOf(0) }
     val voiceSessions = remember { VoiceSessionGeneration() }
     var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
@@ -547,6 +554,27 @@ private fun TuddyScreen() {
         }
     }
 
+    val saveTranscript = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingTranscriptExport
+        pendingTranscriptExport = null
+        if (uri != null && pending != null && pending.first == generation) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(pending.second)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            if (saved) {
+                exportStatus = "Gesprek opgeslagen op de door jou gekozen locatie."
+            } else {
+                error = "Gesprek niet opgeslagen. Kies een andere locatie en probeer opnieuw."
+            }
+        }
+    }
+
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -584,6 +612,88 @@ private fun TuddyScreen() {
             ) {
                 Text("Tuddy", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text("Gesprekken begrijpen, ook zonder internet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Spreektaal: ${source.label}  ·  Vertaling: ${target.label}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val canStart = offlineAvailable && !listening
+                    Button(
+                        onClick = {
+                            if (listening) stop()
+                            else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                                == PackageManager.PERMISSION_GRANTED) start()
+                            else microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+                        },
+                        enabled = offlineAvailable,
+                    ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
+                    OutlinedButton(onClick = {
+                        generation++
+                        pendingTranscriptExport = null
+                        exportStatus = ""
+                        stop()
+                        offlineModelStatus = ""
+                        lines.clear()
+                        previewInput = ""
+                        manualText = ""
+                        previewResult = null
+                        error = ""
+                    }) { Text("Wis gesprek") }
+                    TextButton(onClick = { follow = !follow }) {
+                        Text(if (follow) "Live ✓" else "Volg live")
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        enabled = lines.isNotEmpty() && !listening,
+                        onClick = {
+                            exportStatus = ""
+                            val snapshot = PrivateTranscriptExport.snapshot(
+                                lines.map { line ->
+                                    TranscriptExportRow(
+                                        line.original, line.translated, line.status,
+                                        line.sourceCode, line.targetCode
+                                    )
+                                }
+                            )
+                            if (snapshot == null) {
+                                error = "Kan dit gesprek niet veilig exporteren. Wis ongeldige tekst en probeer opnieuw."
+                            } else {
+                                pendingTranscriptExport = generation to snapshot
+                                saveTranscript.launch("Tuddy-gesprek.txt")
+                            }
+                        }
+                    ) { Text("Bewaar gesprek…") }
+                    Text(
+                        "Alleen op verzoek. Externe opslag kan synchroniseren.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (exportStatus.isNotBlank()) Text(
+                    exportStatus,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedButton(
+                    onClick = { showSettings = !showSettings },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (showSettings) "Verberg taal- en modelinstellingen" else "Taal- en modelinstellingen")
+                }
+                // Settings used to occupy the full unscrollable outer Column on
+                // phones, starving the weighted transcript of its available height.
+                // Keep listening/clear/follow controls pinned above a separately
+                // scrollable, bounded setup area; default to the actual conversation.
+                if (showSettings) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                            .weight(0.48f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.weight(1f)) {
                         OutlinedButton(onClick = { sourceOpen = true }, modifier = Modifier.fillMaxWidth()) {
@@ -752,31 +862,6 @@ private fun TuddyScreen() {
                         "geen netwerk-spraakdienst of ondersteuning voor vrije Koerdische/Pasjtoe zinnen.",
                         style = MaterialTheme.typography.bodySmall)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val canStart = offlineAvailable && !listening
-                    Button(
-                        onClick = {
-                            if (listening) stop()
-                            else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
-                                == PackageManager.PERMISSION_GRANTED) start()
-                            else microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
-                        },
-                        enabled = offlineAvailable,
-                    ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
-                    OutlinedButton(onClick = {
-                        generation++
-                        stop()
-                        offlineModelStatus = ""
-                        lines.clear()
-                        previewInput = ""
-                        manualText = ""
-                        previewResult = null
-                        error = ""
-                    }) { Text("Wis gesprek") }
-                    TextButton(onClick = { follow = !follow }) {
-                        Text(if (follow) "Live ✓" else "Volg live")
-                    }
-                }
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("Offline tekstvertaling · ${source.label} → ${target.label}",
                         style = MaterialTheme.typography.titleSmall)
@@ -869,6 +954,8 @@ private fun TuddyScreen() {
                 if (!offlineAvailable) {
                     Text("Geen lokale spraakherkenning op dit apparaat. Geen cloudfallback.", color = MaterialTheme.colorScheme.error)
                 }
+                    }
+                }
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
                 HorizontalDivider()
                 LazyColumn(
@@ -876,6 +963,17 @@ private fun TuddyScreen() {
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    if (lines.isEmpty() && partial.isBlank()) {
+                        item(key = "empty-conversation") {
+                            Text(
+                                "Nog geen ondertitels. Tik op Luister voor offline spraak " +
+                                    "of open Taal- en modelinstellingen om een zin te typen. " +
+                                    "Je gesprek blijft op dit apparaat in tijdelijk geheugen.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     items(lines, key = { it.id }) { line ->
                         Card(
                             shape = RoundedCornerShape(14.dp),
@@ -918,7 +1016,7 @@ private fun TuddyScreen() {
                     }
                 }
                 Text(
-                    "Privacy: alleen lokaal spraakherkennen en vertalen. Taalmodellen eerst via wifi downloaden. Gesprek staat alleen in tijdelijk geheugen en wordt niet opgeslagen.",
+                    "Privacy: lokale spraak en vertaling; modellen via wifi voorbereiden. Gesprekken blijven in tijdelijk geheugen, tenzij je zelf Bewaar gesprek kiest. De gekozen opslaglocatie kan synchroniseren.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
