@@ -222,6 +222,17 @@ rolt of bij app-afsluiting. Er is geen automatische opslag of netwerk,
 en lopende vertalingen zijn nooit als afgerond gelabeld.
 [Lees de privacy- en gebruiksinstructies](docs/SESSION_CAPTION_BOOKMARKS.md).
 
+### Zelfgekozen leesbaar woordenblad
+
+Via **Mijn woorden → Bewaar leesbaar woordenblad…** kun je na een
+expliciete Android-bestandskeuze een TXT maken met uitsluitend
+zelf opgeslagen, door het ingebouwde NL/EN/DE/FR/ES-miniwoordenboek
+herkende woorden en hun reeds aanwezige betekenissen. Dit is een
+**lees- en printbestand**, geen vervanging van de JSON-herstelback-up.
+Het bevat geen gesprek, audio, zelfgeschreven oefenzinnen of
+leerresultaten. Een gekozen externe bestandsprovider kan synchroniseren.
+[Uitleg en privacy](docs/PRIVATE_VOCABULARY_STUDY_SHEET.md).
+
 ### Nieuwe offline woordoefening
 
 Via **Mijn woorden → Oefen opgeslagen woorden** kun je nu echt oefenen

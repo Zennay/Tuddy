@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateVocabularyDeck
+import com.livelingo.android.PrivateVocabularyStudySheet
 import java.io.ByteArrayOutputStream
 
 /**
@@ -50,6 +51,7 @@ internal fun SavedWordsPanel(
     var confirmDelete by remember { mutableStateOf(false) }
     var practiceOpen by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingStudySheet by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var pendingImport by remember { mutableStateOf<List<String>?>(null) }
     var transferStatus by remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -68,6 +70,26 @@ internal fun SavedWordsPanel(
             }.getOrDefault(false)
             transferStatus = if (saved) "Woordenback-up opgeslagen op jouw gekozen locatie."
                 else "Opslaan mislukt; alle lokaal bewaarde woorden blijven behouden."
+        }
+    }
+    val saveStudySheet = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingStudySheet
+        pendingStudySheet = null
+        if (uri != null && pending != null && pending.first == revision) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(pending.second)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            transferStatus = if (saved)
+                "Eigen woordenblad opgeslagen op jouw gekozen locatie."
+            else "Woordenblad opslaan is mislukt. Je oorspronkelijke woorden blijven behouden."
+        } else if (uri != null) {
+            transferStatus = "De woordselectie is gewijzigd; kies opnieuw Bewaar woordenblad."
         }
     }
     val openBackup = rememberLauncherForActivityResult(
@@ -145,8 +167,28 @@ internal fun SavedWordsPanel(
                     }) { Text("Herstel back-up…") }
                 }
                 Text(
-                    "Alleen gecontroleerde woorden én taalcodes, nooit gesprekstekst of definities. " +
-                        "Een gekozen cloudbestandsprovider kan de back-up extern synchroniseren.",
+                    "JSON-back-up: alleen gecontroleerde woordidentiteiten, nooit gesprekken. " +
+                        "Een gekozen cloudbestandsprovider kan bestanden extern synchroniseren.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedButton(
+                    enabled = allWords.isNotEmpty(),
+                    onClick = {
+                        val sheet = PrivateVocabularyStudySheet.snapshot(allWords)
+                        if (sheet == null) {
+                            transferStatus = "Geen veilig woordenblad beschikbaar voor deze selectie."
+                        } else {
+                            pendingStudySheet = revision to sheet
+                            transferStatus = ""
+                            saveStudySheet.launch("Tuddy-mijn-woordenblad.txt")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Bewaar leesbaar woordenblad…") }
+                Text(
+                    "Afzonderlijk leesbaar TXT met je zelf bewaarde woorden én " +
+                        "de kleine, ingebouwde woordenboekbetekenissen. Alleen na jouw " +
+                        "bestandskeuze; nooit automatische export van gesprek of oefenscores.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (transferStatus.isNotBlank()) Text(
