@@ -11,6 +11,20 @@ internal object PrivateStudyCalendar {
     private val dateFormat = DateTimeFormatter.BASIC_ISO_DATE
     private const val MAX_BYTES = 16_384
 
+    // RFC 5545 lines are at most 75 octets; these fields are ASCII-only.
+    private fun fold(line: String): List<String> {
+        val rows = mutableListOf<String>()
+        var index = 0
+        var width = 75
+        while (index < line.length) {
+            val until = (index + width).coerceAtMost(line.length)
+            rows.add((if (index == 0) "" else " ") + line.substring(index, until))
+            index = until
+            width = 74 // Continuation starts with one space.
+        }
+        return rows
+    }
+
     fun snapshot(
         words: PrivateVocabularyDeck,
         ownWords: PrivateOwnWordDeck,
@@ -66,7 +80,9 @@ internal object PrivateStudyCalendar {
         if (events == 0) return null
         lines += "END:VCALENDAR"
         // ASCII-only fields keep RFC 5545 line folding trivial and avoid leaking study text.
-        val bytes = (lines.joinToString("\r\n") + "\r\n").toByteArray(Charsets.UTF_8)
+        if (lines.any { line -> line.any { it.code < 32 || it.code > 126 } }) return null
+        val bytes = (lines.flatMap(::fold).joinToString("\r\n") + "\r\n")
+            .toByteArray(Charsets.UTF_8)
         return bytes.takeIf { it.size <= MAX_BYTES }
     }
 }
