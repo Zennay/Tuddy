@@ -18,11 +18,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.livelingo.android.LocalCaptionSpeaker
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -32,7 +35,8 @@ import androidx.compose.ui.window.DialogProperties
 
 /**
  * Temporary large-screen presentation of user-selected transcript lines.
- * No file, clipboard, external share, audio or hidden persistence operations.
+ * No file, clipboard, external share or hidden persistence operations.
+ * Any speech is explicitly triggered via already installed non-network voices.
  * Translations are shown ONLY for completed on-device captions.
  */
 @Composable
@@ -47,6 +51,12 @@ internal fun TwoWayConversationReadingBoard(
     var finishedOnly by remember { mutableStateOf(false) }
     var large by remember { mutableStateOf(true) }
     var followNewest by remember { mutableStateOf(true) }
+    var audioNotice by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    DisposableEffect(speaker) {
+        onDispose { speaker.close() }
+    }
     val scroll = rememberLazyListState()
     val admitted = lines.takeLast(80)
     fun completed(row: TypedConversationLine): Boolean =
@@ -170,10 +180,29 @@ internal fun TwoWayConversationReadingBoard(
                                     "Er wordt geen resultaat verzonnen.",
                                     style = MaterialTheme.typography.bodySmall)
                             }
+                            OfflineReadingTurnAudioActions(
+                                turn = row,
+                                speaker = speaker,
+                                onNotice = { audioNotice = it }
+                            )
                             HorizontalDivider()
                         }
                     }
                 }
+                TextButton(
+                    onClick = {
+                        speaker.stop()
+                        audioNotice = "Lokale stem gestopt."
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("■ Stop alle lokale voorlezing") }
+                if (audioNotice.isNotBlank()) {
+                    Text(audioNotice, style = MaterialTheme.typography.bodySmall)
+                }
+                Text("Alleen met een door Android als lokaal geïnstalleerd gemelde " +
+                    "stem na jouw tik. Ontbreekt de stem, dan wordt niets " +
+                    "naar een netwerkspraakdienst gestuurd.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("De meest recente maximaal 80 regels worden alleen in " +
                     "appgeheugen getoond. Wis gesprek verwijdert ze ook hier.",
                     style = MaterialTheme.typography.bodySmall)
