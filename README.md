@@ -1,5 +1,15 @@
 # Tuddy 🎙️
 
+## Nieuw: mijn komende veertien studiedagen overzien
+
+Open bij **Vandaag offline oefenen** de lokale 14-daagse vooruitblik.
+Je ziet per dag wat er aan de beurt komt uit de drie al ingeschakelde
+herhaalplannen, inclusief achterstand en kaarten buiten de periode.
+Beoordelingen kunnen deze voorlopige planning veranderen; er worden
+geen herinneringen of nieuwe gegevens opgeslagen.
+[Meer informatie](docs/OFFLINE_STUDY_FORECAST.md).
+
+
 ## Nieuw: een eigen voorbereide zin gebruiken in een tekstgesprek
 
 In het offline **tweeweg-tekstgesprek** kun je nu bewust een
