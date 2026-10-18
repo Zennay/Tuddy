@@ -16,6 +16,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -25,6 +26,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.SavedWord
 import java.text.Normalizer
@@ -40,7 +43,9 @@ private data class PracticeCard(
     val answer: String,
     val language: String,
     val note: String,
-    val rtlAnswer: Boolean
+    val rtlAnswer: Boolean,
+    val spokenText: String,
+    val spokenLanguage: String
 )
 
 private enum class PracticeFilter { ALL, WORDS, OWN_PHRASES }
@@ -57,12 +62,15 @@ private fun literalAnswerMatches(typed: String, expected: String): Boolean {
 internal fun OfflineStudyFlashcards(
     savedWords: List<SavedWord>,
     personalPhrases: List<PersonalPhrase>?,
+    speaker: LocalCaptionSpeaker,
     onManageWords: () -> Unit,
     onManagePhrases: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var filter by remember { mutableStateOf(PracticeFilter.ALL) }
     var mode by remember { mutableStateOf(PracticeMode.REVEAL) }
+    var voiceNotice by remember { mutableStateOf("") }
+    DisposableEffect(speaker) { onDispose { speaker.stop() } }
     val cards = remember(savedWords, personalPhrases, filter, mode) {
         val wordCards = if (filter != PracticeFilter.OWN_PHRASES) savedWords.mapNotNull { saved ->
             val definition = saved.entry.definition.trim()
@@ -72,7 +80,9 @@ internal fun OfflineStudyFlashcards(
                 answer = if (mode == PracticeMode.TYPE) saved.word else definition,
                 language = saved.language.uppercase(),
                 note = "Betekenis uit kleine ingebouwde woordenlijst · niet uit gesprek",
-                rtlAnswer = false
+                rtlAnswer = false,
+                spokenText = saved.word,
+                spokenLanguage = saved.language
             )
         } else emptyList()
         val phraseCards = if (filter != PracticeFilter.WORDS) personalPhrases.orEmpty().map { phrase ->
@@ -81,7 +91,9 @@ internal fun OfflineStudyFlashcards(
                 answer = phrase.phrase,
                 language = phrase.language.uppercase(),
                 note = "Jouw eigen betekenis in ${phrase.meaningLanguage.uppercase()} · niet geverifieerd",
-                rtlAnswer = phrase.language == "ckb" || phrase.language == "ps"
+                rtlAnswer = phrase.language == "ckb" || phrase.language == "ps",
+                spokenText = phrase.phrase,
+                spokenLanguage = phrase.language
             )
         } else emptyList()
         (wordCards + phraseCards).take(200)
@@ -134,7 +146,12 @@ internal fun OfflineStudyFlashcards(
                     Text("Nog geen kaarten in deze selectie. Bewaar eerst privéwoorden " +
                         "of eigen oefenzinnen.", style = MaterialTheme.typography.bodyMedium)
                 } else {
-                    PracticeCardsSession(cards, mode == PracticeMode.TYPE)
+                    PracticeCardsSession(cards, mode == PracticeMode.TYPE, speaker) {
+                        voiceNotice = it
+                    }
+                    if (voiceNotice.isNotBlank()) {
+                        Text(voiceNotice, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
                 HorizontalDivider()
                 TextButton(onClick = onManageWords, modifier = Modifier.fillMaxWidth()) {
@@ -150,7 +167,12 @@ internal fun OfflineStudyFlashcards(
 }
 
 @Composable
-private fun PracticeCardsSession(cards: List<PracticeCard>, typedMode: Boolean) {
+private fun PracticeCardsSession(
+    cards: List<PracticeCard>,
+    typedMode: Boolean,
+    speaker: LocalCaptionSpeaker,
+    onVoiceNotice: (String) -> Unit
+) {
     val pending = remember(cards, typedMode) {
         mutableStateListOf<PracticeCard>().apply { addAll(cards) }
     }
@@ -162,6 +184,8 @@ private fun PracticeCardsSession(cards: List<PracticeCard>, typedMode: Boolean) 
 
     fun nextCard(remembered: Boolean, repeat: Boolean = false) {
         if (pending.isEmpty()) return
+        speaker.stop()
+        onVoiceNotice("")
         val first = pending.removeAt(0)
         if (repeat) {
             pending.add(first)
@@ -188,6 +212,10 @@ private fun PracticeCardsSession(cards: List<PracticeCard>, typedMode: Boolean) 
         return
     }
     val card = pending.first()
+    // Never continue pronouncing an earlier answer when the learning mode changes.
+    DisposableEffect(cards, typedMode) {
+        onDispose { speaker.stop() }
+    }
     Text(card.language + " · " + card.note,
         style = MaterialTheme.typography.labelSmall)
     Text(card.prompt, style = MaterialTheme.typography.titleLarge)
@@ -217,6 +245,27 @@ private fun PracticeCardsSession(cards: List<PracticeCard>, typedMode: Boolean) 
                 textDirection = if (card.rtlAnswer) TextDirection.Rtl else TextDirection.Ltr
             ),
             color = MaterialTheme.colorScheme.primary)
+        // The same strictly installed, non-network Android TTS voice gate as
+        // for a live caption. Never reveal the answer with audio before the
+        // learner explicitly opens the answer.
+        if (card.spokenText.isNotBlank() && card.spokenText.length <= 400) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(onClick = {
+                    speaker.speak(card.spokenText, card.spokenLanguage, LocalSpeechPace.NORMAL) {
+                        onVoiceNotice(it)
+                    }
+                }) { Text("🔊 Normaal") }
+                TextButton(onClick = {
+                    speaker.speak(card.spokenText, card.spokenLanguage, LocalSpeechPace.SLOW) {
+                        onVoiceNotice(it)
+                    }
+                }) { Text("🔊 Rustig") }
+                TextButton(onClick = {
+                    speaker.stop()
+                    onVoiceNotice("Voorlezen gestopt.")
+                }) { Text("Stop stem") }
+            }
+        }
         if (typedMode) {
             val matches = literalAnswerMatches(typedAnswer, card.answer)
             Text(
