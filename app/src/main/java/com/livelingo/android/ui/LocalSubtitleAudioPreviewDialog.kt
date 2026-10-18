@@ -455,8 +455,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 ) {
                     Text(
                         "Zoek alleen in het zelf geopende SRT/VTT-bestand. " +
-                            "Tik een regel om de audio op zijn eigen begintijd te zetten. " +
-                            "Geen automatische spraak-/woorduitlijning.",
+                            "Spring naar een regel óf kies één regel als tijdanker: " +
+                            "de geselecteerde cue begint dan op je huidige audiopositie " +
+                            "(maximaal ±30 seconden verschil). Dit is handmatige correctie.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedTextField(
@@ -499,6 +500,26 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                                 textDirection = TextDirection.ContentOrRtl
                                             ))
                                     }
+                                }
+
+                                val anchorOffset = positionMs - cue.startMillis
+                                val canAnchor = anchorOffset in -30_000L..30_000L
+                                OutlinedButton(
+                                    enabled = canAnchor,
+                                    onClick = {
+                                        pauseAudio()
+                                        // Neither seek the player nor mutate the original subtitle cues.
+                                        shiftSubtitles(anchorOffset - subtitleOffsetMs)
+                                        loopCueIndex = -1
+                                        cuePickerOpen = false
+                                        notice = "Ondertitelregel " + (index + 1) +
+                                            " gekoppeld aan de huidige audiopositie (" +
+                                            clock(positionMs) + "); alleen tijdelijke preview."
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (canAnchor) "Gebruik als tijdanker op huidige audiopositie"
+                                        else "Buiten bereik van ±30 s: geen tijdanker mogelijk")
                                 }
                                 HorizontalDivider()
                             }
