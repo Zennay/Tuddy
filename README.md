@@ -1,5 +1,14 @@
 # Tuddy 🎙️
 
+## Nieuw: bestaande SRT/VTT-tijdcodes offline corrigeren
+
+In de ondertiteleditor kun je nu **alle tijdcodes samen schalen en verschuiven**
+met een direct voorbeeld van eerste/laatste tijdcode en eventuele overlap.
+Kies het anker, pas de verandering alleen op je tijdelijke concept toe,
+gebruik Terug/Opnieuw en bewaar desgewenst afzonderlijk een nieuwe kopie.
+De tekst verandert niet en Tuddy meet geen audio/video-synchronisatie.
+[Bediening en privacy](docs/OFFLINE_SUBTITLE_RETIMING.md).
+
 ## Nieuw: standaard WebVTT-bestanden met taalheader openen
 
 Tuddy opent nu ook gangbare WebVTT-bestanden met `Kind:`- en
