@@ -2,6 +2,8 @@ package com.livelingo.android
 
 import android.content.Context
 import java.util.Locale
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Explicit, user-defined local themes for personally authored phrase notes.
@@ -10,6 +12,12 @@ import java.util.Locale
  * SHA-256 phrase identities with one bounded theme label; never a transcript,
  * machine translation, model output, account identifier or audio.
  */
+/** Preview exists only in RAM until the user expressly confirms replacement. */
+internal data class PrivatePhraseTopicBackup(
+    val names: List<String>,
+    val assignments: Map<String, String>
+)
+
 internal class PrivatePhraseTopics(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(
         "tuddy_private_phrases_v1", Context.MODE_PRIVATE
@@ -21,6 +29,8 @@ internal class PrivatePhraseTopics(context: Context) {
         const val ASSIGNMENTS_KEY = "user_phrase_topic_assignments_v1"
         const val MAX_TOPICS = 12
         const val MAX_PHRASES = 80
+        const val MAX_BACKUP_BYTES = 16_384
+        private const val BACKUP_FORMAT = "tuddy-private-phrase-topics-v1"
         private const val MAX_NAME_LENGTH = 30
     }
 
@@ -85,6 +95,93 @@ internal class PrivatePhraseTopics(context: Context) {
         return notes.mapNotNull { phrase ->
             assignments[PrivatePhraseShortcuts.fingerprint(phrase)]?.takeIf { it in topics }
         }.groupingBy { it }.eachCount()
+    }
+
+
+    /** The caller chooses an external Android document. Do not include phrases. */
+    @Synchronized
+    fun exportSnapshot(): ByteArray? {
+        val names = readTopics() ?: return null
+        val assignments = readAssignments() ?: return null
+        val stored = deck.entries() ?: return null
+        if (names.isEmpty()) return null
+        val live = stored.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
+        val root = JSONObject().put("format", BACKUP_FORMAT)
+        val namesArray = JSONArray()
+        names.sortedWith(String.CASE_INSENSITIVE_ORDER).forEach { namesArray.put(it) }
+        root.put("topics", namesArray)
+        val pairs = JSONArray()
+        assignments.toSortedMap().forEach { (id, name) ->
+            if (id in live && name in names) pairs.put(
+                JSONObject().put("identity", id).put("topic", name)
+            )
+        }
+        root.put("assignments", pairs)
+        val bytes = (root.toString() + "\n").toByteArray(Charsets.UTF_8)
+        return bytes.takeIf { it.size <= MAX_BACKUP_BYTES }
+    }
+
+    /**
+     * Parse a chosen backup without changing local notes. A matching phrase
+     * must already be restored before its topic assignment is eligible.
+     */
+    @Synchronized
+    fun previewImport(bytes: ByteArray): PrivatePhraseTopicBackup? {
+        if (bytes.isEmpty() || bytes.size > MAX_BACKUP_BYTES) return null
+        val source = bytes.toString(Charsets.UTF_8)
+        if (!source.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        val notes = deck.entries() ?: return null
+        val live = notes.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
+        return try {
+            val root = JSONObject(source)
+            if (root.length() != 3 || root.opt("format") != BACKUP_FORMAT ||
+                root.opt("topics") !is JSONArray ||
+                root.opt("assignments") !is JSONArray) return null
+            val topicsArray = root.getJSONArray("topics")
+            val assignedArray = root.getJSONArray("assignments")
+            if (topicsArray.length() !in 1..MAX_TOPICS ||
+                assignedArray.length() > MAX_PHRASES) return null
+            val names = mutableListOf<String>()
+            for (i in 0 until topicsArray.length()) {
+                val name = topicsArray.opt(i) as? String ?: return null
+                if (!validName(name) ||
+                    names.any { it.equals(name, ignoreCase = true) }) return null
+                names.add(name)
+            }
+            val pairs = mutableMapOf<String, String>()
+            for (i in 0 until assignedArray.length()) {
+                val objectValue = assignedArray.opt(i) as? JSONObject ?: return null
+                if (objectValue.length() != 2 ||
+                    objectValue.opt("identity") !is String ||
+                    objectValue.opt("topic") !is String) return null
+                val id = objectValue.getString("identity")
+                val name = objectValue.getString("topic")
+                if (id.length != 64 || id.any { it !in "0123456789abcdef" } ||
+                    id !in live || name !in names || id in pairs) return null
+                pairs[id] = name
+            }
+            PrivatePhraseTopicBackup(names, pairs)
+        } catch (_: Exception) { null }
+    }
+
+    /** Replace only after the UI shows counts and a separate confirmation. */
+    @Synchronized
+    fun replaceImported(candidate: PrivatePhraseTopicBackup): Boolean {
+        if (candidate.names.size !in 1..MAX_TOPICS ||
+            candidate.names.any { !validName(it) } ||
+            candidate.names.map { it.lowercase(Locale.ROOT) }.toSet().size !=
+                candidate.names.size ||
+            candidate.assignments.size > MAX_PHRASES) return false
+        val stored = deck.entries() ?: return false
+        val live = stored.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
+        if (candidate.assignments.any { (id, topic) ->
+                id.length != 64 || id.any { it !in "0123456789abcdef" } ||
+                    id !in live || topic !in candidate.names
+            }) return false
+        return prefs.edit()
+            .putStringSet(TOPICS_KEY, candidate.names.toSet())
+            .putStringSet(ASSIGNMENTS_KEY, rows(candidate.assignments))
+            .commit()
     }
 
     @Synchronized
