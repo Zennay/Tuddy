@@ -185,6 +185,37 @@ internal class PrivatePhraseDeck(context: Context) {
     }
 
     /**
+     * Mandatory header, user-written text only, no language inference.
+     * UTF-8 TSV rows: language, phrase, meaningLanguage, ownMeaning.
+     * Parsing only; UI controls the separate merge/replace confirmation.
+     */
+    fun previewTsvImport(bytes: ByteArray): List<PersonalPhrase>? {
+        if (bytes.isEmpty() || bytes.size > MAX_JSON) return null
+        val decoded = bytes.toString(Charsets.UTF_8)
+        if (!decoded.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        val lines = decoded.removePrefix("\uFEFF").split('\n')
+            .dropLastWhile { it.isEmpty() }
+        if (lines.size !in 2..(MAX_ROWS + 1) ||
+            lines.first().removeSuffix("\r") !=
+                "language\tphrase\tmeaningLanguage\townMeaning"
+        ) return null
+
+        val seen = HashSet<String>()
+        val result = ArrayList<PersonalPhrase>()
+        for (line in lines.drop(1)) {
+            val fields = line.removeSuffix("\r").split('\t')
+            if (fields.size != 4) return null
+            val row = PersonalPhrase(
+                fields[0], fields[1], fields[2], fields[3]
+            )
+            val id = row.language + "|" + row.phrase.lowercase(Locale.ROOT)
+            if (!valid(row) || !seen.add(id)) return null
+            result.add(row)
+        }
+        return result.takeIf { it.isNotEmpty() }
+    }
+
+    /**
      * Explicit, non-destructive merge of a user-selected note backup.
      * A local entry always wins on duplicate language+phrase identity; imported
      * meanings cannot silently overwrite personal edits. Either the whole
