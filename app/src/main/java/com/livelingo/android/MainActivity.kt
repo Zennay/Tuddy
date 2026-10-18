@@ -105,6 +105,9 @@ private fun TuddyScreen() {
     var captionSizeMessage by remember { mutableStateOf("") }
     // Local-only bookmarks: never persisted or associated with external identity.
     var captionPins by remember { mutableStateOf(emptySet<Long>()) }
+    // Human-assigned conversation turns: labels stay in RAM only.
+    // No automatic identity inference, audio fingerprint, server or export.
+    val manuallyAssignedSpeakers = remember { mutableStateMapOf<Long, String>() }
     var pinsOpen by remember { mutableStateOf(false) }
     var pinsNotice by remember { mutableStateOf("") }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
@@ -212,6 +215,15 @@ private fun TuddyScreen() {
             lines[index].original.contains(normalizedHistoryQuery, ignoreCase = true) ||
                 lines[index].translated.contains(normalizedHistoryQuery, ignoreCase = true)
         }
+
+    fun jumpToSpeaker(label: String) {
+        val matches = lines.indices.filter { manuallyAssignedSpeakers[lines[it].id] == label }
+        if (matches.isEmpty()) return
+        val destination = matches.firstOrNull { it > listState.firstVisibleItemIndex }
+            ?: matches.first()
+        follow = false
+        coroutineScope.launch { listState.animateScrollToItem(destination) }
+    }
 
     fun jumpToHistoryMatch(forward: Boolean) {
         if (historyMatches.isEmpty()) return
@@ -581,6 +593,7 @@ private fun TuddyScreen() {
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             val removed = lines.removeAt(0)
                             captionPins = captionPins - removed.id
+                            manuallyAssignedSpeakers.remove(removed.id)
                         }
                         translate(sentence, id, selectedTarget, observedSource, token)
                     }
@@ -742,6 +755,7 @@ private fun TuddyScreen() {
             previewArchiveRows = null
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
+            manuallyAssignedSpeakers.clear()
             captionSpeaker.close()
         }
     }
@@ -1037,6 +1051,7 @@ private fun TuddyScreen() {
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
+                        manuallyAssignedSpeakers.clear()
                         captionPins = emptySet()
                         pinsOpen = false
                         pinsNotice = ""
@@ -1049,6 +1064,24 @@ private fun TuddyScreen() {
                     }) { Text("Wis gesprek") }
                     TextButton(onClick = { follow = !follow }) {
                         Text(if (follow) "Live ✓" else "Volg live")
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
+                            "De labels zijn geen stemherkenning, worden niet geëxporteerd en " +
+                            "verdwijnen wanneer deze gesprekssessie wordt gewist.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val countA = lines.count { manuallyAssignedSpeakers[it.id] == "A" }
+                        val countB = lines.count { manuallyAssignedSpeakers[it.id] == "B" }
+                        TextButton(enabled = countA > 0, onClick = { jumpToSpeaker("A") }) {
+                            Text("Volgende A ($countA)")
+                        }
+                        TextButton(enabled = countB > 0, onClick = { jumpToSpeaker("B") }) {
+                            Text("Volgende B ($countB)")
+                        }
                     }
                 }
                 Row(
@@ -1367,7 +1400,8 @@ private fun TuddyScreen() {
                             lines.add(Line(id, sentence, "Vertalen…", "Bezig",
                                 selectedSource, selectedTarget))
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
-                                lines.removeAt(0)
+                                val removed = lines.removeAt(0)
+                                manuallyAssignedSpeakers.remove(removed.id)
                             }
                             manualText = ""
                             translate(sentence, id, selectedTarget, selectedSource, token)
@@ -1558,6 +1592,24 @@ private fun TuddyScreen() {
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    val speaker = manuallyAssignedSpeakers[line.id]
+                                    Text(
+                                        if (speaker == null) "Spreker: onbekend (handmatig)"
+                                        else "Spreker $speaker (handmatig)",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                    TextButton(onClick = {
+                                        when (speaker) {
+                                            null -> manuallyAssignedSpeakers[line.id] = "A"
+                                            "A" -> manuallyAssignedSpeakers[line.id] = "B"
+                                            else -> manuallyAssignedSpeakers.remove(line.id)
+                                        }
+                                    }) { Text("Wijzig spreker") }
+                                }
                                 OfflineWordText(
                                     line.original, line.sourceCode,
                                     MaterialTheme.typography.bodyLarge.copy(
