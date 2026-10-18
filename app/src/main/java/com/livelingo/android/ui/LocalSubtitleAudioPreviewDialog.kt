@@ -4,6 +4,7 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.net.Uri
+import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,6 +61,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var dragPositionMs by remember { mutableLongStateOf(-1L) }
     var durationMs by remember { mutableLongStateOf(0L) }
     var playbackSpeed by remember { mutableStateOf(1f) }
+    var loopCueIndex by remember { mutableIntStateOf(-1) }
+    var lastLoopAtMs by remember { mutableLongStateOf(0L) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
 
     fun closeAudio() {
@@ -70,6 +74,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         dragPositionMs = -1L
         durationMs = 0L
         playbackSpeed = 1f
+        loopCueIndex = -1
+        lastLoopAtMs = 0L
         if (old != null) runCatching {
             old.setOnPreparedListener(null)
             old.setOnErrorListener(null)
@@ -92,6 +98,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val current = player ?: return
         if (!prepared || durationMs <= 0L) return
         val target = position.coerceIn(0L, durationMs)
+        val loop = cues.getOrNull(loopCueIndex)
+        if (loop != null && target !in loop.startMillis until loop.endMillis)
+            loopCueIndex = -1
         runCatching { current.seekTo(target.toInt()) }
             .onSuccess { positionMs = target }
             .onFailure { notice = "Naar deze tijd springen is niet gelukt." }
@@ -145,8 +154,21 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     }
                     next.setOnCompletionListener { finished ->
                         if (player === finished) {
-                            playing = false
-                            positionMs = durationMs
+                            val cue = cues.getOrNull(loopCueIndex)
+                            val loopAllowed = cue != null &&
+                                cue.endMillis - cue.startMillis >= 750L &&
+                                cue.startMillis < durationMs &&
+                                cue.endMillis <= durationMs
+                            val replayed = if (loopAllowed && cue != null) runCatching {
+                                finished.seekTo(cue.startMillis.toInt())
+                                finished.start()
+                                positionMs = cue.startMillis
+                                true
+                            }.getOrDefault(false) else false
+                            if (!replayed) {
+                                playing = false
+                                positionMs = durationMs
+                            }
                         }
                     }
                     next.setOnErrorListener { failed, _, _ ->
@@ -180,11 +202,27 @@ internal fun LocalSubtitleAudioPreviewDialog(
         }
     }
 
-    LaunchedEffect(player, playing) {
+    LaunchedEffect(player, playing, loopCueIndex) {
         val current = player
         while (playing && current != null && player === current) {
             val now = runCatching { current.currentPosition.toLong() }.getOrNull()
-            if (now != null) positionMs = now.coerceIn(0L, durationMs)
+            if (now != null) {
+                positionMs = now.coerceIn(0L, durationMs)
+                val loop = cues.getOrNull(loopCueIndex)
+                val elapsed = SystemClock.elapsedRealtime()
+                if (loop != null && loop.endMillis - loop.startMillis >= 750L &&
+                    loop.endMillis <= durationMs && now >= loop.endMillis &&
+                    elapsed - lastLoopAtMs >= 450L) {
+                    val rewound = runCatching {
+                        current.seekTo(loop.startMillis.toInt())
+                        true
+                    }.getOrDefault(false)
+                    if (rewound) {
+                        lastLoopAtMs = elapsed
+                        positionMs = loop.startMillis
+                    }
+                }
+            }
             delay(160L)
         }
     }
@@ -289,6 +327,24 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             }
                         }
                     }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = active != null &&
+                            active.endMillis - active.startMillis >= 750L &&
+                            active.endMillis <= durationMs,
+                        onClick = {
+                            loopCueIndex = if (loopCueIndex == activeIndex) -1
+                                else activeIndex
+                            lastLoopAtMs = 0L
+                        }
+                    ) {
+                        Text(if (loopCueIndex >= 0)
+                            "↻ Herhaal regel ${loopCueIndex + 1} ✓ · tik om te stoppen"
+                        else "↻ Herhaal deze ondertitelregel")
+                    }
+                    Text("Herhalen gebruikt alleen de door jou ingevoerde tijdcodes " +
+                        "(minimaal 0,75 s). Geen automatische woord- of audiouitlijning.",
+                        style = MaterialTheme.typography.labelSmall)
                     Text("Verschuiving? Pas de tijdcodes in de editor aan; " +
                         "de originele SRT/VTT wordt niet overschreven.",
                         style = MaterialTheme.typography.labelSmall)
