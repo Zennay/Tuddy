@@ -80,7 +80,8 @@ private fun CaptionSide(text: String, code: String, large: Boolean,
 internal fun FullscreenCaptionCard(
     captions: List<FocusCaptionLine>,
     initialId: Long,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onStudyCaption: ((Long) -> Unit)? = null
 ) {
     val finished = captions.filter {
         (it.status == "Lokaal" || it.status == "Lokaal vertaald") &&
@@ -182,6 +183,17 @@ internal fun FullscreenCaptionCard(
                     }
                     TextButton(onClick = { large = !large }) {
                         Text(if (large) "Kleinere letters" else "Grotere letters")
+                    }
+                    if (onStudyCaption != null && card.status == "Lokaal vertaald" &&
+                        translation != null && card.original != translation &&
+                        card.original.length <= 400 && translation.length <= 400) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                speaker.stop()
+                                onStudyCaption(card.id)
+                            }
+                        ) { Text("🧠 Oefen vanaf deze zin · alleen tijdelijk") }
                     }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)) {

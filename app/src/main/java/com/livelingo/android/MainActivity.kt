@@ -61,6 +61,7 @@ import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
 import com.livelingo.android.ui.FocusCaptionLine
+import com.livelingo.android.ui.SessionCaptionStudyDialog
 import com.livelingo.android.ui.LiveInterimWordFocus
 import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.OfflineStudyFlashcards
@@ -280,6 +281,7 @@ private fun TuddyScreen(
     var exportStatus by remember { mutableStateOf("") }
     // The read-only archive is not part of the current live conversation.
     var previewArchiveRows by remember { mutableStateOf<List<TranscriptExportRow>?>(null) }
+    var archiveStudyOpen by remember { mutableStateOf(false) }
     var archiveSubtitleConsentOpen by remember { mutableStateOf(false) }
     var pendingArchiveSubtitleExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var archiveSearchQuery by remember { mutableStateOf("") }
@@ -344,6 +346,8 @@ private fun TuddyScreen(
     var pendingStudyErase by remember { mutableStateOf(false) }
     var studyEraseNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
+    var sessionCaptionStudyOpen by remember { mutableStateOf(false) }
+    var sessionCaptionStudyStartId by remember { mutableStateOf<Long?>(null) }
     var presentedCaptionId by remember { mutableStateOf<Long?>(null) }
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
@@ -1353,6 +1357,8 @@ private fun TuddyScreen(
                 flashcardsOpen = false
                 ownWordsOpen = false
                 focusMode = false
+                sessionCaptionStudyOpen = false
+                sessionCaptionStudyStartId = null
                 presentedCaptionId = null
                 meaningIndexOpen = false
                 quickTypedOpen = false
@@ -1361,6 +1367,7 @@ private fun TuddyScreen(
                 draftFromExternalShare = false
                 manualText = ""
                 previewArchiveRows = null
+                archiveStudyOpen = false
                 archiveSearchQuery = ""
                 pendingArchiveExcerpt = null
                 archiveExcerptNotice = ""
@@ -1389,10 +1396,13 @@ private fun TuddyScreen(
             twoWayTypedOpen = false
             sharedTextToTwoWay = null
             presentedCaptionId = null
+            sessionCaptionStudyOpen = false
+            sessionCaptionStudyStartId = null
             pendingCaptionLanguageChange = null
             meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
+            archiveStudyOpen = false
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
             pendingArchiveExcerpt = null
@@ -1699,7 +1709,29 @@ private fun TuddyScreen(
                     )
                 },
                 initialId = presented,
-                onDismiss = { presentedCaptionId = null }
+                onDismiss = { presentedCaptionId = null },
+                onStudyCaption = { selected ->
+                    presentedCaptionId = null
+                    captionSpeaker.stop()
+                    sessionCaptionStudyStartId = selected
+                    sessionCaptionStudyOpen = true
+                }
+            )
+        }
+        if (sessionCaptionStudyOpen) {
+            SessionCaptionStudyDialog(
+                captions = lines.map { line ->
+                    FocusCaptionLine(
+                        line.id, line.original, line.translated, line.status,
+                        line.sourceCode, line.targetCode,
+                        manuallyAssignedSpeakers[line.id], line.personalMeaning
+                    )
+                },
+                onDismiss = {
+                    sessionCaptionStudyOpen = false
+                    sessionCaptionStudyStartId = null
+                },
+                initialCaptionId = sessionCaptionStudyStartId
             )
         }
         if (focusMode) {
@@ -2210,7 +2242,19 @@ private fun TuddyScreen(
         val archive = previewArchiveRows
         val matchedArchive = if (archive == null) emptyList() else
             PrivateArchiveSearch.filter(archive, archiveSearchQuery)
-        if (archive != null && pendingArchiveExcerpt == null) {
+        if (archiveStudyOpen && archive != null) {
+            SessionCaptionStudyDialog(
+                captions = matchedArchive.mapIndexed { index, row ->
+                    FocusCaptionLine(
+                        index.toLong(), row.original, row.translated,
+                        row.status, row.sourceCode, row.targetCode
+                    )
+                },
+                onDismiss = { archiveStudyOpen = false },
+                originLabel = "de gevonden archiefregels"
+            )
+        }
+        if (archive != null && pendingArchiveExcerpt == null && !archiveStudyOpen) {
             AlertDialog(
                 onDismissRequest = {
                     pendingArchiveExcerpt = null
@@ -2228,6 +2272,21 @@ private fun TuddyScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(Modifier.height(10.dp))
+                        OutlinedButton(
+                            enabled = !listening && matchedArchive.any { row ->
+                                row.status == "Lokaal vertaald" &&
+                                    row.original.isNotBlank() &&
+                                    row.translated.isNotBlank() &&
+                                    row.original != row.translated &&
+                                    row.original.length <= 400 &&
+                                    row.translated.length <= 400
+                            },
+                            onClick = {
+                                captionSpeaker.stop()
+                                archiveStudyOpen = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("🧠 Oefen gevonden archiefzinnen · tijdelijk") }
                         TextButton(
                             enabled = !listening && archive.any {
                                 it.status == "Lokaal vertaald" || it.status == "Lokaal"
@@ -2893,6 +2952,20 @@ private fun TuddyScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("🧠 Oefenkaarten · mijn opgeslagen woorden en zinnen") }
+                OutlinedButton(
+                    enabled = !listening && lines.any { line ->
+                        line.status == "Lokaal vertaald" &&
+                            line.original.isNotBlank() && line.translated.isNotBlank() &&
+                            line.original != line.translated &&
+                            line.original.length <= 400 && line.translated.length <= 400
+                    },
+                    onClick = {
+                        captionSpeaker.stop()
+                        sessionCaptionStudyStartId = null
+                        sessionCaptionStudyOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🧠 Oefen dit gesprek · tijdelijke tweetalige kaarten") }
                 TextButton(
                     onClick = {
                         if (listening) stop()
