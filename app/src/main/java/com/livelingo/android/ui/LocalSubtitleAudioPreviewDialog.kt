@@ -39,6 +39,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleAudioAlignment
+import com.livelingo.android.PrivateSubtitleClip
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -78,6 +79,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
     var confirmApplyOpen by remember { mutableStateOf(false) }
+    var confirmClipOpen by remember { mutableStateOf(false) }
     var cueQuery by remember { mutableStateOf("") }
 
     fun closeAudio() {
@@ -97,6 +99,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         subtitleOffsetMs = 0L
         cuePickerOpen = false
         confirmApplyOpen = false
+        confirmClipOpen = false
         cueQuery = ""
         lastLoopAtMs = 0L
         if (old != null) runCatching {
@@ -157,6 +160,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         rangeEndIndex = -1
         rangeRepeating = false
         confirmApplyOpen = false
+        confirmClipOpen = false
         lastLoopAtMs = 0L
         notice = "Verschuiving aangepast; dit wijzigt je SRT/VTT-bestand niet."
     }
@@ -293,6 +297,18 @@ internal fun LocalSubtitleAudioPreviewDialog(
 
     val adjustedDraft = remember(cues, subtitleOffsetMs) {
         PrivateSubtitleAudioAlignment.preview(cues, subtitleOffsetMs)
+    }
+    // A hand-picked whole A–B section becomes a NEW, zero-based subtitle-only
+    // editor draft. This deliberately never creates or copies audio content.
+    val passageDraft = remember(cues, subtitleOffsetMs,
+        rangeStartIndex, rangeEndIndex, durationMs) {
+        val bounds = rangeBounds()
+        if (bounds == null) null else {
+            val selected = cues.subList(rangeStartIndex, rangeEndIndex + 1).toList()
+            val timed = if (subtitleOffsetMs == 0L) selected
+                else PrivateSubtitleAudioAlignment.preview(selected, subtitleOffsetMs)
+            timed?.let { PrivateSubtitleClip.extract(it, bounds.first, bounds.second)?.cues }
+        }
     }
     val displayTimeMs = if (dragPositionMs >= 0L) dragPositionMs else positionMs
     val activeIndex = if (prepared) cues.indexOfLast {
@@ -482,6 +498,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 rangeEndIndex = -1
                                 rangeRepeating = false
                                 loopCueIndex = -1
+                                confirmClipOpen = false
                                 notice = "A ingesteld op regel " + (activeIndex + 1) +
                                     ". Kies nu een latere of dezelfde regel als B."
                             },
@@ -495,6 +512,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 rangeEndIndex = activeIndex
                                 rangeRepeating = false
                                 loopCueIndex = -1
+                                confirmClipOpen = false
                                 notice = "B ingesteld op regel " + (activeIndex + 1) + "."
                             },
                             modifier = Modifier.weight(1f)
@@ -523,6 +541,18 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         }
                     ) { Text(if (rangeRepeating) "Stop A–B-herhaling ✓"
                         else "↻ Herhaal mijn A–B-passage") }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = passageDraft != null,
+                        onClick = {
+                            pauseAudio()
+                            rangeRepeating = false
+                            confirmClipOpen = true
+                        }
+                    ) { Text("Maak A–B als afzonderlijk ondertitelconcept…") }
+                    Text("Je kunt je hele A–B-passage als een nieuw SRT/VTT-concept " +
+                        "laten beginnen bij 00:00, maar audio wordt nooit geëxporteerd.",
+                        style = MaterialTheme.typography.labelSmall)
                     Text("A–B-herhaling is tijdelijk en bevat alleen de door jou gekozen " +
                         "ondertitelregels, geen automatische audioanalyse.",
                         style = MaterialTheme.typography.labelSmall)
@@ -559,6 +589,38 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     style = MaterialTheme.typography.labelSmall)
             }
         }
+    }
+    if (confirmClipOpen && passageDraft != null) {
+        AlertDialog(
+            onDismissRequest = { confirmClipOpen = false },
+            title = { Text("Alleen mijn A–B-ondertitelfragment overnemen?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Dit maakt een eigen tijdelijk editorconcept met " +
+                        passageDraft.size + " van " + cues.size + " ondertitelregels.")
+                    Text("Geselecteerde regels: A " + (rangeStartIndex + 1) +
+                        " tot en met B " + (rangeEndIndex + 1) + ".")
+                    Text("De nieuwe teksttijdlijn begint bij 00:00; " +
+                        "de laatste regel eindigt op " + passageDraft.last().endLabel + ".")
+                    Text("Je originele document én het audiobestand blijven ongewijzigd. " +
+                        "Er wordt GEEN audioclip gemaakt. Pas de tekst zo nodig aan " +
+                        "en gebruik daarna alleen bewust 'Bewaar nieuwe kopie' in de editor.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val chosen = passageDraft.toList()
+                    confirmClipOpen = false
+                    closeAudio()
+                    onApplyAdjustedCues(chosen)
+                }) { Text("Open alleen mijn geselecteerde ondertitels in de editor") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClipOpen = false }) {
+                    Text("Annuleer · niets overnemen")
+                }
+            }
+        )
     }
     if (confirmApplyOpen && adjustedDraft != null && subtitleOffsetMs != 0L) {
         AlertDialog(
