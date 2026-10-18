@@ -96,6 +96,8 @@ internal fun PrivateSubtitleFileDialog(
     var clipOpen by remember { mutableStateOf(false) }
     var clipStart by remember { mutableStateOf("") }
     var clipEnd by remember { mutableStateOf("") }
+    var excerptOpen by remember { mutableStateOf(false) }
+    var excerptCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var practiceOpen by remember { mutableStateOf(false) }
     var retimingOpen by remember { mutableStateOf(false) }
     var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
@@ -319,6 +321,14 @@ internal fun PrivateSubtitleFileDialog(
                 )
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = query.isNotBlank() && found.isNotEmpty(),
+                    onClick = {
+                        excerptCues = found.map { it.second }.toList()
+                        excerptOpen = true
+                    }
+                ) { Text("↳ Bewaar alleen gevonden regels als SRT/VTT…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
                     onClick = { retimingOpen = true }
                 ) { Text("⏱ Tijdcodes van alle regels aanpassen…") }
                 OutlinedButton(
@@ -461,6 +471,14 @@ internal fun PrivateSubtitleFileDialog(
                     style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+
+    if (excerptOpen) {
+        PrivateSubtitleExcerptDialog(
+            selected = excerptCues,
+            onSaveCopy = onSaveCopy,
+            onDismiss = { excerptOpen = false }
+        )
     }
 
     if (retimingOpen) {

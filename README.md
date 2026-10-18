@@ -9,6 +9,16 @@ gebruik Terug/Opnieuw en bewaar desgewenst afzonderlijk een nieuwe kopie.
 De tekst verandert niet en Tuddy meet geen audio/video-synchronisatie.
 [Bediening en privacy](docs/OFFLINE_SUBTITLE_RETIMING.md).
 
+## Nieuw: alleen gevonden ondertitels als bestand bewaren
+
+Zoek in een zelf geopend SRT/VTT-bestand en kies vervolgens
+**Bewaar alleen gevonden regels…**. Kies tussen de originele
+tijdcodes en een vanaf 00:00 aaneengesloten selectie. Vooraf zie
+je het aantal regels en de uitvoergrootte; opslag vereist nog steeds
+een afzonderlijke Android-bestandskeuze. Het oorspronkelijke document
+blijft intact.
+[Werking en grenzen](docs/FILTERED_OFFLINE_SUBTITLE_EXCERPT.md).
+
 ## Nieuw: afdrukbaar oefenblad van eigen ondertitels
 
 Je kunt geselecteerde regels uit een bewust geopend SRT/VTT-bestand
