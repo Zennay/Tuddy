@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 
 /**
  * Follows the text already emitted by Android's on-device recognizer.
@@ -43,6 +44,9 @@ internal fun LiveInterimWordFocus(text: String, fontScale: Float, compact: Boole
         else MaterialTheme.typography.headlineSmall
     Text(
         annotated,
-        style = baseStyle.copy(fontSize = baseStyle.fontSize * fontScale)
+        style = baseStyle.copy(
+            fontSize = baseStyle.fontSize * fontScale,
+            textDirection = TextDirection.ContentOrRtl
+        )
     )
 }

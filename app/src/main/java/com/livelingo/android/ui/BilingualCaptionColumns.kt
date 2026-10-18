@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 
 /**
@@ -28,7 +29,8 @@ internal fun BilingualCaptionColumns(
 ) {
     val translated = status == "Lokaal vertaald" || status == "Lokaal"
     val originalStyle = MaterialTheme.typography.titleLarge.copy(
-        fontSize = MaterialTheme.typography.titleLarge.fontSize * fontScale
+        fontSize = MaterialTheme.typography.titleLarge.fontSize * fontScale,
+        textDirection = TextDirection.ContentOrRtl
     )
     val translatedStyle = originalStyle.copy(color = MaterialTheme.colorScheme.primary)
     Row(
@@ -53,14 +55,20 @@ internal fun BilingualCaptionColumns(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (isInterim) {
-                if (translation.isNotBlank())
-                    SessionCaptionSearchText(translation, searchQuery, translatedStyle)
+                if (translation.isNotBlank()) {
+                    LiveInterimWordFocus(
+                        text = translation, fontScale = fontScale * 0.88f, compact = true
+                    )
+                    Text("Laatste vertaald tekstwoord · geen audio-uitlijning",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 else
                     Text("Wacht op lokaal resultaat",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else if (translated) {
-                Text(translation, style = translatedStyle)
+                SessionCaptionSearchText(translation, searchQuery, translatedStyle)
             } else {
                 Text("[Vertaling niet voltooid: $status]",
                     style = MaterialTheme.typography.bodyMedium,
