@@ -28,7 +28,8 @@ internal data class FocusCaptionLine(
     val translated: String,
     val status: String,
     val sourceCode: String,
-    val targetCode: String
+    val targetCode: String,
+    val speaker: String? = null // Manual A/B marker for this session; never an inferred identity.
 )
 
 @Composable
@@ -43,6 +44,14 @@ internal fun FocusTranscriptDialog(
 ) {
     val listState = rememberLazyListState()
     var followLive by remember { mutableStateOf(true) }
+    var speakerFilter by remember { mutableStateOf<String?>(null) }
+    var speakerMenuOpen by remember { mutableStateOf(false) }
+    val displayedCaptions = when (speakerFilter) {
+        "A", "B" -> captions.filter { it.speaker == speakerFilter }
+        "?" -> captions.filter { it.speaker == null }
+        else -> captions
+    }
+    val showInterim = speakerFilter == null
     val manualScroll = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -54,11 +63,13 @@ internal fun FocusTranscriptDialog(
         }
     }
 
-    LaunchedEffect(captions.size, captions.lastOrNull()?.translated,
+    LaunchedEffect(speakerFilter, displayedCaptions.size,
+        displayedCaptions.lastOrNull()?.translated,
         interimOriginal, interimTranslated, followLive) {
-        if (followLive && (captions.isNotEmpty() || interimOriginal.isNotBlank())) {
-            val index = if (interimOriginal.isNotBlank()) captions.size else
-                (captions.size - 1).coerceAtLeast(0)
+        if (followLive && (displayedCaptions.isNotEmpty() ||
+                (showInterim && interimOriginal.isNotBlank()))) {
+            val index = if (showInterim && interimOriginal.isNotBlank()) displayedCaptions.size
+                else (displayedCaptions.size - 1).coerceAtLeast(0)
             listState.scrollToItem(index)
         }
     }
@@ -101,6 +112,46 @@ internal fun FocusTranscriptDialog(
                         OutlinedButton(onClick = onStop) { Text("■ Stop microfoon") }
                     }
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box {
+                        OutlinedButton(onClick = { speakerMenuOpen = true }) {
+                            Text(when (speakerFilter) {
+                                "A" -> "Spreker A"
+                                "B" -> "Spreker B"
+                                "?" -> "Onbekend"
+                                else -> "Alle sprekers"
+                            })
+                        }
+                        DropdownMenu(
+                            expanded = speakerMenuOpen,
+                            onDismissRequest = { speakerMenuOpen = false }
+                        ) {
+                            val choices = listOf(
+                                null to "Alle sprekers (${captions.size})",
+                                "A" to "Spreker A (${captions.count { it.speaker == "A" }})",
+                                "B" to "Spreker B (${captions.count { it.speaker == "B" }})",
+                                "?" to "Onbekend (${captions.count { it.speaker == null }})"
+                            )
+                            choices.forEach { (choice, title) ->
+                                DropdownMenuItem(text = { Text(title) }, onClick = {
+                                    speakerFilter = choice
+                                    speakerMenuOpen = false
+                                    followLive = true
+                                })
+                            }
+                        }
+                    }
+                    Text(
+                        "Handmatig gelabeld, geen sprekerherkenning.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 if (!followLive) {
                     Text("Teruglezen gepauzeerd. Tik op Volg live om verder te volgen.",
                         style = MaterialTheme.typography.bodySmall,
@@ -113,13 +164,17 @@ internal fun FocusTranscriptDialog(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
-                    if (captions.isEmpty() && interimOriginal.isBlank()) {
+                    if (displayedCaptions.isEmpty() && (!showInterim || interimOriginal.isBlank())) {
                         item(key = "empty") {
-                            Text("Nog geen ondertitels. Sluit de leesmodus en tik op Luister.",
-                                style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                if (speakerFilter == null)
+                                    "Nog geen ondertitels. Sluit de leesmodus en tik op Luister."
+                                else "Geen afgeronde regels met dit handmatige sprekerlabel. Kies Alle sprekers.",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
                         }
                     }
-                    items(captions, key = { it.id }) { line ->
+                    items(displayedCaptions, key = { it.id }) { line ->
                         Card(shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth()) {
                             Column(
@@ -127,7 +182,9 @@ internal fun FocusTranscriptDialog(
                                 verticalArrangement = Arrangement.spacedBy(9.dp)
                             ) {
                                 Text(
-                                    "${line.sourceCode.uppercase()} → ${line.targetCode.uppercase()}",
+                                    "${line.sourceCode.uppercase()} → ${line.targetCode.uppercase()} · " +
+                                        (line.speaker?.let { "Spreker $it (handmatig)" }
+                                            ?: "Spreker onbekend (handmatig)"),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -149,7 +206,7 @@ internal fun FocusTranscriptDialog(
                             }
                         }
                     }
-                    if (interimOriginal.isNotBlank()) {
+                    if (showInterim && interimOriginal.isNotBlank()) {
                         item(key = "interim") {
                             Card(shape = RoundedCornerShape(16.dp),
                                 modifier = Modifier.fillMaxWidth()) {
