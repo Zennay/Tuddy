@@ -6,6 +6,8 @@ internal enum class SubtitleDraftMode {
     BILINGUAL, ORIGINAL_ONLY, TRANSLATION_ONLY
 }
 
+internal enum class SubtitleDraftFormat { SRT, WEBVTT }
+
 /**
  * Deliberately coarse manual adjustments for a rough SRT editing draft.
  * Values are constrained to the choices exposed in the UI.
@@ -13,11 +15,12 @@ internal enum class SubtitleDraftMode {
 internal data class SubtitleDraftOptions(
     val mode: SubtitleDraftMode = SubtitleDraftMode.BILINGUAL,
     val startOffsetMs: Long = 0L,
-    val cueDurationMs: Long = 3500L
+    val cueDurationMs: Long = 3500L,
+    val format: SubtitleDraftFormat = SubtitleDraftFormat.SRT
 )
 
 /**
- * Explicit, bounded SRT editing draft. Completion callbacks are NOT the real
+ * Explicit, bounded SRT or WebVTT editing draft. Completion callbacks are NOT the real
  * audio onset, word timestamps or a synchronized media clock. The manual
  * offset/duration settings remain estimates and never verify alignment.
  *
@@ -39,13 +42,14 @@ internal object PrivateSubtitleDraftExport {
             .joinToString("")
             .trim()
 
-    private fun stamp(millis: Long): String {
+    private fun stamp(millis: Long, format: SubtitleDraftFormat): String {
         val hours = millis / 3_600_000L
         val minutes = millis / 60_000L % 60
         val seconds = millis / 1_000L % 60
         val remainder = millis % 1_000L
-        return String.format(Locale.ROOT, "%02d:%02d:%02d,%03d",
-            hours, minutes, seconds, remainder)
+        val punctuation = if (format == SubtitleDraftFormat.WEBVTT) "." else ","
+        return String.format(Locale.ROOT, "%02d:%02d:%02d%s%03d",
+            hours, minutes, seconds, punctuation, remainder)
     }
 
     /** Preserve the original bilingual behavior for existing callers. */
@@ -98,12 +102,14 @@ internal object PrivateSubtitleDraftExport {
         }
 
         val output = StringBuilder()
+        if (options.format == SubtitleDraftFormat.WEBVTT) output.append("WEBVTT\n\n")
         cues.forEachIndexed { index, (start, caption) ->
             val next = cues.getOrNull(index + 1)?.first
             val end = if (next == null) start + options.cueDurationMs
                 else minOf(start + options.cueDurationMs, next - 150L)
             output.append(index + 1).append('\n')
-                .append(stamp(start)).append(" --> ").append(stamp(end))
+                .append(stamp(start, options.format)).append(" --> ")
+                .append(stamp(end, options.format))
                 .append('\n').append(caption.first)
             if (caption.second.isNotBlank() && caption.second != caption.first) {
                 output.append('\n').append(caption.second)
