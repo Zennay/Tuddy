@@ -123,6 +123,27 @@ internal class PrivateOwnWordDeck(context: Context) {
     }
 
     /**
+     * Deliberately exported own meanings, not reviewed translations.
+     * TSV can be re-imported using the existing strict, bounded parser.
+     */
+    @Synchronized
+    fun exportTsvSnapshot(): ByteArray? {
+        val saved = entries() ?: return null
+        if (saved.isEmpty()) return null
+        val text = buildString {
+            append("language\tword\tmeaning\n")
+            saved.forEach { row ->
+                append(row.language).append('\t')
+                append(row.word).append('\t')
+                append(row.ownMeaning).append('\n')
+            }
+        }
+        return text.toByteArray(Charsets.UTF_8).takeIf { bytes ->
+            bytes.size <= MAX_BACKUP_BYTES && previewTsvImport(bytes) == saved
+        }
+    }
+
+    /**
      * Explicit user-selected JSON backup. No transcript/audio/provider data
      * is included, only the user's word, language and their own meaning.
      */

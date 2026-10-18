@@ -157,6 +157,28 @@ internal class PrivatePhraseDeck(context: Context) {
         return next.size < current.size && write(next)
     }
 
+    /**
+     * Portable TSV matches the strict self-authored import format byte-for-byte.
+     * Only user notes are included; no transcripts, model outputs or cloud calls.
+     */
+    @Synchronized
+    fun exportTsvSnapshot(): ByteArray? {
+        val saved = entries() ?: return null
+        if (saved.isEmpty()) return null
+        val text = buildString {
+            append("language\tphrase\tmeaningLanguage\townMeaning\n")
+            saved.forEach { row ->
+                append(row.language).append('\t')
+                append(row.phrase).append('\t')
+                append(row.meaningLanguage).append('\t')
+                append(row.ownMeaning).append('\n')
+            }
+        }
+        return text.toByteArray(Charsets.UTF_8).takeIf { bytes ->
+            bytes.size <= MAX_JSON && previewTsvImport(bytes) == saved
+        }
+    }
+
     /** User-chosen Storage Access Framework export; never background/silent. */
     @Synchronized
     fun exportSnapshot(): ByteArray? {

@@ -59,6 +59,7 @@ internal fun MyOfflinePhrasesPanel(
     var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var importSource by remember { mutableStateOf("json") }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingTsvExport by remember { mutableStateOf<ByteArray?>(null) }
     var printableConsent by remember { mutableStateOf(false) }
     var printableAllLanguages by remember { mutableStateOf(false) }
     var pendingPrintable by remember { mutableStateOf<Pair<String?, ByteArray>?>(null) }
@@ -69,15 +70,40 @@ internal fun MyOfflinePhrasesPanel(
         val snapshot = pendingExport
         pendingExport = null
         if (uri != null && snapshot != null) {
-            val saved = runCatching {
-                context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
-                    stream.write(snapshot)
-                    stream.flush()
-                    true
-                } ?: false
-            }.getOrDefault(false)
-            info = if (saved) "Je eigen zinnen zijn op jouw gekozen locatie opgeslagen."
-                else "Opslaan is mislukt. Je lokale zinnen blijven behouden."
+            if (deck.exportSnapshot()?.contentEquals(snapshot) != true) {
+                info = "Eigen zinnen zijn gewijzigd. Maak een nieuwe back-up."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                        stream.write(snapshot)
+                        stream.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                info = if (saved) "Je eigen zinnen zijn op jouw gekozen locatie opgeslagen."
+                    else "Opslaan is mislukt. Je lokale zinnen blijven behouden."
+            }
+        }
+    }
+    val createTsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/tab-separated-values")
+    ) { uri ->
+        val snapshot = pendingTsvExport
+        pendingTsvExport = null
+        if (uri != null && snapshot != null) {
+            if (deck.exportTsvSnapshot()?.contentEquals(snapshot) != true) {
+                info = "Eigen zinnen zijn gewijzigd. Maak de TSV-lijst opnieuw."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                        stream.write(snapshot)
+                        stream.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                info = if (saved) "Zelfgeschreven zinnenlijst opgeslagen als UTF-8 TSV."
+                    else "TSV niet opgeslagen. Je eigen zinnen blijven behouden."
+            }
         }
     }
     // No bytes leave app-private memory until a consciously chosen SAF location.
@@ -325,6 +351,23 @@ internal fun MyOfflinePhrasesPanel(
                         ))
                     }
                 ) { Text("Importeer eigen zinnenlijst (TSV)…") }
+                OutlinedButton(
+                    enabled = phrases?.isNotEmpty() == true,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        val snapshot = deck.exportTsvSnapshot()
+                        if (snapshot == null) {
+                            info = "Geen geldige eigen zinnen voor TSV-export."
+                        } else {
+                            pendingTsvExport = snapshot
+                            createTsv.launch("tuddy-mijn-eigen-zinnen.tsv")
+                        }
+                    }
+                ) { Text("Exporteer mijn eigen zinnen (TSV)…") }
+                Text("Dit bestand kun je zelf bewerken en later via TSV-import " +
+                    "weer toevoegen of vervangen. Het bevat alleen je eigen, " +
+                    "niet onafhankelijk gecontroleerde zinnen.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("Gebruik zelfgeschreven UTF-8-zinnen met vier tabkolommen: " +
                     "language, phrase, meaningLanguage, ownMeaning. " +
                     "Kies na het inlezen bewust samenvoegen of vervangen. " +
