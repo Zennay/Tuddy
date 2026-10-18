@@ -54,6 +54,9 @@ internal fun MyOfflinePhrasesPanel(
     var info by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
     var practiceOpen by remember { mutableStateOf(false) }
+    var scheduledOpen by remember { mutableStateOf(false) }
+    var startScheduleConsent by remember { mutableStateOf(false) }
+    var eraseScheduleConsent by remember { mutableStateOf(false) }
     var displayedPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var editingPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
@@ -206,6 +209,14 @@ internal fun MyOfflinePhrasesPanel(
         )
         return
     }
+    if (scheduledOpen) {
+        ScheduledPhraseReviewPanel(
+            deck = deck,
+            onChanged = { revision++ },
+            onDismiss = { scheduledOpen = false }
+        )
+        return
+    }
     if (practiceOpen) {
         PersonalPhrasePracticePanel(
             notes = phrases.orEmpty(),
@@ -309,6 +320,31 @@ internal fun MyOfflinePhrasesPanel(
                     onClick = { practiceOpen = true },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Oefen mijn eigen zinnen") }
+                if (!deck.reviewsEnabled()) {
+                    OutlinedButton(
+                        enabled = phrases?.isNotEmpty() == true,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { startScheduleConsent = true }
+                    ) { Text("Plan mijn eigen zinnen voor herhaling…") }
+                } else {
+                    val scheduled = deck.scheduledReviews().orEmpty()
+                    val due = scheduled.count {
+                        it.dueDay <= java.time.LocalDate.now().toEpochDay()
+                    }
+                    OutlinedButton(
+                        enabled = due > 0,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { scheduledOpen = true }
+                    ) { Text("Herhaal eigen zinnen vandaag · $due") }
+                    Text(
+                        "Lokaal gepland: ${scheduled.size} eigen zinnen. Geen automatische " +
+                            "vertaling, native-speakercontrole of meldingen.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    TextButton(onClick = { eraseScheduleConsent = true }) {
+                        Text("Wis herhaalplanning eigen zinnen")
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         enabled = phrases?.isNotEmpty() == true,
@@ -441,6 +477,56 @@ internal fun MyOfflinePhrasesPanel(
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Sluiten") } }
     )
+    if (startScheduleConsent) {
+        AlertDialog(
+            onDismissRequest = { startScheduleConsent = false },
+            title = { Text("Mijn eigen zinnen privé herhalen?") },
+            text = { Text(
+                "Alle zinnen en betekenissen zijn door jou zelf geschreven en niet " +
+                    "door Tuddy geverifieerd. Pas na deze keuze bewaart de app " +
+                    "lokaal een hash, niveau en volgende herhaaldatum per zin. " +
+                    "Geen extra zinnenkopie, account, cloud, notificaties of spraakherkenning."
+            ) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val enabled = deck.enableReviews()
+                    if (enabled) revision++
+                    info = if (enabled) "Herhaalplanning gestart: nieuwe zinnen staan klaar."
+                        else "Herhaalplanning kon niet worden gestart."
+                    startScheduleConsent = false
+                }) { Text("Start op dit toestel") }
+            },
+            dismissButton = {
+                TextButton(onClick = { startScheduleConsent = false }) {
+                    Text("Annuleren")
+                }
+            }
+        )
+    }
+    if (eraseScheduleConsent) {
+        AlertDialog(
+            onDismissRequest = { eraseScheduleConsent = false },
+            title = { Text("Herhaaldatums eigen zinnen wissen?") },
+            text = { Text(
+                "Dit wist het optionele lokale schema en de niveaus; de eigen " +
+                    "zinnen, betekenissen en favorieten blijven bewaard."
+            ) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val removed = deck.disableReviews()
+                    if (removed) revision++
+                    info = if (removed) "Alle herhaaldatums van eigen zinnen gewist."
+                        else "Wissen van de herhaalplanning mislukt."
+                    eraseScheduleConsent = false
+                }) { Text("Wis planning") }
+            },
+            dismissButton = {
+                TextButton(onClick = { eraseScheduleConsent = false }) {
+                    Text("Annuleren")
+                }
+            }
+        )
+    }
     if (printableConsent) {
         val included = phrases.orEmpty().filter {
             printableAllLanguages || it.language == language
@@ -570,7 +656,8 @@ internal fun MyOfflinePhrasesPanel(
             onDismissRequest = { confirmClear = false },
             title = { Text("Alle eigen zinnen wissen?") },
             text = { Text("Deze actie verwijdert je lokaal bewaarde zinnen definitief. " +
-                "De ingebouwde vijf basiszinnen blijven beschikbaar.") },
+                "De ingebouwde vijf basiszinnen blijven beschikbaar. " +
+                "Je optionele herhaalplanning voor eigen zinnen wordt ook gewist.") },
             confirmButton = {
                 TextButton(onClick = {
                     val cleared = deck.clear()
