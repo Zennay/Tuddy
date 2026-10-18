@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlin.random.Random
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,9 +39,16 @@ internal fun WordPracticePanel(
     savedWords: List<SavedWord>,
     onDismiss: () -> Unit
 ) {
-    var startIndex by remember(savedWords) { mutableIntStateOf(0) }
-    var round by remember(savedWords) {
-        mutableStateOf(WordPracticeRound.start(savedWords))
+    var selectedLanguage by remember { mutableStateOf("all") }
+    var shuffleVersion by remember { mutableIntStateOf(0) }
+    val selectedWords = remember(savedWords, selectedLanguage, shuffleVersion) {
+        val filtered = if (selectedLanguage == "all") savedWords
+            else savedWords.filter { it.language == selectedLanguage }
+        if (shuffleVersion == 0) filtered else filtered.shuffled(Random(shuffleVersion))
+    }
+    var startIndex by remember(selectedWords) { mutableIntStateOf(0) }
+    var round by remember(selectedWords) {
+        mutableStateOf(WordPracticeRound.start(selectedWords))
     }
     val current = round.current
 
@@ -60,8 +68,29 @@ internal fun WordPracticePanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Text("Kies woorden per taal", style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf("all" to "Alle", "nl" to "NL", "en" to "EN",
+                        "de" to "DE").forEach { (code, label) ->
+                        TextButton(onClick = { selectedLanguage = code }) {
+                            Text(if (selectedLanguage == code) "$label ✓" else label)
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf("fr" to "FR", "es" to "ES").forEach { (code, label) ->
+                        TextButton(onClick = { selectedLanguage = code }) {
+                            Text(if (selectedLanguage == code) "$label ✓" else label)
+                        }
+                    }
+                    TextButton(enabled = selectedWords.size > 1,
+                        onClick = { shuffleVersion++ }) { Text("↻ Schud kaarten") }
+                    Text("${selectedWords.size} woorden",
+                        style = MaterialTheme.typography.labelSmall)
+                }
                 if (round.initialCount == 0) {
-                    Text("Bewaar eerst een gecontroleerd woord vanuit een ondertitel.")
+                    Text("Nog geen opgeslagen gecontroleerde woorden voor deze taal. " +
+                        "Kies Alle of bewaar eerst een woord vanuit een ondertitel.")
                 } else if (current != null) {
                     Text(
                         "Afgerond ${round.finishedCards} / ${round.initialCount} · " +
@@ -127,15 +156,15 @@ internal fun WordPracticePanel(
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
-                            round = WordPracticeRound.start(savedWords, startIndex)
+                            round = WordPracticeRound.start(selectedWords, startIndex)
                         }
                     ) { Text("Oefen deze set opnieuw") }
-                    if (savedWords.size > WordPracticeRound.MAX_CARDS) {
+                    if (selectedWords.size > WordPracticeRound.MAX_CARDS) {
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
-                                startIndex = (startIndex + WordPracticeRound.MAX_CARDS) % savedWords.size
-                                round = WordPracticeRound.start(savedWords, startIndex)
+                                startIndex = (startIndex + WordPracticeRound.MAX_CARDS) % selectedWords.size
+                                round = WordPracticeRound.start(selectedWords, startIndex)
                             }
                         ) { Text("Volgende woorden oefenen") }
                     }
