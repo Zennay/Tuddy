@@ -364,6 +364,33 @@ private fun TuddyScreen() {
             }
     }
 
+    /**
+     * Share the exact existing transcript/history and local ML Kit pipeline.
+     * Typed input is separate from the microphone and is never automatically
+     * persisted or sent to a speech service.
+     */
+    fun submitTypedCaption(): Boolean {
+        val sentence = OfflineTypedCaptionPolicy.normalize(manualText) ?: return false
+        val id = System.nanoTime()
+        val token = generation
+        val selectedSource = source.translateCode
+        val selectedTarget = target.translateCode
+        lines.add(Line(id, sentence, "Vertalen…", "Bezig",
+            selectedSource, selectedTarget))
+        repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
+            val removed = lines.removeAt(0)
+            manuallyAssignedSpeakers.remove(removed.id)
+            captionPins = captionPins - removed.id
+            if (editingCaptionId == removed.id) {
+                editingCaptionId = null
+                captionCorrectionDraft = ""
+            }
+        }
+        manualText = ""
+        translate(sentence, id, selectedTarget, selectedSource, token)
+        return true
+    }
+
     // Explicit offline text preparation: one supported source->target model,
     // never a hidden bulk download or an unreviewed speech recognition model.
     // Existing ML Kit model downloads cannot be stopped by clearing text;
@@ -1776,27 +1803,7 @@ private fun TuddyScreen() {
                         modifier = Modifier.fillMaxWidth()
                     )
                     Button(
-                        onClick = {
-                            val sentence = OfflineTypedCaptionPolicy.normalize(manualText)
-                                ?: return@Button
-                            val id = System.nanoTime()
-                            val token = generation
-                            val selectedSource = source.translateCode
-                            val selectedTarget = target.translateCode
-                            lines.add(Line(id, sentence, "Vertalen…", "Bezig",
-                                selectedSource, selectedTarget))
-                            repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
-                                val removed = lines.removeAt(0)
-                                manuallyAssignedSpeakers.remove(removed.id)
-                                captionPins = captionPins - removed.id
-                                if (editingCaptionId == removed.id) {
-                                    editingCaptionId = null
-                                    captionCorrectionDraft = ""
-                                }
-                            }
-                            manualText = ""
-                            translate(sentence, id, selectedTarget, selectedSource, token)
-                        },
+                        onClick = { submitTypedCaption() },
                         enabled = OfflineTypedCaptionPolicy.normalize(manualText) != null
                     ) { Text("Vertaal tekst lokaal") }
                     Text("Geen microfoon nodig. Alleen de beschikbare lokale ML Kit-tekstmodellen; " +
