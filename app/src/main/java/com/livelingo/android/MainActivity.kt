@@ -55,6 +55,7 @@ import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.OfflinePhraseQuickPicker
 import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.FocusTranscriptDialog
+import com.livelingo.android.ui.FullscreenCaptionCard
 import com.livelingo.android.ui.FocusCaptionLine
 import com.livelingo.android.ui.LiveInterimWordFocus
 import com.livelingo.android.ui.OfflineStarterPhraseboard
@@ -308,6 +309,7 @@ private fun TuddyScreen(
     var pendingStudyErase by remember { mutableStateOf(false) }
     var studyEraseNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
+    var presentedCaptionId by remember { mutableStateOf<Long?>(null) }
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
     var editingCaptionId by remember { mutableStateOf<Long?>(null) }
@@ -1105,6 +1107,7 @@ private fun TuddyScreen(
                 flashcardsOpen = false
                 ownWordsOpen = false
                 focusMode = false
+                presentedCaptionId = null
                 quickTypedOpen = false
                 draftFromExternalShare = false
                 manualText = ""
@@ -1133,6 +1136,7 @@ private fun TuddyScreen(
             quickPhrasePickerOpen = false
             flashcardsOpen = false
             ownWordsOpen = false
+            presentedCaptionId = null
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             archiveSearchQuery = ""
@@ -1304,6 +1308,20 @@ private fun TuddyScreen(
                         manualText = ""
                     }) { Text("Annuleren") }
                 }
+            )
+        }
+        val presented = presentedCaptionId
+        if (presented != null) {
+            FullscreenCaptionCard(
+                captions = lines.map {
+                    FocusCaptionLine(
+                        it.id, it.original, it.translated, it.status,
+                        it.sourceCode, it.targetCode,
+                        manuallyAssignedSpeakers[it.id]
+                    )
+                },
+                initialId = presented,
+                onDismiss = { presentedCaptionId = null }
             )
         }
         if (focusMode) {
@@ -3062,6 +3080,16 @@ private fun TuddyScreen(
                                             }
                                         ) { Text("↻ Probeer opnieuw") }
                                     }
+                                }
+                                if ((line.status == "Lokaal" ||
+                                        line.status == "Lokaal vertaald") &&
+                                    line.original.isNotBlank()
+                                ) {
+                                    OutlinedButton(onClick = {
+                                        if (listening) stop()
+                                        captionSpeaker.stop()
+                                        presentedCaptionId = line.id
+                                    }) { Text("▣ Toon deze zin groot") }
                                 }
                                 TextButton(onClick = {
                                     pendingSingleCaptionDelete = Triple(
