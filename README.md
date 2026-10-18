@@ -72,6 +72,10 @@ en moeilijke kaarten te herhalen of over te slaan. Dit beoordeelt
 alleen tekstgelijkheid, niet de werkelijke betekenis of uitspraak.
 Eigen betekenissen zijn niet door Tuddy vertaald of gecontroleerd.
 Geen score of getypt antwoord wordt opgeslagen of verstuurd.
+Na het onthullen van een kaart kun je het opgeslagen woord of je eigen zin
+ook normaal of rustig **lokaal laten voorlezen** met een al geïnstalleerde
+Android-stem; zonder passende offline stem blijft Tuddy stil. Sluiten of
+wisselen van kaart stopt de uitspraak.
 [Bediening en grenzen](docs/OFFLINE_STUDY_FLASHCARDS.md).
 
 ## Nieuw: bewegende woordfocus in het gewone gesprek
