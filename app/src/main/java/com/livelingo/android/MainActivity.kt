@@ -635,6 +635,27 @@ private fun TuddyScreen() {
         }
     }
 
+    val saveTranscriptJson = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val pending = pendingTranscriptExport
+        pendingTranscriptExport = null
+        if (uri != null && pending != null && pending.first == generation) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(pending.second)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            if (saved) {
+                exportStatus = "JSON-gesprek opgeslagen op de door jou gekozen locatie."
+            } else {
+                error = "JSON-gesprek niet opgeslagen. Kies een andere locatie en probeer opnieuw."
+            }
+        }
+    }
+
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -756,6 +777,37 @@ private fun TuddyScreen() {
                     ) { Text("Bewaar gesprek…") }
                     Text(
                         "Alleen op verzoek. Externe opslag kan synchroniseren.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TextButton(
+                        enabled = lines.isNotEmpty() && !listening,
+                        onClick = {
+                            exportStatus = ""
+                            val snapshot = PrivateTranscriptJsonExport.snapshot(
+                                lines.map { line ->
+                                    TranscriptExportRow(
+                                        line.original, line.translated, line.status,
+                                        line.sourceCode, line.targetCode, line.recordedAtMillis
+                                    )
+                                }
+                            )
+                            if (snapshot == null) {
+                                error = "Kan dit gesprek niet veilig als JSON exporteren."
+                            } else {
+                                pendingTranscriptExport = generation to snapshot
+                                saveTranscriptJson.launch("Tuddy-gesprek.json")
+                            }
+                        }
+                    ) { Text("Bewaar JSON…") }
+                    Text(
+                        "Voor eigen archief of verwerking; onvoltooide vertalingen blijven leeg.",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall
                     )
