@@ -15,6 +15,16 @@ voltooide export- en deelacties worden ingetrokken, maar bestaande externe
 kopieën en klembordinhoud kunnen niet achteraf worden gewist.
 [Privacy en bediening](docs/PRIVATE_SINGLE_CAPTION_DELETE.md).
 
+## Nieuw: tekst vanuit een andere Android-app delen
+
+**Delen → Tuddy** verschijnt voor één platte tekst in het Android-deelmenu.
+De gedeelde tekst wordt eerst als **bewerkbaar, tijdelijk concept** getoond;
+pas na **Vertaal lokaal** volgt de bestaande offline ML Kit-tekstvertaling.
+Annuleren of de app verlaten wist het open concept. Ongeldige en te lange
+inhoud wordt geweigerd; geen automatische URL-/bijlagenimport, cloudspraak
+of externe bestandsopslag.
+[Privacy, bediening en beperkingen](docs/ANDROID_TEXT_SHARING.md).
+
 ## Nieuw: offline tekstmodelopslag beheren
 
 Via **Taal- en modelinstellingen → Beheer offline tekstmodelopslag**
