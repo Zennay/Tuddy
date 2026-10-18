@@ -96,6 +96,8 @@ internal fun PrivateSubtitleFileDialog(
     var clipOpen by remember { mutableStateOf(false) }
     var clipStart by remember { mutableStateOf("") }
     var clipEnd by remember { mutableStateOf("") }
+    var practiceOpen by remember { mutableStateOf(false) }
+    var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var sourceAtPicker by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var pendingImport by remember { mutableStateOf<PendingSubtitleImport?>(null) }
     var importMode by remember { mutableStateOf(SubtitleCombineMode.APPEND_AFTER_LAST) }
@@ -305,6 +307,17 @@ internal fun PrivateSubtitleFileDialog(
                 }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = found.isNotEmpty(),
+                    onClick = {
+                        practiceCues = found.map { it.second }.take(24).toList()
+                        practiceOpen = true
+                    }
+                ) { Text("▣ Oefen deze gevonden ondertitelregels…") }
+                PrivateSubtitleWorksheetExportAction(
+                    selected = found.map { it.second }.take(24)
+                )
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = draft.size < 500,
                     onClick = {
                         sourceAtPicker = draft.toList()
@@ -443,6 +456,13 @@ internal fun PrivateSubtitleFileDialog(
                     style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+
+    if (practiceOpen) {
+        OfflineSubtitleRecallDialog(
+            selected = practiceCues,
+            onDismiss = { practiceOpen = false }
+        )
     }
 
     val stagedImport = pendingImport

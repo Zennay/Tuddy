@@ -9,6 +9,14 @@ Alleen een afzonderlijke Android-bestandskeuze schrijft een nieuwe
 kopie. Tijdcodes en tekst zijn niet automatisch geverifieerd.
 [Uitleg](docs/OFFLINE_SUBTITLE_PRINTABLE_WORKSHEET.md).
 
+## Nieuw: eigen SRT/VTT-ondertitels oefenen
+
+Gebruik een bewust geopend ondertitelbestand nu ook als tijdelijke
+oefenkaarten: filter regels, onthul de volledige tekst op verzoek en
+oefen moeilijke zinnen opnieuw. Er wordt geen leerprofiel of
+automatische vertaling van gemaakt en alle antwoorden blijven in RAM.
+[Handleiding](docs/OFFLINE_SUBTITLE_RECALL.md).
+
 ## Nieuw: meerdere ondertitelbestanden offline combineren
 
 Open een eigen SRT/VTT-bestand en kies **Tweede SRT/VTT-document
