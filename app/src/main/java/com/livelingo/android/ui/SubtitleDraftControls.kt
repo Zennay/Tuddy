@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
+import com.livelingo.android.SubtitleDraftFormat
 import com.livelingo.android.SubtitleDraftMode
 import com.livelingo.android.SubtitleDraftOptions
 
@@ -21,7 +22,19 @@ internal fun SubtitleDraftControls(
     onChange: (SubtitleDraftOptions) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text("Welke tekst komt in het SRT-concept?",
+        Text("Bestandsformaat van het ruwe ondertitelconcept",
+            style = MaterialTheme.typography.labelMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            listOf(
+                SubtitleDraftFormat.SRT to "SRT",
+                SubtitleDraftFormat.WEBVTT to "WebVTT"
+            ).forEach { (format, label) ->
+                TextButton(onClick = { onChange(options.copy(format = format)) }) {
+                    Text(if (options.format == format) label + " ✓" else label)
+                }
+            }
+        }
+        Text("Welke tekst komt in het ondertitelconcept?",
             style = MaterialTheme.typography.labelMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             listOf(

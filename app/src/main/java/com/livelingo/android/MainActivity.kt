@@ -1057,6 +1057,35 @@ private fun TuddyScreen(
         }
     }
 
+    // WebVTT uses the same explicit consent, bounded draft and snapshot check
+    // as SRT, but preserves the distinct browser/video-editor file format.
+    val saveWebVttDraft = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/vtt")
+    ) { uri ->
+        val pending = pendingTranscriptExport
+        pendingTranscriptExport = null
+        if (uri != null && pending != null && pending.first == generation) {
+            val current = captureSubtitleDraft()
+            if (subtitleOptions.format != SubtitleDraftFormat.WEBVTT ||
+                current == null || !current.contentEquals(pending.second)) {
+                exportStatus = "Het gesprek is gewijzigd. Kies opnieuw ondertitels bewaren."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use {
+                        it.write(pending.second)
+                        it.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                if (saved) {
+                    exportStatus = "WebVTT-concept opgeslagen. Controleer alle tijden in je video-editor."
+                } else {
+                    error = "WebVTT niet opgeslagen. Kies een andere locatie."
+                }
+            }
+        }
+    }
+
     // The consented snapshot survives SAF's external picker, which causes
     // ON_STOP to clear the read-only archive preview but not the user's export.
     val saveArchivedSubtitleDraft = rememberLauncherForActivityResult(
@@ -1077,6 +1106,30 @@ private fun TuddyScreen(
                     "Tijden zijn geschat; lijn de zinnen zelf uit met de audio."
             } else {
                 error = "Archief-SRT niet opgeslagen. Kies een andere locatie."
+            }
+        }
+    }
+
+    // An archive is read-only and cleared from the screen on background.
+    // Only the consented snapshot and generation survive Android's picker.
+    val saveArchivedWebVttDraft = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/vtt")
+    ) { uri ->
+        val pending = pendingArchiveSubtitleExport
+        pendingArchiveSubtitleExport = null
+        if (uri != null && pending != null && pending.first == generation) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(pending.second)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            if (saved) {
+                exportStatus = "Archief als WebVTT-concept opgeslagen. " +
+                    "Controleer de geschatte tijden zelf in je editor."
+            } else {
+                error = "Archief-WebVTT niet opgeslagen. Kies een andere locatie."
             }
         }
     }
@@ -1371,7 +1424,7 @@ private fun TuddyScreen(
         if (subtitleConsentOpen) {
             AlertDialog(
                 onDismissRequest = { subtitleConsentOpen = false },
-                title = { Text("SRT-ondertitelconcept bewaren?") },
+                title = { Text("Ondertitelconcept bewaren (SRT/WebVTT)?") },
                 text = {
                     Column(
                         modifier = Modifier.heightIn(max = 420.dp)
@@ -1400,11 +1453,14 @@ private fun TuddyScreen(
                         if (!listening) {
                             val snapshot = captureSubtitleDraft()
                             if (snapshot == null) {
-                                exportStatus = "Geen veilig afgeronde zinnen voor een SRT-concept."
+                                exportStatus = "Geen veilig afgeronde zinnen voor een ondertitelconcept."
                             } else {
                                 exportStatus = ""
                                 pendingTranscriptExport = generation to snapshot
-                                saveSubtitleDraft.launch("Tuddy-ondertitels-concept.srt")
+                                if (subtitleOptions.format == SubtitleDraftFormat.WEBVTT)
+                                    saveWebVttDraft.launch("Tuddy-ondertitels-concept.vtt")
+                                else
+                                    saveSubtitleDraft.launch("Tuddy-ondertitels-concept.srt")
                             }
                         }
                     }) { Text("Ik begrijp dit, kies opslag…") }
@@ -1678,7 +1734,7 @@ private fun TuddyScreen(
                                 it.status == "Lokaal vertaald" || it.status == "Lokaal"
                             },
                             onClick = { archiveSubtitleConsentOpen = true }
-                        ) { Text("Bewaar dit archief als SRT-concept…") }
+                        ) { Text("Bewaar dit archief als SRT/WebVTT-concept…") }
                         Text(
                             "Alleen afgeronde archiefzinnen; geschatte herkenningstijden, " +
                                 "niet synchroon met de oorspronkelijke audio.",
@@ -1803,7 +1859,10 @@ private fun TuddyScreen(
                                 "naar een SRT-concept worden omgezet."
                         } else {
                             pendingArchiveSubtitleExport = generation to snapshot
-                            saveArchivedSubtitleDraft.launch("Tuddy-archief-ondertitelconcept.srt")
+                            if (subtitleOptions.format == SubtitleDraftFormat.WEBVTT)
+                                saveArchivedWebVttDraft.launch("Tuddy-archief-ondertitelconcept.vtt")
+                            else
+                                saveArchivedSubtitleDraft.launch("Tuddy-archief-ondertitelconcept.srt")
                         }
                     }) { Text("Ik begrijp dit, kies opslag…") }
                 },
@@ -2439,7 +2498,7 @@ private fun TuddyScreen(
                             it.status == "Lokaal" || it.status == "Lokaal vertaald"
                         },
                         onClick = { subtitleConsentOpen = true }
-                    ) { Text("Bewaar SRT-ondertitelconcept…") }
+                    ) { Text("Bewaar ondertitelconcept (SRT/WebVTT)…") }
                     Text(
                         "Tweetalige zinnen; geschatte tijden uit spraakafloop, " +
                             "niet gesynchroniseerd met audio.",
