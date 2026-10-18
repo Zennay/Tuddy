@@ -794,7 +794,21 @@ private fun TuddyScreen() {
                                         speechPackReceipt = result
                                     }
                                 }
-                            }, enabled = !listening) { Text("Download via wifi") }
+                            }, enabled = !listening) {
+                                Text(if (speechPackReceipt.stage == SpeechPackStage.ERROR)
+                                    "Opnieuw via wifi" else "Download via wifi")
+                            }
+                        }
+                        if (speechPackReceipt.tag == source.speechCode &&
+                            speechPackReceipt.stage in setOf(
+                                SpeechPackStage.CHECKING, SpeechPackStage.DOWNLOADING
+                            )) {
+                            TextButton(onClick = {
+                                speechPacks.cancel()
+                                speechPackReceipt = SpeechPackReceipt(source.speechCode,
+                                    SpeechPackStage.REQUESTED,
+                                    "Statuscontrole gestopt. Android kan de download alsnog voortzetten; controleer opnieuw.")
+                            }) { Text("Stop volgen") }
                         }
                     }
                     Text("Alleen de door Android gemelde lokale spreektaal. Geen cloudfallback; " +
