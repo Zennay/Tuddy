@@ -129,8 +129,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val last = cues.getOrNull(rangeEndIndex) ?: return null
         val start = cueStart(first)
         val end = cueEnd(last)
+        // No silently truncated line may be part of an A–B exercise.
+        // Bound practice passages to five minutes so accidental far-apart
+        // anchors cannot create a huge surprising repeat interval.
         if (start < 0L || start >= durationMs || end > durationMs ||
-            end - start < 750L) return null
+            end - start !in 750L..300_000L ||
+            cues.subList(rangeStartIndex, rangeEndIndex + 1).any { cue ->
+                !cuePlayable(cue) || cueStart(cue) < start || cueEnd(cue) > end
+            }) return null
         return start to end
     }
 
@@ -464,7 +470,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     if (rangeToolsOpen) {
                     HorizontalDivider()
                     Text("Oefen meerdere ondertitelregels achter elkaar: markeer eerst " +
-                        "A (beginregel), daarna B (eindregel). Start vervolgens A–B-herhaling.",
+                        "A (beginregel), daarna B (eindregel). Start vervolgens A–B-herhaling. " +
+                        "Het gehele fragment moet binnen de audio vallen (0,75 s tot 5 min).",
                         style = MaterialTheme.typography.bodySmall)
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
