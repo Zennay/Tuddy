@@ -28,3 +28,17 @@ Deze debug-productfunctie is geen bewijs van fysieke offline
 vliegtuigmodusacceptatie, volledig vrij gelicentieerde Kurdish/Pashto
 ASR/MT, onafhankelijke native-speakerreview, production signing of
 zCloud/VPS-admission. Incubate/Verifying blijven ongewijzigd.
+
+## Terugkomen uit de Android-bestandskiezer
+
+Het HTML-bestand wordt voortaan via de **bestandskiezer van de hoofdactiviteit**
+bewaard. Android mag de tijdelijke ondertiteleditor sluiten wanneer de
+bestandsprovider op de voorgrond komt; de bewuste export bevat dan alleen
+een begrensde tekstsnapshot en precies het tijdelijke editorconcept van
+het moment waarop je op Bewaar tikt. Na bevestigen of annuleren wordt
+dat tijdelijke concept heropend. Tuddy meldt of bewaren is gelukt,
+geannuleerd of geweigerd en schrijft niet automatisch een ander bestand.
+De oude Undo/Redo-geschiedenis van de gesloten editor wordt niet
+gereconstrueerd; de reeds gewijzigde tekst en tijdcodes blijven wel
+onderdeel van het heropende concept. Bij procesafsluiting verdwijnt
+deze tijdelijke informatie.
