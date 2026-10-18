@@ -1246,15 +1246,14 @@ private fun TuddyScreen() {
                         Text(if (follow) "Live ✓" else "Volg live")
                     }
                 }
-                OutlinedButton(
-                    onClick = { focusMode = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("⛶ Leesmodus · schermvullende ondertitels") }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    OutlinedButton(onClick = { focusMode = true }) {
+                        Text("⛶ Leesmodus")
+                    }
                     OutlinedButton(
                         enabled = reverseDirection != null,
                         onClick = {
@@ -1291,6 +1290,7 @@ private fun TuddyScreen() {
                                 offlineModelStatus = ""
                                 error = ""
                                 showSettings = true
+                                conversationToolsOpen = false
                                 directionNotice = "Richting: ${nextSource.label} → ${previousSource.label}. " +
                                     "Microfoon gestopt. Controleer spraak- en tekstmodellen, " +
                                     "tik daarna opnieuw op Luister." +
@@ -1298,12 +1298,6 @@ private fun TuddyScreen() {
                             }
                         }
                     ) { Text("⇄ Wissel richting") }
-                    Text(
-                        "Tweewegspraak voor elf mogelijke spraaktalen; "  +
-                            "geen automatische download of cloudfallback.",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
                 }
                 if (directionNotice.isNotBlank()) {
                     Text(directionNotice, style = MaterialTheme.typography.bodySmall,
