@@ -1,12 +1,18 @@
-# Privé SRT/WebVTT-editor: terugdraaien en letterlijk vervangen
+# Privé SRT/WebVTT-editor: stapsgewijs terug en opnieuw
 
-In de bestaande **zelf geopende ondertitelkopie** kan de gebruiker nu de laatste twintig geslaagde bewerkingen stap voor stap **Terug** draaien of opnieuw toepassen. Dit omvat tekstcorrecties, begin/eindtijden, een halve seconde globale verschuiving, splitsen, samenvoegen en verwijderen. Een nieuwe bewerking na terugdraaien maakt de oude *Opnieuw*-tak ongeldig. De bestaande knop **Herstel** verwijdert bewust de volledige bewerkingshistorie en zet alleen de oorspronkelijk geopende cues terug.
+De bestaande offline ondertiteleditor ondersteunt nu **↶ Terug** en **↷ Opnieuw**, met maximaal twintig eerder geslaagde documentbewerkingen in tijdelijk Android-schermgeheugen. De volgende handelingen zijn herstelbaar:
 
-Dezelfde editor heeft een zelfstandige **Vervang…**-workflow: voer exact te zoeken tekst en letterlijke vervangtekst in (ieder maximaal 100 tekens), zie hoeveel ondertitelregels een treffer bevatten, en bevestig afzonderlijk. Dit is hoofdlettergevoelig en geen regex, spellcheck, audio-timing, vertaler of betekenisverificatie. Een ongeldige of te grote wijziging wordt als geheel geweigerd. Voor iedere gewijzigde regel blijven de bestaande per-cue grenzen gelden: maximaal 2400 tekens, acht regels, niet-leeg, geen verborgen controlecodes. Ook de complete SRT-snapshot moet onder de bestaande 256-KiB-limiet passen. Na goedkeuring is de volledige vervanging **één terugdraai-stap**.
+- Corrigeren van één tekstregel.
+- Aanpassen van begin- of eindtijd en verschuiven van alle tijdcodes.
+- Eén cue splitsen, naastliggende cues samenvoegen of een cue verwijderen.
+- De al naar main gemergde, expliciet bevestigde **Zoek en vervang…**-batch van [Tuddy #140](https://github.com/Zennay/Tuddy/pull/140), in **één** undo-stap.
+
+De knoppen zijn uitgeschakeld zonder relevante geschiedenis. Elke nieuwe wijziging na Terug verwijdert de oude opnieuw-tak; **Herstel** gooit alle wijzigingen weg en wist beide geschiedenissen. De bestaande zoek-en-vervangdialoog blijft de enige batchtool: geen parallelle UI of alternatieve parser.
 
 ## Privacy en release
-- Alle vorige versies blijven uitsluitend in RAM tijdens het geopende document, maximaal twintig snapshots. Sluiten/verlaten van de editor wist de historie; er is geen nieuwe automatische opslag.
-- Het originele externe bestand wordt nooit aangepast. **Bewaar kopie SRT…** of **Bewaar kopie VTT…** houdt de bestaande onafhankelijke expliciete Android-bestandslocatie/toestemmingsstap.
-- Teksten, private cues of historie worden niet naar de server, een cloudspraakmodel, logs, analytics, externe accounts of een transcriptarchief verstuurd.
-- Geen nieuwe permissies, microfoonloop, native speaker ondersteuning, licentieclaim, gesigneerde APK, QA-suite of deviceacceptatie toegevoegd.
-- Relevante code: `PrivateSubtitleDraftEditor.replaceLiteral` valideert de wijziging, `PrivateSubtitleFileDialog` bedient undo/redo/confirmatie. Bestaande exact-HEAD Android-build en release-gates blijven verplicht.
+
+- Alle geschiedenis blijft uitsluitend tijdens het geopende document in RAM; maximaal twintig eerder complete cue-lijsten. Sluiten/verlaten vernietigt de historie.
+- Het origineel op de gekozen Android-documentlocatie wordt nooit bijgewerkt. Een gewijzigde ondertitel blijft pas beschikbaar buiten Tuddy na **Bewaar kopie SRT…** of **Bewaar kopie VTT…** en aparte bewust gekozen opslaglocatie.
+- Geen metadata, extra logs, microfoon, netwerkaanroepen, native-speakercontrole, modeldownload of nieuwe permissies.
+- Deze productuitbreiding gebruikt de bestaande `PrivateSubtitleDraftEditor` en `PrivateSubtitleBatchReplace` van main, zonder hun veiligheidsgrenzen te verzwakken.
+- Alleen `app/src/main/java/com/livelingo/android/ui/PrivateSubtitleFileDialog.kt` verandert aan productgedrag. De bestaande hosted Android build-, apparaat-/licentie-, signing- en releasegates blijven ongewijzigd; een bronmerge is geen fysieke deviceacceptatie of APK-productierelease.
