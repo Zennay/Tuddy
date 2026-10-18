@@ -32,3 +32,14 @@ De geselecteerde bestandsprovider kan wel zelfstandig synchroniseren.
 Sluiten, teruggaan en de Activity in de achtergrond verwijderen
 de niet-wegschreven tijdelijke wijzigingen. Een gekozen nieuwe
 kopie buiten Tuddy kun je achteraf niet vanuit Tuddy wissen.
+
+## Verder bewerken na een eigen kopie
+
+Android kan de tijdelijke editor sluiten terwijl je een nieuwe SRT/VTT-locatie
+kiest. Daarom houdt Tuddy precies voor die bewuste bestandskeuze de actuele
+tekst-/tijdcoderegels, het uitvoerformaat en de begrensde exportbytes tijdelijk
+in geheugen. Na Bewaren of Annuleren verschijnt hetzelfde concept opnieuw,
+met de resultaatmelding. De eerder opgebouwde Undo/Redo-geschiedenis wordt
+niet opnieuw aangemaakt; de tekstuele wijzigingen blijven wel bewerkbaar.
+Het originele bestand wordt nooit door deze actie overschreven, er is geen
+autosave, en bij procesafsluiting verdwijnen niet-opgeslagen gegevens.
