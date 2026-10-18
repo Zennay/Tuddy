@@ -247,6 +247,7 @@ private fun TuddyScreen(
     var personalPhrasesOpen by remember { mutableStateOf(false) }
     var quickPhrasePickerOpen by remember { mutableStateOf(false) }
     var starterPhraseboardOpen by remember { mutableStateOf(false) }
+    var starterPhraseboardTarget by remember { mutableStateOf("kmr") }
     var flashcardsOpen by remember { mutableStateOf(false) }
     var previewSource by remember { mutableStateOf("nl") }
     var previewMenuOpen by remember { mutableStateOf(false) }
@@ -1545,6 +1546,16 @@ private fun TuddyScreen(
                     }
                     added
                 },
+                onOpenLimitedPhraseboard = { selected ->
+                    if (selected in setOf("kmr", "ckb", "ps")) {
+                        // Never add an unsupported code to ML Kit text/speech
+                        // language pickers or claim a speech model is present.
+                        starterPhraseboardTarget = selected
+                        twoWayTypedOpen = false
+                        sharedTextToTwoWay = null
+                        starterPhraseboardOpen = true
+                    }
+                },
                 onDismiss = {
                     twoWayTypedOpen = false
                     sharedTextToTwoWay = null
@@ -2528,6 +2539,7 @@ private fun TuddyScreen(
         }
         if (starterPhraseboardOpen) {
             OfflineStarterPhraseboard(
+                initialTarget = starterPhraseboardTarget,
                 onOpenPersonalPhrases = {
                     starterPhraseboardOpen = false
                     personalPhrasesOpen = true
