@@ -57,6 +57,7 @@ internal fun MyOfflinePhrasesPanel(
     var displayedPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var editingPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
+    var importSource by remember { mutableStateOf("json") }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     var printableConsent by remember { mutableStateOf(false) }
     var printableAllLanguages by remember { mutableStateOf(false) }
@@ -131,6 +132,39 @@ internal fun MyOfflinePhrasesPanel(
             } else {
                 pendingImport = candidate
                 info = "Bestand gecontroleerd. Bevestig zelf of je de huidige zinnen wilt vervangen."
+            }
+        }
+    }
+    val openTsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        pendingImport = null
+        if (uri != null) {
+            val candidate = runCatching {
+                val output = ByteArrayOutputStream()
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: throw IllegalArgumentException("onleesbaar bestand")
+                input.use { stream ->
+                    val buffer = ByteArray(4096)
+                    while (true) {
+                        val count = stream.read(buffer)
+                        if (count < 0) break
+                        if (count == 0 || output.size() + count > 50000)
+                            throw IllegalArgumentException("ongeldige of te grote lijst")
+                        output.write(buffer, 0, count)
+                    }
+                }
+                deck.previewTsvImport(output.toByteArray())
+            }.getOrNull()
+            if (candidate == null) {
+                info = "TSV-lijst geweigerd. Controleer de UTF-8-kopregel, " +
+                    "vier tabkolommen, talen en de limiet van 80 zinnen. " +
+                    "Er zijn geen eigen zinnen overschreven."
+            } else {
+                importSource = "tsv"
+                pendingImport = candidate
+                info = "Zelfgeschreven zinnenlijst ingelezen. " +
+                    "Kies bewust samenvoegen of vervangen."
             }
         }
     }
@@ -264,6 +298,7 @@ internal fun MyOfflinePhrasesPanel(
                     ) { Text("Bewaar back-up…") }
                     OutlinedButton(onClick = {
                         pendingImport = null
+                        importSource = "json"
                         openBackup.launch(arrayOf("application/json", "text/plain",
                             "application/octet-stream"))
                     }) { Text("Herstel back-up…") }
@@ -278,6 +313,22 @@ internal fun MyOfflinePhrasesPanel(
                 ) { Text("▤ Maak afdrukbaar tweetalig zinnenboek…") }
                 Text("Maak een zelfstandig HTML-zinnenboek voor bekijken of afdrukken " +
                     "zonder internet. Alleen jouw eigen zinnen, niet geverifieerd.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        pendingImport = null
+                        importSource = "tsv"
+                        openTsv.launch(arrayOf(
+                            "text/tab-separated-values", "text/plain",
+                            "application/octet-stream"
+                        ))
+                    }
+                ) { Text("Importeer eigen zinnenlijst (TSV)…") }
+                Text("Gebruik zelfgeschreven UTF-8-zinnen met vier tabkolommen: " +
+                    "language, phrase, meaningLanguage, ownMeaning. " +
+                    "Kies na het inlezen bewust samenvoegen of vervangen. " +
+                    "Tuddy controleert de vertalingen niet.",
                     style = MaterialTheme.typography.bodySmall)
                 Text("Back-up is optioneel. De gekozen bestandsprovider kan online synchroniseren; " +
                     "Tuddy uploadt zelf niets. Import overschrijft pas na jouw bevestiging.",
@@ -417,7 +468,8 @@ internal fun MyOfflinePhrasesPanel(
         val mergeFits = phrases != null && phrases.size + newCount <= 80
         AlertDialog(
             onDismissRequest = { pendingImport = null },
-            title = { Text("Eigen zinnen vervangen?") },
+            title = { Text(if (importSource == "tsv")
+                "Eigen zinnenlijst importeren?" else "Eigen zinnen vervangen?") },
             text = {
                 Text("Geselecteerd: ${imported.size} eigen zinnen. " +
                     "${newCount} nieuw, ${duplicateCount} bestaan al in je privé-lijst. " +
