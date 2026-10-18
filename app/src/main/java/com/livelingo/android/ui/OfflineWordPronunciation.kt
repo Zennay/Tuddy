@@ -29,7 +29,7 @@ import com.livelingo.android.LocalSpeechPace
  * Uses the shared installed/non-network voice policy and shuts down on pause.
  */
 @Composable
-internal fun OfflineWordPronunciation(word: String, language: String?) {
+internal fun OfflineWordPronunciation(word: String, language: String?, enabled: Boolean) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
@@ -46,12 +46,13 @@ internal fun OfflineWordPronunciation(word: String, language: String?) {
             speaker.close()
         }
     }
-    LaunchedEffect(word, language) {
+    LaunchedEffect(word, language, enabled) {
         // Editing the word or its language never keeps pronouncing old text.
         speaker.stop()
-        notice = ""
+        notice = if (!enabled) "Voorlezen niet beschikbaar terwijl de microfoon luistert."
+            else ""
     }
-    val playable = language != null && word.isNotBlank() && word.length <= 40
+    val playable = enabled && language != null && word.isNotBlank() && word.length <= 40
     Column(verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(),
