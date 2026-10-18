@@ -4,6 +4,17 @@
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
+## Nieuw: eigen offline woordenboek
+
+Naast de kleine ingebouwde woordenlijst kunnen gebruikers nu zelf
+**woordbetekenissen** invoeren, zoeken, bewerken en wissen. Een tik op
+een ondertitel toont een eigen notitie als deze bestaat en biedt een
+expliciete knop om een betekenis toe te voegen. Eigen woorden kunnen
+ook met de offline oefenkaarten worden geleerd; de app houdt deze
+notities duidelijk gescheiden van de gecontroleerde basiswoorden.
+Alles blijft privé op het toestel totdat de gebruiker zelf iets invoert.
+[Werking, grenzen en privacy](docs/PRIVATE_OWN_WORD_NOTES.md).
+
 ## Nieuw: tweetalige SRT-ondertitelconcepten
 
 Bij **Gesprekstools → Bewaar SRT-ondertitelconcept…** kun je van
