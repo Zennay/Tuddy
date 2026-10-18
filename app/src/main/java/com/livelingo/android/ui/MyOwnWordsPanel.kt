@@ -58,6 +58,7 @@ internal fun MyOwnWordsPanel(
     var notice by remember { mutableStateOf("") }
     var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
     var pendingRestore by remember { mutableStateOf<List<OwnWord>?>(null) }
+    var restoreOrigin by remember { mutableStateOf("json") }
     val context = LocalContext.current
     val backupPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -111,6 +112,37 @@ internal fun MyOwnWordsPanel(
             }
         }
     }
+    val tsvPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        pendingRestore = null
+        if (uri != null) {
+            val imported = runCatching {
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: throw IllegalArgumentException("onleesbaar bestand")
+                val output = ByteArrayOutputStream()
+                input.use { stream ->
+                    val buffer = ByteArray(4096)
+                    while (true) {
+                        val read = stream.read(buffer)
+                        if (read < 0) break
+                        if (read == 0 || output.size() + read > PrivateOwnWordDeck.MAX_BACKUP_BYTES)
+                            throw IllegalArgumentException("onjuist of te groot bestand")
+                        output.write(buffer, 0, read)
+                    }
+                }
+                deck.previewTsvImport(output.toByteArray())
+            }.getOrNull()
+            if (imported == null) {
+                notice = "TSV-lijst geweigerd: verwacht UTF-8 met kopregel " +
+                    "language, word, meaning (tabs). Niets overschreven."
+            } else {
+                restoreOrigin = "tsv"
+                pendingRestore = imported
+                notice = "Woordlijst veilig ingelezen. Kies bewust samenvoegen of vervangen."
+            }
+        }
+    }
     val items = remember(revision) { deck.entries() }
     val filtered = items.orEmpty().filter {
         it.language == language && (query.isBlank() ||
@@ -130,7 +162,8 @@ internal fun MyOwnWordsPanel(
         val canMerge = items != null && items.size + newCount <= PrivateOwnWordDeck.MAX_ENTRIES
         AlertDialog(
             onDismissRequest = { pendingRestore = null },
-            title = { Text("Eigen woorden herstellen?") },
+            title = { Text(if (restoreOrigin == "tsv")
+                "Zelfgeschreven woordenlijst importeren?" else "Eigen woorden herstellen?") },
             text = {
                 Text("Dit bestand bevat " + restore.size + " zelfgeschreven woorden. " +
                     newCount + " zijn nieuw, " + duplicateCount + " staan al lokaal. " +
@@ -314,9 +347,26 @@ internal fun MyOwnWordsPanel(
                     ) { Text("Bewaar back-up…") }
                     OutlinedButton(onClick = {
                         pendingRestore = null
+                        restoreOrigin = "json"
                         restorePicker.launch(arrayOf("application/json", "text/plain"))
                     }) { Text("Herstel back-up…") }
                 }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        pendingRestore = null
+                        restoreOrigin = "tsv"
+                        tsvPicker.launch(arrayOf(
+                            "text/tab-separated-values", "text/plain",
+                            "application/octet-stream"
+                        ))
+                    }
+                ) { Text("Importeer eigen woordenlijst (TSV)…") }
+                Text("Maak zelf een UTF-8-tekstbestand met kolommen language, word, meaning " +
+                    "gescheiden door tabs. Verplicht eerste regel: " +
+                    "language<TAB>word<TAB>meaning. Maximaal 120 eigen woorden. " +
+                    "Bestaande betekenissen worden pas na jouw aparte keuze vervangen.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("Back-ups zijn optioneel en bevatten alleen je eigen woordnotities. " +
                     "De gekozen Android-bestandsprovider kan ze extern opslaan of synchroniseren.",
                     style = MaterialTheme.typography.bodySmall)

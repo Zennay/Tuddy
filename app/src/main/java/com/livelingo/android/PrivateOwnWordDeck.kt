@@ -174,6 +174,37 @@ internal class PrivateOwnWordDeck(context: Context) {
         } catch (_: Exception) { null }
     }
 
+    /**
+     * User-selected UTF-8 TSV import for manually maintained vocabulary lists.
+     * The header is mandatory: language<TAB>word<TAB>meaning. No guessing from
+     * CSV, URLs, transcript text, screenshots or translated model output.
+     * Never writes anything until the UI separately confirms merge/replace.
+     */
+    fun previewTsvImport(bytes: ByteArray): List<OwnWord>? {
+        if (bytes.isEmpty() || bytes.size > MAX_BACKUP_BYTES) return null
+        val raw = bytes.toString(Charsets.UTF_8)
+        if (!raw.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        val text = raw.removePrefix("\uFEFF")
+        val lines = text.split('\n').dropLastWhile { it.isEmpty() }
+        if (lines.size !in 2..(MAX_ENTRIES + 1)) return null
+        val header = lines.first().removeSuffix("\r")
+        if (header != "language\tword\tmeaning") return null
+        val seen = HashSet<String>()
+        val records = ArrayList<OwnWord>()
+        for (line in lines.drop(1)) {
+            val columns = line.removeSuffix("\r").split('\t')
+            if (columns.size != 3) return null
+            val word = OwnWord(
+                language = cleanCode(columns[0]),
+                word = columns[1],
+                ownMeaning = columns[2]
+            )
+            if (!valid(word) || !seen.add(key(word))) return null
+            records.add(word)
+        }
+        return records.takeIf { it.isNotEmpty() }
+    }
+
     /** Merge only previously unseen keys: local edits always win. */
     @Synchronized
     fun mergeImported(imported: List<OwnWord>): Boolean {
