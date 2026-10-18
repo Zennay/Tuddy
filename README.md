@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: één privéthema als afdrukbaar zinnenboek
+
+Na het kiezen van een zelfgemaakt thema kun je nu alleen die zinnen
+naar een zelfstandig offline HTML-zinnenboek exporteren.
+Kies bewust of je filter actief blijft en selecteer de taal.
+De app weigert een verouderd momentbeeld na het openen van
+de Android-bestandskiezer. Eigen teksten en betekenissen zijn
+ongeverifieerd; een externe provider kan de export synchroniseren.
+[Bediening en privacy](docs/PRINT_SELECTED_PRIVATE_PHRASE_TOPIC.md).
+
+
 ## Nieuw: mijn eigen woordbetekenissen later opnieuw oefenen
 
 Zelfgeschreven woordbetekenissen kunnen nu, na **aparte toestemming**,
