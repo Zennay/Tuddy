@@ -51,6 +51,8 @@ internal fun TwoWayTypedConversationDialog(
     initialSource: String,
     initialTarget: String,
     recentLines: List<TypedConversationLine>,
+    retryableCount: (String, String) -> Int,
+    onRetryMissing: (String, String) -> Int,
     onSend: (String, String, String) -> Boolean,
     onDismiss: () -> Unit
 ) {
@@ -175,6 +177,24 @@ internal fun TwoWayTypedConversationDialog(
                             }
                         }) { Text(if (preparing) "Download loopt…" else "Modellen via wifi…") }
                     }
+                }
+                val retryable = retryableCount(from, to)
+                if (retryable > 0) {
+                    Text("Eerder niet vertaald voor deze richting: $retryable zinnen.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(
+                        enabled = !preparing && modelStatus?.stage == OfflineTextStage.READY,
+                        onClick = {
+                            val retried = onRetryMissing(from, to)
+                            info = if (retried > 0)
+                                "$retried eerdere zinnen worden opnieuw lokaal vertaald."
+                            else "Er zijn geen passende onvoltooide zinnen meer."
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("↻ Herprobeer ontbrekende vertalingen (max. 12)") }
+                    Text("Alleen na jouw tik. Dit hergebruikt reeds aanwezige " +
+                        "tekstmodellen en downloadt niets automatisch.",
+                        style = MaterialTheme.typography.bodySmall)
                 }
                 if (from == to) {
                     Text("Kies twee verschillende teksttalen voor een vertaling.",
