@@ -15,6 +15,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -262,7 +263,8 @@ internal fun FocusTranscriptDialog(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     SessionCaptionSearchText(own, captionQuery,
                                         MaterialTheme.typography.titleMedium.copy(
-                                            fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale
+                                            fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale,
+                                            textDirection = TextDirection.ContentOrRtl
                                         ))
                                 }
                                 if (showColumns) {
@@ -279,13 +281,15 @@ internal fun FocusTranscriptDialog(
                                 } else {
                                     SessionCaptionSearchText(line.original, captionQuery,
                                     style = MaterialTheme.typography.headlineSmall.copy(
-                                        fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale
+                                        fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
+                                        textDirection = TextDirection.ContentOrRtl
                                     ))
                                     if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
                                     SessionCaptionSearchText(line.translated, captionQuery,
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             color = MaterialTheme.colorScheme.primary,
-                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale
+                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
+                                            textDirection = TextDirection.ContentOrRtl
                                         ))
                                 } else {
                                     Text("[Vertaling niet voltooid: ${line.status}]",
@@ -325,10 +329,13 @@ internal fun FocusTranscriptDialog(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     if (interimTranslated.isNotBlank()) {
-                                        Text(interimTranslated,
-                                            style = MaterialTheme.typography.headlineSmall.copy(
-                                                color = MaterialTheme.colorScheme.primary,
-                                                fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale))
+                                        LiveInterimWordFocus(
+                                            text = interimTranslated, fontScale = fontScale
+                                        )
+                                        Text("Laatste tekstwoord in lokale voorlopige " +
+                                            "vertaling · geen audio-woordtiming.",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     } else {
                                         Text("Vertaling volgt zodra een lokaal model resultaat geeft.",
                                             style = MaterialTheme.typography.bodySmall)
