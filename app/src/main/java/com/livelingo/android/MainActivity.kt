@@ -256,6 +256,16 @@ private fun TuddyScreen(
     // Android document picker result; no automatic disk/history persistence.
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var subtitleConsentOpen by remember { mutableStateOf(false) }
+    var printableLiveConsentOpen by remember { mutableStateOf(false) }
+    var printableArchiveConsentOpen by remember { mutableStateOf(false) }
+    var printableOnlyFinished by remember { mutableStateOf(true) }
+    // Generation, selected filter, and exact opt-in RAM snapshot.
+    var pendingPrintableLive by remember {
+        mutableStateOf<Triple<Int, Boolean, ByteArray>?>(null)
+    }
+    var pendingPrintableArchive by remember {
+        mutableStateOf<Pair<Int, ByteArray>?>(null)
+    }
     var subtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
     var exportStatus by remember { mutableStateOf("") }
     // The read-only archive is not part of the current live conversation.
@@ -360,6 +370,12 @@ private fun TuddyScreen(
             lines[index].original.contains(normalizedHistoryQuery, ignoreCase = true) ||
                 lines[index].translated.contains(normalizedHistoryQuery, ignoreCase = true)
         }
+
+    fun capturePrintableConversation(onlyFinished: Boolean): ByteArray? =
+        PrivatePrintableConversation.snapshot(lines.map { line ->
+            TranscriptExportRow(line.original, line.translated, line.status,
+                line.sourceCode, line.targetCode, line.recordedAtMillis)
+        }, onlyFinished)
 
     fun captureSubtitleDraft(): ByteArray? =
         PrivateSubtitleDraftExport.snapshot(lines.map { line ->
@@ -1191,6 +1207,50 @@ private fun TuddyScreen(
         }
     }
 
+    val savePrintableLive = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri ->
+        val pending = pendingPrintableLive
+        pendingPrintableLive = null
+        if (uri != null && pending != null && pending.first == generation) {
+            val fresh = capturePrintableConversation(pending.second)
+            if (fresh == null || !fresh.contentEquals(pending.third)) {
+                exportStatus = "Het gesprek is gewijzigd. Kies afdrukbaar gesprek opnieuw."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use {
+                        it.write(pending.third)
+                        it.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                exportStatus = if (saved)
+                    "Afdrukbaar gesprek opgeslagen als offline HTML."
+                else "Afdrukbaar gesprek niet opgeslagen."
+            }
+        }
+    }
+
+    val savePrintableArchive = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri ->
+        val pending = pendingPrintableArchive
+        pendingPrintableArchive = null
+        // A user-chosen archive closes when Android's picker backgrounds the
+        // activity. This user-consented bounded snapshot can still be saved.
+        if (uri != null && pending != null && pending.first == generation) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(pending.second)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            exportStatus = if (saved) "Afdrukbaar privéarchief opgeslagen als offline HTML."
+                else "Afdrukbaar privéarchief niet opgeslagen."
+        }
+    }
+
     val openTranscriptArchive = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1509,6 +1569,48 @@ private fun TuddyScreen(
                 fontScale = captionSize.scale,
                 onStop = { stop() },
                 onClose = { focusMode = false }
+            )
+        }
+        if (printableLiveConsentOpen) {
+            AlertDialog(
+                onDismissRequest = { printableLiveConsentOpen = false },
+                title = { Text("Afdrukbaar tweetalig gesprek bewaren?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Je kiest zelf of je dit tijdelijke gesprek als HTML-bestand " +
+                            "buiten Tuddy wilt bewaren. Een Android-bestandsprovider kan " +
+                            "dit bestand synchroniseren of delen. Controleer de toestemming " +
+                            "van betrokken gesprekspartners. Vertalingen zijn niet gecontroleerd.")
+                        TextButton(onClick = { printableOnlyFinished = true }) {
+                            Text(if (printableOnlyFinished) "Alleen afgeronde zinnen ✓"
+                                else "Alleen afgeronde zinnen")
+                        }
+                        TextButton(onClick = { printableOnlyFinished = false }) {
+                            Text(if (!printableOnlyFinished) "Ook originele zinnen zonder vertaling ✓"
+                                else "Ook originele zinnen zonder vertaling")
+                        }
+                        Text("Geen audio, script, externe bronnen of transcriptopslag " +
+                            "zonder jouw keuze. Onvoltooide vertalingen worden niet ingevuld.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(enabled = !listening, onClick = {
+                        printableLiveConsentOpen = false
+                        val snapshot = capturePrintableConversation(printableOnlyFinished)
+                        if (snapshot == null) {
+                            exportStatus = "Geen geldige gespreksregels voor afdrukbare export."
+                        } else {
+                            pendingPrintableLive = Triple(generation, printableOnlyFinished, snapshot)
+                            savePrintableLive.launch("Tuddy-afdrukbaar-gesprek.html")
+                        }
+                    }) { Text("Ik begrijp dit, kies opslag…") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { printableLiveConsentOpen = false }) {
+                        Text("Annuleren")
+                    }
+                }
             )
         }
         if (subtitleConsentOpen) {
@@ -1904,6 +2006,13 @@ private fun TuddyScreen(
                             },
                             onClick = { archiveSubtitleConsentOpen = true }
                         ) { Text("Bewaar dit archief als SRT/WebVTT-concept…") }
+                        TextButton(
+                            enabled = !listening && archive.isNotEmpty(),
+                            onClick = {
+                                printableOnlyFinished = true
+                                printableArchiveConsentOpen = true
+                            }
+                        ) { Text("▤ Bewaar leesbaar afdrukbaar privéarchief (HTML)…") }
                         Text(
                             "Alleen afgeronde archiefzinnen; geschatte herkenningstijden, " +
                                 "niet synchroon met de oorspronkelijke audio.",
@@ -1981,6 +2090,48 @@ private fun TuddyScreen(
                         previewArchiveRows = null
                         archiveSearchQuery = ""
                     }) { Text("Sluiten") }
+                }
+            )
+        }
+
+        if (printableArchiveConsentOpen && archive != null) {
+            AlertDialog(
+                onDismissRequest = { printableArchiveConsentOpen = false },
+                title = { Text("Afdrukbaar privéarchief bewaren?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Dit is een door jou gekozen, niet onafhankelijk gecontroleerd " +
+                            "gespreksarchief. Een HTML-bestand kan door de opslagprovider " +
+                            "extern worden bewaard of gedeeld. Controleer toestemming.")
+                        TextButton(onClick = { printableOnlyFinished = true }) {
+                            Text(if (printableOnlyFinished) "Alleen afgeronde zinnen ✓"
+                                else "Alleen afgeronde zinnen")
+                        }
+                        TextButton(onClick = { printableOnlyFinished = false }) {
+                            Text(if (!printableOnlyFinished) "Ook oorspronkelijke zinnen ✓"
+                                else "Ook oorspronkelijke zinnen")
+                        }
+                        Text("Geen onbevestigde vertalingen; geen automatische export.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(enabled = !listening, onClick = {
+                        printableArchiveConsentOpen = false
+                        val snapshot = PrivatePrintableConversation.snapshot(
+                            archive, printableOnlyFinished)
+                        if (snapshot == null) {
+                            archiveExcerptNotice = "Geen veilig archief voor afdrukbare export."
+                        } else {
+                            pendingPrintableArchive = generation to snapshot
+                            savePrintableArchive.launch("Tuddy-afdrukbaar-privearchief.html")
+                        }
+                    }) { Text("Ik begrijp dit, kies opslag…") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { printableArchiveConsentOpen = false }) {
+                        Text("Annuleren")
+                    }
                 }
             )
         }
@@ -2681,6 +2832,13 @@ private fun TuddyScreen(
                         },
                         onClick = { subtitleConsentOpen = true }
                     ) { Text("Bewaar ondertitelconcept (SRT/WebVTT)…") }
+                    OutlinedButton(
+                        enabled = !listening && lines.isNotEmpty(),
+                        onClick = {
+                            printableOnlyFinished = true
+                            printableLiveConsentOpen = true
+                        }
+                    ) { Text("▤ Afdrukbaar gesprek (HTML)…") }
                     Text(
                         "Tweetalige zinnen; geschatte tijden uit spraakafloop, " +
                             "niet gesynchroniseerd met audio.",
