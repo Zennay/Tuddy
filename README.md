@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: alle vandaag verschuldigde kaarten door elkaar oefenen
+
+Vanuit **Vandaag offline oefenen** kun je maximaal dertig kaarten uit
+drie al vrijwillig ingeschakelde lokale herhaalplannen in één ronde oefenen.
+Wissel tussen basiswoorden, eigen woordbetekenissen en eigen zinnen;
+onthul antwoorden, beoordeel ze in hun eigen bestaande planning of sla
+over zonder beoordeling. Er is geen nieuw leerprofiel, account, opname,
+modeldownload of extra opslag. Eigen betekenissen zijn niet geverifieerd.
+[Handleiding](docs/MIXED_DUE_OFFLINE_REVIEW.md).
+
+
 ## Nieuw: zelf je kaarten op papier oefenen
 
 Kies bij **Bewaar mijn kaarten van vandaag…** ook voor een afdrukbaar
