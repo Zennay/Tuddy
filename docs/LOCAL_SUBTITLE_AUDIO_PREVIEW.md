@@ -30,3 +30,7 @@ Sluiten, audio wisselen en een nieuw gesprek starten houden geen
 herhaalsessie of instellingen vast. Audio-pauze bij achtergrond blijft
 van kracht, ook tijdens herhaling. Tijdvakken kunnen fout of overlappend
 zijn: er wordt niets automatisch op spraakwoorden uitgelijnd.
+
+## Android-bestandskiezer en veilig terugkeren naar de editor
+
+Tuddy gebruikt voor de audio een **bestandskiezer die aan de hoofdactiviteit hangt**. Als Android de app tijdens de externe bestandskeuze op de achtergrond zet, verdwijnen de open editor en eventuele live microfoon zoals de privacyregels voorschrijven. Alleen het exact op dat moment door jou gekozen tijdelijke SRT/VTT-concept wordt voor die expliciete pickeractie kort in RAM behouden; na een geldige audioselectie opent een zelfstandige afspeelmodus. **Annuleren** keert terug naar dat concept. **Sluiten** in de audiomodus opent datzelfde tijdelijke tekst-/tijdcodeconcept weer; eerdere editor-undo-stappen worden niet meeverhuisd. Niets hiervan overleeft procesafsluiting of wordt ongevraagd naar schijf geschreven. Audio wordt nooit automatisch afgespeeld na terugkeer.
