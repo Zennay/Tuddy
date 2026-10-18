@@ -54,6 +54,7 @@ import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.FocusCaptionLine
+import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
 import java.io.ByteArrayOutputStream
@@ -205,6 +206,7 @@ private fun TuddyScreen(
     var previewTarget by remember { mutableStateOf("kmr") }
     val personalPhrases = remember(context) { PrivatePhraseDeck(context) }
     var personalPhrasesOpen by remember { mutableStateOf(false) }
+    var starterPhraseboardOpen by remember { mutableStateOf(false) }
     var previewSource by remember { mutableStateOf("nl") }
     var previewMenuOpen by remember { mutableStateOf(false) }
     var previewInput by remember { mutableStateOf("") }
@@ -1010,6 +1012,7 @@ private fun TuddyScreen(
             }
             if (event == Lifecycle.Event.ON_STOP) {
                 offlineReadinessOpen = false
+                starterPhraseboardOpen = false
                 focusMode = false
                 quickTypedOpen = false
                 draftFromExternalShare = false
@@ -1035,6 +1038,7 @@ private fun TuddyScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             generation++
             modelStorage.invalidate()
+            starterPhraseboardOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             archiveSearchQuery = ""
@@ -1647,6 +1651,15 @@ private fun TuddyScreen(
                 }
             )
         }
+        if (starterPhraseboardOpen) {
+            OfflineStarterPhraseboard(
+                onOpenPersonalPhrases = {
+                    starterPhraseboardOpen = false
+                    personalPhrasesOpen = true
+                },
+                onDismiss = { starterPhraseboardOpen = false }
+            )
+        }
         if (personalPhrasesOpen) {
             MyOfflinePhrasesPanel(
                 deck = personalPhrases,
@@ -1856,6 +1869,7 @@ private fun TuddyScreen(
                         previewInput = ""
                         manualText = ""
                         quickTypedOpen = false
+                        starterPhraseboardOpen = false
                         previewResult = null
                         error = ""
                     }) { Text("Wis gesprek") }
@@ -1921,6 +1935,13 @@ private fun TuddyScreen(
                     enabled = !listening,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("✍ Typ zin · zonder microfoon") }
+                TextButton(
+                    onClick = {
+                        if (listening) stop()
+                        starterPhraseboardOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🌍 5 basiswoorden · Kurmanji, Sorani, Pasjtoe") }
                 OutlinedButton(onClick = {
                     favoritesOpen = !favoritesOpen
                     if (favoritesOpen) {
