@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.livelingo.android.PrivateSubtitleBatchReplace
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateSubtitleTimelineNavigation
@@ -60,12 +62,9 @@ internal fun PrivateSubtitleFileDialog(
     var large by remember { mutableStateOf(true) }
     var draft by remember(cues) { mutableStateOf(cues) }
     var edited by remember(cues) { mutableStateOf(false) }
-    // Up to 20 private in-memory revisions, never an additional disk history.
+    // The last twenty document edits exist only while this document is open.
     var undoHistory by remember(cues) { mutableStateOf(emptyList<List<PrivateSubtitleCue>>()) }
     var redoHistory by remember(cues) { mutableStateOf(emptyList<List<PrivateSubtitleCue>>()) }
-    var findLiteral by remember(cues) { mutableStateOf("") }
-    var replaceLiteral by remember(cues) { mutableStateOf("") }
-    var replaceConfirmation by remember(cues) { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var deleteIndex by remember { mutableStateOf<Int?>(null) }
     var splitIndex by remember { mutableStateOf<Int?>(null) }
@@ -75,6 +74,10 @@ internal fun PrivateSubtitleFileDialog(
     var editValue by remember { mutableStateOf("") }
     var requestSave by remember { mutableStateOf<SubtitleDraftFormat?>(null) }
     var notice by remember { mutableStateOf("") }
+    var batchOpen by remember { mutableStateOf(false) }
+    var batchFind by remember { mutableStateOf("") }
+    var batchWith by remember { mutableStateOf("") }
+    var batchMatchCase by remember { mutableStateOf(false) }
     val found = draft.mapIndexed { idx, row -> idx to row }
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
     val current = found.getOrNull(shownIndex)?.second
@@ -117,13 +120,13 @@ internal fun PrivateSubtitleFileDialog(
 
     fun undoChange() {
         if (undoHistory.isEmpty()) return
-        val last = undoHistory.last()
+        val previous = undoHistory.last()
         undoHistory = undoHistory.dropLast(1)
         redoHistory = (redoHistory + listOf(draft.toList())).takeLast(20)
-        draft = last
+        draft = previous
         edited = draft != cues
         shownIndex = -1
-        notice = "Laatste bewerking teruggedraaid. Origineel blijft intact."
+        notice = "Laatste bewerking teruggedraaid; het origineel is niet aangepast."
     }
 
     fun redoChange() {
@@ -134,7 +137,7 @@ internal fun PrivateSubtitleFileDialog(
         draft = next
         edited = draft != cues
         shownIndex = -1
-        notice = "Bewerking opnieuw toegepast op de tijdelijke kopie."
+        notice = "Bewerking opnieuw toegepast op deze tijdelijke kopie."
     }
 
     fun nudgeSelected(start: Long, end: Long) {
@@ -183,9 +186,16 @@ internal fun PrivateSubtitleFileDialog(
                         }
                     }) { Text("Spring →") }
                 }
-                Text("${found.size} van ${draft.size} regels" +
-                    (if (edited) " · niet bewaarde wijzigingen" else ""),
-                    style = MaterialTheme.typography.labelMedium)
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("${found.size} van ${draft.size} regels" +
+                        (if (edited) " · niet bewaard" else ""),
+                        style = MaterialTheme.typography.labelMedium)
+                    TextButton(onClick = {
+                        batchFind = query.take(100)
+                        batchOpen = true
+                    }) { Text("Zoek en vervang…") }
+                }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     TextButton(onClick = {
@@ -217,21 +227,6 @@ internal fun PrivateSubtitleFileDialog(
                         onClick = { redoChange() }) {
                         Text("↷ Opnieuw (${redoHistory.size})")
                     }
-                }
-                OutlinedTextField(value = findLiteral,
-                    onValueChange = { findLiteral = it.take(100) },
-                    label = { Text("Exacte tekst om te vervangen") },
-                    singleLine = true, modifier = Modifier.fillMaxWidth())
-                Row(modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = replaceLiteral,
-                        onValueChange = { replaceLiteral = it.take(100) },
-                        label = { Text("Vervang door (letterlijk)") },
-                        singleLine = true, modifier = Modifier.weight(1f))
-                    OutlinedButton(enabled = findLiteral.isNotBlank() &&
-                        replaceLiteral.isNotBlank() && findLiteral != replaceLiteral &&
-                        draft.any { it.text.contains(findLiteral) },
-                        onClick = { replaceConfirmation = true }) { Text("Vervang…") }
                 }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
@@ -378,6 +373,63 @@ internal fun PrivateSubtitleFileDialog(
         }
     }
 
+    if (batchOpen) {
+        val proposed = PrivateSubtitleBatchReplace.preview(
+            draft, batchFind, batchWith, batchMatchCase)
+        AlertDialog(
+            onDismissRequest = { batchOpen = false },
+            title = { Text("Zoek en vervang · tijdelijk") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Letterlijke tekst in alle ondertitelregels; tijdcodes " +
+                        "blijven ongewijzigd. Bekijk het aantal vóór je toepast.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = batchFind,
+                        onValueChange = { batchFind = it.take(100) },
+                        label = { Text("Zoek tekst · max. 100 tekens") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = batchWith,
+                        onValueChange = { batchWith = it.take(200) },
+                        label = { Text("Vervang door · leeg mag") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Checkbox(checked = batchMatchCase,
+                            onCheckedChange = { batchMatchCase = it })
+                        Text("Hoofdletters onderscheiden")
+                    }
+                    Text(
+                        if (proposed == null)
+                            "Geen geldige wijziging; controleer zoekterm, " +
+                                "regelgrenzen en documentlimieten."
+                        else "Voorbeeld: ${proposed.replacements} vervangingen " +
+                            "in ${proposed.changedCues} regels.",
+                        style = MaterialTheme.typography.bodyMedium)
+                    Text("De bron blijft ongewijzigd. Alleen via Bewaar kopie… " +
+                        "kan je later een nieuw SRT/VTT-bestand maken.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = proposed != null, onClick = {
+                    val confirmed = PrivateSubtitleBatchReplace.preview(
+                        draft, batchFind, batchWith, batchMatchCase)
+                    if (confirmed != null) {
+                        applyChange(confirmed.updated)
+                        shownIndex = -1
+                        notice = "${confirmed.replacements} tekstvervangingen toegepast " +
+                            "in ${confirmed.changedCues} regels. Herstel blijft mogelijk."
+                    }
+                    batchOpen = false
+                }) { Text("Pas toe in tijdelijk concept") }
+            },
+            dismissButton = {
+                TextButton(onClick = { batchOpen = false }) { Text("Annuleren") }
+            }
+        )
+    }
     val splitting = splitIndex
     if (splitting != null) {
         AlertDialog(onDismissRequest = { splitIndex = null },
@@ -497,36 +549,6 @@ internal fun PrivateSubtitleFileDialog(
             },
             dismissButton = {
                 TextButton(onClick = { editIndex = null }) { Text("Annuleren") }
-            }
-        )
-    }
-    if (replaceConfirmation) {
-        val matchCount = draft.count { it.text.contains(findLiteral) }
-        AlertDialog(onDismissRequest = { replaceConfirmation = false },
-            title = { Text("Tekst vervangen in ${matchCount} ondertitelregels?") },
-            text = { Text("Letterlijk en hoofdlettergevoelig; geen regex of automatische vertaling. " +
-                "Alleen de tijdelijke kopie wordt aangepast. Na vervangen kun je " +
-                "terugdraaien, of de originele versie herstellen. " +
-                "Bewaren blijft een aparte handeling.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    val next = PrivateSubtitleDraftEditor.replaceLiteral(
-                        draft, findLiteral, replaceLiteral)
-                    if (next == null) {
-                        notice = "Vervanging geweigerd: tekstlimiet, ongeldige inhoud, " +
-                            "bestandsgrootte of geen letterlijke treffers."
-                    } else {
-                        applyChange(next.first)
-                        shownIndex = -1
-                        notice = "${next.second} regels in tijdelijke kopie aangepast."
-                    }
-                    replaceConfirmation = false
-                }) { Text("Vervang alleen in concept") }
-            },
-            dismissButton = {
-                TextButton(onClick = { replaceConfirmation = false }) {
-                    Text("Niet vervangen")
-                }
             }
         )
     }
