@@ -2260,7 +2260,8 @@ private fun TuddyScreen(
                 listening = false,
                 fontScale = captionSize.scale,
                 onStop = {},
-                onClose = { archiveReaderOpen = false }
+                onClose = { archiveReaderOpen = false },
+                archiveMode = true
             )
         }
         if (archiveStudyOpen && archive != null) {
