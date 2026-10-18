@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter
 internal object PrivateStudyCalendar {
     private val dateFormat = DateTimeFormatter.BASIC_ISO_DATE
     private const val MAX_BYTES = 16_384
+    private val CATEGORIES = setOf("curated", "own", "phrases")
 
     // RFC 5545 lines are at most 75 octets; these fields are ASCII-only.
     private fun fold(line: String): List<String> {
@@ -28,13 +29,18 @@ internal object PrivateStudyCalendar {
     fun snapshot(
         words: PrivateVocabularyDeck,
         ownWords: PrivateOwnWordDeck,
-        phrases: PrivatePhraseDeck
+        phrases: PrivatePhraseDeck,
+        included: Set<String> = CATEGORIES
     ): ByteArray? {
-        val curated = if (words.reviewsEnabled()) words.scheduledReviews().map { it.dueDay }
-            else emptyList()
-        val own = if (ownWords.reviewsEnabled())
+        if (included.isEmpty() || included.any { it !in CATEGORIES }) return null
+        if (("curated" in included && !words.reviewsEnabled()) ||
+            ("own" in included && !ownWords.reviewsEnabled()) ||
+            ("phrases" in included && !phrases.reviewsEnabled())) return null
+        val curated = if ("curated" in included)
+            words.scheduledReviews().map { it.dueDay } else emptyList()
+        val own = if ("own" in included)
             ownWords.scheduledReviews()?.map { it.dueDay } else emptyList()
-        val personal = if (phrases.reviewsEnabled())
+        val personal = if ("phrases" in included)
             phrases.scheduledReviews()?.map { it.dueDay } else emptyList()
         // Do not pretend that unreadable local data contains zero cards.
         if (own == null || personal == null) return null
