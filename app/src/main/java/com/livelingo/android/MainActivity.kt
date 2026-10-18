@@ -2717,7 +2717,8 @@ private fun TuddyScreen(
                 deck = savedVocabulary,
                 revision = savedWordRevision,
                 onChanged = { savedWordRevision++ },
-                onDismiss = { savedWordsOpen = false }
+                onDismiss = { savedWordsOpen = false },
+                allowSpeech = !listening
             )
         }
         Surface(Modifier.fillMaxSize()) {

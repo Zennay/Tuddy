@@ -18,6 +18,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,8 +27,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.PrivateVocabularyDeck
 import com.livelingo.android.PrivateVocabularyStudySheet
+import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
 import java.io.ByteArrayOutputStream
 
 /**
@@ -38,7 +45,8 @@ internal fun SavedWordsPanel(
     deck: PrivateVocabularyDeck,
     revision: Int,
     onChanged: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    allowSpeech: Boolean = true
 ) {
     val allWords = remember(revision) { deck.entries() }
     var search by remember { mutableStateOf("") }
@@ -125,13 +133,35 @@ internal fun SavedWordsPanel(
     if (practiceOpen) {
         WordPracticePanel(
             savedWords = allWords,
-            onDismiss = { practiceOpen = false }
+            onDismiss = { practiceOpen = false },
+            allowSpeech = allowSpeech
         )
         return
     }
 
+    // One speaker for the visible word list, not a TTS engine per saved word.
+    val owner = LocalLifecycleOwner.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    var audioNotice by remember { mutableStateOf("") }
+    DisposableEffect(owner, speaker) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                speaker.stop()
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose {
+            owner.lifecycle.removeObserver(observer)
+            speaker.close()
+        }
+    }
+    LaunchedEffect(search, revision, allowSpeech) {
+        speaker.stop()
+        audioNotice = if (allowSpeech) "" else "Voorlezen uit terwijl de microfoon luistert."
+    }
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { speaker.stop(); onDismiss() },
         title = { Text("Mijn opgeslagen woorden") },
         text = {
             Column(
@@ -145,7 +175,7 @@ internal fun SavedWordsPanel(
                 )
                 OutlinedButton(
                     enabled = allWords.isNotEmpty(),
-                    onClick = { practiceOpen = true },
+                    onClick = { speaker.stop(); practiceOpen = true },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Oefen opgeslagen woorden") }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -205,6 +235,9 @@ internal fun SavedWordsPanel(
                 )
                 Text("${words.size} van ${allWords.size} woorden · betekenissen verborgen om te oefenen",
                     style = MaterialTheme.typography.bodySmall)
+                if (audioNotice.isNotBlank()) {
+                    Text(audioNotice, style = MaterialTheme.typography.bodySmall)
+                }
                 if (words.isEmpty()) {
                     Text(if (allWords.isEmpty())
                         "Nog geen woorden. Tik op een woord in een ondertitel en kies Bewaar woord."
@@ -224,18 +257,33 @@ internal fun SavedWordsPanel(
                                 revealed = if (key in revealed) revealed - key else revealed + key
                             }) { Text(if (key in revealed) "Verberg betekenis" else "Toon betekenis") }
                             TextButton(onClick = {
+                                speaker.stop()
                                 if (deck.remove(word.language, word.word)) {
                                     revealed = revealed - key
                                     onChanged()
                                 }
                             }) { Text("Verwijder") }
                         }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TextButton(enabled = allowSpeech, onClick = {
+                                speaker.speak(word.word, word.language,
+                                    LocalSpeechPace.NORMAL) { audioNotice = it }
+                            }) { Text("🔊 Hoor woord") }
+                            TextButton(enabled = allowSpeech, onClick = {
+                                speaker.speak(word.word, word.language,
+                                    LocalSpeechPace.SLOW) { audioNotice = it }
+                            }) { Text("Rustig") }
+                            TextButton(onClick = {
+                                speaker.stop()
+                                audioNotice = "Lokale voorlezing gestopt."
+                            }) { Text("■ Stop") }
+                        }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Sluiten") }
+            TextButton(onClick = { speaker.stop(); onDismiss() }) { Text("Sluiten") }
         },
         dismissButton = {
             if (allWords.isNotEmpty()) {
