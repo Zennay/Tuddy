@@ -281,6 +281,7 @@ private fun TuddyScreen(
     var exportStatus by remember { mutableStateOf("") }
     // The read-only archive is not part of the current live conversation.
     var previewArchiveRows by remember { mutableStateOf<List<TranscriptExportRow>?>(null) }
+    var archiveStudyOpen by remember { mutableStateOf(false) }
     var archiveSubtitleConsentOpen by remember { mutableStateOf(false) }
     var pendingArchiveSubtitleExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var archiveSearchQuery by remember { mutableStateOf("") }
@@ -1366,6 +1367,7 @@ private fun TuddyScreen(
                 draftFromExternalShare = false
                 manualText = ""
                 previewArchiveRows = null
+                archiveStudyOpen = false
                 archiveSearchQuery = ""
                 pendingArchiveExcerpt = null
                 archiveExcerptNotice = ""
@@ -1400,6 +1402,7 @@ private fun TuddyScreen(
             meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
+            archiveStudyOpen = false
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
             pendingArchiveExcerpt = null
@@ -2239,7 +2242,19 @@ private fun TuddyScreen(
         val archive = previewArchiveRows
         val matchedArchive = if (archive == null) emptyList() else
             PrivateArchiveSearch.filter(archive, archiveSearchQuery)
-        if (archive != null && pendingArchiveExcerpt == null) {
+        if (archiveStudyOpen && archive != null) {
+            SessionCaptionStudyDialog(
+                captions = matchedArchive.mapIndexed { index, row ->
+                    FocusCaptionLine(
+                        index.toLong(), row.original, row.translated,
+                        row.status, row.sourceCode, row.targetCode
+                    )
+                },
+                onDismiss = { archiveStudyOpen = false },
+                originLabel = "de gevonden archiefregels"
+            )
+        }
+        if (archive != null && pendingArchiveExcerpt == null && !archiveStudyOpen) {
             AlertDialog(
                 onDismissRequest = {
                     pendingArchiveExcerpt = null
@@ -2257,6 +2272,21 @@ private fun TuddyScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(Modifier.height(10.dp))
+                        OutlinedButton(
+                            enabled = !listening && matchedArchive.any { row ->
+                                row.status == "Lokaal vertaald" &&
+                                    row.original.isNotBlank() &&
+                                    row.translated.isNotBlank() &&
+                                    row.original != row.translated &&
+                                    row.original.length <= 400 &&
+                                    row.translated.length <= 400
+                            },
+                            onClick = {
+                                captionSpeaker.stop()
+                                archiveStudyOpen = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("🧠 Oefen gevonden archiefzinnen · tijdelijk") }
                         TextButton(
                             enabled = !listening && archive.any {
                                 it.status == "Lokaal vertaald" || it.status == "Lokaal"
