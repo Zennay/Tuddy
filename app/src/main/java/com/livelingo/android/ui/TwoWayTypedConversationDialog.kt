@@ -92,6 +92,7 @@ internal fun TwoWayTypedConversationDialog(
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     var speechNotice by remember { mutableStateOf("") }
     var readerOpen by remember { mutableStateOf(false) }
+    var studyOpen by remember { mutableStateOf(false) }
     val models = remember { TypedConversationModelController() }
 
     DisposableEffect(models, speaker) {
@@ -144,6 +145,18 @@ internal fun TwoWayTypedConversationDialog(
 
     // Keep the same unsent typed draft and selected language direction while
     // switching to a larger read-only presentation of this RAM conversation.
+    if (studyOpen) {
+        SessionCaptionStudyDialog(
+            captions = recentLines.takeLast(80).mapIndexed { index, line ->
+                FocusCaptionLine(
+                    index.toLong(), line.original, line.translated,
+                    line.status, line.source, line.target
+                )
+            },
+            onDismiss = { studyOpen = false }
+        )
+        return
+    }
     if (readerOpen) {
         TwoWayConversationReadingBoard(
             lines = recentLines,
@@ -470,6 +483,18 @@ internal fun TwoWayTypedConversationDialog(
                 Text("Grotere leesweergave toont maximaal 80 RAM-regels en " +
                     "komt terug naar deze onopgeslagen invoer.",
                     style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    enabled = recentLines.any { it.status == "Lokaal vertaald" &&
+                        it.original.isNotBlank() && it.translated.isNotBlank() &&
+                        it.original != it.translated &&
+                        it.original.length <= 400 && it.translated.length <= 400 },
+                    onClick = {
+                        speaker.stop()
+                        speechNotice = ""
+                        studyOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🧠 Oefen dit tijdelijke gesprek · zonder opslaan") }
                 recentLines.takeLast(6).forEach { row ->
                     Text(row.source.uppercase() + " → " + row.target.uppercase() +
                         " · " + row.status, style = MaterialTheme.typography.labelSmall)
