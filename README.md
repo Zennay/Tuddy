@@ -1,5 +1,18 @@
 # Tuddy 🎙️
 
+## Nieuw: vandaag offline woorden herhalen (vrijwillig)
+
+Naast een gewone oefenronde kun je je opgeslagen basiswoorden nu apart
+voor **privé herhaalplanning** aanmelden. Elk woord verschijnt bij eerste
+gebruik, en na je eigen antwoord later opnieuw. **Nog oefenen** plant
+morgen; **Ik wist het** verschuift naar 2/4/7/14/30 dagen.
+Je ziet de betekenis pas na een tik. Herhaaldatums en niveaus blijven
+uitsluitend op je toestel, worden niet automatisch geback-upt en kunnen
+zonder je woorden te verliezen worden gewist. Standaard staat dit uit;
+geen account, pushmelding, cloud of taalvaardigheidsclaim.
+[Bediening en gegevens](docs/PRIVATE_SCHEDULED_WORD_REVIEW.md).
+
+
 ## Nieuw: eigen JSON-archief groot lezen
 
 Open bewust een eerder opgeslagen privé-JSON-archief, zoek in
