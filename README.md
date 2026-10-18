@@ -1,5 +1,17 @@
 # Tuddy 🎙️
 
+## Nieuw: afgeronde ondertitels en handmatig woorden voorlezen
+
+In **▣ Toon deze zin groot** kun je na een tik het afgeronde
+origineel of de daadwerkelijk lokaal voltooide vertaling laten
+voorlezen. Bij **▸ Lees woord voor woord** kun je ook het
+geselecteerde tekstwoord op normaal of rustig tempo laten horen.
+Geen automatische audiotiming, extra modeldownload of
+netwerkspraak: bij ontbrekende geïnstalleerde offline Android-stem
+wordt niets ingesproken. Iedere nieuwe zin/woordselectie en
+achtergrondgang stopt het vorige geluid.
+[Lees hoe dit werkt](docs/OFFLINE_AUDIO_COMPLETED_CAPTIONS.md).
+
 ## Nieuw: offline gesprekskaarten op verzoek voorlezen
 
 De grote eigen-zinnenkaart én de vijf ingebouwde voorbeeldwoorden
