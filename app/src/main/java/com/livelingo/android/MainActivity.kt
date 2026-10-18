@@ -633,6 +633,15 @@ private fun TuddyScreen() {
         }
     }
 
+    // Returning to Live dismisses a prior local search; searching never
+    // retains an unseen filter that can later fight automatic following.
+    LaunchedEffect(follow) {
+        if (follow) {
+            historySearchOpen = false
+            historySearchQuery = ""
+        }
+    }
+
     // The partial caption grows while still visible. A Boolean key never
     // changes after the first word, so track its actual text revision.
     // Keep interim scrolling immediate rather than repeatedly restarting
