@@ -25,3 +25,11 @@ Tuddy synchroniseren. Er is geen koppeling met live-opnames of transcripties.
 
 Beschikbaarheid in GitHub-broncode bewijst nog geen succesvolle fysieke
 Android-toestelinstallatie of vrijgegeven APK.
+
+## Eigen zin als grote gesprekskaart tonen
+
+Bij een opgeslagen eigen zin is **▣ Toon groot · gesprekskaart** beschikbaar.
+Daarmee toon je de zelfgeschreven zin én eigen betekenis op het scherm,
+kun je binnen dezelfde taalset bladeren en de leesgrootte/volgorde aanpassen.
+Dit is geen machinevertaling en gebruikt geen microfoon, cloud of TTS.
+[Bediening en grenzen](OFFLINE_BILINGUAL_PHRASE_PRESENTER.md).
