@@ -1,5 +1,17 @@
 # Tuddy 🎙️
 
+## Nieuw: alleen de oefenkaarten van vandaag afdrukken
+
+Vanuit **Vandaag offline oefenen** kun je bewust één of meer
+leergroepen kiezen en daarvan een zelfstandig, offline HTML-studieblad
+bewaren via de Android-bestandskiezer. Alleen de vandaag aan-de-beurt
+zijnde kaarten worden meegenomen. Als het lokale materiaal tijdens
+de bestandskeuze verandert, weigert Tuddy de verouderde export.
+Zelfgeschreven betekenissen blijven ongeverifieerd en de externe
+opslaglocatie is jouw verantwoordelijkheid.
+[Meer informatie](docs/DUE_TODAY_OFFLINE_STUDY_BOOK.md).
+
+
 ## Nieuw: één studieoverzicht voor alle drie je eigen oefenstromen
 
 **Vandaag offline oefenen** toont nu ook de vrijwillige herhaalplanning
