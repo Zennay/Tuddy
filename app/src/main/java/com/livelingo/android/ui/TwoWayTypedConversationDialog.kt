@@ -76,6 +76,7 @@ internal fun TwoWayTypedConversationDialog(
     var modelStatus by remember { mutableStateOf<OfflineTextReceipt?>(null) }
     var preparing by remember { mutableStateOf(false) }
     var favoritesOpen by remember { mutableStateOf(false) }
+    var confirmEraseFavorites by remember { mutableStateOf(false) }
     var favoriteNotice by remember { mutableStateOf("") }
     var favoritesRevision by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
@@ -140,6 +141,35 @@ internal fun TwoWayTypedConversationDialog(
         TwoWayConversationReadingBoard(
             lines = recentLines,
             onDismiss = { readerOpen = false }
+        )
+        return
+    }
+
+    if (confirmEraseFavorites) {
+        AlertDialog(
+            onDismissRequest = { confirmEraseFavorites = false },
+            title = { Text("Alle opgeslagen teksttaalparen wissen?") },
+            text = {
+                Text("Dit verwijdert je ${pinnedPairs.size} privé opgeslagen " +
+                    "favoriete teksttaalrichtingen. Huidige tekst, gesprekken, " +
+                    "spraakfavorieten en gedownloade modellen blijven ongemoeid. " +
+                    "Na wissen kun je deze taalparen alleen opnieuw zelf opslaan.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmEraseFavorites = false
+                    val cleared = favorites.clear()
+                    if (cleared) favoritesRevision++
+                    favoriteNotice = if (cleared)
+                        "Alle favoriete tekstrichtingen gewist."
+                    else "Tekstfavorieten konden niet worden gewist."
+                }) { Text("Wis alle tekstfavorieten") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmEraseFavorites = false }) {
+                    Text("Annuleren")
+                }
+            }
         )
         return
     }
@@ -248,6 +278,11 @@ internal fun TwoWayTypedConversationDialog(
                     if (pinnedPairs.isEmpty()) {
                         Text("Nog geen tekstrichtingen opgeslagen.",
                             style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        OutlinedButton(
+                            onClick = { confirmEraseFavorites = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Wis alle tekstfavorieten…") }
                     }
                 }
                 if (favoriteNotice.isNotBlank()) {
