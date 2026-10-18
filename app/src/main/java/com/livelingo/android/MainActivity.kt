@@ -1208,6 +1208,7 @@ private fun TuddyScreen(
                 ownWordsOpen = false
                 focusMode = false
                 presentedCaptionId = null
+                meaningIndexOpen = false
                 quickTypedOpen = false
                 draftFromExternalShare = false
                 manualText = ""
@@ -1237,6 +1238,7 @@ private fun TuddyScreen(
             flashcardsOpen = false
             ownWordsOpen = false
             presentedCaptionId = null
+            meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             archiveSearchQuery = ""
