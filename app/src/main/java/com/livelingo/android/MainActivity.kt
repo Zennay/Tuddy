@@ -55,6 +55,7 @@ import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.OfflinePhraseQuickPicker
 import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.FocusTranscriptDialog
+import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FocusCaptionLine
 import com.livelingo.android.ui.LiveInterimWordFocus
 import com.livelingo.android.ui.OfflineStarterPhraseboard
@@ -244,6 +245,7 @@ private fun TuddyScreen(
     // Android document picker result; no automatic disk/history persistence.
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var subtitleConsentOpen by remember { mutableStateOf(false) }
+    var subtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
     var exportStatus by remember { mutableStateOf("") }
     // The read-only archive is not part of the current live conversation.
     var previewArchiveRows by remember { mutableStateOf<List<TranscriptExportRow>?>(null) }
@@ -350,7 +352,7 @@ private fun TuddyScreen(
                 line.original, line.translated, line.status,
                 line.sourceCode, line.targetCode, line.recordedAtMillis
             )
-        })
+        }, subtitleOptions)
 
     fun captureSpeakerTranscript(): ByteArray? {
         val completed = lines.filter {
@@ -1351,18 +1353,28 @@ private fun TuddyScreen(
         if (subtitleConsentOpen) {
             AlertDialog(
                 onDismissRequest = { subtitleConsentOpen = false },
-                title = { Text("Tweetalig ondertitelconcept bewaren?") },
+                title = { Text("SRT-ondertitelconcept bewaren?") },
                 text = {
-                    Text(
-                        "Tuddy kent alleen de voltooiingstijd van een herkende zin: " +
-                            "dit is geen echte audio- of woordtijdlijn. SRT-tijden " +
-                            "zijn ruwe schattingen en moeten handmatig worden " +
-                            "gesynchroniseerd in een video-editor. Alleen afgeronde " +
-                            "zinnen komen erin, met de vertaling waar deze lokaal " +
-                            "klaar is. Na jouw keuze kan Androids opslagprovider " +
-                            "de ondertitels extern bewaren of synchroniseren. " +
-                            "Controleer of het gesprek gedeeld mag worden."
-                    )
+                    Column(
+                        modifier = Modifier.heightIn(max = 420.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "Tuddy kent alleen het einde van een herkende zin, " +
+                                "niet de echte audiotijdlijn. Kies hieronder tekst, " +
+                                "een ruwe begintijdverschuiving en maximale duur. " +
+                                "Vertaling-only slaat zinnen zonder voltooide lokale " +
+                                "vertaling over. Controleer zelf de daadwerkelijke " +
+                                "timing en inhoud in een video-editor. De externe " +
+                                "Android-bestandsprovider kan deze inhoud bewaren " +
+                                "of synchroniseren. Controleer of je die mag delen."
+                        )
+                        SubtitleDraftControls(
+                            options = subtitleOptions,
+                            onChange = { subtitleOptions = it }
+                        )
+                    }
                 },
                 confirmButton = {
                     TextButton(onClick = {
@@ -1732,28 +1744,42 @@ private fun TuddyScreen(
 
         if (archiveSubtitleConsentOpen && archive != null) {
             val finishedCount = archive.count {
-                it.status == "Lokaal vertaald" || it.status == "Lokaal"
+                if (subtitleOptions.mode == SubtitleDraftMode.TRANSLATION_ONLY) {
+                    it.status == "Lokaal vertaald" && it.translated.isNotBlank()
+                } else {
+                    it.status == "Lokaal vertaald" || it.status == "Lokaal"
+                }
             }
             AlertDialog(
                 onDismissRequest = { archiveSubtitleConsentOpen = false },
                 title = { Text("Afgerond archief als ondertitelconcept bewaren?") },
                 text = {
-                    Text("Van de " + archive.size + " regels kunnen " + finishedCount +
-                        " afgeronde uitspraken worden omgezet naar een SRT-concept. " +
-                        "De archiefgegevens zijn niet onafhankelijk gecontroleerd. " +
-                        "Tuddy kent slechts voltooiingstijden van spraakherkenning, " +
-                        "geen werkelijke begin- of eindtijden van de audio. " +
-                        "De tijden zijn ruwe schattingen en moeten door jou in een " +
-                        "video-editor opnieuw worden uitgelijnd. Een externe " +
-                        "Android-bestandsprovider kan de inhoud bewaren of synchroniseren. " +
-                        "Controleer de toestemming om dit gesprek te delen."
-                    )
+                    Column(
+                        modifier = Modifier.heightIn(max = 420.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("Van de " + archive.size + " archiefregels zijn momenteel " +
+                            finishedCount + " bruikbaar voor deze tekstkeuze. " +
+                            "Dit archief is niet onafhankelijk gecontroleerd. " +
+                            "Tuddy kent slechts herkenningsvoltooiing, geen " +
+                            "audiobegintijd of exacte woordtiming. De instellingen " +
+                            "blijven ruwe schattingen: pas ze na export handmatig " +
+                            "aan in je editor. Een externe Android-bestandsprovider " +
+                            "kan de inhoud bewaren of synchroniseren. " +
+                            "Controleer de toestemming voor dit gesprek."
+                        )
+                        SubtitleDraftControls(
+                            options = subtitleOptions,
+                            onChange = { subtitleOptions = it }
+                        )
+                    }
                 },
                 confirmButton = {
                     TextButton(enabled = finishedCount > 0 && !listening, onClick = {
                         archiveSubtitleConsentOpen = false
                         // Never merge an imported archive into the live conversation.
-                        val snapshot = PrivateSubtitleDraftExport.snapshot(archive)
+                        val snapshot = PrivateSubtitleDraftExport.snapshot(archive, subtitleOptions)
                         if (snapshot == null) {
                             archiveExcerptNotice = "Dit archief kan niet veilig " +
                                 "naar een SRT-concept worden omgezet."
