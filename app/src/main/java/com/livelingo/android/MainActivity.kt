@@ -61,6 +61,7 @@ import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
 import com.livelingo.android.ui.FocusCaptionLine
+import com.livelingo.android.ui.SessionCaptionStudyDialog
 import com.livelingo.android.ui.LiveInterimWordFocus
 import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.OfflineStudyFlashcards
@@ -344,6 +345,7 @@ private fun TuddyScreen(
     var pendingStudyErase by remember { mutableStateOf(false) }
     var studyEraseNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
+    var sessionCaptionStudyOpen by remember { mutableStateOf(false) }
     var presentedCaptionId by remember { mutableStateOf<Long?>(null) }
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
@@ -1353,6 +1355,7 @@ private fun TuddyScreen(
                 flashcardsOpen = false
                 ownWordsOpen = false
                 focusMode = false
+                sessionCaptionStudyOpen = false
                 presentedCaptionId = null
                 meaningIndexOpen = false
                 quickTypedOpen = false
@@ -1389,6 +1392,7 @@ private fun TuddyScreen(
             twoWayTypedOpen = false
             sharedTextToTwoWay = null
             presentedCaptionId = null
+            sessionCaptionStudyOpen = false
             pendingCaptionLanguageChange = null
             meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
@@ -1700,6 +1704,18 @@ private fun TuddyScreen(
                 },
                 initialId = presented,
                 onDismiss = { presentedCaptionId = null }
+            )
+        }
+        if (sessionCaptionStudyOpen) {
+            SessionCaptionStudyDialog(
+                captions = lines.map { line ->
+                    FocusCaptionLine(
+                        line.id, line.original, line.translated, line.status,
+                        line.sourceCode, line.targetCode,
+                        manuallyAssignedSpeakers[line.id], line.personalMeaning
+                    )
+                },
+                onDismiss = { sessionCaptionStudyOpen = false }
             )
         }
         if (focusMode) {
@@ -2893,6 +2909,19 @@ private fun TuddyScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("🧠 Oefenkaarten · mijn opgeslagen woorden en zinnen") }
+                OutlinedButton(
+                    enabled = !listening && lines.any { line ->
+                        line.status == "Lokaal vertaald" &&
+                            line.original.isNotBlank() && line.translated.isNotBlank() &&
+                            line.original != line.translated &&
+                            line.original.length <= 400 && line.translated.length <= 400
+                    },
+                    onClick = {
+                        captionSpeaker.stop()
+                        sessionCaptionStudyOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🧠 Oefen dit gesprek · tijdelijke tweetalige kaarten") }
                 TextButton(
                     onClick = {
                         if (listening) stop()
