@@ -60,6 +60,12 @@ internal fun PrivateSubtitleFileDialog(
     var large by remember { mutableStateOf(true) }
     var draft by remember(cues) { mutableStateOf(cues) }
     var edited by remember(cues) { mutableStateOf(false) }
+    // Up to 20 private in-memory revisions, never an additional disk history.
+    var undoHistory by remember(cues) { mutableStateOf(emptyList<List<PrivateSubtitleCue>>()) }
+    var redoHistory by remember(cues) { mutableStateOf(emptyList<List<PrivateSubtitleCue>>()) }
+    var findLiteral by remember(cues) { mutableStateOf("") }
+    var replaceLiteral by remember(cues) { mutableStateOf("") }
+    var replaceConfirmation by remember(cues) { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var deleteIndex by remember { mutableStateOf<Int?>(null) }
     var splitIndex by remember { mutableStateOf<Int?>(null) }
@@ -101,11 +107,41 @@ internal fun PrivateSubtitleFileDialog(
         }
     }
 
+    fun applyChange(next: List<PrivateSubtitleCue>) {
+        if (next == draft) return
+        undoHistory = (undoHistory + listOf(draft.toList())).takeLast(20)
+        redoHistory = emptyList()
+        draft = next
+        edited = draft != cues
+    }
+
+    fun undoChange() {
+        if (undoHistory.isEmpty()) return
+        val last = undoHistory.last()
+        undoHistory = undoHistory.dropLast(1)
+        redoHistory = (redoHistory + listOf(draft.toList())).takeLast(20)
+        draft = last
+        edited = draft != cues
+        shownIndex = -1
+        notice = "Laatste bewerking teruggedraaid. Origineel blijft intact."
+    }
+
+    fun redoChange() {
+        if (redoHistory.isEmpty()) return
+        val next = redoHistory.last()
+        redoHistory = redoHistory.dropLast(1)
+        undoHistory = (undoHistory + listOf(draft.toList())).takeLast(20)
+        draft = next
+        edited = draft != cues
+        shownIndex = -1
+        notice = "Bewerking opnieuw toegepast op de tijdelijke kopie."
+    }
+
     fun nudgeSelected(start: Long, end: Long) {
         val selected = found.getOrNull(shownIndex)?.first ?: return
         val updated = PrivateSubtitleDraftEditor.adjustCue(draft, selected, start, end)
         if (updated == null) notice = "Tijd geweigerd: begin/eind of volgorde ongeldig."
-        else { draft = updated; edited = true; notice = "Tijd van deze regel aangepast." }
+        else { applyChange(updated); notice = "Tijd van deze regel aangepast." }
     }
 
     Dialog(onDismissRequest = onDismiss,
@@ -155,19 +191,47 @@ internal fun PrivateSubtitleFileDialog(
                     TextButton(onClick = {
                         val next = PrivateSubtitleDraftEditor.shift(draft, -500L)
                         if (next == null) notice = "Kan niet eerder: negatieve tijdcode."
-                        else { draft = next; edited = true; notice = "0,5 s eerder gezet." }
+                        else { applyChange(next); notice = "0,5 s eerder gezet." }
                     }) { Text("−0,5 s") }
                     TextButton(onClick = {
                         val next = PrivateSubtitleDraftEditor.shift(draft, 500L)
                         if (next == null) notice = "Kan niet later: tijdgrens bereikt."
-                        else { draft = next; edited = true; notice = "0,5 s later gezet." }
+                        else { applyChange(next); notice = "0,5 s later gezet." }
                     }) { Text("+0,5 s") }
                     TextButton(enabled = edited, onClick = {
                         draft = cues
                         edited = false
+                        undoHistory = emptyList()
+                        redoHistory = emptyList()
                         shownIndex = -1
                         notice = "Bewerkingen weggegooid; origineel ongewijzigd."
                     }) { Text("Herstel") }
+                }
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(enabled = undoHistory.isNotEmpty(),
+                        onClick = { undoChange() }) {
+                        Text("↶ Terug (${undoHistory.size})")
+                    }
+                    OutlinedButton(enabled = redoHistory.isNotEmpty(),
+                        onClick = { redoChange() }) {
+                        Text("↷ Opnieuw (${redoHistory.size})")
+                    }
+                }
+                OutlinedTextField(value = findLiteral,
+                    onValueChange = { findLiteral = it.take(100) },
+                    label = { Text("Exacte tekst om te vervangen") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth())
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = replaceLiteral,
+                        onValueChange = { replaceLiteral = it.take(100) },
+                        label = { Text("Vervang door (letterlijk)") },
+                        singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedButton(enabled = findLiteral.isNotBlank() &&
+                        replaceLiteral.isNotBlank() && findLiteral != replaceLiteral &&
+                        draft.any { it.text.contains(findLiteral) },
+                        onClick = { replaceConfirmation = true }) { Text("Vervang…") }
                 }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
@@ -342,8 +406,7 @@ internal fun PrivateSubtitleFileDialog(
                     if (next == null) {
                         notice = "Splitsing geweigerd: tekst/tijdsduur of cuevolgorde ongeldig."
                     } else {
-                        draft = next
-                        edited = true
+                        applyChange(next)
                         shownIndex = -1
                         notice = "Regel in twee bewerkbare regels gesplitst."
                     }
@@ -368,8 +431,7 @@ internal fun PrivateSubtitleFileDialog(
                     val next = PrivateSubtitleDraftEditor.mergeWithNext(draft, merging)
                     if (next == null) notice = "Samenvoegen geweigerd: te veel tekst of ongeldige tijd."
                     else {
-                        draft = next
-                        edited = true
+                        applyChange(next)
                         shownIndex = -1
                         notice = "Beide regels tot één tijdelijke cue samengevoegd."
                     }
@@ -391,8 +453,7 @@ internal fun PrivateSubtitleFileDialog(
                 TextButton(onClick = {
                     val newDraft = PrivateSubtitleDraftEditor.dropCue(draft, requestedDelete)
                     if (newDraft != null) {
-                        draft = newDraft
-                        edited = true
+                        applyChange(newDraft)
                         shownIndex = -1
                         notice = "Regel verwijderd uit tijdelijke kopie."
                     } else notice = "De laatste regel kan niet worden verwijderd."
@@ -427,8 +488,7 @@ internal fun PrivateSubtitleFileDialog(
                     if (next == null) {
                         notice = "Ongeldige tekst. Maximaal acht regels, zonder controlecodes."
                     } else {
-                        draft = next
-                        edited = true
+                        applyChange(next)
                         notice = "Tekst aangepast in tijdelijk concept."
                         shownIndex = -1
                     }
@@ -437,6 +497,36 @@ internal fun PrivateSubtitleFileDialog(
             },
             dismissButton = {
                 TextButton(onClick = { editIndex = null }) { Text("Annuleren") }
+            }
+        )
+    }
+    if (replaceConfirmation) {
+        val matchCount = draft.count { it.text.contains(findLiteral) }
+        AlertDialog(onDismissRequest = { replaceConfirmation = false },
+            title = { Text("Tekst vervangen in ${matchCount} ondertitelregels?") },
+            text = { Text("Letterlijk en hoofdlettergevoelig; geen regex of automatische vertaling. " +
+                "Alleen de tijdelijke kopie wordt aangepast. Na vervangen kun je " +
+                "terugdraaien, of de originele versie herstellen. " +
+                "Bewaren blijft een aparte handeling.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val next = PrivateSubtitleDraftEditor.replaceLiteral(
+                        draft, findLiteral, replaceLiteral)
+                    if (next == null) {
+                        notice = "Vervanging geweigerd: tekstlimiet, ongeldige inhoud, " +
+                            "bestandsgrootte of geen letterlijke treffers."
+                    } else {
+                        applyChange(next.first)
+                        shownIndex = -1
+                        notice = "${next.second} regels in tijdelijke kopie aangepast."
+                    }
+                    replaceConfirmation = false
+                }) { Text("Vervang alleen in concept") }
+            },
+            dismissButton = {
+                TextButton(onClick = { replaceConfirmation = false }) {
+                    Text("Niet vervangen")
+                }
             }
         )
     }
