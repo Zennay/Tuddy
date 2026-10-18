@@ -41,6 +41,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDraftEditor
+import com.livelingo.android.PrivateSubtitleTimelineNavigation
 import com.livelingo.android.SubtitleDraftFormat
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.LocalCaptionSpeaker
@@ -54,6 +55,7 @@ internal fun PrivateSubtitleFileDialog(
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    var jumpToTime by remember { mutableStateOf("") }
     var shownIndex by remember { mutableIntStateOf(-1) }
     var large by remember { mutableStateOf(true) }
     var draft by remember(cues) { mutableStateOf(cues) }
@@ -128,6 +130,23 @@ internal fun PrivateSubtitleFileDialog(
                     shownIndex = -1
                 }, label = { Text("Zoek in dit document") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = jumpToTime,
+                        onValueChange = { jumpToTime = it.take(13) },
+                        label = { Text("Ga naar tijd · mm:ss") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f))
+                    TextButton(onClick = {
+                        val target = PrivateSubtitleTimelineNavigation.nearest(draft, jumpToTime)
+                        if (target == null) notice = "Tijd ongeldig. Voorbeeld: 01:23 of 00:01:23.500."
+                        else {
+                            query = ""
+                            shownIndex = target
+                            notice = "Dichtstbijzijnde cue op of na de gekozen tijd geopend."
+                        }
+                    }) { Text("Spring →") }
+                }
                 Text("${found.size} van ${draft.size} regels" +
                     (if (edited) " · niet bewaarde wijzigingen" else ""),
                     style = MaterialTheme.typography.labelMedium)
