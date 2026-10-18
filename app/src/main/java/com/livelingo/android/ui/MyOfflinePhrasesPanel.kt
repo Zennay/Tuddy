@@ -53,6 +53,7 @@ internal fun MyOfflinePhrasesPanel(
     var info by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
     var practiceOpen by remember { mutableStateOf(false) }
+    var displayedPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var editingPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
@@ -105,6 +106,15 @@ internal fun MyOfflinePhrasesPanel(
     val phrases = remember(revision) { deck.entries() }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
 
+    val toDisplay = displayedPhrase
+    if (toDisplay != null) {
+        OfflinePhrasePresenter(
+            notes = phrases.orEmpty(),
+            initial = toDisplay,
+            onDismiss = { displayedPhrase = null }
+        )
+        return
+    }
     if (practiceOpen) {
         PersonalPhrasePracticePanel(
             notes = phrases.orEmpty(),
@@ -263,6 +273,9 @@ internal fun MyOfflinePhrasesPanel(
                                     TextDirection.Rtl else TextDirection.Ltr
                             ))
                         Text(item.ownMeaning, style = MaterialTheme.typography.bodyMedium)
+                        OutlinedButton(onClick = { displayedPhrase = item }) {
+                            Text("▣ Toon groot · gesprekskaart")
+                        }
                         TextButton(onClick = {
                             editingPhrase = item
                             language = item.language
