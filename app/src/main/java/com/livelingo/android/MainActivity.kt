@@ -346,6 +346,7 @@ private fun TuddyScreen(
     var studyEraseNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
     var sessionCaptionStudyOpen by remember { mutableStateOf(false) }
+    var sessionCaptionStudyStartId by remember { mutableStateOf<Long?>(null) }
     var presentedCaptionId by remember { mutableStateOf<Long?>(null) }
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
@@ -1356,6 +1357,7 @@ private fun TuddyScreen(
                 ownWordsOpen = false
                 focusMode = false
                 sessionCaptionStudyOpen = false
+                sessionCaptionStudyStartId = null
                 presentedCaptionId = null
                 meaningIndexOpen = false
                 quickTypedOpen = false
@@ -1393,6 +1395,7 @@ private fun TuddyScreen(
             sharedTextToTwoWay = null
             presentedCaptionId = null
             sessionCaptionStudyOpen = false
+            sessionCaptionStudyStartId = null
             pendingCaptionLanguageChange = null
             meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
@@ -1703,7 +1706,13 @@ private fun TuddyScreen(
                     )
                 },
                 initialId = presented,
-                onDismiss = { presentedCaptionId = null }
+                onDismiss = { presentedCaptionId = null },
+                onStudyCaption = { selected ->
+                    presentedCaptionId = null
+                    captionSpeaker.stop()
+                    sessionCaptionStudyStartId = selected
+                    sessionCaptionStudyOpen = true
+                }
             )
         }
         if (sessionCaptionStudyOpen) {
@@ -1715,7 +1724,11 @@ private fun TuddyScreen(
                         manuallyAssignedSpeakers[line.id], line.personalMeaning
                     )
                 },
-                onDismiss = { sessionCaptionStudyOpen = false }
+                onDismiss = {
+                    sessionCaptionStudyOpen = false
+                    sessionCaptionStudyStartId = null
+                },
+                initialCaptionId = sessionCaptionStudyStartId
             )
         }
         if (focusMode) {
@@ -2918,6 +2931,7 @@ private fun TuddyScreen(
                     },
                     onClick = {
                         captionSpeaker.stop()
+                        sessionCaptionStudyStartId = null
                         sessionCaptionStudyOpen = true
                     },
                     modifier = Modifier.fillMaxWidth()
