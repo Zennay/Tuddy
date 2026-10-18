@@ -36,7 +36,8 @@ internal fun OfflineWordText(
     style: TextStyle,
     onSaveWord: ((String, String) -> Boolean)? = null,
     readOwnMeaning: ((String, String) -> String?)? = null,
-    saveOwnMeaning: ((String, String, String) -> Boolean)? = null
+    saveOwnMeaning: ((String, String, String) -> Boolean)? = null,
+    allowSpeech: Boolean = true
 ) {
     var layout by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     var dialogOpen by remember(text, language) { mutableStateOf(false) }
@@ -95,7 +96,8 @@ internal fun OfflineWordText(
                     )
                     OfflineWordPronunciation(
                         word = selectedWord,
-                        language = language
+                        language = language,
+                        enabled = allowSpeech
                     )
                     if (ownMeaning != null) {
                         Text("Mijn eigen notitie (niet geverifieerd): " + ownMeaning,
