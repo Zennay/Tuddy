@@ -11,8 +11,11 @@ oorspronkelijke taalpaar, ook nadat je hebt gewisseld.
 
 1. De microfoon en lopende on-device herkenning stoppen onmiddellijk. Tuddy
    herstart de microfoon nooit automatisch na een taalwisseling.
-2. De nieuwe spreektaal moet in de bestaande picker met zes spraaktalen
-   staan (NL/EN/DE/FR/ES/AR). De 59 ML Kit-**tekst**doelen zijn **niet**
+2. De nieuwe spreektaal moet in de bestaande picker met elf spraakkandidaten
+   staan (NL/EN/DE/FR/ES/AR/FA/UK/TR/RU/UR). De extra kandidaten Farsi,
+   Oekraïens, Turks, Russisch en Urdu komen uit de oude v0.4-taalhints.
+   Androids lokale recognizer moet voor elke gekozen taal op dit apparaat
+   een werkelijk beschikbaar spraakpakket hebben; de picker garandeert dit niet. De 59 ML Kit-**tekst**doelen zijn **niet**
    allemaal spraakherkenningstalen. Bij een ander doel of identieke talen is
    omkeren uitgeschakeld. Dit zegt niets over welke lokale pakketten een
    specifiek toestel daadwerkelijk bezit.
