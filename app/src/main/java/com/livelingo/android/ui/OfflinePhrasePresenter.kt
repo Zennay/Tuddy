@@ -63,10 +63,9 @@ internal fun OfflinePhrasePresenter(
     initial: PersonalPhrase,
     onDismiss: () -> Unit
 ) {
-    val cards = remember(notes, initial) {
-        notes.filter { it.language == initial.language }
-            .sortedWith(compareBy(PersonalPhrase::phrase))
-    }
+    // Preserve the exact searched/favorited order supplied by the picker;
+    // navigating must not unexpectedly expose other private notes.
+    val cards = remember(notes) { notes.toList() }
     var selectedIndex by remember(cards, initial) {
         mutableIntStateOf(cards.indexOfFirst { it == initial }.coerceAtLeast(0))
     }
@@ -107,11 +106,11 @@ internal fun OfflinePhrasePresenter(
             "Android-deelvenster geopend. Jij kiest of en waar je de zin verstuurt."
         else "Delen niet beschikbaar. Er is geen zin verzonden."
     }
-    val label = when (initial.language) {
+    val label = when (selected?.language) {
         "kmr" -> "Kurmanji"
         "ckb" -> "Sorani"
         "ps" -> "Pasjtoe"
-        else -> initial.language.uppercase()
+        else -> selected?.language?.uppercase() ?: "–"
     }
 
     Dialog(
