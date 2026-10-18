@@ -1,5 +1,15 @@
 # Tuddy 🎙️
 
+## Nieuw: twee handmatige tijdankers voor een complete ondertiteltijdlijn
+
+In de SRT/VTT-editor kun je nu **⌁ Tijdlijn uitlijnen met twee ankers…**
+gebruiken als vaste verschuivingen niet voldoende zijn. Geef zelf de
+gewenste begintijd van de eerste en laatste regel op; Tuddy schaalt alle
+tussenliggende tijden en duren proportioneel, toont het resultaat vooraf
+en legt de wijziging vast als één herstelbare tijdelijke bewerking.
+Er is geen automatische audio-/videoanalyse of ongewenste bestandsopslag.
+[Handleiding](docs/OFFLINE_TWO_ANCHOR_SUBTITLE_TIMELINE.md).
+
 ## Nieuw: ondertiteltijdlijn bekijken en rechtstreeks corrigeren
 
 In het bestaande offline SRT/VTT-document zie je met
