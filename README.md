@@ -305,3 +305,18 @@ verdwijnt, en worden niet toegevoegd aan bestaande tekst-/JSON-exporten.
 Een ander account, cloud, sprekeridentificatie of nieuwe Android-rechten
 is hiervoor niet nodig. Dit is uitsluitend broncode: device- en releasegates
 blijven gelden.
+
+
+### Volledig gesprek met zelfgekozen A/B-sprekers bewaren
+
+De bestaande tekst- en JSON-export blijven **zonder sprekerlabels**. Wie een
+afgeronde gespreksregel handmatig als A of B heeft gemarkeerd, krijgt daarnaast
+**Bewaar gesprek met sprekerlabels…**. De app stelt een afzonderlijke
+privacybevestiging vóór het Android-bestandsscherm verplicht; de gebruiker
+kiest zelf het opslagdoel. Het begrensde tekstbestand bevat uitsluitend
+afgeronde gesprekkenregels, inclusief A/B/onbekend-labels uit de huidige
+tijdelijke sessie. Een gewijzigd transcript of label tussen voorbereiden
+en bevestigen weigert de verouderde export. Sprekerlabels zijn nooit
+biometrisch herkend, geen echte persoonsidentiteit, niet gesynchroniseerd
+door Tuddy en niet in het normale archief opgeslagen. Een gekozen externe
+bestandsprovider kan documenten wel opslaan of synchroniseren.
