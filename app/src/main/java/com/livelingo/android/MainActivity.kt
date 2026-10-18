@@ -1240,6 +1240,7 @@ private fun TuddyScreen(
                 focusMode = false
                 presentedCaptionId = null
                 quickTypedOpen = false
+                twoWayTypedOpen = false // forget private typed draft on background
                 draftFromExternalShare = false
                 manualText = ""
                 previewArchiveRows = null
@@ -1267,6 +1268,7 @@ private fun TuddyScreen(
             quickPhrasePickerOpen = false
             flashcardsOpen = false
             ownWordsOpen = false
+            twoWayTypedOpen = false
             presentedCaptionId = null
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
@@ -1308,6 +1310,7 @@ private fun TuddyScreen(
             if (shared.draft == null) {
                 error = shared.notice ?: "Deze gedeelde inhoud is geen ondersteunde platte tekst."
                 quickTypedOpen = false
+                twoWayTypedOpen = false // forget private typed draft on background
                 draftFromExternalShare = false
                 manualText = ""
             } else {
