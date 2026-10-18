@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: mijn privéthema-indeling bewust overzetten
+
+De thema-manager kan nu naast je bestaande eigen zinnen een
+**afzonderlijke thema-back-up** bewaren of herstellen.
+Bewaar op het nieuwe toestel eerst je zelfgeschreven zinnen,
+daarna de thema-indeling. Een import wordt streng gecontroleerd
+en vervangt pas na een afzonderlijke bevestiging de thema's,
+nooit je eigen teksten. Het JSON-bestand bevat themanamen en
+herleidbare SHA-256-identiteiten: dat is **geen encryptie**.
+[Uitleg en privacy](docs/PRIVATE_PHRASE_TOPIC_BACKUP.md).
+
 ## Nieuw: mijn offline herhalingen acht weken vooruitzien
 
 In **Vandaag offline oefenen** toont **Bekijk mijn geplande
