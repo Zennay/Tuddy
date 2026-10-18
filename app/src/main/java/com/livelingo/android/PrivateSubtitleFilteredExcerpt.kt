@@ -31,7 +31,7 @@ internal object PrivateSubtitleFilteredExcerpt {
             SubtitleExcerptTiming.COMPACT_SELECTED -> {
                 val result = mutableListOf<PrivateSubtitleCue>()
                 var nextStart = 0L
-                for (cue in selected) {
+                for ((index, cue) in selected.withIndex()) {
                     val duration = cue.endMillis - cue.startMillis
                     if (duration <= 0 || nextStart > MAX_TIME - duration) return null
                     val end = nextStart + duration
@@ -41,7 +41,7 @@ internal object PrivateSubtitleFilteredExcerpt {
                         startLabel = label(nextStart),
                         endLabel = label(end)
                     ))
-                    if (nextStart > MAX_TIME - duration - GAP_MS && cue != selected.last())
+                    if (nextStart > MAX_TIME - duration - GAP_MS && index != selected.lastIndex)
                         return null
                     nextStart = end + GAP_MS
                 }
