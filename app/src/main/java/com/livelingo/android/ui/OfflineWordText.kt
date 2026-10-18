@@ -53,7 +53,7 @@ internal fun OfflineWordText(
                 detectTapGestures { point ->
                     val offset = layout?.getOffsetForPosition(point)
                     val word = offset?.let { wordAt(text, it) } ?: return@detectTapGestures
-                    selectedWord = word.take(48)
+                    selectedWord = word.take(40)
                     meaningDraft = ""
                     noteMessage = ""
                     dialogOpen = true
@@ -81,7 +81,7 @@ internal fun OfflineWordText(
                     OutlinedTextField(
                         value = selectedWord,
                         onValueChange = {
-                            selectedWord = it.take(48)
+                            selectedWord = it.take(40)
                             meaningDraft = ""
                             noteMessage = ""
                         },
