@@ -842,7 +842,7 @@ private fun TuddyScreen() {
             FocusTranscriptDialog(
                 captions = lines.map {
                     FocusCaptionLine(it.id, it.original, it.translated, it.status,
-                        it.sourceCode, it.targetCode)
+                        it.sourceCode, it.targetCode, manuallyAssignedSpeakers[it.id])
                 },
                 interimOriginal = partial,
                 interimTranslated = partialTranslation,

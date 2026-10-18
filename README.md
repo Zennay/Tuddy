@@ -16,6 +16,22 @@ zichtbaar label. De microfoon moet uit staan. Dit is geen echte
 spraakmodelverbetering of menselijke tolkvalidatie.
 [Bediening, privacy en grenzen](docs/CAPTION_CORRECTIONS.md).
 
+## Nieuw: mobiel transcript-eerst gesprekscherm
+
+Op kleinere telefoons staat de live tijdlijn centraal. De belangrijkste
+acties **Luister, Wis gesprek, Volg live, ⛶ Leesmodus en ⇄ Wissel richting**
+blijven direct bereikbaar. **Gesprekstools · export, sprekers en archief**
+opent tijdelijk een apart tot 256dp hoog, scrollbaar actiepaneel voor
+handmatige spreker-navigatie, veilig TXT/JSON bewaren, archief openen en
+sprekerlabel-export; standaard is dit paneel dicht zodat ondertitels niet
+door een lange knoppenlijst worden weggedrukt. **Taal- en
+modelinstellingen** opent een eigen begrensd paneel; bij openen van
+één paneel sluit het andere. Alle bestaande toestemmingsdialoog-
+en exportbeperkingen blijven gehandhaafd.
+
+Deze wijziging is een UI-indeling, niet het bewijs van een fysiek
+Android-toestel, volledig offline spraakmodel of getekende release-APK.
+
 ## Nieuw: schermvullend live meelezen
 
 Open **⛶ Leesmodus · schermvullende ondertitels** voor een rustige weergave
@@ -25,6 +41,12 @@ onafgerond. Wanneer je zelf omhoog scrolt, stopt het automatisch volgen;
 met **Volg live** spring je terug naar de nieuwste regel. **■ Stop
 microfoon** stopt de reeds actieve herkenning ook vanuit deze weergave;
 **Sluiten** keert terug zonder bestaande ondertitels te wissen.
+In de leesmodus staat bij elke afgeronde regel het handmatig gekozen
+label **A/B/onbekend**. Via **Alle sprekers** kun je de tijdelijke tijdlijn
+filteren op A, B of nog onbekend; de originele live tussenregel verschijnt
+uitsluitend in de ongefilterde tijdlijn, want die heeft nog geen stabiel
+sprekerlabel. Alle labels en filters blijven RAM-only; ze zijn geen
+automatische stem- of persoonsidentificatie.
 Het scherm gebruikt dezelfde gekozen ondertitelgrootte, bewaart geen
 gesprekken, kent geen automatische speaker-ID en vraagt geen extra
 Android-rechten. Een fysieke toestelproef en getekende release blijven open.
