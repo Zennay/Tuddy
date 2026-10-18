@@ -65,7 +65,14 @@ private val spoken = listOf(
     LanguageChoice("Deutsch", "de-DE", TranslateLanguage.GERMAN),
     LanguageChoice("Français", "fr-FR", TranslateLanguage.FRENCH),
     LanguageChoice("Español", "es-ES", TranslateLanguage.SPANISH),
-    LanguageChoice("العربية", "ar-SA", TranslateLanguage.ARABIC)
+    LanguageChoice("العربية", "ar-SA", TranslateLanguage.ARABIC),
+    // Extra opt-in source candidates from the archived v0.4 locale hints.
+    // They are NOT assertions that this phone has installed speech packs.
+    LanguageChoice("فارسی · Farsi", "fa-IR", "fa"),
+    LanguageChoice("Українська", "uk-UA", "uk"),
+    LanguageChoice("Türkçe", "tr-TR", "tr"),
+    LanguageChoice("Русский", "ru-RU", "ru"),
+    LanguageChoice("اردو · Urdu", "ur-PK", "ur")
 )
 private data class Line(
     val id: Long,
@@ -1289,7 +1296,7 @@ private fun TuddyScreen() {
                         }
                     ) { Text("⇄ Wissel richting") }
                     Text(
-                        "Tweewegspraak voor zes geselecteerde spraaktalen; " +
+                        "Tweewegspraak voor elf mogelijke spraaktalen; "  +
                             "geen automatische download of cloudfallback.",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall
@@ -1503,6 +1510,11 @@ private fun TuddyScreen() {
                             Text("Van: ${source.label}", maxLines = 1)
                         }
                         DropdownMenu(expanded = sourceOpen, onDismissRequest = { sourceOpen = false }) {
+                            Text(
+                                "Kiezen is niet hetzelfde als een geïnstalleerd offline spraakpakket.",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                             spoken.forEach {
                                 DropdownMenuItem(text = { Text(it.label) }, onClick = {
                                     stop()
@@ -1564,7 +1576,7 @@ private fun TuddyScreen() {
                     )
                 }
                 if (automaticSpeechSource) {
-                    Text("Alleen de zes gekozen lokale spraaktalen; de telefoon moet hun offline spraakpakketten bezitten. " +
+                    Text("Alleen de elf gekozen spraakkandidaten; elk offline spraakpakket moet op dit toestel echt aanwezig zijn. " +
                         "Detectie is niet gegarandeerd en gebruikt nooit cloudspraak.",
                         style = MaterialTheme.typography.bodySmall)
                 }
