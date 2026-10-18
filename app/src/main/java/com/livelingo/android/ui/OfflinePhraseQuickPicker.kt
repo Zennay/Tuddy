@@ -43,6 +43,7 @@ internal fun OfflinePhraseQuickPicker(
     var code by remember {
         mutableStateOf(initialLanguage.takeIf { it in names } ?: "kmr")
     }
+    var visibleLimit by remember { mutableIntStateOf(80) }
     var query by remember { mutableStateOf("") }
     var presenting by remember { mutableStateOf<PersonalPhrase?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
@@ -54,18 +55,24 @@ internal fun OfflinePhraseQuickPicker(
     val pinnedNotes = remember(phrases, pinsRevision) {
         shortcuts.pinnedNotes(availableNotes)
     }
-    val shown = availableNotes.filter { note ->
+    // Terms can match either field, independently, without a server search.
+    // Keep the presentation deck EXACTLY equal to the user's visible filter.
+    val terms = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    val filtered = availableNotes.filter { note ->
         (!favoritesOnly || note in pinnedNotes) &&
-        note.language == code && (query.isBlank() ||
-            note.phrase.contains(query.trim(), ignoreCase = true) ||
-            note.ownMeaning.contains(query.trim(), ignoreCase = true))
+            (code == "all" || note.language == code) &&
+            terms.all { term ->
+                note.phrase.contains(term, ignoreCase = true) ||
+                    note.ownMeaning.contains(term, ignoreCase = true)
+            }
     }.sortedWith(compareByDescending<PersonalPhrase> { it in pinnedNotes }
-        .thenBy { it.phrase.lowercase(Locale.ROOT) }).take(80)
+        .thenBy { it.language }.thenBy { it.phrase.lowercase(Locale.ROOT) })
+    val shown = filtered.take(visibleLimit)
 
     val chosen = presenting
     if (chosen != null) {
         OfflinePhrasePresenter(
-            notes = phrases.orEmpty(),
+            notes = shown,
             initial = chosen,
             onDismiss = { presenting = null }
         )
@@ -88,14 +95,17 @@ internal fun OfflinePhraseQuickPicker(
                     style = MaterialTheme.typography.bodySmall
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    TextButton(onClick = { code = "all"; visibleLimit = 80 }) {
+                        Text(if (code == "all") "Alle ✓" else "Alle")
+                    }
                     names.forEach { (tag, name) ->
-                        TextButton(onClick = { code = tag }) {
+                        TextButton(onClick = { code = tag; visibleLimit = 80 }) {
                             Text(if (code == tag) name + " ✓" else name)
                         }
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
+                    TextButton(onClick = { favoritesOnly = !favoritesOnly; visibleLimit = 80 }) {
                         Text(if (favoritesOnly) "★ Alleen favorieten"
                             else "☆ Favorieten (" + pinnedNotes.size + ")")
                     }
@@ -105,8 +115,8 @@ internal fun OfflinePhraseQuickPicker(
                 }
                 OutlinedTextField(
                     value = query,
-                    onValueChange = { query = it.take(90) },
-                    label = { Text("Zoek zin of eigen betekenis") },
+                    onValueChange = { query = it.take(90); visibleLimit = 80 },
+                    label = { Text("Zoek woorden in zin of eigen betekenis") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -115,13 +125,20 @@ internal fun OfflinePhraseQuickPicker(
                         "Er wordt niets geraden of overschreven.",
                         color = MaterialTheme.colorScheme.error)
                 } else if (shown.isEmpty()) {
-                    Text("Geen eigen zinnen in " + (names[code] ?: code) +
-                        ". Voeg eerst zelf een zin met betekenis toe.")
+                    Text(if (availableNotes.isEmpty())
+                        "Nog geen eigen zinnen. Voeg eerst zelf een zin en betekenis toe."
+                        else "Geen kaarten voor deze taal, favorieten en zoekwoorden. " +
+                            "Pas je filters aan.")
                 } else {
-                    Text(shown.size.toString() + " kaart(en) · alleen offline",
+                    Text("${shown.size} van ${filtered.size} kaart(en) · alleen offline",
                         style = MaterialTheme.typography.labelMedium)
+                    Text("Toon groot opent alleen de gevonden kaarten in deze volgorde; " +
+                        "andere persoonlijke zinnen blijven buiten deze presentatie.",
+                        style = MaterialTheme.typography.bodySmall)
                     shown.forEach { item ->
                         HorizontalDivider()
+                        Text((names[item.language] ?: item.language) + " · eigen zin",
+                            style = MaterialTheme.typography.labelSmall)
                         Text(item.phrase,
                             style = MaterialTheme.typography.titleMedium.copy(
                                 textDirection = if (item.language == "ckb" ||
@@ -149,6 +166,14 @@ internal fun OfflinePhraseQuickPicker(
                             }) {
                                 Text(if (item in pinnedNotes) "★ Bewaard" else "☆ Favoriet")
                             }
+                        }
+                    }
+                    if (shown.size < filtered.size) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { visibleLimit += 80 }
+                        ) {
+                            Text("Toon volgende kaarten (${filtered.size - shown.size} over)")
                         }
                     }
                 }
