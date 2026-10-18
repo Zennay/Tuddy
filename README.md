@@ -6,7 +6,9 @@ Open bij **Vandaag offline oefenen** de lokale 14-daagse vooruitblik.
 Je ziet per dag wat er aan de beurt komt uit de drie al ingeschakelde
 herhaalplannen, inclusief achterstand en kaarten buiten de periode.
 Beoordelingen kunnen deze voorlopige planning veranderen; er worden
-geen herinneringen of nieuwe gegevens opgeslagen.
+geen herinneringen of nieuwe gegevens opgeslagen. Desgewenst bewaar je
+zelf een offline .ics-agendabestand met uitsluitend datums en aantallen,
+na een afzonderlijke keuze in de Android-bestandskiezer.
 [Meer informatie](docs/OFFLINE_STUDY_FORECAST.md).
 
 
