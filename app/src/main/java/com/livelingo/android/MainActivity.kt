@@ -259,6 +259,9 @@ private fun TuddyScreen(
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var subtitleConsentOpen by remember { mutableStateOf(false) }
     var printableLiveConsentOpen by remember { mutableStateOf(false) }
+    var studyBookConsentOpen by remember { mutableStateOf(false) }
+    // Deliberately selected private learning material only, never captions/audio.
+    var pendingCombinedStudyBook by remember { mutableStateOf<ByteArray?>(null) }
     var printableArchiveConsentOpen by remember { mutableStateOf(false) }
     var printableOnlyFinished by remember { mutableStateOf(true) }
     // Generation, selected filter, and exact opt-in RAM snapshot.
@@ -373,6 +376,11 @@ private fun TuddyScreen(
             lines[index].original.contains(normalizedHistoryQuery, ignoreCase = true) ||
                 lines[index].translated.contains(normalizedHistoryQuery, ignoreCase = true)
         }
+
+    fun captureCombinedStudyBook(): ByteArray? =
+        PrivateCombinedStudyBook.snapshot(
+            savedVocabulary.entries(), ownWordDeck.entries(), personalPhrases.entries()
+        )
 
     fun capturePrintableConversation(onlyFinished: Boolean): ByteArray? =
         PrivatePrintableConversation.snapshot(lines.map { line ->
@@ -1210,6 +1218,30 @@ private fun TuddyScreen(
         }
     }
 
+    val saveCombinedStudyBook = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri ->
+        val pending = pendingCombinedStudyBook
+        pendingCombinedStudyBook = null
+        if (uri != null && pending != null) {
+            val current = captureCombinedStudyBook()
+            if (current == null || !current.contentEquals(pending)) {
+                exportStatus = "Je eigen leermateriaal is gewijzigd. Maak het studieboek opnieuw."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use {
+                        it.write(pending)
+                        it.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                exportStatus = if (saved)
+                    "Het afdrukbare offline studieboek is opgeslagen op je gekozen locatie."
+                else "Studieboek niet opgeslagen. Je lokale leermateriaal blijft behouden."
+            }
+        }
+    }
+
     val savePrintableLive = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/html")
     ) { uri ->
@@ -1632,6 +1664,44 @@ private fun TuddyScreen(
                 fontScale = captionSize.scale,
                 onStop = { stop() },
                 onClose = { focusMode = false }
+            )
+        }
+        if (studyBookConsentOpen) {
+            AlertDialog(
+                onDismissRequest = { studyBookConsentOpen = false },
+                title = { Text("Mijn eigen offline studieboek bewaren?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Het boek bevat momenteel ${savedVocabulary.entries().size} " +
+                            "bewaarde basiswoorden, ${ownWordDeck.entries()?.size ?: 0} " +
+                            "eigen woordnotities en ${personalPhrases.entries()?.size ?: 0} " +
+                            "eigen zinnen. Zelfgeschreven inhoud wordt duidelijk als " +
+                            "ongecontroleerd gemarkeerd.")
+                        Text("Na jouw aparte bevestiging kiest Android een HTML-opslaglocatie. " +
+                            "Die bestandsprovider kan het boek online synchroniseren. " +
+                            "Tuddy bewaart of uploadt uit zichzelf geen gesprekstekst. " +
+                            "Controleer wat je buiten de app wilt bewaren.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        studyBookConsentOpen = false
+                        val snapshot = captureCombinedStudyBook()
+                        if (snapshot == null) {
+                            exportStatus = "Geen volledig leesbare eigen woorden en zinnen " +
+                                "voor een veilig studieboek."
+                        } else {
+                            pendingCombinedStudyBook = snapshot
+                            saveCombinedStudyBook.launch("Tuddy-mijn-offline-studieboek.html")
+                        }
+                    }) { Text("Ik begrijp dit, kies opslag…") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { studyBookConsentOpen = false }) {
+                        Text("Annuleren")
+                    }
+                }
             )
         }
         if (printableLiveConsentOpen) {
@@ -2366,6 +2436,11 @@ private fun TuddyScreen(
                 onManagePhrases = {
                     flashcardsOpen = false
                     personalPhrasesOpen = true
+                },
+                onSaveStudyBook = {
+                    captionSpeaker.stop()
+                    flashcardsOpen = false
+                    studyBookConsentOpen = true
                 },
                 onDismiss = { flashcardsOpen = false }
             )
