@@ -22,3 +22,20 @@ Dit scherm gebruikt geen netwerk, notificaties, locatie, microfoon,
 spraak-/tekstmodel of nieuwe persistente opslag. Het geeft geen
 release-acceptatie, fysieke vliegtuigmodusproef of Kurdish/Pashto-ASR/MT-
 licentie-/taalexpertbewijs; die afzonderlijke voorwaarden blijven bestaan.
+
+
+## Bewust bewaren als agenda-export
+
+Tik in het overzicht op **Bewaar alleen datums en aantallen als agenda…** om
+via de Android-documentkiezer een lokaal `.ics`-bestand aan te maken.
+Er staan uitsluitend vervaldatums en per categorie getelde kaarten in;
+**geen** woorden, zinnen, betekenissen, transcriptregels of identiteit.
+De kalender maakt alleen afspraken voor dagen waarop daadwerkelijk
+kaarten aan de beurt zijn. Een eenmaal geïmporteerde kalender is een
+momentopname: later zelf beoordelen kan die afspraken niet automatisch
+bijwerken. Externe bestandsproviders en agenda-apps kunnen het bestand
+wel synchroniseren, dus deel het uitsluitend bewust.
+
+Wanneer je de Android-bestandskiezer open hebt terwijl de leerinhoud of
+planning verandert, wordt de verouderde momentopname niet opgeslagen.
+Geen extra kalenderrechten, meldingsrechten of internettoegang nodig.
