@@ -254,6 +254,9 @@ private fun TuddyScreen(
     var manualText by remember { mutableStateOf("") }
     var quickTypedOpen by remember { mutableStateOf(false) }
     var twoWayTypedOpen by remember { mutableStateOf(false) }
+    // Other-app text exists only in this Activity session and only after
+    // the user consciously moves it into the text-only conversation editor.
+    var sharedTextToTwoWay by remember { mutableStateOf<String?>(null) }
     var draftFromExternalShare by remember { mutableStateOf(false) }
     // The export snapshot exists only between an explicit Save tap and the
     // Android document picker result; no automatic disk/history persistence.
@@ -1352,6 +1355,7 @@ private fun TuddyScreen(
                 meaningIndexOpen = false
                 quickTypedOpen = false
                 twoWayTypedOpen = false // forget private typed draft on background
+                sharedTextToTwoWay = null
                 draftFromExternalShare = false
                 manualText = ""
                 previewArchiveRows = null
@@ -1381,6 +1385,7 @@ private fun TuddyScreen(
             flashcardsOpen = false
             ownWordsOpen = false
             twoWayTypedOpen = false
+            sharedTextToTwoWay = null
             presentedCaptionId = null
             pendingCaptionLanguageChange = null
             meaningIndexOpen = false
@@ -1425,6 +1430,7 @@ private fun TuddyScreen(
                 error = shared.notice ?: "Deze gedeelde inhoud is geen ondersteunde platte tekst."
                 quickTypedOpen = false
                 twoWayTypedOpen = false // forget private typed draft on background
+                sharedTextToTwoWay = null
                 draftFromExternalShare = false
                 manualText = ""
             } else {
@@ -1499,6 +1505,7 @@ private fun TuddyScreen(
             TwoWayTypedConversationDialog(
                 initialSource = source.translateCode,
                 initialTarget = target.translateCode,
+                initialSharedDraft = sharedTextToTwoWay,
                 recentLines = lines.takeLast(80).map { row ->
                     TypedConversationLine(row.original, row.translated, row.status,
                         row.sourceCode, row.targetCode)
@@ -1531,10 +1538,16 @@ private fun TuddyScreen(
                 },
                 onSend = { sentence, from, to ->
                     val added = appendTypedTurn(sentence, from, to)
-                    if (added) follow = true
+                    if (added) {
+                        follow = true
+                        sharedTextToTwoWay = null
+                    }
                     added
                 },
-                onDismiss = { twoWayTypedOpen = false }
+                onDismiss = {
+                    twoWayTypedOpen = false
+                    sharedTextToTwoWay = null
+                }
             )
         }
         if (quickTypedOpen) {
@@ -1570,6 +1583,21 @@ private fun TuddyScreen(
                                 showSettings = true
                                 conversationToolsOpen = false
                             }) { Text("Wijzig talen · bewaar dit concept") }
+                            OutlinedButton(onClick = {
+                                // This is a separate explicit route for all 59
+                                // offline ML Kit text languages, not speech ASR.
+                                val incoming = OfflineTypedCaptionPolicy.normalize(manualText)
+                                if (incoming != null && !listening) {
+                                    sharedTextToTwoWay = incoming
+                                    manualText = ""
+                                    draftFromExternalShare = false
+                                    quickTypedOpen = false
+                                    twoWayTypedOpen = true
+                                }
+                            }, enabled = OfflineTypedCaptionPolicy.normalize(manualText) != null,
+                                modifier = Modifier.fillMaxWidth()) {
+                                Text("⇄ Gebruik in tweeweg-tekstgesprek (59 teksttalen)")
+                            }
                         }
                         OutlinedTextField(
                             value = manualText,
