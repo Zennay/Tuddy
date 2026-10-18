@@ -278,3 +278,18 @@ doorsturen of synchroniseren: deel geen vertrouwelijke persoonsgegevens.
 Het openen van Androids chooser bewijst niet dat er werkelijk iets is
 verzonden. Deze wijziging levert uitsluitend broncode; fysieke
 toestelacceptatie, taalmodelbeschikbaarheid en getekende APK blijven apart.
+
+
+### Handmatig sprekers onderscheiden in het live gesprek
+
+In de live ondertiteltijdlijn staat bij iedere afgeronde regel **Spreker: onbekend**.
+Met **Wijzig spreker** doorloop je handmatig **A → B → onbekend**. Dit is geen
+automatische sprekerherkenning: Tuddy beweert niet dat een stem aan een persoon
+gekoppeld is. Boven het gesprek kun je met **Volgende A** en **Volgende B**
+langs de gemarkeerde gespreksregels navigeren zonder de live opname te resetten.
+De labels bestaan uitsluitend in het geheugen van de huidige sessie,
+verdwijnen bij **Wis gesprek** of wanneer een oude zin uit de tijdlijn
+verdwijnt, en worden niet toegevoegd aan bestaande tekst-/JSON-exporten.
+Een ander account, cloud, sprekeridentificatie of nieuwe Android-rechten
+is hiervoor niet nodig. Dit is uitsluitend broncode: device- en releasegates
+blijven gelden.
