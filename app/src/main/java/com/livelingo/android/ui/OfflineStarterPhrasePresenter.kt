@@ -16,9 +16,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -28,6 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.model.SafeCommunityPhrasebook
 
 /**
@@ -35,7 +42,8 @@ import com.livelingo.android.model.SafeCommunityPhrasebook
  * entries, intended for showing a phrase to someone next to the phone.
  *
  * Uses only the already bundled exact-match phrasebook. No ASR, ML Kit,
- * microphone, voice, network, clipboard, share intent or storage.
+ * microphone, network, clipboard, share intent or storage.
+ * Optional pronunciation reuses only an already installed non-network voice.
  */
 @Composable
 internal fun OfflineStarterPhrasePresenter(
@@ -59,13 +67,34 @@ internal fun OfflineStarterPhrasePresenter(
     }
     var targetFirst by remember { mutableStateOf(true) }
     var larger by remember { mutableStateOf(true) }
+    var audioNotice by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(speaker, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                speaker.stop()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            speaker.close()
+        }
+    }
+    LaunchedEffect(index, source, target) {
+        // Never pronounce a word from a previous card or language selection.
+        speaker.stop()
+        audioNotice = ""
+    }
     val item = phrases.getOrNull(index)
     val original = item?.let { if (source == "nl") it.first else it.second }.orEmpty()
     val result = if (item == null) null else
         SafeCommunityPhrasebook.translate(source, target, original).getOrNull()
     val isRtl = target == "ckb" || target == "ps"
 
-    Dialog(onDismissRequest = onDismiss,
+    Dialog(onDismissRequest = { speaker.stop(); onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
             modifier = Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.86f),
@@ -80,12 +109,12 @@ internal fun OfflineStarterPhrasePresenter(
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("5 basiswoorden · $label",
                         style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = onDismiss) { Text("Sluiten") }
+                    TextButton(onClick = { speaker.stop(); onDismiss() }) { Text("Sluiten") }
                 }
                 Text(
                     "Vijf ingebouwde voorbeeldwoorden, niet onafhankelijk door " +
                         "moedertaalsprekers geverifieerd. Geen vrije vertaling, " +
-                        "spraakfunctie of audio-synchronisatie.",
+                        "automatische spraak of audio-synchronisatie.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -157,6 +186,25 @@ internal fun OfflineStarterPhrasePresenter(
                         )
                     }
                 }
+                if (item != null && result != null) {
+                    OfflinePhraseSpeechActions(
+                        original = original,
+                        originalLanguage = source,
+                        meaning = result,
+                        meaningLanguage = target,
+                        originalLabel = "Bronwoord",
+                        meaningLabel = "Doelwoord",
+                        speaker = speaker,
+                        onNotice = { audioNotice = it }
+                    )
+                }
+                if (audioNotice.isNotBlank()) {
+                    Text(audioNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text("Voorlezen alleen na jouw tik met een reeds geïnstalleerde " +
+                    "als lokaal gemelde Android-stem. Er wordt geen stem gedownload.",
+                    style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
