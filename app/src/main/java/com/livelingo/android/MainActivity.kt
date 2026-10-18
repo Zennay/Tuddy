@@ -2051,15 +2051,15 @@ private fun TuddyScreen() {
                             Text(modelStorageNotice, style = MaterialTheme.typography.bodySmall)
                         installedTextModels?.forEach { code ->
                             val label = TargetCatalog.targets.firstOrNull { it.code == code }?.title ?: code
-                            val protected = code in setOf(source.translateCode, target.translateCode)
+                            val isProtected = code in setOf(source.translateCode, target.translateCode)
                             Row(modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("$label ($code)" + if (protected) " · actief" else "",
+                                Text("$label ($code)" + if (isProtected) " · actief" else "",
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.bodySmall)
                                 TextButton(
-                                    enabled = !protected && !listening &&
+                                    enabled = !isProtected && !listening &&
                                         !preparingOfflineModel && !modelStorageBusy,
                                     onClick = { pendingModelDeletion = code }
                                 ) { Text("Verwijder") }
