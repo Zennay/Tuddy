@@ -46,6 +46,18 @@ maar met compactere letters. Dit is geen exacte audio-tijdsynchronisatie
 en markeert de vertaling niet op verzonnen woordposities.
 [Bediening en grenzen](docs/INLINE_LIVE_WORD_FOCUS.md).
 
+## Nieuw: 5 offline basiswoorden direct bereikbaar
+
+Het gespreksscherm heeft nu **🌍 5 basiswoorden · Kurmanji, Sorani,
+Pasjtoe**. Eén tik toont alle vijf bestaande, exact gebundelde
+basiswoorden (hallo, bedankt, ja, nee, water) in de gekozen taal,
+met Nederlandse of Engelse brontekst. Dit werkt zonder microfoon,
+wifi of taalmodel en biedt een route naar de eigen offline
+oefenzinnen. Het is **geen** vrije vertaalmachine, geen bewijs van
+spraakondersteuning of moedertaalsprekeracceptatie.
+[Overzicht en grenzen](docs/COMMUNITY_STARTER_PHRASEBOARD.md).
+
+
 ## Nieuw: optionele privéweergave
 
 Via **Taal- en modelinstellingen → Privacy · privéweergave** kun je
