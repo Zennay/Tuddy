@@ -57,6 +57,10 @@ internal fun SavedWordsPanel(
         it.word.contains(searchTerm, ignoreCase = true) ||
             it.language.contains(searchTerm, ignoreCase = true)
     }
+    val reviewDates = if (deck.reviewsEnabled()) deck.scheduledReviews().associateBy {
+        "${it.saved.language}|${it.saved.word}"
+    } else emptyMap()
+    val localToday = java.time.LocalDate.now().toEpochDay()
     var confirmDelete by remember { mutableStateOf(false) }
     var practiceOpen by remember { mutableStateOf(false) }
     var scheduledReviewOpen by remember { mutableStateOf(false) }
@@ -293,6 +297,15 @@ internal fun SavedWordsPanel(
                     Column {
                         Text("${word.entry.illustration} ${word.word} · ${word.language}",
                             style = MaterialTheme.typography.titleSmall)
+                        reviewDates[key]?.let { scheduled ->
+                            val dueLabel = if (scheduled.dueDay <= localToday)
+                                "Vandaag herhalen"
+                            else "Opnieuw op " + java.time.LocalDate
+                                .ofEpochDay(scheduled.dueDay).toString()
+                            Text(dueLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
                         if (key in revealed) {
                             Text(word.entry.definition, style = MaterialTheme.typography.bodySmall)
                         }
