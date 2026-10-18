@@ -10,8 +10,9 @@ vervolgens naar dezelfde of een latere regel en kies **B-einde**. Kies
 herhaalt tot na de eindtijd van B. Je kunt het herhalen op elk moment
 uitzetten. Gewoon één regel herhalen blijft daarnaast beschikbaar.
 
-De A–B-selectie is alleen bruikbaar als het hele fragment (minimaal 0,75
-seconde) binnen de gekozen audio valt. De huidige tijdelijke handmatige
+De A–B-selectie is alleen bruikbaar als alle geselecteerde regels en
+het hele fragment (minimaal 0,75 seconde, maximaal 5 minuten) binnen de
+gekozen audio vallen. De huidige tijdelijke handmatige
 tijdsverschuiving geldt ook hier, zonder originele audio of SRT/VTT te
 wijzigen. Alle A/B-selecties verdwijnen na audio wisselen of sluiten; bij
 een gewijzigde offset stopt de oude herhaling zodat geen onverwacht
