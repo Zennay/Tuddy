@@ -57,6 +57,7 @@ import com.livelingo.android.ui.OfflinePhraseQuickPicker
 import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.SessionMeaningIndexDialog
 import com.livelingo.android.ui.SessionMeaningRow
+import com.livelingo.android.ui.PrivateSubtitleFileDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
@@ -287,6 +288,9 @@ private fun TuddyScreen(
     var pendingArchiveSubtitleExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var archiveSearchQuery by remember { mutableStateOf("") }
     var pendingArchiveGeneration by remember { mutableStateOf<Int?>(null) }
+    // Explicitly opened SRT/WebVTT file; separate from the active transcript.
+    var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
+    var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     // The user selects one completed row from a read-only, unverified
     // imported archive. No clipboard/share side effects before consent.
     var pendingArchiveExcerpt by remember {
@@ -1341,6 +1345,39 @@ private fun TuddyScreen(
         }
     }
 
+    val openSubtitleFile = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val expected = pendingSubtitleOpenGeneration
+        pendingSubtitleOpenGeneration = null
+        if (uri != null && expected != null && expected == generation) {
+            val loaded = runCatching {
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: throw IllegalArgumentException("Unreadable subtitle document")
+                val bytes = input.use { stream ->
+                    val collected = ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val count = stream.read(buffer)
+                        if (count < 0) break
+                        if (count == 0) continue
+                        if (collected.size() + count > PrivateSubtitleFileReader.MAX_BYTES)
+                            throw IllegalArgumentException("Oversized subtitle document")
+                        collected.write(buffer, 0, count)
+                    }
+                    collected.toByteArray()
+                }
+                PrivateSubtitleFileReader.read(bytes)
+            }.getOrNull()
+            subtitleFileCues = loaded
+            if (loaded == null) {
+                error = "Ongeldig of te groot SRT/WebVTT-bestand; gesprek ongewijzigd."
+            } else {
+                error = ""
+            }
+        }
+    }
+
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -1368,6 +1405,7 @@ private fun TuddyScreen(
                 draftFromExternalShare = false
                 manualText = ""
                 previewArchiveRows = null
+                subtitleFileCues = null
                 archiveStudyOpen = false
                 archiveReaderOpen = false
                 archiveSearchQuery = ""
@@ -1404,6 +1442,8 @@ private fun TuddyScreen(
             meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
+            subtitleFileCues = null
+            pendingSubtitleOpenGeneration = null
             archiveStudyOpen = false
             archiveReaderOpen = false
             archiveSearchQuery = ""
@@ -1735,6 +1775,12 @@ private fun TuddyScreen(
                     sessionCaptionStudyStartId = null
                 },
                 initialCaptionId = sessionCaptionStudyStartId
+            )
+        }
+        subtitleFileCues?.let { opened ->
+            PrivateSubtitleFileDialog(
+                cues = opened,
+                onDismiss = { subtitleFileCues = null }
             )
         }
         if (focusMode) {
@@ -3204,6 +3250,13 @@ private fun TuddyScreen(
                             openTranscriptArchive.launch(arrayOf("application/json", "text/plain"))
                         }
                     ) { Text("Open JSON-archief…") }
+                    TextButton(enabled = !listening, onClick = {
+                        pendingSubtitleOpenGeneration = generation
+                        subtitleFileCues = null
+                        openSubtitleFile.launch(arrayOf(
+                            "text/plain", "application/x-subrip", "text/vtt"
+                        ))
+                    }) { Text("Open SRT/WebVTT…") }
                     Text(
                         "Bekijk een bewaard gesprek zonder je live gesprek te vervangen.",
                         modifier = Modifier.weight(1f),
