@@ -1,5 +1,17 @@
 # Tuddy 🎙️
 
+## Nieuw: oefen een afgerond gesprek zonder iets op te slaan
+
+Vanuit het live gesprek (na stoppen van de microfoon) en vanuit
+de tweeweg-typmodus kun je nu **🧠 Oefen dit gesprek** openen.
+Alleen werkelijk **lokaal voltooide** bron/vertaling-paren komen
+in aanmerking. Oefen in groepjes van twaalf, wissel de
+vraagrichting, onthul antwoorden pas na een tik en beoordeel
+jezelf. Optioneel lokaal voorlezen, hoogstens één herkansing
+per moeilijke kaart. De voortgang verdwijnt bij sluiten:
+**geen nieuwe archivering of automatische vertaalgarantie**.
+[Bediening en privacy](docs/EPHEMERAL_CAPTION_STUDY.md).
+
 ## Nieuw: bewaarde woorden lokaal horen en oefenen
 
 In **Mijn opgeslagen woorden** kun je elk lokaal bewaard woord
