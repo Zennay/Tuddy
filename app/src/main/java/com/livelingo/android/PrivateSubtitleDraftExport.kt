@@ -2,16 +2,26 @@ package com.livelingo.android
 
 import java.util.Locale
 
+internal enum class SubtitleDraftMode {
+    BILINGUAL, ORIGINAL_ONLY, TRANSLATION_ONLY
+}
+
 /**
- * Explicit, bounded SRT editing draft for the current RAM-only conversation.
+ * Deliberately coarse manual adjustments for a rough SRT editing draft.
+ * Values are constrained to the choices exposed in the UI.
+ */
+internal data class SubtitleDraftOptions(
+    val mode: SubtitleDraftMode = SubtitleDraftMode.BILINGUAL,
+    val startOffsetMs: Long = 0L,
+    val cueDurationMs: Long = 3500L
+)
+
+/**
+ * Explicit, bounded SRT editing draft. Completion callbacks are NOT the real
+ * audio onset, word timestamps or a synchronized media clock. The manual
+ * offset/duration settings remain estimates and never verify alignment.
  *
- * Recognition callbacks record the end of an utterance, not the audio onset,
- * word timestamps or a synchronized media clock. Cue times below are only
- * rough relative positions derived from those completion timestamps. The app
- * must never describe them as synchronized/verified subtitles.
- *
- * No file, model, network request or clipboard is touched here. The caller
- * presents informed consent and Android's destination picker separately.
+ * This module performs no persistence, browser, network or share operations.
  */
 internal object PrivateSubtitleDraftExport {
     private const val MAX_ROWS = 500
@@ -19,7 +29,9 @@ internal object PrivateSubtitleDraftExport {
     private const val MAX_BYTES = 262_144
     private const val MAX_DURATION_MS = 86_399_000L
     private const val MIN_GAP_MS = 1200L
-    private const val CUE_MS = 3500L
+
+    private val ALLOWED_OFFSETS = setOf(0L, 5000L, 10000L, 30000L, 60000L)
+    private val ALLOWED_DURATIONS = setOf(2000L, 3500L, 5000L, 7000L)
 
     private fun oneLine(value: String): String =
         value.replace('\r', ' ').replace('\n', ' ')
@@ -36,19 +48,31 @@ internal object PrivateSubtitleDraftExport {
             hours, minutes, seconds, remainder)
     }
 
-    fun snapshot(rows: List<TranscriptExportRow>): ByteArray? {
-        if (rows.isEmpty() || rows.size > MAX_ROWS) return null
+    /** Preserve the original bilingual behavior for existing callers. */
+    fun snapshot(rows: List<TranscriptExportRow>): ByteArray? =
+        snapshot(rows, SubtitleDraftOptions())
+
+    fun snapshot(rows: List<TranscriptExportRow>, options: SubtitleDraftOptions): ByteArray? {
+        if (rows.isEmpty() || rows.size > MAX_ROWS ||
+            options.startOffsetMs !in ALLOWED_OFFSETS ||
+            options.cueDurationMs !in ALLOWED_DURATIONS
+        ) return null
+
         val now = System.currentTimeMillis()
-        // A pending/failed translation is not a confirmed subtitle. Its
-        // original sentence is also excluded until the turn completes.
-        val completed = rows.filter {
+        val finished = rows.filter {
             it.status == "Lokaal" || it.status == "Lokaal vertaald"
         }
+        val completed = if (options.mode == SubtitleDraftMode.TRANSLATION_ONLY) {
+            finished.filter {
+                it.status == "Lokaal vertaald" && oneLine(it.translated).isNotBlank()
+            }
+        } else finished
+        // Do not silently fill translation-only drafts with source sentences.
         if (completed.isEmpty()) return null
 
         val cues = mutableListOf<Pair<Long, Pair<String, String>>>()
         val origin = completed.first().recordedAtMillis
-        var previousStart = -MIN_GAP_MS
+        var previousStart = options.startOffsetMs - MIN_GAP_MS
         for (row in completed) {
             if (row.recordedAtMillis <= 0L ||
                 row.recordedAtMillis > now + 86_400_000L ||
@@ -59,22 +83,25 @@ internal object PrivateSubtitleDraftExport {
             val original = oneLine(row.original)
             if (original.isEmpty()) return null
             val translated = oneLine(row.translated)
-            // Retain chronological transcript order even if device clock moves
-            // backwards, or several recognition callbacks share a timestamp.
             val start = maxOf(
-                (row.recordedAtMillis - origin).coerceAtLeast(0L),
+                (row.recordedAtMillis - origin).coerceAtLeast(0L) + options.startOffsetMs,
                 previousStart + MIN_GAP_MS
             )
-            if (start > MAX_DURATION_MS - CUE_MS) return null
-            cues.add(start to (original to translated))
+            if (start > MAX_DURATION_MS - options.cueDurationMs) return null
+            val first = if (options.mode == SubtitleDraftMode.TRANSLATION_ONLY)
+                translated else original
+            val second = if (options.mode == SubtitleDraftMode.BILINGUAL)
+                translated else ""
+            if (first.isBlank()) return null
+            cues.add(start to (first to second))
             previousStart = start
         }
 
         val output = StringBuilder()
         cues.forEachIndexed { index, (start, caption) ->
             val next = cues.getOrNull(index + 1)?.first
-            val end = if (next == null) start + CUE_MS
-                else minOf(start + CUE_MS, next - 150L)
+            val end = if (next == null) start + options.cueDurationMs
+                else minOf(start + options.cueDurationMs, next - 150L)
             output.append(index + 1).append('\n')
                 .append(stamp(start)).append(" --> ").append(stamp(end))
                 .append('\n').append(caption.first)
