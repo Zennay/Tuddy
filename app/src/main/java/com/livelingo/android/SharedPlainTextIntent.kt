@@ -15,6 +15,14 @@ internal object SharedPlainTextIntent {
             intent.type?.substringBefore(';')?.trim()?.lowercase() != "text/plain"
         ) return null
 
+        // Even a mislabeled text/plain send can carry attachments or HTML.
+        // Refuse rather than reading or silently downgrading that payload.
+        if (intent.hasExtra(Intent.EXTRA_STREAM) ||
+            intent.hasExtra(Intent.EXTRA_HTML_TEXT)) {
+            return IncomingSharedText(null,
+                "Bijlagen en HTML worden niet overgenomen. Deel alleen platte tekst.")
+        }
+
         val supplied = runCatching {
             intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
         }.getOrNull()

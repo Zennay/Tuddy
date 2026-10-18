@@ -96,6 +96,8 @@ class MainActivity : ComponentActivity() {
         // the original Intent after it was already dismissed or consumed.
         pendingExternalText = if (savedInstanceState == null)
             SharedPlainTextIntent.read(intent) else null
+        // Do not keep the original other-app text in Activity Intent extras.
+        intent?.removeExtra(Intent.EXTRA_TEXT)
         setContent {
             TuddyScreen(
                 incomingExternalText = pendingExternalText,
@@ -106,8 +108,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent)
         pendingExternalText = SharedPlainTextIntent.read(intent)
+        intent.removeExtra(Intent.EXTRA_TEXT)
+        setIntent(intent)
     }
 }
 
