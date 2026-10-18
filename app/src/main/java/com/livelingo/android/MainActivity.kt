@@ -434,7 +434,8 @@ private fun TuddyScreen() {
     }
 
     fun prepareOfflinePair() {
-        if (preparingOfflineModel || modelStorageBusy) return
+        if (preparingOfflineModel) return
+        if (modelStorageBusy) return
         when (OfflineModelPreparationPolicy.decide(
             source.translateCode, target.translateCode, TargetCatalog.codes)) {
             OfflinePairDecision.UNSUPPORTED -> {
@@ -868,8 +869,8 @@ private fun TuddyScreen() {
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) {
-                stop()
                 modelStorage.invalidate()
                 modelStorageBusy = false
                 pendingModelDeletion = null
