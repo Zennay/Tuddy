@@ -9,6 +9,13 @@ gebruik Terug/Opnieuw en bewaar desgewenst afzonderlijk een nieuwe kopie.
 De tekst verandert niet en Tuddy meet geen audio/video-synchronisatie.
 [Bediening en privacy](docs/OFFLINE_SUBTITLE_RETIMING.md).
 
+## Nieuw: standaard WebVTT-bestanden met taalheader openen
+
+Tuddy opent nu ook gangbare WebVTT-bestanden met `Kind:`- en
+`Language:`-headerregels vóór de cues. Onbekende instructies zoals
+externe tijdmapping worden niet stilzwijgend overgenomen.
+[Ondersteuning en grenzen](docs/WEBVTT_IMPORT_COMPATIBILITY.md).
+
 ## Nieuw: alleen gevonden ondertitels als bestand bewaren
 
 Zoek in een zelf geopend SRT/VTT-bestand en kies vervolgens

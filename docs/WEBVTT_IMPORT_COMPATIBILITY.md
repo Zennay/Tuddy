@@ -11,6 +11,13 @@ zoals `align:start`. VTT `NOTE`-, `STYLE`- en `REGION`-blokken
 worden veilig overgeslagen: ze worden niet als ondertiteltekst
 ingelezen, geëxporteerd of geïnterpreteerd.
 
+Ook WebVTT-bestanden met gebruikelijke, meerregelige `Kind: `- en
+`Language: `-headerinformatie vóór de eerste lege regel zijn leesbaar.
+Deze optionele metagegevens worden uitsluitend als beschrijving genegeerd,
+niet als bewijs van de gesproken taal of bron van vertalingen. Onbekende
+headerinstructies, zoals `X-TIMESTAMP-MAP` met een externe media-klok,
+blijven expliciet geweigerd in plaats van foutief tijdcodes over te nemen.
+
 De werkelijke gekozen cue-tekst wordt als gewone, niet-uitgevoerde
 tekst weergegeven. Een WebVTT-marker of markup wordt dus geen
 HTML/script, geen afgedwongen speaker-identiteit en geen
