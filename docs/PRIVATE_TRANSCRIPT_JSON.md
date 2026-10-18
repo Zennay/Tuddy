@@ -35,6 +35,21 @@ recognition is not written. Text from a pending/failed translator task is
 **never** labelled as a completed translation. The original text is retained
 so the user can recover what was spoken without relying on a missing translation.
 
+## Copy a single bilingual caption
+
+Each completed caption card also has **Kopieer deze zin**. This is an
+explicit, individual Android clipboard action, not an automatic sharing
+channel. It copies the original language-labelled sentence and (only when
+actually complete) the translated sentence. Pending/missing translations are
+clearly marked `[Vertaling niet voltooid]`. Each copied payload is bounded to
+16 KiB and is marked **sensitive** in Android's clipboard metadata where
+supported, so the operating system can suppress clipboard previews.
+
+**Important:** The clipboard belongs to Android, not Tuddy's RAM-only
+conversation history. Other apps, input methods or platform clipboard history
+may access its contents. Tuddy does not guarantee automatic removal from the
+clipboard. Avoid copying sensitive medical, legal or asylum conversations.
+
 ## Boundaries
 
 - At most 500 captions, 4096 UTF-16 units per field and 256 KiB in the
