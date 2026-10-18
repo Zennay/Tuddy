@@ -1100,6 +1100,7 @@ private fun TuddyScreen(
                 offlineReadinessOpen = false
                 starterPhraseboardOpen = false
                 flashcardsOpen = false
+                ownWordsOpen = false
                 focusMode = false
                 quickTypedOpen = false
                 draftFromExternalShare = false
@@ -1127,6 +1128,7 @@ private fun TuddyScreen(
             modelStorage.invalidate()
             starterPhraseboardOpen = false
             flashcardsOpen = false
+            ownWordsOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             archiveSearchQuery = ""
@@ -2871,8 +2873,8 @@ private fun TuddyScreen(
                 HorizontalDivider()
                 Text("Privacy · opgeslagen oefengegevens",
                     style = MaterialTheme.typography.titleSmall)
-                Text("Verwijder desgewenst alle bewust opgeslagen basiswoorden, " +
-                    "eigen oefenzinnen en favoriete taalparen van dit toestel. " +
+                Text("Verwijder desgewenst bewust opgeslagen basiswoorden, " +
+                    "eigen woordbetekenissen, oefenzinnen en favoriete taalparen van dit toestel. " +
                     "Het tijdelijke gesprek en je aparte exportbestanden blijven staan.",
                     style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(
@@ -3061,8 +3063,8 @@ private fun TuddyScreen(
                                             fontSize = MaterialTheme.typography.titleMedium.fontSize * captionSize.scale
                                         ),
                                         onSaveWord = ::saveVerifiedWord,
-                                    readOwnMeaning = ::readOwnWordMeaning,
-                                    saveOwnMeaning = ::saveOwnWordMeaning
+                                        readOwnMeaning = ::readOwnWordMeaning,
+                                        saveOwnMeaning = ::saveOwnWordMeaning
                                     )
                                 } else {
                                     Text(
@@ -3191,8 +3193,8 @@ private fun TuddyScreen(
                 }
                 Text(
                     "Privacy: gesprekken blijven tijdelijk, behalve bij expliciete export. " +
-                        "Alleen bewust bewaarde basiswoorden en zelf ingevoerde zinnen worden privé op je telefoon opgeslagen. " +
-                        "Eigen zinnen zijn niet automatisch vertaald of gecontroleerd. Voorlezen gebruikt Android-gemelde offline stemmen.",
+                        "Alleen bewust bewaarde basiswoorden, eigen woordbetekenissen en zelf ingevoerde zinnen worden privé opgeslagen. " +
+                        "Eigen betekenissen zijn niet automatisch vertaald of gecontroleerd. Voorlezen gebruikt Android-gemelde offline stemmen.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
