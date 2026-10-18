@@ -60,3 +60,39 @@ internal object PrivateTranscriptExport {
         return bytes.takeIf { it.size <= MAX_BYTES }
     }
 }
+
+
+/**
+ * A separate, explicit opt-in TXT product for manually annotated turns.
+ * Ordinary TXT/JSON archives intentionally remain label-free. These labels
+ * are not speaker identities, voice recognition or verified attribution.
+ */
+internal object PrivateSpeakerTranscriptExport {
+    private const val MAX_ROWS = 500
+    private const val MAX_BYTES = 262_144
+
+    fun snapshot(rows: List<Pair<TranscriptExportRow, String?>>): ByteArray? {
+        if (rows.isEmpty() || rows.size > MAX_ROWS) return null
+        // Inherit canonical timestamp, source language and row length admission.
+        if (PrivateTranscriptExport.snapshot(rows.map { it.first }) == null) return null
+
+        val text = StringBuilder(
+            "Tuddy · handmatig gelabeld privégesprek\n" +
+                "A/B/onbekend zijn door jou gekozen labels, geen stemherkenning of identiteit.\n" +
+                "Dit bestand kan door je gekozen provider extern worden opgeslagen of gesynchroniseerd.\n\n"
+        )
+        rows.forEachIndexed { index, (row, label) ->
+            if (label != null && label != "A" && label != "B") return null
+            // Reuse the same privacy-normalized original + translated lines
+            // as the existing single-caption opt-in clipboard feature.
+            val payload = PrivateCaptionCopy.snapshot(row) ?: return null
+            text.append(index + 1).append(". Spreker ")
+                .append(label ?: "onbekend").append(" (handmatig)\n")
+                .append("  ").append(payload.replace("\n", "\n  ")).append("\n\n")
+            // Fail early before generating large documents.
+            if (text.length > MAX_BYTES) return null
+        }
+        return text.toString().toByteArray(Charsets.UTF_8)
+            .takeIf { it.size <= MAX_BYTES }
+    }
+}
