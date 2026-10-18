@@ -31,7 +31,7 @@ internal data class SpeechPackReceipt(
     val stage: SpeechPackStage,
     val detail: String
 ) {
-    val canDownload: Boolean get() = stage == SpeechPackStage.DOWNLOADABLE
+    val canDownload: Boolean get() = stage == SpeechPackStage.DOWNLOADABLE || stage == SpeechPackStage.ERROR
 }
 
 internal class OnDeviceSpeechPackController(private val context: Context) {
