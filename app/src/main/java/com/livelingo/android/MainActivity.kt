@@ -365,8 +365,8 @@ private fun TuddyScreen(
     fun translate(text: String, id: Long, targetCode: String, sourceCode: String, token: Int) {
         val revision = lines.firstOrNull { it.id == id }?.translationRevision ?: return
         if (!translationStillRelevant(id, token, revision)) return
-        // Text language detection and translation remain ON DEVICE. Models are downloaded only
-        // when the user is on Wi-Fi; without a downloaded model, fail transparently.
+        // Text detection and translation stay on-device. Never start a model
+        // download from a transcript/typed input: require explicit preparation.
         val detector = LanguageIdentification.getClient()
         detector.identifyLanguage(text)
             .addOnSuccessListener { guess ->
@@ -384,35 +384,50 @@ private fun TuddyScreen(
                     updateLine(id, text, "Lokaal", token, revision)
                     return@addOnSuccessListener
                 }
-                val options = TranslatorOptions.Builder()
-                    .setSourceLanguage(from)
-                    .setTargetLanguage(targetCode)
-                    .build()
-                val translator = Translation.getClient(options)
-                val conditions = DownloadConditions.Builder().requireWifi().build()
-                translator.downloadModelIfNeeded(conditions)
-                    .addOnSuccessListener {
-                        // A model download already underway may finish after
-                        // the conversation was cleared. Close without launching
-                        // an unnecessary translation for now-absent text.
-                        if (!translationStillRelevant(id, token, revision)) {
-                            translator.close()
-                            return@addOnSuccessListener
-                        }
-                        translator.translate(text)
-                            .addOnSuccessListener { output ->
-                                updateLine(id, output, "Lokaal vertaald", token, revision)
-                                translator.close()
-                            }
-                            .addOnFailureListener {
+                // Never fetch models implicitly while capturing speech,
+                // typing, editing or retrying. Inspect the CURRENT installed
+                // pair and require explicit Wi-Fi preparation in settings.
+                // One inventory per caption avoids cross-cancelling other rows.
+                OfflineTextModelInventory().check(from, targetCode, TargetCatalog.codes) { receipt ->
+                    if (!translationStillRelevant(id, token, revision)) return@check
+                    when (receipt.stage) {
+                        OfflineTextStage.CHECKING -> Unit
+                        OfflineTextStage.READY -> {
+                            val translator = try {
+                                Translation.getClient(TranslatorOptions.Builder()
+                                    .setSourceLanguage(from)
+                                    .setTargetLanguage(targetCode)
+                                    .build())
+                            } catch (_: Exception) {
                                 updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                                translator.close()
+                                return@check
                             }
+                            try {
+                                translator.translate(text)
+                                    .addOnSuccessListener { output ->
+                                        updateLine(id, output, "Lokaal vertaald", token, revision)
+                                        translator.close()
+                                    }
+                                    .addOnFailureListener {
+                                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                                        translator.close()
+                                    }
+                            } catch (_: Exception) {
+                                translator.close()
+                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                            }
+                        }
+                        OfflineTextStage.MISSING -> updateLine(
+                            id,
+                            "Lokaal tekstmodel ontbreekt ($from → $targetCode). " +
+                                "Open instellingen en bereid dit taalpaar bewust via wifi voor.",
+                            "Model ontbreekt", token, revision
+                        )
+                        else -> updateLine(id,
+                            "Lokale tekstmodelstatus niet bevestigd. Controleer modellen in instellingen.",
+                            "Fout", token, revision)
                     }
-                    .addOnFailureListener {
-                        updateLine(id, "Taalmodel ontbreekt — verbind met wifi en probeer opnieuw.", "Model ontbreekt", token, revision)
-                        translator.close()
-                    }
+                }
             }
             .addOnFailureListener {
                 detector.close()
