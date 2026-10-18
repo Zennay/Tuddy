@@ -13,6 +13,7 @@ import java.util.Locale
  * disabled at the application level; data remains in app-private preferences.
  */
 internal data class OwnWord(val language: String, val word: String, val ownMeaning: String)
+internal data class ScheduledOwnWord(val entry: OwnWord, val dueDay: Long, val stage: Int)
 
 internal class PrivateOwnWordDeck(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(
@@ -21,6 +22,9 @@ internal class PrivateOwnWordDeck(context: Context) {
 
     companion object {
         private const val KEY = "own_word_notes"
+        private const val REVIEW_OPT_IN = "own_word_review_enabled_v1"
+        private const val REVIEW_DATA = "own_word_review_rows_v1"
+        private val INTERVAL_DAYS = listOf(1L, 2L, 4L, 7L, 14L, 30L)
         const val MAX_ENTRIES = 120
         const val MAX_BACKUP_BYTES = 50_000
         private const val MAX_JSON = 50_000
@@ -74,7 +78,72 @@ internal class PrivateOwnWordDeck(context: Context) {
         } catch (_: Exception) { null }
     }
 
-    private fun write(items: List<OwnWord>): Boolean {
+    /** No second copy of user words; keys are 64-char SHA-256 fingerprints. */
+    private fun fingerprint(item: OwnWord): String {
+        val input = (item.language + "\u0000" + item.word.lowercase(Locale.ROOT))
+            .toByteArray(Charsets.UTF_8)
+        return java.security.MessageDigest.getInstance("SHA-256").digest(input)
+            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    }
+
+    private fun reviewRows(): Map<String, Pair<Int, Long>> {
+        val data = try {
+            prefs.getStringSet(REVIEW_DATA, emptySet())?.toSet().orEmpty()
+        } catch (_: RuntimeException) { return emptyMap() }
+        if (data.size > MAX_ENTRIES) return emptyMap()
+        return data.mapNotNull { row ->
+            val parts = row.split('|')
+            if (parts.size != 3 || parts[0].length != 64 ||
+                parts[0].any { it !in "0123456789abcdef" }) return@mapNotNull null
+            val stage = parts[1].toIntOrNull() ?: return@mapNotNull null
+            val due = parts[2].toLongOrNull() ?: return@mapNotNull null
+            if (stage !in 0..5 || due !in 0L..365000L) return@mapNotNull null
+            parts[0] to (stage to due)
+        }.toMap()
+    }
+
+    private fun encodeReviews(records: Map<String, Pair<Int, Long>>): Set<String> =
+        records.map { (hash, value) -> "$hash|${value.first}|${value.second}" }.toSet()
+
+    @Synchronized
+    fun reviewsEnabled(): Boolean = try { prefs.getBoolean(REVIEW_OPT_IN, false) }
+        catch (_: RuntimeException) { false }
+
+    @Synchronized
+    fun enableReviews(): Boolean = prefs.edit().putBoolean(REVIEW_OPT_IN, true).commit()
+
+    @Synchronized
+    fun disableReviews(): Boolean = prefs.edit()
+        .remove(REVIEW_OPT_IN).remove(REVIEW_DATA).commit()
+
+    @Synchronized
+    fun scheduledReviews(): List<ScheduledOwnWord>? {
+        val notes = entries() ?: return null
+        if (!reviewsEnabled()) return emptyList()
+        val today = java.time.LocalDate.now().toEpochDay()
+        val rows = reviewRows()
+        return notes.map { note ->
+            val record = rows[fingerprint(note)]
+            ScheduledOwnWord(note, record?.second ?: today, record?.first ?: 0)
+        }.sortedWith(compareBy(ScheduledOwnWord::dueDay,
+            { it.entry.language }, { it.entry.word }))
+    }
+
+    @Synchronized
+    fun rateScheduledWord(note: OwnWord, remembered: Boolean): Boolean {
+        if (!reviewsEnabled()) return false
+        val current = read() ?: return false
+        if (note !in current) return false
+        val hash = fingerprint(note)
+        val allowed = current.map(::fingerprint).toSet()
+        val records = reviewRows().filterKeys { it in allowed }.toMutableMap()
+        val stage = if (remembered) ((records[hash]?.first ?: 0) + 1).coerceAtMost(5) else 0
+        records[hash] = stage to java.time.LocalDate.now()
+            .plusDays(INTERVAL_DAYS[stage]).toEpochDay()
+        return prefs.edit().putStringSet(REVIEW_DATA, encodeReviews(records)).commit()
+    }
+
+    private fun write(items: List<OwnWord>, resetReviews: Boolean = false): Boolean {
         if (items.size > MAX_ENTRIES || items.any { !valid(it) } ||
             items.map(::key).toSet().size != items.size) return false
         val array = JSONArray()
@@ -86,7 +155,20 @@ internal class PrivateOwnWordDeck(context: Context) {
         }
         val json = array.toString()
         if (json.length > MAX_JSON) return false
-        return try { prefs.edit().putString(KEY, json).commit() }
+        // A changed personal definition must be practised again rather than
+        // reusing the interval for a different answer. Deletions also prune.
+        val previous = read().orEmpty().associateBy(::fingerprint)
+        val retained = if (resetReviews) emptyMap() else {
+            reviewRows().filterKeys { hash ->
+                items.any { note ->
+                    fingerprint(note) == hash && previous[hash] == note
+                }
+            }
+        }
+        return try { prefs.edit()
+            .putString(KEY, json)
+            .putStringSet(REVIEW_DATA, encodeReviews(retained))
+            .commit() }
         catch (_: RuntimeException) { false }
     }
 
@@ -242,9 +324,10 @@ internal class PrivateOwnWordDeck(context: Context) {
     /** Overwrite only after a second, informed user confirmation in the UI. */
     @Synchronized
     fun replaceImported(imported: List<OwnWord>): Boolean =
-        if (imported.isEmpty()) false else write(imported)
+        if (imported.isEmpty()) false else write(imported, resetReviews = true)
 
     @Synchronized
-    fun clear(): Boolean = try { prefs.edit().remove(KEY).commit() }
+    fun clear(): Boolean = try { prefs.edit()
+        .remove(KEY).remove(REVIEW_OPT_IN).remove(REVIEW_DATA).commit() }
     catch (_: RuntimeException) { false }
 }
