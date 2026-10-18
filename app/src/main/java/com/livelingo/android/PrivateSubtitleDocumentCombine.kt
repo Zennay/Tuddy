@@ -5,14 +5,17 @@ import java.util.Locale
 /** Explicit user decision about where a second SRT/WebVTT timeline belongs. */
 internal enum class SubtitleCombineMode {
     APPEND_AFTER_LAST,
-    KEEP_SOURCE_TIMES
+    KEEP_SOURCE_TIMES,
+    PAIR_OVERLAPPING_TIMES
 }
 
 internal data class SubtitleCombinePreview(
     val cues: List<PrivateSubtitleCue>,
     val importedCount: Int,
     val adjacentOverlaps: Int,
-    val startsAtMillis: Long
+    val startsAtMillis: Long,
+    val pairedCount: Int = 0,
+    val unpairedSecondTrack: Int = 0
 )
 
 /**
@@ -39,13 +42,28 @@ internal object PrivateSubtitleDocumentCombine {
         mode: SubtitleCombineMode
     ): SubtitleCombinePreview? {
         if (current.isEmpty() || incoming.isEmpty() ||
-            current.size + incoming.size > 500 ||
+            (mode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES &&
+                current.size + incoming.size > 500) ||
             PrivateSubtitleDraftEditor.snapshot(current, SubtitleDraftFormat.SRT) == null ||
             PrivateSubtitleDraftEditor.snapshot(incoming, SubtitleDraftFormat.SRT) == null
         ) return null
 
+        if (mode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
+            val paired = PrivateSubtitleTrackPairing.preview(current, incoming) ?: return null
+            return SubtitleCombinePreview(
+                cues = paired.cues,
+                importedCount = incoming.size,
+                adjacentOverlaps = paired.cues.zipWithNext().count { (a, b) ->
+                    a.endMillis > b.startMillis
+                },
+                startsAtMillis = incoming.first().startMillis,
+                pairedCount = paired.pairedCount,
+                unpairedSecondTrack = paired.unpairedSecondTrack
+            )
+        }
         val shifted = when (mode) {
             SubtitleCombineMode.KEEP_SOURCE_TIMES -> incoming
+            SubtitleCombineMode.PAIR_OVERLAPPING_TIMES -> return null // handled above
             SubtitleCombineMode.APPEND_AFTER_LAST -> {
                 val tail = current.maxOf { it.endMillis }
                 val newStart = tail + GAP_MS
