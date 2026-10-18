@@ -1852,7 +1852,19 @@ private fun TuddyScreen(
                 listening = listening,
                 fontScale = captionSize.scale,
                 onStop = { stop() },
-                onClose = { focusMode = false }
+                onClose = { focusMode = false },
+                pinnedCaptionIds = captionPins,
+                onTogglePin = { id ->
+                    val before = captionPins
+                    val currentlyVisible = lines.map { it.id }.toSet()
+                    captionPins = SessionCaptionPins.toggle(before, id, currentlyVisible)
+                    pinsNotice = when {
+                        id in before -> "Markering verwijderd uit dit gesprek."
+                        id in captionPins -> "Regel tijdelijk gemarkeerd voor dit gesprek."
+                        else -> "Maximaal ${SessionCaptionPins.MAX_PINS} sessieregels te markeren."
+                    }
+                    pinsNotice
+                }
             )
         }
         if (studyBookConsentOpen) {
