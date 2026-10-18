@@ -1,5 +1,7 @@
 package com.livelingo.android.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,9 +20,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivatePhraseTopics
+import com.livelingo.android.PrivatePhraseTopicBackup
+import java.io.ByteArrayOutputStream
 
 /** Theme management for human-authored notes, never model-derived categories. */
 @Composable
@@ -35,6 +40,93 @@ internal fun PrivatePhraseTopicsDialog(
     var proposed by remember { mutableStateOf("") }
     var pendingDelete by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
+    var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingRestore by remember { mutableStateOf<PrivatePhraseTopicBackup?>(null) }
+    val context = LocalContext.current
+    val exportDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val snapshot = pendingBackup
+        pendingBackup = null
+        if (uri != null && snapshot != null) {
+            val fresh = storage.exportSnapshot()
+            if (fresh == null || !fresh.contentEquals(snapshot)) {
+                notice = "De indeling is veranderd. Maak de thema-back-up opnieuw."
+            } else {
+                val written = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use {
+                        it.write(snapshot)
+                        it.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                notice = if (written) "Privéthema-back-up bewaard op gekozen locatie."
+                    else "Back-up opslaan mislukt. Alle lokale thema's zijn behouden."
+            }
+        }
+    }
+    val importDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        pendingRestore = null
+        if (uri != null) {
+            val candidate = runCatching {
+                val source = context.contentResolver.openInputStream(uri)
+                    ?: throw IllegalArgumentException("Unreadable file")
+                val output = ByteArrayOutputStream()
+                source.use { input ->
+                    val buffer = ByteArray(4096)
+                    while (true) {
+                        val size = input.read(buffer)
+                        if (size < 0) break
+                        if (size == 0 || output.size() + size >
+                            PrivatePhraseTopics.MAX_BACKUP_BYTES) {
+                            throw IllegalArgumentException("Invalid backup size")
+                        }
+                        output.write(buffer, 0, size)
+                    }
+                }
+                storage.previewImport(output.toByteArray())
+            }.getOrNull()
+            if (candidate == null) {
+                notice = "Thema-back-up geweigerd: ongeldige gegevens of " +
+                    "bijbehorende eigen zinnen ontbreken. Herstel eerst die zinnen."
+            } else {
+                pendingRestore = candidate
+                notice = ""
+            }
+        }
+    }
+
+    val restoring = pendingRestore
+    if (restoring != null) {
+        AlertDialog(
+            onDismissRequest = { pendingRestore = null },
+            title = { Text("Privéthema's vervangen?") },
+            text = { Text(
+                "Gekozen back-up: ${restoring.names.size} thema's en " +
+                    "${restoring.assignments.size} koppelingen naar eigen zinnen. " +
+                    "Je bestaande thema-indeling wordt vervangen; je eigen " +
+                    "zinnen, betekenissen, favorieten en herhaalplanning blijven " +
+                    "ongewijzigd. Een externe back-up wordt niet automatisch gewist."
+            ) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val restored = storage.replaceImported(restoring)
+                    if (restored) onChanged()
+                    notice = if (restored) "Thema-indeling lokaal hersteld."
+                        else "Herstellen mislukt; bestaande indeling is behouden."
+                    pendingRestore = null
+                }) { Text("Vervang alleen thema-indeling") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRestore = null; notice = "Herstel geannuleerd." }) {
+                    Text("Annuleren")
+                }
+            }
+        )
+        return
+    }
 
     if (editTarget != null) {
         val creating = editTarget == "__new__"
@@ -129,9 +221,24 @@ internal fun PrivatePhraseTopicsDialog(
                     }
                 }
                 if (topics.isEmpty()) Text("Je hebt nog geen thema’s.")
+                TextButton(enabled = topics.isNotEmpty(), onClick = {
+                    val snapshot = storage.exportSnapshot()
+                    if (snapshot == null) {
+                        notice = "Kan geen geldige thema-indeling opslaan."
+                    } else {
+                        pendingBackup = snapshot
+                        exportDocument.launch("tuddy-privethemas.json")
+                    }
+                }) { Text("Bewaar thema-indeling als aparte JSON…") }
+                TextButton(onClick = {
+                    pendingRestore = null
+                    importDocument.launch(arrayOf("application/json", "text/plain"))
+                }) { Text("Herstel thema-indeling uit JSON…") }
                 if (notice.isNotBlank()) Text(notice, color = MaterialTheme.colorScheme.error)
-                Text("Een JSON-/TSV-zinnenback-up bevat alleen jouw zinnen, " +
-                    "niet deze privé-indeling.",
+                Text("Herstel eerst de gewone eigen zinnen, daarna eventueel " +
+                    "de thema-indeling. Een apart gekozen bestandsprovider kan " +
+                    "ook gehashte zinsidentiteiten en themanamen extern bewaren. " +
+                    "Gewone zinnen-JSON/TSV bevat dit schema niet.",
                     style = MaterialTheme.typography.bodySmall)
             }
         },
