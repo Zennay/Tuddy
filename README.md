@@ -1,5 +1,12 @@
 # Tuddy 🎙️
 
+## Nieuw: standaard WebVTT-bestanden met taalheader openen
+
+Tuddy opent nu ook gangbare WebVTT-bestanden met `Kind:`- en
+`Language:`-headerregels vóór de cues. Onbekende instructies zoals
+externe tijdmapping worden niet stilzwijgend overgenomen.
+[Ondersteuning en grenzen](docs/WEBVTT_IMPORT_COMPATIBILITY.md).
+
 ## Nieuw: afdrukbaar oefenblad van eigen ondertitels
 
 Je kunt geselecteerde regels uit een bewust geopend SRT/VTT-bestand
