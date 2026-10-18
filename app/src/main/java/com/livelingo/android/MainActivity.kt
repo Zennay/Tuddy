@@ -1,6 +1,8 @@
 package com.livelingo.android
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,6 +10,7 @@ import android.os.Bundle
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PersistableBundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -146,6 +149,7 @@ private fun TuddyScreen() {
     // Android document picker result; no automatic disk/history persistence.
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var exportStatus by remember { mutableStateOf("") }
+    var copyStatus by remember { mutableStateOf("") }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
@@ -736,6 +740,7 @@ private fun TuddyScreen() {
                         generation++
                         pendingTranscriptExport = null
                         exportStatus = ""
+                        copyStatus = ""
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
@@ -816,6 +821,11 @@ private fun TuddyScreen() {
                     exportStatus,
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall
+                )
+                if (copyStatus.isNotBlank()) Text(
+                    copyStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (pronunciationNotice.isNotBlank()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1238,6 +1248,34 @@ private fun TuddyScreen() {
                                         color = MaterialTheme.colorScheme.primary)
                                 }
                                 Text(line.status, style = MaterialTheme.typography.labelSmall)
+                                TextButton(onClick = {
+                                    val payload = PrivateCaptionCopy.snapshot(
+                                        TranscriptExportRow(
+                                            line.original, line.translated, line.status,
+                                            line.sourceCode, line.targetCode, line.recordedAtMillis
+                                        )
+                                    )
+                                    if (payload == null) {
+                                        copyStatus = "Deze regel kan niet veilig worden gekopieerd."
+                                    } else {
+                                        val copied = runCatching {
+                                            val clipboard = context.getSystemService(
+                                                Context.CLIPBOARD_SERVICE
+                                            ) as ClipboardManager
+                                            val clip = ClipData.newPlainText("Tuddy privézin", payload)
+                                            clip.description.extras = PersistableBundle().apply {
+                                                putBoolean("android.content.extra.IS_SENSITIVE", true)
+                                            }
+                                            clipboard.setPrimaryClip(clip)
+                                            true
+                                        }.getOrDefault(false)
+                                        copyStatus = if (copied) {
+                                            "Zin gekopieerd. Het Android-klembord is buiten Tuddy zichtbaar."
+                                        } else {
+                                            "Kopiëren niet gelukt."
+                                        }
+                                    }
+                                }) { Text("Kopieer deze zin") }
                             }
                         }
                     }
