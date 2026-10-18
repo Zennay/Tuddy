@@ -301,6 +301,14 @@ private fun TuddyScreen(
     // Explicitly opened SRT/WebVTT file; separate from the active transcript.
     var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
     var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    // Second SRT/VTT picker: one explicit RAM-only document pair, never disk.
+    var pendingSecondSubtitle by remember {
+        mutableStateOf<Pair<Int, List<PrivateSubtitleCue>>?>(null)
+    }
+    var importedSecondSubtitle by remember {
+        mutableStateOf<Pair<List<PrivateSubtitleCue>, List<PrivateSubtitleCue>>?>(null)
+    }
+    var secondSubtitleError by remember { mutableStateOf<String?>(null) }
     // Exact, user-authorized draft retained only across Android's audio picker.
     var pendingSubtitleAudio by remember {
         mutableStateOf<Pair<Int, List<PrivateSubtitleCue>>?>(null)
@@ -1417,6 +1425,41 @@ private fun TuddyScreen(
         }
     }
 
+    val openSecondSubtitleFile = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val pending = pendingSecondSubtitle
+        pendingSecondSubtitle = null
+        if (pending != null && pending.first == generation) {
+            subtitleFileCues = pending.second // recover only explicit temporary draft
+            importedSecondSubtitle = null
+            secondSubtitleError = null
+            if (uri != null) {
+                val loaded = if (uri.scheme != "content") null else runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        val collected = ByteArrayOutputStream()
+                        val buffer = ByteArray(8192)
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            if (count == 0) continue
+                            if (collected.size() + count > PrivateSubtitleFileReader.MAX_BYTES)
+                                throw IllegalArgumentException("Subtitle exceeds size limit")
+                            collected.write(buffer, 0, count)
+                        }
+                        PrivateSubtitleFileReader.read(collected.toByteArray())
+                    }
+                }.getOrNull()
+                if (loaded != null) {
+                    importedSecondSubtitle = pending.second to loaded
+                } else {
+                    secondSubtitleError = "Tweede bestand geweigerd: kies een geldig UTF-8 " +
+                        "SRT/VTT-bestand van maximaal 256 KiB en 500 regels."
+                }
+            }
+        }
+    }
+
     val openSubtitleAudio = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1464,6 +1507,8 @@ private fun TuddyScreen(
                 manualText = ""
                 previewArchiveRows = null
                 subtitleFileCues = null
+                importedSecondSubtitle = null
+                secondSubtitleError = null
                 subtitleAudioPreview = null
                 archiveStudyOpen = false
                 archiveReaderOpen = false
@@ -1503,6 +1548,9 @@ private fun TuddyScreen(
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             subtitleFileCues = null
+            pendingSecondSubtitle = null
+            importedSecondSubtitle = null
+            secondSubtitleError = null
             pendingSubtitleAudio = null
             subtitleAudioPreview = null
             pendingSubtitleOpenGeneration = null
@@ -1847,6 +1895,19 @@ private fun TuddyScreen(
                 onChooseAudio = { draftCues ->
                     pendingSubtitleAudio = generation to draftCues.toList()
                     openSubtitleAudio.launch(arrayOf("audio/*"))
+                },
+                onChooseSecondFile = { draftCues ->
+                    pendingSecondSubtitle = generation to draftCues.toList()
+                    importedSecondSubtitle = null
+                    secondSubtitleError = null
+                    // SAF providers do not agree on SRT/VTT MIME types.
+                    openSecondSubtitleFile.launch(arrayOf("*/*"))
+                },
+                pendingSecondFile = importedSecondSubtitle,
+                secondFileError = secondSubtitleError,
+                onSecondFileReceived = {
+                    importedSecondSubtitle = null
+                    secondSubtitleError = null
                 },
                 onSaveCopy = { editedCues, format ->
                     val snapshot = PrivateSubtitleDraftEditor.snapshot(editedCues, format)
