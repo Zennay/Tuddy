@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: ondertiteltijden exact aanpassen per regel
+
+In de bestaande offline SRT/VTT-editor kun je voor één ondertitel
+het begin en einde nu exact invoeren, inclusief milliseconden.
+Kies bewust om alleen die regel te wijzigen of alle volgende tijden
+mee te verschuiven op basis van het gewijzigde begin of einde.
+Bekijk vooraf de impact en overlap, gebruik Terug/Opnieuw en bewaar
+uitsluitend op verzoek een nieuwe kopie. Er is geen automatische
+audio-/videosynchronisatie of nieuwe permissie.
+[Bediening en privacy](docs/EXACT_OFFLINE_SUBTITLE_TIMING.md).
+
 ## Nieuw: bestaande SRT/VTT-tijdcodes offline corrigeren
 
 In de ondertiteleditor kun je nu **alle tijdcodes samen schalen en verschuiven**
