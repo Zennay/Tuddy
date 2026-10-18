@@ -34,11 +34,15 @@ internal fun OfflineWordText(
     text: String,
     language: String?,
     style: TextStyle,
-    onSaveWord: ((String, String) -> Boolean)? = null
+    onSaveWord: ((String, String) -> Boolean)? = null,
+    readOwnMeaning: ((String, String) -> String?)? = null,
+    saveOwnMeaning: ((String, String, String) -> Boolean)? = null
 ) {
     var layout by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     var dialogOpen by remember(text, language) { mutableStateOf(false) }
     var selectedWord by remember(text, language) { mutableStateOf("") }
+    var meaningDraft by remember(text, language) { mutableStateOf("") }
+    var noteMessage by remember(text, language) { mutableStateOf("") }
 
     Text(
         text = text,
@@ -50,12 +54,16 @@ internal fun OfflineWordText(
                     val offset = layout?.getOffsetForPosition(point)
                     val word = offset?.let { wordAt(text, it) } ?: return@detectTapGestures
                     selectedWord = word.take(40)
+                    meaningDraft = ""
+                    noteMessage = ""
                     dialogOpen = true
                 }
             }
             .semantics {
                 onClick(label = "Open lokale woordkaart") {
                     selectedWord = ""
+                    meaningDraft = ""
+                    noteMessage = ""
                     dialogOpen = true
                     true
                 }
@@ -64,6 +72,7 @@ internal fun OfflineWordText(
 
     if (dialogOpen) {
         val definition = LocalGlossary.lookup(language, selectedWord)
+        val ownMeaning = if (language != null) readOwnMeaning?.invoke(language, selectedWord) else null
         AlertDialog(
             onDismissRequest = { dialogOpen = false },
             title = { Text("Lokale woordkaart") },
@@ -71,7 +80,11 @@ internal fun OfflineWordText(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = selectedWord,
-                        onValueChange = { selectedWord = it.take(40) },
+                        onValueChange = {
+                            selectedWord = it.take(40)
+                            meaningDraft = ""
+                            noteMessage = ""
+                        },
                         label = { Text("Woord uit de zin") },
                         singleLine = true
                     )
@@ -80,6 +93,32 @@ internal fun OfflineWordText(
                         else "Geen gecontroleerde lokale betekenis voor dit woord of deze taal.",
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    if (ownMeaning != null) {
+                        Text("Mijn eigen notitie (niet geverifieerd): " + ownMeaning,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    if (saveOwnMeaning != null && language != null) {
+                        OutlinedTextField(
+                            value = meaningDraft,
+                            onValueChange = { meaningDraft = it.take(180) },
+                            label = { Text("Mijn eigen betekenis · niet gecontroleerd") },
+                            maxLines = 3
+                        )
+                        TextButton(
+                            enabled = selectedWord.isNotBlank() && meaningDraft.isNotBlank(),
+                            onClick = {
+                                val saved = saveOwnMeaning(language, selectedWord, meaningDraft)
+                                noteMessage = if (saved)
+                                    "Eigen betekenis privé opgeslagen; niet geverifieerd."
+                                else "Niet opgeslagen. Controleer de woordtaal en invoer."
+                                if (saved) meaningDraft = ""
+                            }
+                        ) { Text("Bewaar mijn eigen betekenis") }
+                        if (noteMessage.isNotBlank()) {
+                            Text(noteMessage, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                     Text(
                         "Alleen enkele basiswoorden in NL, EN, DE, FR en ES. " +
                             "Geen AI-gok of online woordenboek; niet gebruiken als medisch of juridisch advies.",

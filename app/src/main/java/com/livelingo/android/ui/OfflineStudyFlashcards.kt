@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.OwnWord
 import com.livelingo.android.SavedWord
 import java.text.Normalizer
 import java.util.Locale
@@ -62,8 +63,10 @@ private fun literalAnswerMatches(typed: String, expected: String): Boolean {
 internal fun OfflineStudyFlashcards(
     savedWords: List<SavedWord>,
     personalPhrases: List<PersonalPhrase>?,
+    ownWords: List<OwnWord>?,
     speaker: LocalCaptionSpeaker,
     onManageWords: () -> Unit,
+    onManageOwnWords: () -> Unit,
     onManagePhrases: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -71,7 +74,7 @@ internal fun OfflineStudyFlashcards(
     var mode by remember { mutableStateOf(PracticeMode.REVEAL) }
     var voiceNotice by remember { mutableStateOf("") }
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
-    val cards = remember(savedWords, personalPhrases, filter, mode) {
+    val cards = remember(savedWords, personalPhrases, ownWords, filter, mode) {
         val wordCards = if (filter != PracticeFilter.OWN_PHRASES) savedWords.mapNotNull { saved ->
             val definition = saved.entry.definition.trim()
             if (definition.isEmpty() || definition.length > 250) null
@@ -96,7 +99,19 @@ internal fun OfflineStudyFlashcards(
                 spokenLanguage = phrase.language
             )
         } else emptyList()
-        (wordCards + phraseCards).take(200)
+        val ownWordCards = if (filter != PracticeFilter.OWN_PHRASES) ownWords.orEmpty().map { saved ->
+            PracticeCard(
+                prompt = if (mode == PracticeMode.TYPE) saved.ownMeaning else saved.word,
+                answer = if (mode == PracticeMode.TYPE) saved.word else saved.ownMeaning,
+                language = saved.language.uppercase(),
+                note = "Jouw eigen woordbetekenis · niet gecontroleerd",
+                rtlAnswer = mode == PracticeMode.TYPE &&
+                    saved.language in setOf("ar", "fa", "ur", "ckb", "ps"),
+                spokenText = saved.word,
+                spokenLanguage = saved.language
+            )
+        } else emptyList()
+        (wordCards + ownWordCards + phraseCards).take(200)
     }
 
     AlertDialog(
@@ -136,6 +151,11 @@ internal fun OfflineStudyFlashcards(
                         "Dit is geen controle van uitspraak, grammatica of betekenis.",
                         style = MaterialTheme.typography.bodySmall)
                 }
+                if (ownWords == null && filter != PracticeFilter.OWN_PHRASES) {
+                    Text("Eigen woordnotities konden niet veilig worden geladen.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 if (personalPhrases == null && filter != PracticeFilter.WORDS) {
                     Text("Eigen zinnen konden niet veilig worden ingelezen. " +
                         "Er zijn geen onzekere notities als oefenkaarten toegevoegd.",
@@ -156,6 +176,9 @@ internal fun OfflineStudyFlashcards(
                 HorizontalDivider()
                 TextButton(onClick = onManageWords, modifier = Modifier.fillMaxWidth()) {
                     Text("Beheer mijn opgeslagen woorden")
+                }
+                TextButton(onClick = onManageOwnWords, modifier = Modifier.fillMaxWidth()) {
+                    Text("Beheer mijn eigen woordbetekenissen")
                 }
                 TextButton(onClick = onManagePhrases, modifier = Modifier.fillMaxWidth()) {
                     Text("Beheer mijn eigen zinnen")
