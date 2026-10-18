@@ -1,5 +1,8 @@
 package com.livelingo.android.ui
 
+import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +25,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.livelingo.android.PersonalPhrase
+import java.io.ByteArrayOutputStream
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivatePhraseDeck
@@ -46,6 +52,54 @@ internal fun MyOfflinePhrasesPanel(
     var revision by remember { mutableIntStateOf(0) }
     var info by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
+    var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
+    var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
+    val context = LocalContext.current
+    val createBackup = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val snapshot = pendingExport
+        pendingExport = null
+        if (uri != null && snapshot != null) {
+            val saved = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                    stream.write(snapshot)
+                    stream.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            info = if (saved) "Je eigen zinnen zijn op jouw gekozen locatie opgeslagen."
+                else "Opslaan is mislukt. Je lokale zinnen blijven behouden."
+        }
+    }
+    val openBackup = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        pendingImport = null
+        if (uri != null) {
+            val candidate = runCatching {
+                val output = ByteArrayOutputStream()
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    val chunk = ByteArray(4096)
+                    while (true) {
+                        val count = input.read(chunk)
+                        if (count < 0) break
+                        if (count == 0 || output.size() + count > 50000)
+                            throw IllegalArgumentException("oversized or invalid data")
+                        output.write(chunk, 0, count)
+                    }
+                } ?: throw IllegalArgumentException("unreadable provider")
+                deck.previewImport(output.toByteArray())
+            }.getOrNull()
+            if (candidate == null) {
+                info = "Bestand geweigerd: onbekende versie, ongeldige zinnen of te groot. " +
+                    "De huidige zinnen zijn behouden."
+            } else {
+                pendingImport = candidate
+                info = "Bestand gecontroleerd. Bevestig zelf of je de huidige zinnen wilt vervangen."
+            }
+        }
+    }
     val phrases = remember(revision) { deck.entries() }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
 
@@ -114,6 +168,28 @@ internal fun MyOfflinePhrasesPanel(
                 Text("Alleen op jouw verzoek blijven deze zinnen in privé-appopslag staan. " +
                     "Ze worden niet gedeeld of automatisch overgenomen uit gesprekken.",
                     style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        enabled = phrases?.isNotEmpty() == true,
+                        onClick = {
+                            val snapshot = deck.exportSnapshot()
+                            if (snapshot == null) {
+                                info = "Er zijn geen geldige eigen zinnen om te exporteren."
+                            } else {
+                                pendingExport = snapshot
+                                createBackup.launch("tuddy-mijn-eigen-zinnen.json")
+                            }
+                        }
+                    ) { Text("Bewaar back-up…") }
+                    OutlinedButton(onClick = {
+                        pendingImport = null
+                        openBackup.launch(arrayOf("application/json", "text/plain",
+                            "application/octet-stream"))
+                    }) { Text("Herstel back-up…") }
+                }
+                Text("Back-up is optioneel. De gekozen bestandsprovider kan online synchroniseren; " +
+                    "Tuddy uploadt zelf niets. Import overschrijft pas na jouw bevestiging.",
+                    style = MaterialTheme.typography.bodySmall)
                 if (info.isNotBlank()) Text(info,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary)
@@ -162,6 +238,31 @@ internal fun MyOfflinePhrasesPanel(
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Sluiten") } }
     )
+    if (pendingImport != null) {
+        val imported = pendingImport!!
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text("Eigen zinnen vervangen?") },
+            text = { Text("Je hebt ${imported.size} geldige eigen zinnen geselecteerd. " +
+                "Hiermee worden alle lokaal opgeslagen eigen zinnen vervangen. " +
+                "Er is geen automatische vertaling of broncontrole.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val saved = deck.replaceImported(imported)
+                    if (saved) revision++
+                    info = if (saved) "Back-up lokaal hersteld. Alle betekenissen zijn door mensen ingevoerd."
+                        else "Herstellen mislukt. De oude lijst blijft behouden."
+                    pendingImport = null
+                }) { Text("Vervang eigen zinnen") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pendingImport = null
+                    info = "Import geannuleerd; eigen zinnen zijn behouden."
+                }) { Text("Annuleren") }
+            }
+        )
+    }
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },

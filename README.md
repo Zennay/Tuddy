@@ -172,3 +172,23 @@ modellicenties en toestelacceptatie uit
 [issue #2](https://github.com/Zennay/Tuddy/issues/2) blijven open.
 Gebruik eigen notities zonder menselijke tolk niet voor gevoelige
 medische, juridische of asielbeslissingen.
+
+
+### Privé back-up en herstel voor eigen zinnen
+
+In **Mijn eigen offline zinnen** kun je nu expliciet **Bewaar back-up…**
+kiezen. Android vraagt via de Storage Access Framework-bestandskiezer
+welke locatie het JSON-bestand krijgt; de app schrijft nergens anders.
+**Herstel back-up…** accepteert alleen het eigen
+versie-1-formaat, maximaal 50 KiB / 80 zinnen, strikte UTF-8,
+de bekende taal- en betekenisvelden en slechts de originele zelf
+ingevoerde teksten. Beschadigde, onbekende en gedupliceerde gegevens
+worden geweigerd voordat er opslag verandert. Een geldig bestand laat
+eerst het aantal ingelezen zinnen zien en vraagt apart of bestaande
+privézinnen werkelijk moeten worden vervangen; annuleren verandert niets.
+
+Geen extra opslag- of internetmachtiging en geen automatische
+achtergrondback-up. Een door jou gekozen cloudbestandsprovider kan
+de back-up buiten Tuddy synchroniseren. Exporteer geen gevoelige
+persoonsgegevens. De zelf ingevulde betekenissen zijn en blijven
+niet-gecontroleerde persoonlijke notities, **geen** nieuwe vertaalmodellen.
