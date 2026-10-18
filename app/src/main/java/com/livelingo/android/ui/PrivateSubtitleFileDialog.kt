@@ -70,6 +70,8 @@ internal fun PrivateSubtitleFileDialog(
     onSecondFileReceived: () -> Unit,
     worksheetNotice: String?,
     onWorksheetNoticeRead: () -> Unit,
+    saveCopyNotice: String?,
+    onSaveCopyNoticeRead: () -> Unit,
     onSaveWorksheetCopy: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit
 ) {
@@ -143,6 +145,12 @@ internal fun PrivateSubtitleFileDialog(
         if (worksheetNotice != null) {
             notice = worksheetNotice
             onWorksheetNoticeRead()
+        }
+    }
+    LaunchedEffect(saveCopyNotice) {
+        if (saveCopyNotice != null) {
+            notice = saveCopyNotice
+            onSaveCopyNoticeRead()
         }
     }
     val lifecycleOwner = LocalLifecycleOwner.current
