@@ -66,7 +66,7 @@ private data class Line(
     val status: String,
     val sourceCode: String,
     val targetCode: String,
-    val recordedAtMillis: Long
+    val recordedAtMillis: Long = System.currentTimeMillis()
 )
 
 class MainActivity : ComponentActivity() {
@@ -506,8 +506,7 @@ private fun TuddyScreen() {
                     clearInterim()
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
-                        lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget,
-                            System.currentTimeMillis()))
+                        lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
                         // Evict old RAM-only captions before scheduling more work.
                         // Late callbacks for evicted IDs are already denied by
                         // translationStillRelevant(lines.any { it.id == id }).
@@ -871,7 +870,7 @@ private fun TuddyScreen() {
                             val selectedSource = source.translateCode
                             val selectedTarget = target.translateCode
                             lines.add(Line(id, sentence, "Vertalen…", "Bezig",
-                                selectedSource, selectedTarget, System.currentTimeMillis()))
+                                selectedSource, selectedTarget))
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                                 lines.removeAt(0)
                             }
