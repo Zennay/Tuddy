@@ -21,6 +21,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -32,11 +34,25 @@ import androidx.compose.ui.window.DialogProperties
 private enum class CaptionCardSide { BOTH, ORIGINAL, TRANSLATION }
 
 @Composable
-private fun CaptionSide(text: String, code: String, large: Boolean) {
+private fun CaptionSide(text: String, code: String, large: Boolean,
+    highlightedWord: Int? = null) {
     val language = code.substringBefore('-')
     val rtl = language in setOf("ar", "fa", "ur", "he", "ps", "ckb")
+    val wordRanges = remember(text) { Regex("\\S+").findAll(text).map { it.range }.toList() }
+    val selected = highlightedWord?.let { wordRanges.getOrNull(it) }
+    val emphasis = MaterialTheme.colorScheme.primary
+    val displayed = buildAnnotatedString {
+        append(text)
+        if (selected != null) {
+            addStyle(
+                SpanStyle(color = emphasis, background = emphasis.copy(alpha = 0.16f),
+                    fontWeight = FontWeight.Bold),
+                selected.first, selected.last + 1
+            )
+        }
+    }
     Text(
-        text,
+        displayed,
         modifier = Modifier.fillMaxWidth(),
         style = MaterialTheme.typography.bodyLarge.copy(
             fontSize = if (large) 38.sp else 26.sp,
@@ -70,6 +86,14 @@ internal fun FullscreenCaptionCard(
     val safeIndex = index.coerceIn(0, (finished.size - 1).coerceAtLeast(0))
     val card = finished.getOrNull(safeIndex)
     val translation = card?.translated?.takeIf { it.isNotBlank() && it != card.original }
+    // Intentionally manual, never linked to recognizer/audio timing.
+    var wordStepper by remember(card?.id) { mutableStateOf(false) }
+    var stepTranslation by remember(card?.id) { mutableStateOf(false) }
+    var currentWord by remember(card?.id) { mutableIntStateOf(0) }
+    val studyText = if (stepTranslation && translation != null) translation
+        else card?.original.orEmpty()
+    val wordCount = remember(studyText) { Regex("\\S+").findAll(studyText).count() }
+    val safeWordIndex = currentWord.coerceIn(0, (wordCount - 1).coerceAtLeast(0))
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -127,6 +151,65 @@ internal fun FullscreenCaptionCard(
                         Text(if (large) "Kleinere letters" else "Grotere letters")
                     }
                     Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                wordStepper = !wordStepper
+                                currentWord = 0
+                                if (wordStepper) {
+                                    stepTranslation = false
+                                    side = CaptionCardSide.ORIGINAL
+                                }
+                            }
+                        ) {
+                            Text(if (wordStepper) "Stop woordstappen" else "▸ Lees woord voor woord")
+                        }
+                        if (wordStepper) {
+                            Text("Handmatig tekstwoord benadrukt, GEEN audio-woordtiming " +
+                                "of woord-voor-woord vertaaluitlijning.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                TextButton(onClick = {
+                                    stepTranslation = false
+                                    currentWord = 0
+                                    side = CaptionCardSide.ORIGINAL
+                                }) { Text(if (!stepTranslation) "Origineel ✓" else "Origineel") }
+                                TextButton(
+                                    enabled = translation != null,
+                                    onClick = {
+                                        stepTranslation = true
+                                        currentWord = 0
+                                        side = CaptionCardSide.TRANSLATION
+                                    }
+                                ) { Text(if (stepTranslation) "Vertaling ✓" else "Vertaling") }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                OutlinedButton(
+                                    enabled = safeWordIndex > 0,
+                                    onClick = { currentWord = (safeWordIndex - 1).coerceAtLeast(0) }
+                                ) { Text("← Woord") }
+                                Text(
+                                    "${if (wordCount == 0) 0 else safeWordIndex + 1} / $wordCount",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedButton(
+                                    enabled = wordCount > 0 && safeWordIndex < wordCount - 1,
+                                    onClick = { currentWord = safeWordIndex + 1 }
+                                ) { Text("Woord →") }
+                            }
+                        }
+                    }
+                    Column(
                         modifier = Modifier.weight(1f).fillMaxWidth()
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(22.dp)
@@ -134,14 +217,16 @@ internal fun FullscreenCaptionCard(
                         if (side != CaptionCardSide.TRANSLATION || translation == null) {
                             Text("Origineel · " + card.sourceCode.uppercase(),
                                 style = MaterialTheme.typography.labelLarge)
-                            CaptionSide(card.original, card.sourceCode, large)
+                            CaptionSide(card.original, card.sourceCode, large,
+                                if (wordStepper && !stepTranslation) safeWordIndex else null)
                         }
                         if (side != CaptionCardSide.ORIGINAL) {
                             HorizontalDivider()
                             if (translation != null) {
                                 Text("Lokaal vertaald · " + card.targetCode.uppercase(),
                                     style = MaterialTheme.typography.labelLarge)
-                                CaptionSide(translation, card.targetCode, large)
+                                CaptionSide(translation, card.targetCode, large,
+                                    if (wordStepper && stepTranslation) safeWordIndex else null)
                             } else {
                                 Text("Voor deze regel is geen afzonderlijke vertaling beschikbaar.",
                                     style = MaterialTheme.typography.bodySmall)
