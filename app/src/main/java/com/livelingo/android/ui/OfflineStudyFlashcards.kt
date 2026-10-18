@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,6 +27,8 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.SavedWord
+import java.text.Normalizer
+import java.util.Locale
 
 /**
  * Fully on-device practice of already saved information. User-provided
@@ -41,6 +44,14 @@ private data class PracticeCard(
 )
 
 private enum class PracticeFilter { ALL, WORDS, OWN_PHRASES }
+private enum class PracticeMode { REVEAL, TYPE }
+
+/** Case/spacing/width normalization only: exact typed text, NOT meaning verification. */
+private fun literalAnswerMatches(typed: String, expected: String): Boolean {
+    fun normalize(value: String): String = Normalizer.normalize(value, Normalizer.Form.NFKC)
+        .trim().replace(Regex("\\s+"), " ").lowercase(Locale.ROOT)
+    return typed.isNotBlank() && typed.length <= 300 && normalize(typed) == normalize(expected)
+}
 
 @Composable
 internal fun OfflineStudyFlashcards(
@@ -51,13 +62,14 @@ internal fun OfflineStudyFlashcards(
     onDismiss: () -> Unit
 ) {
     var filter by remember { mutableStateOf(PracticeFilter.ALL) }
-    val cards = remember(savedWords, personalPhrases, filter) {
+    var mode by remember { mutableStateOf(PracticeMode.REVEAL) }
+    val cards = remember(savedWords, personalPhrases, filter, mode) {
         val wordCards = if (filter != PracticeFilter.OWN_PHRASES) savedWords.mapNotNull { saved ->
             val definition = saved.entry.definition.trim()
             if (definition.isEmpty() || definition.length > 250) null
             else PracticeCard(
-                prompt = saved.word,
-                answer = definition,
+                prompt = if (mode == PracticeMode.TYPE) definition else saved.word,
+                answer = if (mode == PracticeMode.TYPE) saved.word else definition,
                 language = saved.language.uppercase(),
                 note = "Betekenis uit kleine ingebouwde woordenlijst · niet uit gesprek",
                 rtlAnswer = false
@@ -84,8 +96,8 @@ internal fun OfflineStudyFlashcards(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Oefen met alleen de woorden en zinnen die je zelf hebt bewaard. " +
-                    "Je antwoorden en voortgang blijven tijdelijk in deze oefensessie.",
+                Text("Oefen met alleen bewust bewaarde woorden en zinnen. " +
+                    "Antwoorden en voortgang blijven tijdelijk in deze oefensessie.",
                     style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     TextButton(onClick = { filter = PracticeFilter.ALL }) {
@@ -98,6 +110,20 @@ internal fun OfflineStudyFlashcards(
                         Text(if (filter == PracticeFilter.OWN_PHRASES) "Zinnen ✓" else "Zinnen")
                     }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { mode = PracticeMode.REVEAL }) {
+                        Text(if (mode == PracticeMode.REVEAL) "Omdraaien ✓" else "Omdraaien")
+                    }
+                    TextButton(onClick = { mode = PracticeMode.TYPE }) {
+                        Text(if (mode == PracticeMode.TYPE) "Antwoord typen ✓" else "Antwoord typen")
+                    }
+                }
+                if (mode == PracticeMode.TYPE) {
+                    Text("Typ het opgeslagen woord of de eigen zin. Tuddy vergelijkt " +
+                        "alleen de letterlijke tekst (hoofdletters en spaties tellen niet). " +
+                        "Dit is geen controle van uitspraak, grammatica of betekenis.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 if (personalPhrases == null && filter != PracticeFilter.WORDS) {
                     Text("Eigen zinnen konden niet veilig worden ingelezen. " +
                         "Er zijn geen onzekere notities als oefenkaarten toegevoegd.",
@@ -108,7 +134,7 @@ internal fun OfflineStudyFlashcards(
                     Text("Nog geen kaarten in deze selectie. Bewaar eerst privéwoorden " +
                         "of eigen oefenzinnen.", style = MaterialTheme.typography.bodyMedium)
                 } else {
-                    PracticeCardsSession(cards)
+                    PracticeCardsSession(cards, mode == PracticeMode.TYPE)
                 }
                 HorizontalDivider()
                 TextButton(onClick = onManageWords, modifier = Modifier.fillMaxWidth()) {
@@ -124,18 +150,38 @@ internal fun OfflineStudyFlashcards(
 }
 
 @Composable
-private fun PracticeCardsSession(cards: List<PracticeCard>) {
-    val pending = remember(cards) {
+private fun PracticeCardsSession(cards: List<PracticeCard>, typedMode: Boolean) {
+    val pending = remember(cards, typedMode) {
         mutableStateListOf<PracticeCard>().apply { addAll(cards) }
     }
-    var revealed by remember(cards) { mutableStateOf(false) }
-    var mastered by remember(cards) { mutableIntStateOf(0) }
-    var retries by remember(cards) { mutableIntStateOf(0) }
+    var revealed by remember(cards, typedMode) { mutableStateOf(false) }
+    var typedAnswer by remember(cards, typedMode) { mutableStateOf("") }
+    var mastered by remember(cards, typedMode) { mutableIntStateOf(0) }
+    var retries by remember(cards, typedMode) { mutableIntStateOf(0) }
+    var skipped by remember(cards, typedMode) { mutableIntStateOf(0) }
 
-    Text("Nog te oefenen: ${pending.size}  ·  Gekend: $mastered  ·  Herhaald: $retries",
+    fun nextCard(remembered: Boolean, repeat: Boolean = false) {
+        if (pending.isEmpty()) return
+        val first = pending.removeAt(0)
+        if (repeat) {
+            pending.add(first)
+            retries++
+        } else if (remembered) {
+            mastered++
+        } else {
+            skipped++
+        }
+        typedAnswer = ""
+        revealed = false
+    }
+
+    Text("Nog te oefenen: " + pending.size +
+        "  ·  Gekend: " + mastered +
+        "  ·  Herhaald: " + retries +
+        "  ·  Overgeslagen: " + skipped,
         style = MaterialTheme.typography.labelMedium)
     if (pending.isEmpty()) {
-        Text("Alle kaarten zijn voor deze sessie afgevinkt. " +
+        Text("Alle kaarten zijn voor deze sessie afgehandeld. " +
             "Sluit en open opnieuw om vanaf het begin te oefenen.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary)
@@ -145,28 +191,59 @@ private fun PracticeCardsSession(cards: List<PracticeCard>) {
     Text(card.language + " · " + card.note,
         style = MaterialTheme.typography.labelSmall)
     Text(card.prompt, style = MaterialTheme.typography.titleLarge)
-    if (revealed) {
+
+    if (typedMode && !revealed) {
+        OutlinedTextField(
+            value = typedAnswer,
+            onValueChange = { typedAnswer = it.take(300) },
+            label = { Text("Mijn letterlijke antwoord") },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                textDirection = if (card.rtlAnswer) TextDirection.Rtl else TextDirection.Ltr
+            ),
+            minLines = 1,
+            maxLines = 3,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Button(
+            enabled = typedAnswer.isNotBlank(),
+            onClick = { revealed = true },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Vergelijk antwoord") }
+    } else if (revealed) {
         HorizontalDivider()
-        Text("Antwoord", style = MaterialTheme.typography.labelMedium)
+        Text("Opgeslagen antwoord", style = MaterialTheme.typography.labelMedium)
         Text(card.answer,
             style = MaterialTheme.typography.titleMedium.copy(
                 textDirection = if (card.rtlAnswer) TextDirection.Rtl else TextDirection.Ltr
             ),
             color = MaterialTheme.colorScheme.primary)
-        Text("Beoordeel zelf of je dit wist. Tuddy corrigeert geen eigen zinnen.",
-            style = MaterialTheme.typography.bodySmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = {
-                val first = pending.removeAt(0)
-                pending.add(first)
-                retries++
-                revealed = false
-            }) { Text("Nog eens") }
-            Button(onClick = {
-                pending.removeAt(0)
-                mastered++
-                revealed = false
-            }) { Text("Ken ik ✓") }
+        if (typedMode) {
+            val matches = literalAnswerMatches(typedAnswer, card.answer)
+            Text(
+                if (matches) "De tekst komt overeen met je bewaarde antwoord."
+                else "De tekst verschilt van je bewaarde antwoord. " +
+                    "Synoniemen en inhoudelijke juistheid worden niet beoordeeld.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!matches) {
+                    OutlinedButton(onClick = { nextCard(false, repeat = true) }) {
+                        Text("Nog eens")
+                    }
+                }
+                Button(onClick = { nextCard(remembered = matches) }) {
+                    Text(if (matches) "Goed · volgende ✓" else "Overslaan")
+                }
+            }
+        } else {
+            Text("Beoordeel zelf of je dit wist. Tuddy corrigeert geen eigen zinnen.",
+                style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { nextCard(false, repeat = true) }) {
+                    Text("Nog eens")
+                }
+                Button(onClick = { nextCard(true) }) { Text("Ken ik ✓") }
+            }
         }
     } else {
         Button(onClick = { revealed = true }, modifier = Modifier.fillMaxWidth()) {
