@@ -15,6 +15,16 @@ voltooide export- en deelacties worden ingetrokken, maar bestaande externe
 kopieën en klembordinhoud kunnen niet achteraf worden gewist.
 [Privacy en bediening](docs/PRIVATE_SINGLE_CAPTION_DELETE.md).
 
+## Nieuw: favoriete taalparen
+
+Gebruik **☆ Favoriete taalparen** om maximaal drie privécombinaties van
+spreektaal en vertaaltaal vast te leggen, te kiezen of te verwijderen.
+Een wissel stopt de microfoon, houdt het oude gesprek met oorspronkelijke
+taalrichting intact en vraagt daarna om een nieuwe controle van spraak-
+én tekstmodel. Er wordt niets automatisch gedownload. Alleen de taalcodes
+worden privé bewaard, geen transcript of stemgegevens.
+[Bediening en grenzen](docs/FAVORITE_LANGUAGE_PAIRS.md).
+
 ## Nieuw: tekst vanuit een andere Android-app delen
 
 **Delen → Tuddy** verschijnt voor één platte tekst in het Android-deelmenu.

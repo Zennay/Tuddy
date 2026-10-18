@@ -166,7 +166,7 @@ private fun TuddyScreen(
     var pendingInterim by remember { mutableStateOf<Runnable?>(null) }
     val interimHandler = remember { Handler(Looper.getMainLooper()) }
     var error by remember { mutableStateOf("") }
-    // Only picker codes and explicitly bookmarked curated vocabulary are kept
+    // Only picker codes, manually pinned language pairs and reviewed words are kept
     // in app-private preferences. Captions, speech and model status stay in RAM.
     val languageSettings = remember(context) {
         context.getSharedPreferences(PrivateLanguageSelectionPolicy.SETTINGS_NAME, Context.MODE_PRIVATE)
@@ -252,6 +252,13 @@ private fun TuddyScreen(
     // Secondary export/history actions are collapsed on compact screens.
     var conversationToolsOpen by remember { mutableStateOf(false) }
     var directionNotice by remember { mutableStateOf("") }
+    val favoriteStorage = remember(context) { PrivateLanguagePairFavorites(context) }
+    val allowedSpeechTags = remember { spoken.map { it.speechCode } }
+    var favoritePairs by remember {
+        mutableStateOf(favoriteStorage.entries(allowedSpeechTags))
+    }
+    var favoritesOpen by remember { mutableStateOf(false) }
+    var favoritesNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
@@ -786,6 +793,49 @@ private fun TuddyScreen(
      * Typed input is separate from the microphone and is never automatically
      * persisted or sent to a speech service.
      */
+    fun chooseFavoritePair(pair: FavoriteLanguagePair) {
+        if (modelStorageBusy || preparingOfflineModel) {
+            favoritesNotice = "Wacht tot de huidige modelactie afgerond is."
+            return
+        }
+        // Resolve against the CURRENT allowlists, never trust stored codes.
+        val nextSource = spoken.firstOrNull { it.speechCode == pair.speechTag } ?: return
+        val nextTarget = TargetCatalog.targets.firstOrNull { it.code == pair.targetCode }
+            ?: return
+        stop()
+        modelStorage.invalidate()
+        installedTextModels = null
+        pendingModelDeletion = null
+        pendingCaptionShare = null
+        pendingSpeakerExport = null
+        pendingTranscriptExport = null
+        pendingArchiveExcerpt = null
+        exportStatus = ""
+        sourceOpen = false
+        targetOpen = false
+        targetQuery = ""
+        source = nextSource
+        target = LanguageChoice(nextTarget.title, nextTarget.code, nextTarget.code)
+        textReceipt = OfflineTextReceipt(nextSource.translateCode, nextTarget.code,
+            OfflineTextStage.UNCHECKED, "Nieuw favoriet taalpaar: controleer beide lokale tekstmodellen.")
+        speechPackReceipt = SpeechPackReceipt(nextSource.speechCode, SpeechPackStage.UNCHECKED,
+            "Nieuw favoriet taalpaar: controleer eerst het offline spraakpakket.")
+        offlineModelStatus = ""
+        error = ""
+        val saved = runCatching {
+            languageSettings.edit()
+                .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, nextSource.speechCode)
+                .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, nextTarget.code)
+                .commit()
+        }.getOrDefault(false)
+        showSettings = true
+        conversationToolsOpen = false
+        favoritesOpen = false
+        favoritesNotice = "Taalpaar gekozen: ${nextSource.label} → ${nextTarget.title}. " +
+            "Microfoon gestopt; controleer beide lokale modellen voordat je opnieuw luistert." +
+            if (saved) "" else " Deze keuze geldt alleen voor deze sessie."
+    }
+
     fun submitTypedCaption(): Boolean {
         val sentence = OfflineTypedCaptionPolicy.normalize(manualText) ?: return false
         val id = System.nanoTime()
@@ -1718,6 +1768,66 @@ private fun TuddyScreen(
                     enabled = !listening,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("✍ Typ zin · zonder microfoon") }
+                OutlinedButton(onClick = {
+                    favoritesOpen = !favoritesOpen
+                    if (favoritesOpen) {
+                        showSettings = false
+                        conversationToolsOpen = false
+                    }
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (favoritesOpen) "Verberg favoriete taalparen"
+                        else "☆ Favoriete taalparen (${favoritePairs.size})")
+                }
+                if (favoritesOpen) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 236.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Bewaar maximaal drie taalrichtingen. Een favoriet " +
+                            "installeert geen spraak- of tekstmodel op je telefoon.",
+                            style = MaterialTheme.typography.bodySmall)
+                        val active = FavoriteLanguagePair(source.speechCode, target.translateCode)
+                        Button(
+                            enabled = active !in favoritePairs &&
+                                favoritePairs.size < PrivateLanguagePairFavorites.MAX_PAIRS,
+                            onClick = {
+                                val saved = favoriteStorage.save(active, allowedSpeechTags)
+                                favoritePairs = favoriteStorage.entries(allowedSpeechTags)
+                                favoritesNotice = if (saved)
+                                    "Dit taalpaar is als privéfavoriet opgeslagen."
+                                else "Opslaan mislukt of maximum bereikt. Verwijder eventueel een favoriet."
+                            }
+                        ) { Text("☆ Bewaar huidig taalpaar") }
+                        favoritePairs.forEach { pair ->
+                            val from = spoken.firstOrNull { it.speechCode == pair.speechTag }
+                            val to = TargetCatalog.targets.firstOrNull { it.code == pair.targetCode }
+                            if (from != null && to != null) {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("${from.label} → ${to.title}",
+                                        style = MaterialTheme.typography.bodySmall)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(
+                                            enabled = !modelStorageBusy && !preparingOfflineModel,
+                                            onClick = { chooseFavoritePair(pair) }
+                                        ) { Text("Kies") }
+                                        TextButton(onClick = {
+                                            val removed = favoriteStorage.remove(pair, allowedSpeechTags)
+                                            if (removed) favoritePairs =
+                                                favoriteStorage.entries(allowedSpeechTags)
+                                            favoritesNotice = if (removed) "Favoriet verwijderd."
+                                                else "Verwijderen mislukt; probeer opnieuw."
+                                        }) { Text("Verwijder") }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (favoritesNotice.isNotBlank()) {
+                    Text(favoritesNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                }
                 if (directionNotice.isNotBlank()) {
                     Text(directionNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
@@ -1725,7 +1835,10 @@ private fun TuddyScreen(
                 OutlinedButton(
                     onClick = {
                         conversationToolsOpen = !conversationToolsOpen
-                        if (conversationToolsOpen) showSettings = false
+                        if (conversationToolsOpen) {
+                            showSettings = false
+                            favoritesOpen = false
+                        }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1900,7 +2013,10 @@ private fun TuddyScreen(
                 OutlinedButton(
                     onClick = {
                         showSettings = !showSettings
-                        if (showSettings) conversationToolsOpen = false
+                        if (showSettings) {
+                            conversationToolsOpen = false
+                            favoritesOpen = false
+                        }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
