@@ -94,6 +94,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        PrivateScreenShield.restore(this)
         // A configuration recreation must never re-import private text from
         // the original Intent after it was already dismissed or consumed.
         pendingExternalText = if (savedInstanceState == null)
@@ -124,6 +125,11 @@ private fun TuddyScreen(
     onExternalTextConsumed: () -> Unit
 ) {
     val context = LocalContext.current
+    val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
+    var privateScreenShieldOn by remember(context) {
+        mutableStateOf(PrivateScreenShield.enabled(context))
+    }
+    var privateScreenShieldNotice by remember { mutableStateOf("") }
     val lifecycleOwner = LocalLifecycleOwner.current
     val colors = darkColorScheme(
         primary = androidx.compose.ui.graphics.Color(0xFFAB9BFF),
@@ -2496,6 +2502,44 @@ private fun TuddyScreen(
                 if (!offlineAvailable) {
                     Text("Geen lokale spraakherkenning op dit apparaat. Geen cloudfallback.", color = MaterialTheme.colorScheme.error)
                 }
+                HorizontalDivider()
+                Text("Privacy · privéweergave",
+                    style = MaterialTheme.typography.titleSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        if (privateScreenShieldOn) "Screenshots en schermopname blokkeren · aan"
+                        else "Screenshots en schermopname blokkeren · uit",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Switch(
+                        checked = privateScreenShieldOn,
+                        enabled = screenActivity != null,
+                        onCheckedChange = { requested ->
+                            val updated = screenActivity?.let {
+                                PrivateScreenShield.change(it, requested)
+                            } == true
+                            if (updated) privateScreenShieldOn = requested
+                            privateScreenShieldNotice = if (updated)
+                                if (requested) "Android-privéweergave ingeschakeld."
+                                else "Android-privéweergave uitgeschakeld."
+                            else "Schermbescherming kon niet worden gewijzigd."
+                        }
+                    )
+                }
+                Text(
+                    "Android probeert screenshots, schermopnames en recente-appsvoorbeelden " +
+                        "te blokkeren zolang dit aanstaat. Dit kan ook zelf screenshots " +
+                        "maken verhinderen; externe camera's blijven mogelijk. " +
+                        "Er wordt geen gesprekstekst voor opgeslagen.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (privateScreenShieldNotice.isNotBlank())
+                    Text(privateScreenShieldNotice, style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 Text("Privacy · opgeslagen oefengegevens",
                     style = MaterialTheme.typography.titleSmall)

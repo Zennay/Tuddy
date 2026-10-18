@@ -26,7 +26,17 @@ online fallback. Een eigen stopactie beëindigt de uitspraak.
 Er wordt niets als audio bewaard.
 [Bediening en beperkingen](docs/OFFLINE_PRONUNCIATION_CHOICES.md).
 
-## Nieuw: offline startcheck vanaf het hoofdscherm
+## Nieuw: optionele privéweergave
+
+Via **Taal- en modelinstellingen → Privacy · privéweergave** kun je
+Androids schermbeveiliging voor Tuddy aan- of uitzetten. Indien aan,
+vraagt de app het besturingssysteem screenshots, standaard
+schermopnames en recente-appsvoorbeelden te blokkeren. De keuze
+blijft lokaal op het toestel bewaard; geen transcript of audio
+wordt voor deze functie opgeslagen. Externe camera's of andere
+toestelafwijkingen kunnen nooit volledig worden tegengehouden.
+[Bediening en beperkingen](docs/PRIVATE_SCREEN_SHIELD.md).
+
 
 De knop **Offline startcheck** laat zien of de gekozen Android-spreektaal
 daadwerkelijk lokaal beschikbaar is én of de benodigde ML Kit-tekstmodellen
