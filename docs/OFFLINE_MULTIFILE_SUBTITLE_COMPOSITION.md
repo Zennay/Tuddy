@@ -40,3 +40,21 @@ Dit is functionaliteit van de debug-Android-app en verandert
 vrij gelicentieerde Kurdish/Pashto-ASR+MT/native-speakercontrole,
 productieondertekening en zCloud-admission moeten nog apart
 aangetoond worden.
+
+## Een tweede bestand veilig kiezen op Android
+
+Android kan Tuddy op de achtergrond zetten zodra de bestandskiezer opent.
+Daarom wordt de tweede keuze voortaan door de hoofdactiviteit afgehandeld:
+de editor zelf wordt volgens de bestaande privacyregel gesloten. Het
+**precies op het moment van kiezen aanwezige tijdelijke ondertitelconcept**
+blijft uitsluitend tijdens deze bewuste pickeractie in RAM. Na terugkomst
+komt het concept terug met de afzonderlijk geselecteerde tweede bron,
+waarna Tuddy de bestaande combineerpreview en expliciete bevestiging
+toont. Annuleren heropent alleen het tijdelijke concept. Een ongeldig
+bestand toont een verklaring en laat het eerste concept ongemoeid.
+
+Een nieuwe bewerkersessie na de externe keuze heeft geen vorige
+Terug-/Opnieuw-geschiedenis; nog niet bewaarde tekst-/tijdcodebewerkingen
+zitten wel in het herstelde concept. Procesafsluiting bewaart niets.
+Bewaren als bestand vereist altijd de al bestaande, afzonderlijke
+Android-keuze. Er worden geen nieuwe Android-permissies aangevraagd.
