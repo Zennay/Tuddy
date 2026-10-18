@@ -17,6 +17,11 @@ import androidx.compose.ui.text.font.FontWeight
  */
 @Composable
 internal fun LiveInterimWordFocus(text: String, fontScale: Float) {
+    LiveInterimWordFocus(text, fontScale, compact = false)
+}
+
+@Composable
+internal fun LiveInterimWordFocus(text: String, fontScale: Float, compact: Boolean) {
     val color = MaterialTheme.colorScheme.primary
     val annotated = remember(text, color) {
         buildAnnotatedString {
@@ -34,10 +39,10 @@ internal fun LiveInterimWordFocus(text: String, fontScale: Float) {
             }
         }
     }
+    val baseStyle = if (compact) MaterialTheme.typography.bodyLarge
+        else MaterialTheme.typography.headlineSmall
     Text(
         annotated,
-        style = MaterialTheme.typography.headlineSmall.copy(
-            fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale
-        )
+        style = baseStyle.copy(fontSize = baseStyle.fontSize * fontScale)
     )
 }
