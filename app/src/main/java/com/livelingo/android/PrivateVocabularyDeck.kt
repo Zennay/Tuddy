@@ -21,6 +21,9 @@ internal data class SavedWord(
     val entry: GlossaryEntry
 )
 
+/** Optional local review metadata for explicitly saved glossary words; never speech content. */
+internal data class ScheduledWordReview(val saved: SavedWord, val dueDay: Long, val stage: Int)
+
 internal class PrivateVocabularyDeck(context: Context) {
     private val preferences = context.applicationContext.getSharedPreferences(
         "tuddy_private_vocabulary_v1", Context.MODE_PRIVATE
@@ -28,6 +31,10 @@ internal class PrivateVocabularyDeck(context: Context) {
 
     private companion object {
         const val ENTRIES = "saved_curated_word_keys"
+        const val REVIEW_ON = "scheduled_review_opt_in"
+        const val REVIEW_ROWS = "scheduled_review_rows_v1"
+        const val MAX_REVIEW_STAGE = 5
+        val REVIEW_INTERVAL_DAYS = listOf(1L, 2L, 4L, 7L, 14L, 30L)
         const val MAX_ENTRIES = 120
         const val MAX_BACKUP_BYTES = 16_384
         val CODES = setOf("nl", "en", "de", "fr", "es")
@@ -57,6 +64,72 @@ internal class PrivateVocabularyDeck(context: Context) {
         emptySet()
     }
 
+
+    /** Each stored row is language|word|stage|epoch-day, never a definition or transcript.
+     * An invalid row is ignored; it is never trusted as an arbitrary saved-word key. */
+    private fun reviewRows(): Map<String, Pair<Int, Long>> {
+        val raw = try {
+            preferences.getStringSet(REVIEW_ROWS, emptySet())?.toSet().orEmpty()
+        } catch (_: RuntimeException) { return emptyMap() }
+        if (raw.size > MAX_ENTRIES) return emptyMap()
+        return raw.mapNotNull { row ->
+            val parts = row.split('|')
+            if (parts.size != 4) return@mapNotNull null
+            val key = "${parts[0]}|${parts[1]}"
+            val stage = parts[2].toIntOrNull() ?: return@mapNotNull null
+            val due = parts[3].toLongOrNull() ?: return@mapNotNull null
+            if (valid(key) == null || stage !in 0..MAX_REVIEW_STAGE ||
+                due !in 0L..365000L) return@mapNotNull null
+            key to (stage to due)
+        }.toMap()
+    }
+
+    private fun encodedReviewRows(rows: Map<String, Pair<Int, Long>>): Set<String> =
+        rows.map { (key, value) -> "$key|${value.first}|${value.second}" }.toSet()
+
+    @Synchronized
+    fun reviewsEnabled(): Boolean =
+        try { preferences.getBoolean(REVIEW_ON, false) } catch (_: RuntimeException) { false }
+
+    /** The user opts in separately from saving a word. No timers, notifications or network. */
+    @Synchronized
+    fun enableReviews(): Boolean =
+        preferences.edit().putBoolean(REVIEW_ON, true).commit()
+
+    /** Erase the complete optional review history without touching saved words. */
+    @Synchronized
+    fun disableReviews(): Boolean =
+        preferences.edit().remove(REVIEW_ON).remove(REVIEW_ROWS).commit()
+
+    @Synchronized
+    fun scheduledReviews(): List<ScheduledWordReview> {
+        if (!reviewsEnabled()) return emptyList()
+        val rows = reviewRows()
+        val today = java.time.LocalDate.now().toEpochDay()
+        return entries().map { word ->
+            val memory = rows["${word.language}|${word.word}"]
+            ScheduledWordReview(word, memory?.second ?: today, memory?.first ?: 0)
+        }.sortedWith(compareBy(ScheduledWordReview::dueDay,
+            { it.saved.language }, { it.saved.word }))
+    }
+
+    /**
+     * Manual reveal + self-assessment only. Hard cards return tomorrow; remembered
+     * cards progressively return after 2/4/7/14/30 days. No skill claims.
+     */
+    @Synchronized
+    fun rateScheduledWord(language: String, word: String, remembered: Boolean): Boolean {
+        if (!reviewsEnabled()) return false
+        val key = canonical(language, word) ?: return false
+        if (key !in stored()) return false
+        val rows = reviewRows().filterKeys { it in stored() }.toMutableMap()
+        val stage = if (remembered)
+            ((rows[key]?.first ?: 0) + 1).coerceAtMost(MAX_REVIEW_STAGE) else 0
+        val due = java.time.LocalDate.now().plusDays(REVIEW_INTERVAL_DAYS[stage]).toEpochDay()
+        rows[key] = stage to due
+        return preferences.edit().putStringSet(REVIEW_ROWS, encodedReviewRows(rows)).commit()
+    }
+
     @Synchronized
     fun entries(): List<SavedWord> =
         stored().mapNotNull(::valid).sortedWith(compareBy(SavedWord::language, SavedWord::word))
@@ -79,7 +152,10 @@ internal class PrivateVocabularyDeck(context: Context) {
         val key = canonical(language, word) ?: return false
         val current = stored()
         if (key !in current) return false
-        return preferences.edit().putStringSet(ENTRIES, current - key).commit()
+        return preferences.edit()
+            .putStringSet(ENTRIES, current - key)
+            .putStringSet(REVIEW_ROWS, encodedReviewRows(reviewRows() - key))
+            .commit()
     }
 
     /**
@@ -130,12 +206,14 @@ internal class PrivateVocabularyDeck(context: Context) {
         if (keys.isEmpty() || keys.size > MAX_ENTRIES ||
             keys.any { valid(it) == null } || keys.toSet().size != keys.size) return false
         return try {
-            preferences.edit().putStringSet(ENTRIES, keys.toSet()).commit()
+            preferences.edit().putStringSet(ENTRIES, keys.toSet())
+                .remove(REVIEW_ROWS).commit()
         } catch (_: RuntimeException) {
             false
         }
     }
 
     @Synchronized
-    fun clear(): Boolean = preferences.edit().remove(ENTRIES).commit()
+    fun clear(): Boolean = preferences.edit()
+        .remove(ENTRIES).remove(REVIEW_ROWS).remove(REVIEW_ON).commit()
 }
