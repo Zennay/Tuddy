@@ -95,8 +95,18 @@ internal class PrivatePhraseDeck(context: Context) {
         }.toSet().size != entries.size) return false
         val value = toJson(entries).toString()
         if (value.length > MAX_JSON) return false
-        return try { prefs.edit().putString(KEY, value).commit() }
-        catch (_: RuntimeException) { false }
+        val allowedPins = entries.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
+        val storedPins = runCatching {
+            prefs.getStringSet(PrivatePhraseShortcuts.KEY, emptySet())?.toSet().orEmpty()
+        }.getOrDefault(emptySet())
+        // An edit/delete/backup replacement cannot leave a stale bookmark that
+        // later resurrects when an old phrase is imported back into the deck.
+        return try {
+            prefs.edit()
+                .putString(KEY, value)
+                .putStringSet(PrivatePhraseShortcuts.KEY, storedPins.intersect(allowedPins))
+                .commit()
+        } catch (_: RuntimeException) { false }
     }
 
     @Synchronized
@@ -199,6 +209,8 @@ internal class PrivatePhraseDeck(context: Context) {
     fun replaceImported(records: List<PersonalPhrase>): Boolean = write(records)
 
     @Synchronized
-    fun clear(): Boolean = try { prefs.edit().remove(KEY).commit() }
+    fun clear(): Boolean = try {
+        prefs.edit().remove(KEY).remove(PrivatePhraseShortcuts.KEY).commit()
+    }
     catch (_: RuntimeException) { false }
 }
