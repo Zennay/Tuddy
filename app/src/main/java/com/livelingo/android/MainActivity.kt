@@ -72,7 +72,9 @@ private data class Line(
     val status: String,
     val sourceCode: String,
     val targetCode: String,
-    val recordedAtMillis: Long = System.currentTimeMillis()
+    val recordedAtMillis: Long = System.currentTimeMillis(),
+    val translationRevision: Int = 0,
+    val userCorrected: Boolean = false
 )
 
 class MainActivity : ComponentActivity() {
@@ -197,6 +199,10 @@ private fun TuddyScreen() {
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     // Local search stays in memory, never persisted or sent to an API.
+    // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
+    var editingCaptionId by remember { mutableStateOf<Long?>(null) }
+    var captionCorrectionDraft by remember { mutableStateOf("") }
+    var correctionNotice by remember { mutableStateOf("") }
     var historySearchOpen by remember { mutableStateOf(false) }
     var historySearchQuery by remember { mutableStateOf("") }
     var generation by remember { mutableIntStateOf(0) }
@@ -250,17 +256,21 @@ private fun TuddyScreen() {
         }
     }
 
-    fun updateLine(id: Long, translation: String, status: String, token: Int) {
-        if (token != generation) return
+    // Revision fences prevent an old ML Kit callback from replacing a later
+    // human correction or retry, even when the text is changed back to its old value.
+    fun translationStillRelevant(id: Long, token: Int, revision: Int): Boolean =
+        TranslationWorkPolicy.mayContinue(token, generation,
+            lines.any { it.id == id && it.translationRevision == revision })
+
+    fun updateLine(id: Long, translation: String, status: String, token: Int, revision: Int) {
+        if (!translationStillRelevant(id, token, revision)) return
         val index = lines.indexOfFirst { it.id == id }
         if (index >= 0) lines[index] = lines[index].copy(translated = translation, status = status)
     }
 
-    fun translationStillRelevant(id: Long, token: Int): Boolean =
-        TranslationWorkPolicy.mayContinue(token, generation, lines.any { it.id == id })
-
     fun translate(text: String, id: Long, targetCode: String, sourceCode: String, token: Int) {
-        if (!translationStillRelevant(id, token)) return
+        val revision = lines.firstOrNull { it.id == id }?.translationRevision ?: return
+        if (!translationStillRelevant(id, token, revision)) return
         // Text language detection and translation remain ON DEVICE. Models are downloaded only
         // when the user is on Wi-Fi; without a downloaded model, fail transparently.
         val detector = LanguageIdentification.getClient()
@@ -269,15 +279,15 @@ private fun TuddyScreen() {
                 detector.close()
                 // Clear/remove may occur while language detection is pending.
                 // Do not begin a *new* Wi-Fi model download for abandoned text.
-                if (!translationStillRelevant(id, token)) return@addOnSuccessListener
+                if (!translationStillRelevant(id, token, revision)) return@addOnSuccessListener
                 val identified = guess.takeIf { it != "und" && TranslateLanguage.fromLanguageTag(it) != null }
                 val from = identified?.let { TranslateLanguage.fromLanguageTag(it) } ?: sourceCode
                 // Each historical caption keeps its recognized original language.
                 // Never relabel older lines when a different source is selected.
                 val row = lines.indexOfFirst { it.id == id }
-                if (row >= 0) lines[row] = lines[row].copy(sourceCode = from)
+                if (row >= 0 && lines[row].translationRevision == revision) lines[row] = lines[row].copy(sourceCode = from)
                 if (from == targetCode) {
-                    updateLine(id, text, "Lokaal", token)
+                    updateLine(id, text, "Lokaal", token, revision)
                     return@addOnSuccessListener
                 }
                 val options = TranslatorOptions.Builder()
@@ -291,28 +301,28 @@ private fun TuddyScreen() {
                         // A model download already underway may finish after
                         // the conversation was cleared. Close without launching
                         // an unnecessary translation for now-absent text.
-                        if (!translationStillRelevant(id, token)) {
+                        if (!translationStillRelevant(id, token, revision)) {
                             translator.close()
                             return@addOnSuccessListener
                         }
                         translator.translate(text)
                             .addOnSuccessListener { output ->
-                                updateLine(id, output, "Lokaal vertaald", token)
+                                updateLine(id, output, "Lokaal vertaald", token, revision)
                                 translator.close()
                             }
                             .addOnFailureListener {
-                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token)
+                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
                                 translator.close()
                             }
                     }
                     .addOnFailureListener {
-                        updateLine(id, "Taalmodel ontbreekt — verbind met wifi en probeer opnieuw.", "Model ontbreekt", token)
+                        updateLine(id, "Taalmodel ontbreekt — verbind met wifi en probeer opnieuw.", "Model ontbreekt", token, revision)
                         translator.close()
                     }
             }
             .addOnFailureListener {
                 detector.close()
-                updateLine(id, "Taaldetectie mislukt.", "Fout", token)
+                updateLine(id, "Taaldetectie mislukt.", "Fout", token, revision)
             }
     }
 
@@ -594,6 +604,10 @@ private fun TuddyScreen() {
                             val removed = lines.removeAt(0)
                             captionPins = captionPins - removed.id
                             manuallyAssignedSpeakers.remove(removed.id)
+                            if (editingCaptionId == removed.id) {
+                                editingCaptionId = null
+                                captionCorrectionDraft = ""
+                            }
                         }
                         translate(sentence, id, selectedTarget, observedSource, token)
                     }
@@ -741,6 +755,8 @@ private fun TuddyScreen() {
                 previewArchiveRows = null
                 archiveSearchQuery = ""
                 pendingCaptionShare = null
+                editingCaptionId = null
+                captionCorrectionDraft = ""
             }
             if (event == Lifecycle.Event.ON_STOP) {
                 speechPackReceipt = SpeechPackReceipt(source.speechCode, SpeechPackStage.UNCHECKED,
@@ -755,6 +771,8 @@ private fun TuddyScreen() {
             previewArchiveRows = null
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
+            editingCaptionId = null
+            captionCorrectionDraft = ""
             manuallyAssignedSpeakers.clear()
             captionSpeaker.close()
         }
@@ -782,6 +800,79 @@ private fun TuddyScreen() {
     }
 
     MaterialTheme(colorScheme = colors) {
+        val correctionId = editingCaptionId
+        val correctionLine = lines.firstOrNull { it.id == correctionId }
+        if (correctionId != null && correctionLine != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    editingCaptionId = null
+                    captionCorrectionDraft = ""
+                },
+                title = { Text("Herstel herkende zin") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Controleer zelf wat er werkelijk is gezegd. De originele " +
+                            "zin en de bijbehorende vertaling worden in dit tijdelijke " +
+                            "gesprek vervangen. Dit is geen automatische controle.")
+                        OutlinedTextField(
+                            value = captionCorrectionDraft,
+                            onValueChange = { candidate ->
+                                if (candidate.length <= OfflineTypedCaptionPolicy.MAX_INPUT_UNITS)
+                                    captionCorrectionDraft = candidate
+                            },
+                            label = { Text("Gecorrigeerde oorspronkelijke zin") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2,
+                            maxLines = 5
+                        )
+                        Text("Vertaling wordt opnieuw lokaal aangevraagd. Een ontbrekend " +
+                            "model kan alleen via wifi worden voorbereid; geen cloudspraak.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !listening &&
+                            OfflineTypedCaptionPolicy.normalize(captionCorrectionDraft) != null &&
+                            OfflineTypedCaptionPolicy.normalize(captionCorrectionDraft) != correctionLine.original,
+                        onClick = {
+                            val corrected = OfflineTypedCaptionPolicy.normalize(captionCorrectionDraft)
+                                ?: return@TextButton
+                            val index = lines.indexOfFirst { it.id == correctionId }
+                            if (index >= 0 && !listening &&
+                                lines[index].original != corrected) {
+                                val previous = lines[index]
+                                captionSpeaker.stop()
+                                pronunciationNotice = ""
+                                // Pending user-consent/export payloads must not outlive a revision.
+                                pendingCaptionShare = null
+                                pendingTranscriptExport = null
+                                exportStatus = ""
+                                lines[index] = previous.copy(
+                                    original = corrected,
+                                    translated = "Vertalen…",
+                                    status = "Bezig",
+                                    translationRevision = previous.translationRevision + 1,
+                                    userCorrected = true
+                                )
+                                translate(corrected, previous.id, previous.targetCode,
+                                    previous.sourceCode, generation)
+                                correctionNotice = "Correctie opgeslagen in dit gesprek; " +
+                                    "vertaling opnieuw gestart."
+                            }
+                            editingCaptionId = null
+                            captionCorrectionDraft = ""
+                        }
+                    ) { Text("Corrigeer en vertaal") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        editingCaptionId = null
+                        captionCorrectionDraft = ""
+                    }) { Text("Annuleer") }
+                }
+            )
+        }
         val share = pendingCaptionShare
         if (share != null) {
             AlertDialog(
@@ -1048,6 +1139,9 @@ private fun TuddyScreen() {
                         copyStatus = ""
                         lastCopiedCaptionId = null
                         pendingCaptionShare = null
+                        editingCaptionId = null
+                        captionCorrectionDraft = ""
+                        correctionNotice = ""
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
@@ -1402,6 +1496,11 @@ private fun TuddyScreen() {
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                                 val removed = lines.removeAt(0)
                                 manuallyAssignedSpeakers.remove(removed.id)
+                                captionPins = captionPins - removed.id
+                                if (editingCaptionId == removed.id) {
+                                    editingCaptionId = null
+                                    captionCorrectionDraft = ""
+                                }
                             }
                             manualText = ""
                             translate(sentence, id, selectedTarget, selectedSource, token)
@@ -1545,6 +1644,10 @@ private fun TuddyScreen() {
                     }
                 }
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+                if (correctionNotice.isNotBlank()) {
+                    Text(correctionNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                }
                 if (!follow) {
                     Text(
                         "Teruggelezen: automatisch volgen is gepauzeerd. Tik op Volg live om de laatste regel te zien.",
@@ -1609,6 +1712,44 @@ private fun TuddyScreen() {
                                             else -> manuallyAssignedSpeakers.remove(line.id)
                                         }
                                     }) { Text("Wijzig spreker") }
+                                }
+                                if (line.userCorrected) {
+                                    Text("✎ Zelf gecorrigeerd · niet door Android gecontroleerd",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    TextButton(
+                                        enabled = !listening,
+                                        onClick = {
+                                            editingCaptionId = line.id
+                                            captionCorrectionDraft = line.original
+                                            correctionNotice = ""
+                                        }
+                                    ) { Text("✎ Corrigeer tekst") }
+                                    if (line.status == "Fout" || line.status == "Model ontbreekt") {
+                                        TextButton(
+                                            enabled = !listening,
+                                            onClick = {
+                                                val index = lines.indexOfFirst { it.id == line.id }
+                                                if (index >= 0) {
+                                                    val old = lines[index]
+                                                    captionSpeaker.stop()
+                                                    pendingCaptionShare = null
+                                                    pendingTranscriptExport = null
+                                                    exportStatus = ""
+                                                    lines[index] = old.copy(
+                                                        translated = "Vertalen…",
+                                                        status = "Bezig",
+                                                        translationRevision = old.translationRevision + 1
+                                                    )
+                                                    translate(old.original, old.id, old.targetCode,
+                                                        old.sourceCode, generation)
+                                                    correctionNotice = "Lokale vertaling opnieuw aangevraagd."
+                                                }
+                                            }
+                                        ) { Text("↻ Probeer opnieuw") }
+                                    }
                                 }
                                 OfflineWordText(
                                     line.original, line.sourceCode,
