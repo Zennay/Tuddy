@@ -29,6 +29,26 @@ zichtbaar label. De microfoon moet uit staan. Dit is geen echte
 spraakmodelverbetering of menselijke tolkvalidatie.
 [Bediening, privacy en grenzen](docs/CAPTION_CORRECTIONS.md).
 
+## Nieuw: zin typen zonder microfoon
+
+Tik in het gesprekscherm op **✍ Typ zin · zonder microfoon**. Hiermee open
+je direct een privacyvriendelijk invoervenster zonder Android-microfoon,
+zelfs op telefoons zonder on-device spraakherkenning. Je kiest eerst in de
+instellingen de bron- en doeltaal. Een ingevoerde zin wordt exact volgens
+de bestaande invoergrenzen als originele ondertitel in het tijdelijke
+gesprek toegevoegd. De app probeert met de bestaande ML Kit-pijplijn
+**lokale tekstvertaling** voor dat taalpaar; indien het model nog ontbreekt
+kan de eenmalige download eerst wifi vragen. Mislukt de vertaling, dan
+blijft de invoer als onvoltooide regel herkenbaar.
+
+Het invoervenster kan alleen worden geopend wanneer de microfoon uitstaat.
+Annuleren, gesprek wissen of verlaten van de app verwijdert de tijdelijke
+concepttekst. Er is geen stilzwijgende server-spraakherkenning, opslag van
+de concepttekst of onbewezen vrije Koerdische/Pasjtoe-vertaling. De optie
+**Zin typen** onder de modelinstellingen gebruikt dezelfde invoerfunctie.
+Een medische of juridische vertaling blijft ongeschikt zonder menselijke
+controle. Fysieke Android-acceptatie en release/signing staan apart.
+
 ## Nieuw: mobiel transcript-eerst gesprekscherm
 
 Op kleinere telefoons blijft de live ondertiteltijdlijn zichtbaar: **Luister,

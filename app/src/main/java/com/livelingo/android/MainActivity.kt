@@ -175,6 +175,7 @@ private fun TuddyScreen() {
     var previewMenuOpen by remember { mutableStateOf(false) }
     var previewInput by remember { mutableStateOf("") }
     var manualText by remember { mutableStateOf("") }
+    var quickTypedOpen by remember { mutableStateOf(false) }
     // The export snapshot exists only between an explicit Save tap and the
     // Android document picker result; no automatic disk/history persistence.
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
@@ -748,6 +749,33 @@ private fun TuddyScreen() {
         }
     }
 
+    /**
+     * Share the exact existing transcript/history and local ML Kit pipeline.
+     * Typed input is separate from the microphone and is never automatically
+     * persisted or sent to a speech service.
+     */
+    fun submitTypedCaption(): Boolean {
+        val sentence = OfflineTypedCaptionPolicy.normalize(manualText) ?: return false
+        val id = System.nanoTime()
+        val token = generation
+        val selectedSource = source.translateCode
+        val selectedTarget = target.translateCode
+        lines.add(Line(id, sentence, "Vertalen…", "Bezig",
+            selectedSource, selectedTarget))
+        repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
+            val removed = lines.removeAt(0)
+            manuallyAssignedSpeakers.remove(removed.id)
+            captionPins = captionPins - removed.id
+            if (editingCaptionId == removed.id) {
+                editingCaptionId = null
+                captionCorrectionDraft = ""
+            }
+        }
+        manualText = ""
+        translate(sentence, id, selectedTarget, selectedSource, token)
+        return true
+    }
+
     val microphonePermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -849,6 +877,8 @@ private fun TuddyScreen() {
             }
             if (event == Lifecycle.Event.ON_STOP) {
                 focusMode = false
+                quickTypedOpen = false
+                manualText = ""
                 previewArchiveRows = null
                 archiveSearchQuery = ""
                 pendingArchiveExcerpt = null
@@ -874,6 +904,8 @@ private fun TuddyScreen() {
             pendingArchiveGeneration = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
+            quickTypedOpen = false
+            manualText = ""
             pendingSpeakerExport = null
             editingCaptionId = null
             captionCorrectionDraft = ""
@@ -904,6 +936,60 @@ private fun TuddyScreen() {
     }
 
     MaterialTheme(colorScheme = colors) {
+        if (quickTypedOpen) {
+            AlertDialog(
+                onDismissRequest = {
+                    quickTypedOpen = false
+                    manualText = ""
+                },
+                title = { Text("Zin typen · lokaal vertalen") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Van ${source.label} naar ${target.label}. Geen microfoon nodig. " +
+                                "Bij ontbrekende ML Kit-tekstmodellen kan eerst wifi nodig zijn.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = manualText,
+                            onValueChange = { candidate ->
+                                if (candidate.length <= OfflineTypedCaptionPolicy.MAX_INPUT_UNITS) {
+                                    manualText = candidate
+                                }
+                            },
+                            label = { Text("Typ je oorspronkelijke zin") },
+                            minLines = 2,
+                            maxLines = 5,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            "Resultaat verschijnt in de tijdelijke gespreksgeschiedenis. " +
+                                "Geen algemene offline spraak-/vertaling voor Kurmanji, Sorani " +
+                                "of Pasjtoe; gevoelige teksten vergen menselijke controle.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !listening &&
+                            OfflineTypedCaptionPolicy.normalize(manualText) != null,
+                        onClick = {
+                            if (submitTypedCaption()) {
+                                quickTypedOpen = false
+                                follow = true
+                            }
+                        }
+                    ) { Text("Vertaal lokaal") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        quickTypedOpen = false
+                        manualText = ""
+                    }) { Text("Annuleren") }
+                }
+            )
+        }
         if (focusMode) {
             FocusTranscriptDialog(
                 captions = lines.map {
@@ -1432,6 +1518,7 @@ private fun TuddyScreen() {
                         directionNotice = ""
                         previewInput = ""
                         manualText = ""
+                        quickTypedOpen = false
                         previewResult = null
                         error = ""
                     }) { Text("Wis gesprek") }
@@ -1492,6 +1579,11 @@ private fun TuddyScreen() {
                         }
                     ) { Text("⇄ Wissel richting") }
                 }
+                TextButton(
+                    onClick = { quickTypedOpen = true },
+                    enabled = !listening,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("✍ Typ zin · zonder microfoon") }
                 if (directionNotice.isNotBlank()) {
                     Text(directionNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
