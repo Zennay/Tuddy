@@ -56,6 +56,12 @@ Choose **Open JSON-archief…** and select an existing `Tuddy-gesprek.json`
 with Android's document picker. Tuddy reads at most 256 KiB, validates the
 format and completed/uncompleted translation states, and shows the archived
 bilingual captions in an independently labelled **read-only** dialog.
+Use **Zoek in dit archief** to filter up to 500 loaded captions by the
+original wording, completed translation or language label without sending a
+query anywhere. Results show the original per-line date/time and a local
+match count; unfinished translations cannot silently match as finished.
+Changing search criteria only changes this read-only display, never the
+selected file, the source JSON or the live conversation.
 Close the dialog to discard its temporary in-memory preview. The selected
 document is never copied to app storage, persisted as conversation history,
 used as live speech evidence, or sent to a translation model.
