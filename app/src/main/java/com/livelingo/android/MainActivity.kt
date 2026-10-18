@@ -150,6 +150,7 @@ private fun TuddyScreen() {
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var exportStatus by remember { mutableStateOf("") }
     var copyStatus by remember { mutableStateOf("") }
+    var lastCopiedCaptionId by remember { mutableStateOf<Long?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
@@ -741,6 +742,7 @@ private fun TuddyScreen() {
                         pendingTranscriptExport = null
                         exportStatus = ""
                         copyStatus = ""
+                        lastCopiedCaptionId = null
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
@@ -821,11 +823,6 @@ private fun TuddyScreen() {
                     exportStatus,
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall
-                )
-                if (copyStatus.isNotBlank()) Text(
-                    copyStatus,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (pronunciationNotice.isNotBlank()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1255,6 +1252,7 @@ private fun TuddyScreen() {
                                             line.sourceCode, line.targetCode, line.recordedAtMillis
                                         )
                                     )
+                                    lastCopiedCaptionId = line.id
                                     if (payload == null) {
                                         copyStatus = "Deze regel kan niet veilig worden gekopieerd."
                                     } else {
@@ -1276,6 +1274,10 @@ private fun TuddyScreen() {
                                         }
                                     }
                                 }) { Text("Kopieer deze zin") }
+                                if (lastCopiedCaptionId == line.id && copyStatus.isNotBlank()) {
+                                    Text(copyStatus, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                         }
                     }
