@@ -91,6 +91,18 @@ nog steeds uitsluitend generiek Arabische tekstvertaling, **geen**
 bewezen dialect-specifieke ASR/MT-dekking.
 [Bediening en beperkingen](docs/LEVANTINE_SPEECH_CANDIDATES.md).
 
+## Nieuw: optioneel trilsignaal bij nieuwe spraakzin
+
+Via **Taal- en modelinstellingen → Toegankelijkheid** kun je een
+kort trilalarm aanzetten als de lokale Android-herkenner een
+**afgeronde** ondertitel oplevert. Maximaal één puls per drie
+seconden, niet bij voorlopige woorden of vertaalupdates.
+Standaard uit; de voorbeeldtrilling wordt alleen op je eigen
+tik afgespeeld. Er worden geen woorden, audio, tijdstempels
+of extra persoonlijke gegevens opgeslagen. Android kan haptiek
+dempen; dit is geen garantie op geslaagde herkenning.
+[Uitleg en grenzen](docs/COMPLETED_CAPTION_HAPTICS.md).
+
 ## Nieuw: optionele privéweergave
 
 Via **Taal- en modelinstellingen → Privacy · privéweergave** kun je
