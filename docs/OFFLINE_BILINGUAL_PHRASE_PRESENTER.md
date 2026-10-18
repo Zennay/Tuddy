@@ -33,3 +33,16 @@ Er is geen automatische kopie, screenshot, export of netwerkverzending.
 Deze productfunctie is geen bewijs dat vrije offline ASR of ML Kit-vertaalmodellen
 voor Kurmanji/Sorani/Pasjtoe bestaan. De Android toestel-/vliegtuigmodus-
 en productie-releasegates blijven ongewijzigd.
+
+## Rechtstreeks vanaf het gesprek starten
+
+Op het hoofdscherm opent **▣ Mijn gesprekskaarten · direct zoeken en tonen**
+een privézoekvenster. Kies Kurmanji, Sorani of Pasjtoe, zoek op eigen zin
+of betekenis en kies **Toon deze zin groot**. Bladeren en wisselen van
+weergave werkt vervolgens zoals hierboven. Met **Mijn zinnen toevoegen en
+beheren** ga je rechtstreeks naar je persoonlijke zinnenlijst.
+
+De zoekfunctie gebruikt uitsluitend bewust opgeslagen notities uit de
+app-private opslag. Live gesprekken, onvoltooide herkenningsresultaten en
+andere apps worden niet automatisch doorzocht of opgeslagen. De microfoon
+wordt gestopt voordat de gebruiker het scherm met gesprekskaarten opent.

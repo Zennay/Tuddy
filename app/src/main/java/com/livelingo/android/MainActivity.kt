@@ -52,6 +52,7 @@ import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
 import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
+import com.livelingo.android.ui.OfflinePhraseQuickPicker
 import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.FocusCaptionLine
@@ -230,6 +231,7 @@ private fun TuddyScreen(
     var previewTarget by remember { mutableStateOf("kmr") }
     val personalPhrases = remember(context) { PrivatePhraseDeck(context) }
     var personalPhrasesOpen by remember { mutableStateOf(false) }
+    var quickPhrasePickerOpen by remember { mutableStateOf(false) }
     var starterPhraseboardOpen by remember { mutableStateOf(false) }
     var flashcardsOpen by remember { mutableStateOf(false) }
     var previewSource by remember { mutableStateOf("nl") }
@@ -1099,6 +1101,7 @@ private fun TuddyScreen(
             if (event == Lifecycle.Event.ON_STOP) {
                 offlineReadinessOpen = false
                 starterPhraseboardOpen = false
+                quickPhrasePickerOpen = false
                 flashcardsOpen = false
                 ownWordsOpen = false
                 focusMode = false
@@ -1127,6 +1130,7 @@ private fun TuddyScreen(
             generation++
             modelStorage.invalidate()
             starterPhraseboardOpen = false
+            quickPhrasePickerOpen = false
             flashcardsOpen = false
             ownWordsOpen = false
             stop() // stop() already releases and nulls Android's recognizer
@@ -1817,6 +1821,17 @@ private fun TuddyScreen(
                 onDismiss = { ownWordsOpen = false }
             )
         }
+        if (quickPhrasePickerOpen) {
+            OfflinePhraseQuickPicker(
+                phrases = personalPhrases.entries(),
+                initialLanguage = previewTarget,
+                onManage = {
+                    quickPhrasePickerOpen = false
+                    personalPhrasesOpen = true
+                },
+                onDismiss = { quickPhrasePickerOpen = false }
+            )
+        }
         if (personalPhrasesOpen) {
             MyOfflinePhrasesPanel(
                 deck = personalPhrases,
@@ -2106,6 +2121,13 @@ private fun TuddyScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("🌍 5 basiswoorden · Kurmanji, Sorani, Pasjtoe") }
+                TextButton(
+                    onClick = {
+                        if (listening) stop()
+                        quickPhrasePickerOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("▣ Mijn gesprekskaarten · direct zoeken en tonen") }
                 TextButton(
                     onClick = {
                         if (listening) stop()

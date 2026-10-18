@@ -4,6 +4,16 @@
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
+## Nieuw: eigen gesprekskaarten direct zoeken
+
+Op het hoofdscherm opent **▣ Mijn gesprekskaarten · direct zoeken en tonen**
+een snelle, volledig offline zoekweergave voor bewust opgeslagen
+Kurmanji-, Sorani- en Pasjtoe-zinnen. Je kunt rechtstreeks een grote
+tweetalige kaart laten zien of je eigen zinnen beheren. Dit gebruikt
+geen live transcriptopslag, spraakherkenning, cloud of automatische
+vertaling. Eigen betekenissen zijn niet geverifieerd.
+[Meer informatie](docs/OFFLINE_BILINGUAL_PHRASE_PRESENTER.md).
+
 ## Nieuw: eigen offline woordenboek
 
 Naast de kleine ingebouwde woordenlijst kunnen gebruikers nu zelf
