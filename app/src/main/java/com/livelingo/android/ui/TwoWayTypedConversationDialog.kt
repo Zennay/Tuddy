@@ -77,6 +77,7 @@ internal fun TwoWayTypedConversationDialog(
     var preparing by remember { mutableStateOf(false) }
     var favoritesOpen by remember { mutableStateOf(false) }
     var confirmEraseFavorites by remember { mutableStateOf(false) }
+    var favoriteModelsOpen by remember { mutableStateOf(false) }
     var favoriteNotice by remember { mutableStateOf("") }
     var favoritesRevision by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
@@ -141,6 +142,14 @@ internal fun TwoWayTypedConversationDialog(
         TwoWayConversationReadingBoard(
             lines = recentLines,
             onDismiss = { readerOpen = false }
+        )
+        return
+    }
+
+    if (favoriteModelsOpen) {
+        TypedFavoriteOfflineModelsDialog(
+            savedPairs = pinnedPairs,
+            onDismiss = { favoriteModelsOpen = false }
         )
         return
     }
@@ -279,6 +288,15 @@ internal fun TwoWayTypedConversationDialog(
                         Text("Nog geen tekstrichtingen opgeslagen.",
                             style = MaterialTheme.typography.bodySmall)
                     } else {
+                        OutlinedButton(
+                            enabled = !preparing,
+                            onClick = {
+                                speaker.stop()
+                                speechNotice = ""
+                                favoriteModelsOpen = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("✓ Check alle favorieten · offline modellen…") }
                         OutlinedButton(
                             onClick = { confirmEraseFavorites = true },
                             modifier = Modifier.fillMaxWidth()
