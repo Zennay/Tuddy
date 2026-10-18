@@ -46,3 +46,21 @@ De zoekfunctie gebruikt uitsluitend bewust opgeslagen notities uit de
 app-private opslag. Live gesprekken, onvoltooide herkenningsresultaten en
 andere apps worden niet automatisch doorzocht of opgeslagen. De microfoon
 wordt gestopt voordat de gebruiker het scherm met gesprekskaarten opent.
+
+## Veelgebruikte eigen zinnen bewaren als favoriet
+
+In **Mijn gesprekskaarten** kun je per eigen zin op **☆ Favoriet**
+tikken. Maximaal twaalf gesprekszinnen krijgen zo een snelkoppeling:
+ze staan bovenaan bij zoeken en via **★ Alleen favorieten** kun je
+uitsluitend deze kaarten tonen. Nogmaals tikken verwijdert de favoriet.
+
+De snelle selectie bevat geen externe of automatisch vertaalde tekst,
+alleen al door de gebruiker bewust opgeslagen eigen notities. Tuddy
+bewaart intern uitsluitend een lokale vingerafdruk van het woordpaar
+taal+zin als snelkoppeling, **geen tweede kopie van de zin of betekenis**.
+Er is geen ranking, cloud of analyse van gesprekspatronen. Verwijderen,
+hernoemen of vervangen van een eigen zin ruimt niet-meer-geldige
+snelkoppelingen mee op. **Wis mijn oefengegevens** en de bestaande
+functie **Wis mijn volledige eigen zinnenlijst** verwijderen tevens
+alle favoriete zinnen. Persoonlijke favorieten gaan niet mee in de
+optionele JSON-back-up van de eigen zinnenlijst.
