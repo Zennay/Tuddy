@@ -82,6 +82,7 @@ internal fun OfflinePhrasePresenter(
         mutableIntStateOf(cards.indexOfFirst { it == initial }.coerceAtLeast(0))
     }
     var large by remember { mutableStateOf(true) }
+    var tableMode by remember { mutableStateOf(false) }
     var showMeaningFirst by remember { mutableStateOf(false) }
     var pendingShare by remember { mutableStateOf<PersonalPhrase?>(null) }
     var shareNotice by remember { mutableStateOf("") }
@@ -145,6 +146,18 @@ internal fun OfflinePhrasePresenter(
         else -> selected?.language?.uppercase() ?: "–"
     }
 
+    if (tableMode) {
+        FaceToFacePersonalPhraseDialog(
+            cards = cards,
+            initialIndex = selectedIndex,
+            onBack = { returnedIndex ->
+                selectedIndex = returnedIndex
+                tableMode = false
+            }
+        )
+        return
+    }
+
     Dialog(
         onDismissRequest = { speaker.stop(); onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -175,6 +188,18 @@ internal fun OfflinePhrasePresenter(
                 if (shareNotice.isNotBlank()) {
                     Text(shareNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
+                }
+                if (selected != null) {
+                    OutlinedButton(
+                        onClick = {
+                            speaker.stop()
+                            tableMode = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("↕ Tegenover elkaar · toon mijn eigen zinnen") }
+                    Text("Leg je telefoon plat tussen twee mensen. Beide eigen teksten " +
+                        "staan tegenover elkaar; ze zijn niet geverifieerd.",
+                        style = MaterialTheme.typography.bodySmall)
                 }
                 HorizontalDivider()
                 if (selected == null) {
