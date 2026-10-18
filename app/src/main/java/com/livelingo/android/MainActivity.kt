@@ -52,6 +52,8 @@ import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
 import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
+import com.livelingo.android.ui.FocusTranscriptDialog
+import com.livelingo.android.ui.FocusCaptionLine
 import java.io.ByteArrayOutputStream
 import java.text.DateFormat
 import java.util.Date
@@ -200,6 +202,7 @@ private fun TuddyScreen() {
     }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
+    var focusMode by remember { mutableStateOf(false) }
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
     var editingCaptionId by remember { mutableStateOf<Long?>(null) }
@@ -769,6 +772,7 @@ private fun TuddyScreen() {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) {
+                focusMode = false
                 previewArchiveRows = null
                 archiveSearchQuery = ""
                 pendingCaptionShare = null
@@ -819,6 +823,20 @@ private fun TuddyScreen() {
     }
 
     MaterialTheme(colorScheme = colors) {
+        if (focusMode) {
+            FocusTranscriptDialog(
+                captions = lines.map {
+                    FocusCaptionLine(it.id, it.original, it.translated, it.status,
+                        it.sourceCode, it.targetCode)
+                },
+                interimOriginal = partial,
+                interimTranslated = partialTranslation,
+                listening = listening,
+                fontScale = captionSize.scale,
+                onStop = { stop() },
+                onClose = { focusMode = false }
+            )
+        }
         val speakerSnapshot = pendingSpeakerExport
         if (speakerSnapshot != null) {
             AlertDialog(
@@ -1212,6 +1230,10 @@ private fun TuddyScreen() {
                         Text(if (follow) "Live ✓" else "Volg live")
                     }
                 }
+                OutlinedButton(
+                    onClick = { focusMode = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("⛶ Leesmodus · schermvullende ondertitels") }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
