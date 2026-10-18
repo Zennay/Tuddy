@@ -79,6 +79,14 @@ import java.io.ByteArrayOutputStream
 import java.text.DateFormat
 import java.util.Date
 
+/** Explicitly authored SRT/VTT copy while Android document chooser takes focus. */
+private data class PendingEditedSubtitleSave(
+    val session: Int,
+    val cues: List<PrivateSubtitleCue>,
+    val format: SubtitleDraftFormat,
+    val bytes: ByteArray
+)
+
 /** One explicit HTML worksheet save handoff; never persisted by Tuddy. */
 private data class PendingSubtitleWorksheetSave(
     val session: Int,
@@ -330,7 +338,8 @@ private fun TuddyScreen(
         mutableStateOf<Pair<List<PrivateSubtitleCue>, Uri>?>(null)
     }
     // A user-confirmed immutable copy survives the Android document picker only.
-    var pendingSubtitleDraft by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
+    var pendingSubtitleDraft by remember { mutableStateOf<PendingEditedSubtitleSave?>(null) }
+    var editedSubtitleSaveNotice by remember { mutableStateOf<String?>(null) }
     // The user selects one completed row from a read-only, unverified
     // imported archive. No clipboard/share side effects before consent.
     var pendingArchiveExcerpt by remember {
@@ -1352,16 +1361,28 @@ private fun TuddyScreen(
     ) { uri ->
         val pending = pendingSubtitleDraft
         pendingSubtitleDraft = null
-        if (uri != null && pending != null && pending.first == generation) {
-            val saved = runCatching {
-                context.contentResolver.openOutputStream(uri, "w")?.use {
-                    it.write(pending.second)
-                    it.flush()
-                    true
-                } ?: false
-            }.getOrDefault(false)
-            exportStatus = if (saved) "Nieuwe ondertitelkopie bewaard op jouw gekozen locatie."
-                else "Opslaan mislukt; het originele ondertitelbestand blijft behouden."
+        if (pending != null && pending.session == generation) {
+            // Android has closed the editor while the user chose a location.
+            // Restore the exact chosen RAM-only draft, even after cancellation.
+            subtitleFileCues = pending.cues
+            val fresh = PrivateSubtitleDraftEditor.snapshot(pending.cues, pending.format)
+            editedSubtitleSaveNotice = when {
+                fresh == null || !fresh.contentEquals(pending.bytes) ->
+                    "Ondertitelkopie geweigerd: het tijdelijke concept is gewijzigd."
+                uri == null -> "Opslaan geannuleerd; je tijdelijke concept is heropend."
+                uri.scheme != "content" -> "Ongeldige opslaglocatie; niets opgeslagen."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                            stream.write(pending.bytes)
+                            stream.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved) "Nieuwe SRT/VTT-kopie bewaard; tijdelijk concept blijft bewerkbaar."
+                    else "Opslaan mislukt; tijdelijk concept en origineel ongewijzigd."
+                }
+            }
         }
     }
 
@@ -1553,6 +1574,7 @@ private fun TuddyScreen(
                 importedSecondSubtitle = null
                 secondSubtitleError = null
                 subtitleWorksheetNotice = null
+                editedSubtitleSaveNotice = null
                 subtitleAudioPreview = null
                 archiveStudyOpen = false
                 archiveReaderOpen = false
@@ -1605,6 +1627,7 @@ private fun TuddyScreen(
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
             pendingSubtitleDraft = null
+            editedSubtitleSaveNotice = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
             quickTypedOpen = false
@@ -1957,6 +1980,8 @@ private fun TuddyScreen(
                 },
                 worksheetNotice = subtitleWorksheetNotice,
                 onWorksheetNoticeRead = { subtitleWorksheetNotice = null },
+                saveCopyNotice = editedSubtitleSaveNotice,
+                onSaveCopyNoticeRead = { editedSubtitleSaveNotice = null },
                 onSaveWorksheetCopy = { draftCues, selectedCues ->
                     val chosen = selectedCues.take(24).toList()
                     val bytes = PrivateSubtitleRecallWorksheet.snapshot(chosen)
@@ -1974,7 +1999,9 @@ private fun TuddyScreen(
                     if (snapshot == null) {
                         error = "Kan geen veilige nieuwe ondertitelkopie maken."
                     } else {
-                        pendingSubtitleDraft = generation to snapshot
+                        pendingSubtitleDraft = PendingEditedSubtitleSave(
+                            generation, editedCues.toList(), format, snapshot
+                        )
                         saveEditedSubtitle.launch(if (format == SubtitleDraftFormat.WEBVTT)
                             "Tuddy-handmatig-ondertitelconcept.vtt"
                         else "Tuddy-handmatig-ondertitelconcept.srt")
