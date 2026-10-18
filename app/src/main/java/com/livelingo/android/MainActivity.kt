@@ -16,6 +16,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -133,6 +135,7 @@ private fun TuddyScreen() {
             "Controleer afzonderlijk of Android het gekozen offline spraakpakket bezit."))
     }
     var follow by remember { mutableStateOf(true) }
+    var showSettings by remember { mutableStateOf(false) }
     var generation by remember { mutableIntStateOf(0) }
     val voiceSessions = remember { VoiceSessionGeneration() }
     var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
@@ -584,6 +587,48 @@ private fun TuddyScreen() {
             ) {
                 Text("Tuddy", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text("Gesprekken begrijpen, ook zonder internet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val canStart = offlineAvailable && !listening
+                    Button(
+                        onClick = {
+                            if (listening) stop()
+                            else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                                == PackageManager.PERMISSION_GRANTED) start()
+                            else microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+                        },
+                        enabled = offlineAvailable,
+                    ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
+                    OutlinedButton(onClick = {
+                        generation++
+                        stop()
+                        offlineModelStatus = ""
+                        lines.clear()
+                        previewInput = ""
+                        manualText = ""
+                        previewResult = null
+                        error = ""
+                    }) { Text("Wis gesprek") }
+                    TextButton(onClick = { follow = !follow }) {
+                        Text(if (follow) "Live ✓" else "Volg live")
+                    }
+                }
+                OutlinedButton(
+                    onClick = { showSettings = !showSettings },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (showSettings) "Verberg taal- en modelinstellingen" else "Taal- en modelinstellingen")
+                }
+                // Settings used to occupy the full unscrollable outer Column on
+                // phones, starving the weighted transcript of its available height.
+                // Keep listening/clear/follow controls pinned above a separately
+                // scrollable, bounded setup area; default to the actual conversation.
+                if (showSettings) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                            .weight(0.48f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.weight(1f)) {
                         OutlinedButton(onClick = { sourceOpen = true }, modifier = Modifier.fillMaxWidth()) {
@@ -752,31 +797,6 @@ private fun TuddyScreen() {
                         "geen netwerk-spraakdienst of ondersteuning voor vrije Koerdische/Pasjtoe zinnen.",
                         style = MaterialTheme.typography.bodySmall)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val canStart = offlineAvailable && !listening
-                    Button(
-                        onClick = {
-                            if (listening) stop()
-                            else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
-                                == PackageManager.PERMISSION_GRANTED) start()
-                            else microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
-                        },
-                        enabled = offlineAvailable,
-                    ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
-                    OutlinedButton(onClick = {
-                        generation++
-                        stop()
-                        offlineModelStatus = ""
-                        lines.clear()
-                        previewInput = ""
-                        manualText = ""
-                        previewResult = null
-                        error = ""
-                    }) { Text("Wis gesprek") }
-                    TextButton(onClick = { follow = !follow }) {
-                        Text(if (follow) "Live ✓" else "Volg live")
-                    }
-                }
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("Offline tekstvertaling · ${source.label} → ${target.label}",
                         style = MaterialTheme.typography.titleSmall)
@@ -868,6 +888,8 @@ private fun TuddyScreen() {
                 }
                 if (!offlineAvailable) {
                     Text("Geen lokale spraakherkenning op dit apparaat. Geen cloudfallback.", color = MaterialTheme.colorScheme.error)
+                }
+                    }
                 }
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
                 HorizontalDivider()
