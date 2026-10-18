@@ -68,6 +68,9 @@ internal fun PrivateSubtitleFileDialog(
     pendingSecondFile: Pair<List<PrivateSubtitleCue>, List<PrivateSubtitleCue>>?,
     secondFileError: String?,
     onSecondFileReceived: () -> Unit,
+    worksheetNotice: String?,
+    onWorksheetNoticeRead: () -> Unit,
+    onSaveWorksheetCopy: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
@@ -134,6 +137,12 @@ internal fun PrivateSubtitleFileDialog(
         } else if (secondFileError != null) {
             notice = secondFileError
             onSecondFileReceived()
+        }
+    }
+    LaunchedEffect(worksheetNotice) {
+        if (worksheetNotice != null) {
+            notice = worksheetNotice
+            onWorksheetNoticeRead()
         }
     }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -310,7 +319,8 @@ internal fun PrivateSubtitleFileDialog(
                     }
                 ) { Text("▣ Oefen deze gevonden ondertitelregels…") }
                 PrivateSubtitleWorksheetExportAction(
-                    selected = found.map { it.second }.take(24)
+                    selected = found.map { it.second }.take(24),
+                    onExport = { chosen -> onSaveWorksheetCopy(draft.toList(), chosen) }
                 )
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
