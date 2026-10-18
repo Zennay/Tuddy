@@ -7,6 +7,16 @@ Tuddy opent nu ook gangbare WebVTT-bestanden met `Kind:`- en
 externe tijdmapping worden niet stilzwijgend overgenomen.
 [Ondersteuning en grenzen](docs/WEBVTT_IMPORT_COMPATIBILITY.md).
 
+## Nieuw: alleen gevonden ondertitels als bestand bewaren
+
+Zoek in een zelf geopend SRT/VTT-bestand en kies vervolgens
+**Bewaar alleen gevonden regels…**. Kies tussen de originele
+tijdcodes en een vanaf 00:00 aaneengesloten selectie. Vooraf zie
+je het aantal regels en de uitvoergrootte; opslag vereist nog steeds
+een afzonderlijke Android-bestandskeuze. Het oorspronkelijke document
+blijft intact.
+[Werking en grenzen](docs/FILTERED_OFFLINE_SUBTITLE_EXCERPT.md).
+
 ## Nieuw: afdrukbaar oefenblad van eigen ondertitels
 
 Je kunt geselecteerde regels uit een bewust geopend SRT/VTT-bestand
