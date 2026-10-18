@@ -1,5 +1,20 @@
 # Tuddy 🎙️
 
+## Nieuw: mijn eigen uitlegregels doorzoeken
+
+Heb je in de huidige sessie één of meer eigen betekenissen bij
+ondertitels gezet? Met **✎ N eigen uitleg** vind je alle persoonlijke
+uitlegregels terug in één tijdelijke, doorzoekbare weergave.
+Zoek op herkende tekst, modelvertaling of je eigen betekenis;
+open een volledige tweetalige kaart of wijzig/wis de eigen notitie.
+Een onvoltooide vertaling wordt niet als afgerond gepresenteerd.
+
+Dit overzicht is alleen een **read-only index van het lopende
+gesprek**, geen opgeslagen woordenboek, automatische controle
+of nieuwe export. Achtergrond/sluiten beëindigt het overzicht en
+de bestaande privacy- en modelgates blijven intact.
+[Bediening en privacy](docs/SESSION_MEANING_INDEX.md).
+
 ## Nieuw: eigen uitleg naast een afgeronde gesprekszin
 
 Tuddy heeft nu een tweede, onafhankelijke mogelijkheid om een zin te
