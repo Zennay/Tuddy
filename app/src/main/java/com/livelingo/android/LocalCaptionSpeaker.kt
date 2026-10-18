@@ -17,6 +17,10 @@ import java.util.Locale
  * fenced by a monotonic generation. No text, utterance or voice choice is
  * retained by this app between calls.
  */
+internal enum class LocalSpeechPace(val rate: Float) {
+    NORMAL(1.0f), SLOW(0.72f)
+}
+
 internal class LocalCaptionSpeaker(context: Context) {
     private val appContext = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
@@ -36,6 +40,15 @@ internal class LocalCaptionSpeaker(context: Context) {
     fun close() = stop()
 
     fun speak(translated: String, languageTag: String, feedback: (String) -> Unit) {
+        speak(translated, languageTag, LocalSpeechPace.NORMAL, feedback)
+    }
+
+    fun speak(
+        translated: String,
+        languageTag: String,
+        pace: LocalSpeechPace,
+        feedback: (String) -> Unit
+    ) {
         stop()
         // An on-device translator may produce huge or control-filled results.
         // Admit short printable completed lines only; do not retry over a
@@ -79,12 +92,17 @@ internal class LocalCaptionSpeaker(context: Context) {
                         ).firstOrNull()
                         if (chosen == null ||
                             tts.setVoice(chosen) != TextToSpeech.SUCCESS ||
+                            tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS ||
                             tts.speak(safe, TextToSpeech.QUEUE_FLUSH, null,
                                 "tuddy-offline-caption-$version") != TextToSpeech.SUCCESS) {
                             stop()
                             feedback("Geen geïnstalleerde lokale stem voor deze taal. Geen online fallback.")
                         } else {
-                            feedback("Android gebruikt een als lokaal gemelde stem. De uitspraak kan onnauwkeurig zijn.")
+                            feedback(
+                                if (pace == LocalSpeechPace.SLOW)
+                                    "Rustig tempo met lokaal gemelde Android-stem. Uitspraak kan onnauwkeurig zijn."
+                                else "Android gebruikt een als lokaal gemelde stem. Uitspraak kan onnauwkeurig zijn."
+                            )
                         }
                     } catch (_: RuntimeException) {
                         stop()

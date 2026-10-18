@@ -54,6 +54,7 @@ import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.FocusCaptionLine
+import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
 import java.io.ByteArrayOutputStream
 import java.text.DateFormat
@@ -2687,16 +2688,6 @@ private fun TuddyScreen(
                                         ),
                                         onSaveWord = ::saveVerifiedWord
                                     )
-                                    TextButton(onClick = {
-                                        if (listening) {
-                                            pronunciationNotice =
-                                                "Stop eerst de microfoon voordat je een vertaling laat voorlezen."
-                                        } else {
-                                            captionSpeaker.speak(line.translated, line.targetCode) {
-                                                pronunciationNotice = it
-                                            }
-                                        }
-                                    }) { Text("🔊 Spreek vertaling uit") }
                                 } else {
                                     Text(
                                         line.translated,
@@ -2706,6 +2697,27 @@ private fun TuddyScreen(
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                 }
+                                LocalCaptionPlaybackMenu(
+                                    hasCompletedTranslation =
+                                        line.status == "Lokaal vertaald" || line.status == "Lokaal",
+                                    enabled = !listening,
+                                    onPlayOriginal = { pace ->
+                                        if (!listening) captionSpeaker.speak(
+                                            line.original, line.sourceCode, pace
+                                        ) { pronunciationNotice = it }
+                                    },
+                                    onPlayTranslation = { pace ->
+                                        if (!listening &&
+                                            (line.status == "Lokaal vertaald" || line.status == "Lokaal")
+                                        ) captionSpeaker.speak(
+                                            line.translated, line.targetCode, pace
+                                        ) { pronunciationNotice = it }
+                                    },
+                                    onStop = {
+                                        captionSpeaker.stop()
+                                        pronunciationNotice = "Lokaal voorlezen gestopt."
+                                    }
+                                )
                                 Text(line.status, style = MaterialTheme.typography.labelSmall)
                                 TextButton(onClick = {
                                     val before = captionPins

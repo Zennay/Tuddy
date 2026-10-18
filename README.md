@@ -15,6 +15,17 @@ voltooide export- en deelacties worden ingetrokken, maar bestaande externe
 kopieën en klembordinhoud kunnen niet achteraf worden gewist.
 [Privacy en bediening](docs/PRIVATE_SINGLE_CAPTION_DELETE.md).
 
+## Nieuw: uitspraak oefenen met lokaal Android-voorlezen
+
+Bij elke ondertitel kun je via **🔊 Lokaal voorlezen · kies tempo**
+de oorspronkelijke zin of een afgeronde vertaling laten uitspreken,
+in normaal of rustig tempo. De app biedt alleen al geïnstalleerde,
+niet-netwerkafhankelijke Android TTS-stemmen aan. Ontbreekt een
+bruikbare lokale stem, dan blijft voorlezen uit en volgt **geen**
+online fallback. Een eigen stopactie beëindigt de uitspraak.
+Er wordt niets als audio bewaard.
+[Bediening en beperkingen](docs/OFFLINE_PRONUNCIATION_CHOICES.md).
+
 ## Nieuw: offline startcheck vanaf het hoofdscherm
 
 De knop **Offline startcheck** laat zien of de gekozen Android-spreektaal
