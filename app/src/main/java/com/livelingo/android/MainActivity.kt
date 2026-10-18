@@ -232,6 +232,12 @@ private fun TuddyScreen() {
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
     var editingCaptionId by remember { mutableStateOf<Long?>(null) }
     var captionCorrectionDraft by remember { mutableStateOf("") }
+    // One explicitly chosen row; keep its original and revision so confirmation
+    // cannot accidentally delete a different or subsequently corrected caption.
+    var pendingSingleCaptionDelete by remember {
+        mutableStateOf<Triple<Long, String, Int>?>(null)
+    }
+    var captionDeleteNotice by remember { mutableStateOf("") }
     var correctionNotice by remember { mutableStateOf("") }
     var historySearchOpen by remember { mutableStateOf(false) }
     var historySearchQuery by remember { mutableStateOf("") }
@@ -888,6 +894,7 @@ private fun TuddyScreen() {
                 pendingSpeakerExport = null
                 editingCaptionId = null
                 captionCorrectionDraft = ""
+                pendingSingleCaptionDelete = null
             }
             if (event == Lifecycle.Event.ON_STOP) {
                 speechPackReceipt = SpeechPackReceipt(source.speechCode, SpeechPackStage.UNCHECKED,
@@ -910,6 +917,7 @@ private fun TuddyScreen() {
             pendingSpeakerExport = null
             editingCaptionId = null
             captionCorrectionDraft = ""
+            pendingSingleCaptionDelete = null
             manuallyAssignedSpeakers.clear()
             captionSpeaker.close()
         }
@@ -1437,6 +1445,59 @@ private fun TuddyScreen() {
                 onDismiss = { personalPhrasesOpen = false }
             )
         }
+        val deleteRequest = pendingSingleCaptionDelete
+        if (deleteRequest != null) {
+            val selectedRow = lines.firstOrNull { it.id == deleteRequest.first }
+            val stillSelected = selectedRow != null &&
+                selectedRow.original == deleteRequest.second &&
+                selectedRow.translationRevision == deleteRequest.third
+            AlertDialog(
+                onDismissRequest = { pendingSingleCaptionDelete = null },
+                title = { Text("Eén ondertitel wissen?") },
+                text = {
+                    Text("Alleen deze regel verdwijnt uit het huidige tijdelijke gesprek. " +
+                        "Andere ondertitels en privéwoorden blijven bestaan. " +
+                        "Eerder gekopieerde, gedeelde of geëxporteerde bestanden " +
+                        "buiten Tuddy kunnen hiermee niet worden gewist.")
+                },
+                confirmButton = {
+                    TextButton(enabled = stillSelected, onClick = {
+                        val index = lines.indexOfFirst { it.id == deleteRequest.first }
+                        if (index >= 0 && lines[index].original == deleteRequest.second &&
+                            lines[index].translationRevision == deleteRequest.third) {
+                            val id = lines[index].id
+                            captionSpeaker.stop() // Deleted caption must not keep being spoken.
+                            // Revoke unconsumed external payloads; already exported
+                            // files and the system clipboard are outside our control.
+                            pendingTranscriptExport = null
+                            pendingSpeakerExport = null
+                            pendingCaptionShare = null
+                            exportStatus = ""
+                            captionPins = captionPins - id
+                            manuallyAssignedSpeakers.remove(id)
+                            if (editingCaptionId == id) {
+                                editingCaptionId = null
+                                captionCorrectionDraft = ""
+                            }
+                            if (lastCopiedCaptionId == id) {
+                                lastCopiedCaptionId = null
+                                copyStatus = ""
+                            }
+                            lines.removeAt(index)
+                            captionDeleteNotice = "Ondertitel uit dit gesprek gewist."
+                        } else {
+                            captionDeleteNotice = "Regel is gewijzigd; niets verwijderd."
+                        }
+                        pendingSingleCaptionDelete = null
+                    }) { Text("Wis deze regel") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingSingleCaptionDelete = null }) {
+                        Text("Behouden")
+                    }
+                }
+            )
+        }
         val deletionCode = pendingModelDeletion
         if (deletionCode != null) {
             val deletionLabel = TargetCatalog.targets.firstOrNull {
@@ -1507,6 +1568,8 @@ private fun TuddyScreen() {
                         editingCaptionId = null
                         captionCorrectionDraft = ""
                         correctionNotice = ""
+                        pendingSingleCaptionDelete = null
+                        captionDeleteNotice = ""
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
@@ -2150,6 +2213,9 @@ private fun TuddyScreen() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                if (captionDeleteNotice.isNotBlank()) {
+                    Text(captionDeleteNotice, style = MaterialTheme.typography.bodySmall)
+                }
                 if (historySearchOpen) {
                     OutlinedTextField(
                         value = historySearchQuery,
@@ -2282,6 +2348,10 @@ private fun TuddyScreen() {
                                         ) { Text("↻ Probeer opnieuw") }
                                     }
                                 }
+                                TextButton(onClick = {
+                                    pendingSingleCaptionDelete = Triple(
+                                        line.id, line.original, line.translationRevision)
+                                }) { Text("🗑 Wis deze regel") }
                                 OfflineWordText(
                                     line.original, line.sourceCode,
                                     MaterialTheme.typography.bodyLarge.copy(

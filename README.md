@@ -4,6 +4,17 @@
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
+## Nieuw: één privéondertitel verwijderen
+
+Per ondertitel kun je met **🗑 Wis deze regel** een afzonderlijke
+gespreksregel na expliciete bevestiging uit het tijdelijke geheugen wissen.
+Dit bewaart de andere gespreksturns en opgeslagen woorden. De bevestiging
+controleert de actuele tekst en revisie voordat de regel wordt verwijderd;
+oude lokale vertaalcallbacks kunnen die regel niet herstellen. Nog niet
+voltooide export- en deelacties worden ingetrokken, maar bestaande externe
+kopieën en klembordinhoud kunnen niet achteraf worden gewist.
+[Privacy en bediening](docs/PRIVATE_SINGLE_CAPTION_DELETE.md).
+
 ## Nieuw: offline tekstmodelopslag beheren
 
 Via **Taal- en modelinstellingen → Beheer offline tekstmodelopslag**
