@@ -8,10 +8,11 @@ een privé-JSON-archief**. Open je bestaande JSON-archief vanuit
 De nieuwe weergave hergebruikt de bestaande schermvullende
 tweetalige leesmodus: grote tekst, bij brede schermen origineel
 en vertaling naast elkaar, op smalle schermen onder elkaar,
-zelf omhoog/omlaag scrollen en **Volg live** als
-terugkeer naar de laatste zichtbare archiefregel. Het label
-`Volg live` betekent bij een geopend archief uitsluitend de
-laatste regel in die lokale weergave: **de microfoon blijft uit**.
+zelf omhoog/omlaag scrollen en **Laatste archiefregel** om
+onderaan terug te komen. De titel laat altijd zien dat je
+een **privéarchief** leest; er zijn geen live-microfoonknoppen,
+tijdelijke spraakregels of ongefundeerde sprekerlabels.
+**De microfoon blijft uit.**
 Een nog niet voltooide vertaling wordt niet als voltooide
 doeltekst gepresenteerd. Het overzicht volgt uitsluitend de
 huidige zoekselectie; een andere zoekterm kan na sluiten
