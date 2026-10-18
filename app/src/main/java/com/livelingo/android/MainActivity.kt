@@ -261,6 +261,8 @@ private fun TuddyScreen(
     }
     var favoritesOpen by remember { mutableStateOf(false) }
     var favoritesNotice by remember { mutableStateOf("") }
+    var pendingStudyErase by remember { mutableStateOf(false) }
+    var studyEraseNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
@@ -997,6 +999,7 @@ private fun TuddyScreen(
                 editingCaptionId = null
                 captionCorrectionDraft = ""
                 pendingSingleCaptionDelete = null
+                pendingStudyErase = false
             }
             if (event == Lifecycle.Event.ON_STOP) {
                 speechPackReceipt = SpeechPackReceipt(source.speechCode, SpeechPackStage.UNCHECKED,
@@ -1021,6 +1024,7 @@ private fun TuddyScreen(
             editingCaptionId = null
             captionCorrectionDraft = ""
             pendingSingleCaptionDelete = null
+            pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
             captionSpeaker.close()
         }
@@ -1701,6 +1705,51 @@ private fun TuddyScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { pendingModelDeletion = null }) { Text("Annuleren") }
+                }
+            )
+        }
+        if (pendingStudyErase) {
+            val wordTotal = savedVocabulary.entries().size
+            val phraseTotal = personalPhrases.entries()?.size
+            AlertDialog(
+                onDismissRequest = { pendingStudyErase = false },
+                title = { Text("Privé-oefengegevens definitief wissen?") },
+                text = {
+                    Text("Dit wist $wordTotal opgeslagen woorden, " +
+                        "${phraseTotal?.toString() ?: "een onbekend aantal"} eigen oefenzinnen " +
+                        "en ${favoritePairs.size} favoriete taalparen uit de lokale app-instellingen. " +
+                        "Je huidige tijdelijke gesprek en losse exportbestanden blijven staan. " +
+                        "Tuddy kan eerdere gedeelde of extern opgeslagen kopieën niet terughalen. " +
+                        "Deze actie heeft geen herstelknop.")
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pendingStudyErase = false
+                        val wordsCleared = savedVocabulary.clear()
+                        val phrasesCleared = personalPhrases.clear()
+                        val favoritesCleared = favoriteStorage.clear()
+                        savedWordRevision++
+                        favoritePairs = favoriteStorage.entries(allowedSpeechTags)
+                        savedWordNotice = ""
+                        favoritesNotice = ""
+                        savedWordsOpen = false
+                        personalPhrasesOpen = false
+                        studyEraseNotice = if (wordsCleared && phrasesCleared && favoritesCleared) {
+                            "Opgeslagen woorden, eigen zinnen en favoriete taalparen gewist. " +
+                                "Gesprek, taalkeuze en eerdere externe exports zijn behouden."
+                        } else {
+                            "Niet alles kon worden gewist. " +
+                                "Woorden: ${if (wordsCleared) "gewist" else "mislukt"}, " +
+                                "zinnen: ${if (phrasesCleared) "gewist" else "mislukt"}, " +
+                                "favorieten: ${if (favoritesCleared) "gewist" else "mislukt"}. " +
+                                "Probeer opnieuw voor de overgebleven gegevens."
+                        }
+                    }) { Text("Wis mijn oefengegevens") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingStudyErase = false }) {
+                        Text("Annuleren")
+                    }
                 }
             )
         }
@@ -2443,6 +2492,21 @@ private fun TuddyScreen(
                 }
                 if (!offlineAvailable) {
                     Text("Geen lokale spraakherkenning op dit apparaat. Geen cloudfallback.", color = MaterialTheme.colorScheme.error)
+                }
+                HorizontalDivider()
+                Text("Privacy · opgeslagen oefengegevens",
+                    style = MaterialTheme.typography.titleSmall)
+                Text("Verwijder desgewenst alle bewust opgeslagen basiswoorden, " +
+                    "eigen oefenzinnen en favoriete taalparen van dit toestel. " +
+                    "Het tijdelijke gesprek en je aparte exportbestanden blijven staan.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    onClick = { pendingStudyErase = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Wis opgeslagen oefengegevens…") }
+                if (studyEraseNotice.isNotBlank()) {
+                    Text(studyEraseNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
                 }
                     }
                 }

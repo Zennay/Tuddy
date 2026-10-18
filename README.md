@@ -28,6 +28,15 @@ niet als 'klaar' weergegeven. De controle bewijst geen werkende
 vliegtuigmodus of vrij te vertalen Koerdische/Pasjtoe spraak.
 [Bediening en beperkingen](docs/OFFLINE_START_CHECK.md).
 
+## Nieuw: lokaal opgeslagen oefengegevens bewust wissen
+
+Onder **Taal- en modelinstellingen → Privacy** kun je na afzonderlijke
+bevestiging alle privébasiswoorden, zelfgemaakte oefenzinnen en favoriete
+taalparen tegelijk verwijderen. Tuddy meldt per opslagcategorie
+eventuele mislukte verwijderingen; het huidige gesprek, de actieve
+taalkeuze en eerder gemaakte externe exports blijven intact.
+[Bediening en privacygrenzen](docs/PRIVATE_STUDY_DATA_ERASURE.md).
+
 ## Nieuw: favoriete taalparen
 
 Gebruik **☆ Favoriete taalparen** om maximaal drie privécombinaties van
