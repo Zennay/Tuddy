@@ -89,7 +89,8 @@ private data class SessionPracticeRound(
 internal fun SessionCaptionStudyDialog(
     captions: List<FocusCaptionLine>,
     onDismiss: () -> Unit,
-    initialCaptionId: Long? = null
+    initialCaptionId: Long? = null,
+    originLabel: String = "dit gesprek"
 ) {
     val allFinished = remember(captions) {
         captions.asSequence()
@@ -156,7 +157,7 @@ internal fun SessionCaptionStudyDialog(
 
     AlertDialog(
         onDismissRequest = { speaker.stop(); onDismiss() },
-        title = { Text("Oefen dit gesprek · tijdelijk") },
+        title = { Text("Oefen $originLabel · tijdelijk") },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 510.dp)
@@ -165,8 +166,8 @@ internal fun SessionCaptionStudyDialog(
             ) {
                 Text(
                     "Oefen uitsluitend daadwerkelijk lokaal afgeronde vertalingen " +
-                        "uit dit gesprek. Geen correctheidscontrole, automatische " +
-                        "opslag of nieuwe download. Wis gesprek verwijdert de bron.",
+                        "uit $originLabel. Geen correctheidscontrole, automatische " +
+                        "opslag of nieuwe download. Sluiten wist de oefenvoortgang.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text("${available.size} afgeronde tweetalige zinnen · maximaal 80 " +
