@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -50,6 +51,7 @@ internal fun TwoWayConversationReadingBoard(
     var query by remember { mutableStateOf("") }
     var finishedOnly by remember { mutableStateOf(false) }
     var large by remember { mutableStateOf(true) }
+    var faceToFace by remember { mutableStateOf(false) }
     var followNewest by remember { mutableStateOf(true) }
     var audioNotice by remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -78,6 +80,13 @@ internal fun TwoWayConversationReadingBoard(
     fun dir(code: String): TextDirection =
         if (code.substringBefore('-') in rtl) TextDirection.Rtl else TextDirection.Ltr
 
+    if (faceToFace) {
+        FaceToFaceConversationDialog(
+            lines = admitted, onBack = { faceToFace = false }
+        )
+        return
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false,
@@ -98,6 +107,16 @@ internal fun TwoWayConversationReadingBoard(
                     style = MaterialTheme.typography.bodySmall)
                 Text("Alleen dit tijdelijke gesprek · geen automatische opslag, " +
                     "deling of cloudspraak. Lokale vertalingen kunnen fouten bevatten.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    onClick = {
+                        speaker.stop()
+                        faceToFace = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("↕ Tegenover elkaar · tweetalige tafelmodus") }
+                Text("Leg het toestel plat tussen twee mensen: bovenste helft draait 180° " +
+                    "naar de ander. Alleen afgeronde lokale vertalingen; wissel zelf de kanten.",
                     style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(
                     value = query, onValueChange = {
