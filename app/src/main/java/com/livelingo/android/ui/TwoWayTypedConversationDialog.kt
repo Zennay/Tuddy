@@ -1,0 +1,245 @@
+package com.livelingo.android.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.dp
+import com.livelingo.android.OfflineTextReceipt
+import com.livelingo.android.OfflineTextStage
+import com.livelingo.android.OfflineTypedCaptionPolicy
+import com.livelingo.android.TargetCatalog
+import com.livelingo.android.TypedConversationModelController
+
+/** A temporary UI-only view of the last conversation lines, not an archive. */
+internal data class TypedConversationLine(
+    val original: String,
+    val translated: String,
+    val status: String,
+    val source: String,
+    val target: String
+)
+
+/**
+ * Two people can type successive turns without changing any speech-packet
+ * setting. Only supported ML Kit TEXT pairs are available, and the true
+ * source is picked by the user instead of guessed from a short sentence.
+ */
+@Composable
+internal fun TwoWayTypedConversationDialog(
+    initialSource: String,
+    initialTarget: String,
+    recentLines: List<TypedConversationLine>,
+    onSend: (String, String, String) -> Boolean,
+    onDismiss: () -> Unit
+) {
+    var from by remember { mutableStateOf(initialSource.takeIf { it in TargetCatalog.codes } ?: "nl") }
+    var to by remember { mutableStateOf(initialTarget.takeIf { it in TargetCatalog.codes } ?: "en") }
+    var draft by remember { mutableStateOf("") }
+    var alternating by remember { mutableStateOf(true) }
+    var chooser by remember { mutableStateOf<String?>(null) }
+    var search by remember { mutableStateOf("") }
+    var info by remember { mutableStateOf("") }
+    var modelStatus by remember { mutableStateOf<OfflineTextReceipt?>(null) }
+    var preparing by remember { mutableStateOf(false) }
+    val models = remember { TypedConversationModelController() }
+
+    DisposableEffect(models) { onDispose { models.invalidate() } }
+    LaunchedEffect(from, to) {
+        models.invalidate()
+        modelStatus = OfflineTextReceipt(from, to, OfflineTextStage.UNCHECKED,
+            "Controleer de lokale tekstmodellen voor deze richting.")
+        models.check(from, to) { receipt ->
+            if (receipt.source == from && receipt.target == to) modelStatus = receipt
+        }
+    }
+
+    fun switchTurn() {
+        if (preparing) return
+        val previous = from
+        from = to
+        to = previous
+        chooser = null
+        search = ""
+        info = ""
+    }
+    val rtlLanguages = setOf("ar", "fa", "ur", "he")
+    fun title(code: String): String = TargetCatalog.targets
+        .firstOrNull { it.code == code }?.title ?: code
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tweeweg-tekstgesprek · offline") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 550.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                Text("Twee mensen typen om de beurt in hun eigen taal. " +
+                    "Dit gebruikt uitsluitend lokale ML Kit-tekstvertaling, " +
+                    "geen microfoon, cloudspraak of automatisch bewaarde gesprekken.",
+                    style = MaterialTheme.typography.bodySmall)
+                Text("Actieve richting", style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            enabled = !preparing, onClick = { chooser = "source"; search = "" },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Van: " + title(from)) }
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            enabled = !preparing, onClick = { chooser = "target"; search = "" },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Naar: " + title(to)) }
+                    }
+                }
+                if (chooser != null) {
+                    OutlinedTextField(
+                        value = search, onValueChange = { search = it.take(35) },
+                        label = { Text("Zoek taal of taalcode") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Column(
+                        modifier = Modifier.heightIn(max = 160.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        TargetCatalog.search(search).take(15).forEach { choice ->
+                            TextButton(onClick = {
+                                if (chooser == "source") from = choice.code else to = choice.code
+                                chooser = null
+                                search = ""
+                                info = ""
+                            }) { Text(choice.title + " (" + choice.code + ")") }
+                        }
+                    }
+                    TextButton(onClick = { chooser = null }) { Text("Sluit taallijst") }
+                }
+                OutlinedButton(
+                    enabled = !preparing && from != to,
+                    onClick = { switchTurn() },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("⇄ Wissel wie typt · " + to.uppercase() + " → " + from.uppercase()) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Na versturen automatisch wisselen",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall)
+                    Switch(checked = alternating, onCheckedChange = { alternating = it })
+                }
+                val receipt = modelStatus
+                Text(
+                    "Offline tekstmodellen: " + (receipt?.detail
+                        ?: "Nog niet op dit toestel gecontroleerd."),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (receipt?.stage == OfflineTextStage.MISSING)
+                        MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    TextButton(enabled = !preparing, onClick = {
+                        models.check(from, to) { modelStatus = it }
+                    }) { Text("Controleer modellen") }
+                    if (from != to && receipt?.stage != OfflineTextStage.READY) {
+                        TextButton(enabled = !preparing, onClick = {
+                            preparing = true
+                            info = "Alleen na deze tik probeert Tuddy via wifi de modellen te downloaden."
+                            models.prepareViaWifi(from, to) { message, verified ->
+                                preparing = false
+                                info = message
+                                if (verified != null) modelStatus = verified
+                                else models.check(from, to) { modelStatus = it }
+                            }
+                        }) { Text(if (preparing) "Download loopt…" else "Modellen via wifi…") }
+                    }
+                }
+                if (from == to) {
+                    Text("Kies twee verschillende teksttalen voor een vertaling.",
+                        color = MaterialTheme.colorScheme.error)
+                }
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { if (it.length <= OfflineTypedCaptionPolicy.MAX_INPUT_UNITS) draft = it },
+                    label = { Text("Typ de zin in " + title(from)) },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        textDirection = if (from in rtlLanguages) TextDirection.Rtl else TextDirection.Ltr
+                    ),
+                    minLines = 2, maxLines = 5,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(
+                    enabled = !preparing && from != to &&
+                        OfflineTypedCaptionPolicy.normalize(draft) != null,
+                    onClick = {
+                        val normalized = OfflineTypedCaptionPolicy.normalize(draft)
+                        if (normalized != null && onSend(normalized, from, to)) {
+                            draft = ""
+                            info = "Zin aan het tijdelijke gesprek toegevoegd; " +
+                                "alleen werkelijk lokaal voltooide vertalingen worden getoond."
+                            if (alternating) switchTurn()
+                        } else {
+                            info = "Zin kon niet aan dit gesprek worden toegevoegd."
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Voeg deze beurt toe en vertaal lokaal") }
+                if (info.isNotBlank()) Text(info,
+                    style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider()
+                Text("Laatste gespreksregels · alleen tijdelijk geheugen",
+                    style = MaterialTheme.typography.titleSmall)
+                recentLines.takeLast(6).forEach { row ->
+                    Text(row.source.uppercase() + " → " + row.target.uppercase() +
+                        " · " + row.status, style = MaterialTheme.typography.labelSmall)
+                    Text(row.original, style = MaterialTheme.typography.bodyLarge.copy(
+                        textDirection = if (row.source in rtlLanguages)
+                            TextDirection.Rtl else TextDirection.Ltr
+                    ))
+                    if (row.status == "Lokaal vertaald" || row.status == "Lokaal") {
+                        Text(row.translated, style = MaterialTheme.typography.bodyMedium.copy(
+                            textDirection = if (row.target in rtlLanguages)
+                                TextDirection.Rtl else TextDirection.Ltr
+                        ), color = MaterialTheme.colorScheme.primary)
+                    } else {
+                        Text("Vertaling nog niet voltooid of model ontbreekt.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    HorizontalDivider()
+                }
+                Text("Kurmanji, Sorani en Pasjtoe zijn geen ML Kit-teksttalen. " +
+                    "Uitvoer kan fouten bevatten; laat gevoelige gesprekken " +
+                    "door een mens controleren. Modeldownloads vereisen wifi " +
+                    "en jouw afzonderlijke keuze.",
+                    style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Terug naar gesprek")
+            }
+        }
+    )
+}

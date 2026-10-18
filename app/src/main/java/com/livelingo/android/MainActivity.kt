@@ -64,6 +64,8 @@ import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
+import com.livelingo.android.ui.TwoWayTypedConversationDialog
+import com.livelingo.android.ui.TypedConversationLine
 import java.io.ByteArrayOutputStream
 import java.text.DateFormat
 import java.util.Date
@@ -248,6 +250,7 @@ private fun TuddyScreen(
     var previewInput by remember { mutableStateOf("") }
     var manualText by remember { mutableStateOf("") }
     var quickTypedOpen by remember { mutableStateOf(false) }
+    var twoWayTypedOpen by remember { mutableStateOf(false) }
     var draftFromExternalShare by remember { mutableStateOf(false) }
     // The export snapshot exists only between an explicit Save tap and the
     // Android document picker result; no automatic disk/history persistence.
@@ -427,77 +430,106 @@ private fun TuddyScreen(
         if (index >= 0) lines[index] = lines[index].copy(translated = translation, status = status)
     }
 
-    fun translate(text: String, id: Long, targetCode: String, sourceCode: String, token: Int) {
-        val revision = lines.firstOrNull { it.id == id }?.translationRevision ?: return
+    /**
+     * One bounded local translation pipeline for speech, corrections, and
+     * explicitly typed two-way turns. A user-selected typed source language
+     * must NOT be silently overwritten by automatic short-text detection.
+     */
+    fun translateResolved(
+        text: String, id: Long, from: String, targetCode: String,
+        token: Int, revision: Int
+    ) {
         if (!translationStillRelevant(id, token, revision)) return
-        // Text detection and translation stay on-device. Never start a model
-        // download from a transcript/typed input: require explicit preparation.
-        val detector = LanguageIdentification.getClient()
-        detector.identifyLanguage(text)
-            .addOnSuccessListener { guess ->
-                detector.close()
-                // Clear/remove may occur while language detection is pending.
-                // Do not begin a *new* Wi-Fi model download for abandoned text.
-                if (!translationStillRelevant(id, token, revision)) return@addOnSuccessListener
-                val identified = guess.takeIf { it != "und" && TranslateLanguage.fromLanguageTag(it) != null }
-                val from = identified?.let { TranslateLanguage.fromLanguageTag(it) } ?: sourceCode
-                // Each historical caption keeps its recognized original language.
-                // Never relabel older lines when a different source is selected.
-                val row = lines.indexOfFirst { it.id == id }
-                if (row >= 0 && lines[row].translationRevision == revision) lines[row] = lines[row].copy(sourceCode = from)
-                if (from == targetCode) {
-                    updateLine(id, text, "Lokaal", token, revision)
-                    return@addOnSuccessListener
-                }
-                // Never fetch models implicitly while capturing speech,
-                // typing, editing or retrying. Inspect the CURRENT installed
-                // pair and require explicit Wi-Fi preparation in settings.
-                // One inventory per caption avoids cross-cancelling other rows.
-                OfflineTextModelInventory().check(from, targetCode, TargetCatalog.codes) { receipt ->
-                    if (!translationStillRelevant(id, token, revision)) return@check
-                    when (receipt.stage) {
-                        OfflineTextStage.CHECKING -> Unit
-                        OfflineTextStage.READY -> {
-                            val translator = try {
-                                Translation.getClient(TranslatorOptions.Builder()
-                                    .setSourceLanguage(from)
-                                    .setTargetLanguage(targetCode)
-                                    .build())
-                            } catch (_: Exception) {
-                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                                return@check
-                            }
-                            try {
-                                translator.translate(text)
-                                    .addOnSuccessListener { output ->
-                                        updateLine(id, output, "Lokaal vertaald", token, revision)
-                                        translator.close()
-                                    }
-                                    .addOnFailureListener {
-                                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                                        translator.close()
-                                    }
-                            } catch (_: Exception) {
+        if (from !in TargetCatalog.codes || targetCode !in TargetCatalog.codes) {
+            updateLine(id, "Dit teksttaalpaar wordt lokaal niet ondersteund.", "Fout", token, revision)
+            return
+        }
+        val row = lines.indexOfFirst { it.id == id && it.translationRevision == revision }
+        if (row < 0) return
+        lines[row] = lines[row].copy(sourceCode = from)
+        if (from == targetCode) {
+            updateLine(id, text, "Lokaal", token, revision)
+            return
+        }
+        // Inventory is read-only. A missing model is never downloaded merely
+        // because somebody typed, corrected or spoke a private sentence.
+        OfflineTextModelInventory().check(from, targetCode, TargetCatalog.codes) { receipt ->
+            if (!translationStillRelevant(id, token, revision)) return@check
+            when (receipt.stage) {
+                OfflineTextStage.CHECKING -> Unit
+                OfflineTextStage.READY -> {
+                    val translator = try {
+                        Translation.getClient(TranslatorOptions.Builder()
+                            .setSourceLanguage(from)
+                            .setTargetLanguage(targetCode)
+                            .build())
+                    } catch (_: Exception) {
+                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                        return@check
+                    }
+                    try {
+                        translator.translate(text)
+                            .addOnSuccessListener { output ->
+                                updateLine(id, output, "Lokaal vertaald", token, revision)
                                 translator.close()
-                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
                             }
-                        }
-                        OfflineTextStage.MISSING -> updateLine(
-                            id,
-                            "Lokaal tekstmodel ontbreekt ($from → $targetCode). " +
-                                "Open instellingen en bereid dit taalpaar bewust via wifi voor.",
-                            "Model ontbreekt", token, revision
-                        )
-                        else -> updateLine(id,
-                            "Lokale tekstmodelstatus niet bevestigd. Controleer modellen in instellingen.",
-                            "Fout", token, revision)
+                            .addOnFailureListener {
+                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                                translator.close()
+                            }
+                    } catch (_: Exception) {
+                        translator.close()
+                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
                     }
                 }
+                OfflineTextStage.MISSING -> updateLine(
+                    id, "Lokaal tekstmodel ontbreekt ($from → $targetCode). " +
+                        "Bereid dit teksttaalpaar bewust via wifi voor.",
+                    "Model ontbreekt", token, revision
+                )
+                else -> updateLine(id,
+                    "Lokale tekstmodelstatus niet bevestigd. Controleer modellen in instellingen.",
+                    "Fout", token, revision)
             }
-            .addOnFailureListener {
-                detector.close()
-                updateLine(id, "Taaldetectie mislukt.", "Fout", token, revision)
+        }
+    }
+
+    fun translate(
+        text: String, id: Long, targetCode: String, sourceCode: String,
+        token: Int, explicitlyChosenSource: Boolean = false
+    ) {
+        val revision = lines.firstOrNull { it.id == id }?.translationRevision ?: return
+        if (!translationStillRelevant(id, token, revision)) return
+        if (explicitlyChosenSource) {
+            translateResolved(text, id, sourceCode, targetCode, token, revision)
+            return
+        }
+        // Speech recognition may provide a broad language tag. This local-only
+        // detector is advisory and never upgrades unsupported model coverage.
+        val detector = try { LanguageIdentification.getClient() }
+            catch (_: Exception) {
+                translateResolved(text, id, sourceCode, targetCode, token, revision)
+                return
             }
+        try {
+            detector.identifyLanguage(text)
+                .addOnSuccessListener { guess ->
+                    detector.close()
+                    if (!translationStillRelevant(id, token, revision)) return@addOnSuccessListener
+                    val detected = guess.takeIf { it != "und" }
+                        ?.let { TranslateLanguage.fromLanguageTag(it) }
+                        ?.takeIf { it in TargetCatalog.codes }
+                    translateResolved(text, id, detected ?: sourceCode,
+                        targetCode, token, revision)
+                }
+                .addOnFailureListener {
+                    detector.close()
+                    translateResolved(text, id, sourceCode, targetCode, token, revision)
+                }
+        } catch (_: Exception) {
+            detector.close()
+            translateResolved(text, id, sourceCode, targetCode, token, revision)
+        }
     }
 
     // Explicit offline text preparation: one supported source->target model,
@@ -969,14 +1001,17 @@ private fun TuddyScreen(
             if (saved) "" else " Deze keuze geldt alleen voor deze sessie."
     }
 
-    fun submitTypedCaption(): Boolean {
-        val sentence = OfflineTypedCaptionPolicy.normalize(manualText) ?: return false
+    /**
+     * Shared RAM-only insertion for all user-typed turns. The selected TEXT
+     * language pair does not change the microphone's speech-pack selection.
+     */
+    fun appendTypedTurn(rawText: String, sourceCode: String, targetCode: String): Boolean {
+        val sentence = OfflineTypedCaptionPolicy.normalize(rawText) ?: return false
+        if (listening || sourceCode !in TargetCatalog.codes ||
+            targetCode !in TargetCatalog.codes) return false
         val id = System.nanoTime()
         val token = generation
-        val selectedSource = source.translateCode
-        val selectedTarget = target.translateCode
-        lines.add(Line(id, sentence, "Vertalen…", "Bezig",
-            selectedSource, selectedTarget))
+        lines.add(Line(id, sentence, "Vertalen…", "Bezig", sourceCode, targetCode))
         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
             val removed = lines.removeAt(0)
             manuallyAssignedSpeakers.remove(removed.id)
@@ -986,9 +1021,17 @@ private fun TuddyScreen(
                 captionCorrectionDraft = ""
             }
         }
-        manualText = ""
-        translate(sentence, id, selectedTarget, selectedSource, token)
+        // Short manually identified phrases must never be silently relabelled
+        // as a different detected language before private local translation.
+        translate(sentence, id, targetCode, sourceCode, token,
+            explicitlyChosenSource = true)
         return true
+    }
+
+    fun submitTypedCaption(): Boolean {
+        val saved = appendTypedTurn(manualText, source.translateCode, target.translateCode)
+        if (saved) manualText = ""
+        return saved
     }
 
     val microphonePermission = rememberLauncherForActivityResult(
@@ -1206,6 +1249,7 @@ private fun TuddyScreen(
                 focusMode = false
                 presentedCaptionId = null
                 quickTypedOpen = false
+                twoWayTypedOpen = false // forget private typed draft on background
                 draftFromExternalShare = false
                 manualText = ""
                 previewArchiveRows = null
@@ -1233,6 +1277,7 @@ private fun TuddyScreen(
             quickPhrasePickerOpen = false
             flashcardsOpen = false
             ownWordsOpen = false
+            twoWayTypedOpen = false
             presentedCaptionId = null
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
@@ -1274,6 +1319,7 @@ private fun TuddyScreen(
             if (shared.draft == null) {
                 error = shared.notice ?: "Deze gedeelde inhoud is geen ondersteunde platte tekst."
                 quickTypedOpen = false
+                twoWayTypedOpen = false // forget private typed draft on background
                 draftFromExternalShare = false
                 manualText = ""
             } else {
@@ -1342,6 +1388,22 @@ private fun TuddyScreen(
                     quickTypedOpen = true
                 },
                 onDismiss = { offlineReadinessOpen = false }
+            )
+        }
+        if (twoWayTypedOpen && !listening) {
+            TwoWayTypedConversationDialog(
+                initialSource = source.translateCode,
+                initialTarget = target.translateCode,
+                recentLines = lines.takeLast(6).map { row ->
+                    TypedConversationLine(row.original, row.translated, row.status,
+                        row.sourceCode, row.targetCode)
+                },
+                onSend = { sentence, from, to ->
+                    val added = appendTypedTurn(sentence, from, to)
+                    if (added) follow = true
+                    added
+                },
+                onDismiss = { twoWayTypedOpen = false }
             )
         }
         if (quickTypedOpen) {
@@ -2408,6 +2470,16 @@ private fun TuddyScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("✍ Typ zin · zonder microfoon") }
                 TextButton(
+                    enabled = !listening,
+                    onClick = {
+                        if (!listening) {
+                            quickTypedOpen = false
+                            twoWayTypedOpen = true
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("⇄ Tweeweg-tekstgesprek · zonder microfoon") }
+                TextButton(
                     onClick = {
                         if (listening) stop()
                         starterPhraseboardOpen = true
@@ -2932,6 +3004,7 @@ private fun TuddyScreen(
                             }
                             manualText = ""
                             translate(sentence, id, selectedTarget, selectedSource, token)
+                            follow = true
                         },
                         enabled = OfflineTypedCaptionPolicy.normalize(manualText) != null
                     ) { Text("Vertaal tekst lokaal") }
