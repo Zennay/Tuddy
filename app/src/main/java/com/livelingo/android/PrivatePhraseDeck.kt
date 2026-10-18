@@ -19,6 +19,8 @@ internal data class PersonalPhrase(
     val ownMeaning: String
 )
 
+internal data class DuePersonalPhrase(val phrase: PersonalPhrase, val stage: Int, val dueDay: Long)
+
 internal class PrivatePhraseDeck(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(
         "tuddy_private_phrases_v1", Context.MODE_PRIVATE
@@ -26,6 +28,9 @@ internal class PrivatePhraseDeck(context: Context) {
 
     private companion object {
         const val KEY = "user_authored"
+        const val REVIEW_OPT_IN = "private_phrase_review_enabled"
+        const val REVIEW_ROWS = "private_phrase_review_rows_v1"
+        val REVIEW_INTERVALS = listOf(1L, 2L, 4L, 7L, 14L, 30L)
         const val MAX_ROWS = 80
         const val MAX_JSON = 50000
         val LANGUAGES = setOf("kmr", "ckb", "ps")
@@ -76,6 +81,67 @@ internal class PrivatePhraseDeck(context: Context) {
         return try { parseEntries(JSONArray(raw)) } catch (_: Exception) { null }
     }
 
+
+    /** Only SHA-256 identities and due-day integers; no duplicate phrase text. */
+    private fun reviewRows(): Map<String, Pair<Int, Long>> {
+        val raw = try {
+            prefs.getStringSet(REVIEW_ROWS, emptySet())?.toSet().orEmpty()
+        } catch (_: RuntimeException) { return emptyMap() }
+        if (raw.size > MAX_ROWS) return emptyMap()
+        return raw.mapNotNull { entry ->
+            val parts = entry.split('|')
+            if (parts.size != 3 || parts[0].length != 64 ||
+                parts[0].any { it !in "0123456789abcdef" }) return@mapNotNull null
+            val stage = parts[1].toIntOrNull() ?: return@mapNotNull null
+            val due = parts[2].toLongOrNull() ?: return@mapNotNull null
+            if (stage !in 0..5 || due !in 0L..365000L) return@mapNotNull null
+            parts[0] to (stage to due)
+        }.toMap()
+    }
+
+    private fun encodeReviews(records: Map<String, Pair<Int, Long>>): Set<String> =
+        records.map { (hash, p) -> "$hash|${p.first}|${p.second}" }.toSet()
+
+    @Synchronized
+    fun reviewsEnabled(): Boolean = try {
+        prefs.getBoolean(REVIEW_OPT_IN, false)
+    } catch (_: RuntimeException) { false }
+
+    @Synchronized
+    fun enableReviews(): Boolean = prefs.edit().putBoolean(REVIEW_OPT_IN, true).commit()
+
+    @Synchronized
+    fun disableReviews(): Boolean = prefs.edit()
+        .remove(REVIEW_OPT_IN).remove(REVIEW_ROWS).commit()
+
+    @Synchronized
+    fun scheduledReviews(): List<DuePersonalPhrase>? {
+        val phrases = entries() ?: return null
+        if (!reviewsEnabled()) return emptyList()
+        val today = java.time.LocalDate.now().toEpochDay()
+        val stored = reviewRows()
+        return phrases.map { phrase ->
+            val record = stored[PrivatePhraseShortcuts.fingerprint(phrase)]
+            DuePersonalPhrase(phrase, record?.first ?: 0, record?.second ?: today)
+        }.sortedWith(compareBy(DuePersonalPhrase::dueDay,
+            { it.phrase.language }, { it.phrase.phrase }))
+    }
+
+    /** Self-rated only, and only for an unchanged phrase present in this deck. */
+    @Synchronized
+    fun rateScheduledPhrase(phrase: PersonalPhrase, remembered: Boolean): Boolean {
+        if (!reviewsEnabled()) return false
+        val current = decode() ?: return false
+        if (phrase !in current) return false
+        val id = PrivatePhraseShortcuts.fingerprint(phrase)
+        val validHashes = current.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
+        val records = reviewRows().filterKeys { it in validHashes }.toMutableMap()
+        val stage = if (remembered) ((records[id]?.first ?: 0) + 1).coerceAtMost(5) else 0
+        val due = java.time.LocalDate.now().plusDays(REVIEW_INTERVALS[stage]).toEpochDay()
+        records[id] = stage to due
+        return prefs.edit().putStringSet(REVIEW_ROWS, encodeReviews(records)).commit()
+    }
+
     private fun toJson(entries: List<PersonalPhrase>): JSONArray {
         val array = JSONArray()
         for (entry in entries) {
@@ -88,7 +154,7 @@ internal class PrivatePhraseDeck(context: Context) {
         return array
     }
 
-    private fun write(entries: List<PersonalPhrase>): Boolean {
+    private fun write(entries: List<PersonalPhrase>, resetReview: Boolean = false): Boolean {
         if (entries.size > MAX_ROWS || entries.any { !valid(it) }) return false
         if (entries.map {
             it.language + "|" + it.phrase.lowercase(Locale.ROOT)
@@ -96,6 +162,17 @@ internal class PrivatePhraseDeck(context: Context) {
         val value = toJson(entries).toString()
         if (value.length > MAX_JSON) return false
         val allowedPins = entries.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
+        // Only identical human notes retain an old due date. Correcting the
+        // meaning resets that card rather than implying the new answer was learned.
+        val previous = decode().orEmpty().associateBy { PrivatePhraseShortcuts.fingerprint(it) }
+        val allowedReviews = if (resetReview) emptyMap() else {
+            reviewRows().filterKeys { hash ->
+                val current = entries.firstOrNull {
+                    PrivatePhraseShortcuts.fingerprint(it) == hash
+                }
+                current != null && previous[hash] == current
+            }
+        }
         val storedPins = runCatching {
             prefs.getStringSet(PrivatePhraseShortcuts.KEY, emptySet())?.toSet().orEmpty()
         }.getOrDefault(emptySet())
@@ -105,6 +182,7 @@ internal class PrivatePhraseDeck(context: Context) {
             prefs.edit()
                 .putString(KEY, value)
                 .putStringSet(PrivatePhraseShortcuts.KEY, storedPins.intersect(allowedPins))
+                .putStringSet(REVIEW_ROWS, encodeReviews(allowedReviews))
                 .commit()
         } catch (_: RuntimeException) { false }
     }
@@ -259,11 +337,12 @@ internal class PrivatePhraseDeck(context: Context) {
 
     /** Runs only after a separate, visible replacement confirmation. */
     @Synchronized
-    fun replaceImported(records: List<PersonalPhrase>): Boolean = write(records)
+    fun replaceImported(records: List<PersonalPhrase>): Boolean = write(records, resetReview = true)
 
     @Synchronized
     fun clear(): Boolean = try {
-        prefs.edit().remove(KEY).remove(PrivatePhraseShortcuts.KEY).commit()
+        prefs.edit().remove(KEY).remove(PrivatePhraseShortcuts.KEY)
+            .remove(REVIEW_OPT_IN).remove(REVIEW_ROWS).commit()
     }
     catch (_: RuntimeException) { false }
 }
