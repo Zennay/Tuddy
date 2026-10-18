@@ -48,7 +48,8 @@ internal fun FocusTranscriptDialog(
     canStartOffline: Boolean = false,
     archiveMode: Boolean = false,
     pinnedCaptionIds: Set<Long> = emptySet(),
-    onTogglePin: ((Long) -> String)? = null
+    onTogglePin: ((Long) -> String)? = null,
+    onCycleManualSpeaker: ((Long) -> Unit)? = null
 ) {
     val listState = rememberLazyListState()
     var followLive by remember { mutableStateOf(true) }
@@ -307,6 +308,15 @@ internal fun FocusTranscriptDialog(
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                if (!archiveMode && onCycleManualSpeaker != null) {
+                                    TextButton(onClick = { onCycleManualSpeaker(line.id) }) {
+                                        Text(when (line.speaker) {
+                                            "A" -> "Spreker A (handmatig) → B"
+                                            "B" -> "Spreker B (handmatig) → onbekend"
+                                            else -> "Spreker onbekend → handmatig A"
+                                        })
+                                    }
+                                }
                                 if (!archiveMode && onTogglePin != null) {
                                     TextButton(onClick = {
                                         pinNotice = onTogglePin(line.id)
