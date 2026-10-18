@@ -3,6 +3,13 @@
 Open **Mijn eigen Kurmanji/Sorani/Pasjtoe zinnen**. Nadat je minimaal één
 eigen zin bewust hebt bewaard, verschijnt **Oefen mijn eigen zinnen**.
 
+Je kunt voortaan kiezen voor **Alle**, **Kurmanji**, **Sorani** of
+**Pasjtoe**. Elke taalkeuze start een nieuwe privé-oefenronde met
+uitsluitend eigen zinnen uit die groep; een lege groep toont duidelijk
+dat je daarvoor nog geen zinnen hebt opgeslagen. Met **Schud kaarten**
+start je bewust een nieuwe ronde in een andere volgorde. Wisselen van
+taal of schudden slaat geen score, volgorde of extra studiegegevens op.
+
 De oefening gebruikt uitsluitend jouw al opgeslagen tekstparen. Voor elk
 kaartje bedenk je zelf het tweede deel, tik je **Toon mijn betekenis** en
 beoordeel je daarna **Ik wist het** of **Nog oefenen**. Lastige kaarten komen

@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlin.random.Random
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
@@ -38,8 +39,16 @@ internal fun PersonalPhrasePracticePanel(
     initialLanguage: String,
     onDismiss: () -> Unit
 ) {
-    val selected = remember(notes, initialLanguage) {
-        notes.filter { it.language == initialLanguage }.ifEmpty { notes }
+    // The user can switch between their personally authored language groups
+    // without importing any data, restarting the app, or disclosing study state.
+    var selectedLanguage by remember { mutableStateOf(
+        initialLanguage.takeIf { it in setOf("kmr", "ckb", "ps") } ?: "all"
+    ) }
+    var shuffleVersion by remember { mutableIntStateOf(0) }
+    val selected = remember(notes, selectedLanguage, shuffleVersion) {
+        val filtered = if (selectedLanguage == "all") notes
+            else notes.filter { it.language == selectedLanguage }
+        if (shuffleVersion == 0) filtered else filtered.shuffled(Random(shuffleVersion))
     }
     var offset by remember(selected) { mutableIntStateOf(0) }
     var reverse by remember { mutableStateOf(false) }
@@ -65,12 +74,37 @@ internal fun PersonalPhrasePracticePanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Text("Kies welke van je eigen zinnen je oefent",
+                    style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { selectedLanguage = "all" }) {
+                        Text(if (selectedLanguage == "all") "Alle ✓" else "Alle")
+                    }
+                    TextButton(onClick = { selectedLanguage = "kmr" }) {
+                        Text(if (selectedLanguage == "kmr") "Kurmanji ✓" else "Kurmanji")
+                    }
+                    TextButton(onClick = { selectedLanguage = "ckb" }) {
+                        Text(if (selectedLanguage == "ckb") "Sorani ✓" else "Sorani")
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { selectedLanguage = "ps" }) {
+                        Text(if (selectedLanguage == "ps") "Pasjtoe ✓" else "Pasjtoe")
+                    }
+                    TextButton(
+                        enabled = selected.size > 1,
+                        onClick = { shuffleVersion++ }
+                    ) { Text("↻ Schud kaarten") }
+                    Text("${selected.size} zinnen",
+                        style = MaterialTheme.typography.labelSmall)
+                }
                 TextButton(onClick = { reverse = !reverse }) {
                     Text(if (reverse) "Oefen: eigen betekenis → zin  ↔"
                         else "Oefen: zin → eigen betekenis  ↔")
                 }
                 if (round.total == 0) {
-                    Text("Voeg eerst een eigen zin toe en bewaar die lokaal.")
+                    Text("Geen eigen zinnen voor deze taal. Kies Alle of sla eerst " +
+                        "zelf een zin op in je privé-oefenlijst.")
                 } else if (card != null) {
                     Text(
                         "Afgerond ${round.recalled + round.needsPractice}/${round.total} " +
@@ -122,6 +156,12 @@ internal fun PersonalPhrasePracticePanel(
                             onClick = { round = round.reveal() }
                         ) { Text("Toon mijn betekenis") }
                     }
+                    Text(
+                        "Alleen de geselecteerde eigen taalset. Schud kaarten begint " +
+                            "een nieuwe ronde; lastige zinnen komen hoogstens eenmaal terug.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Text(
                         "Lastige zinnen verschijnen maximaal één keer opnieuw in deze ronde.",
                         style = MaterialTheme.typography.bodySmall,
