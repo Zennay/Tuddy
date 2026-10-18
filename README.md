@@ -15,6 +15,17 @@ voltooide export- en deelacties worden ingetrokken, maar bestaande externe
 kopieën en klembordinhoud kunnen niet achteraf worden gewist.
 [Privacy en bediening](docs/PRIVATE_SINGLE_CAPTION_DELETE.md).
 
+## Geen automatische vertaalmodeldownloads meer
+
+Een nieuwe ondertitel, handmatig getypte zin of correctie probeert
+niet langer stilzwijgend een ML Kit-teksttaalmodel op te halen.
+Tuddy controleert eerst de werkelijk geïnstalleerde modellen voor
+de herkende bron en het gekozen doel. Ontbreekt iets, dan toont
+de zin **Model ontbreekt** met de benodigde talen. De gebruiker
+kiest daarna zélf of hij het ontbrekende model via wifi voorbereidt.
+Ook bij tijdelijk onbekende modelstatus is er geen cloudfallback.
+[Exact gedrag en grenzen](docs/EXPLICIT_MODEL_DOWNLOAD_ONLY.md).
+
 ## Nieuw: offline startcheck vanaf het hoofdscherm
 
 De knop **Offline startcheck** laat zien of de gekozen Android-spreektaal
