@@ -199,6 +199,8 @@ internal class PrivatePhraseDeck(context: Context) {
     fun replaceImported(records: List<PersonalPhrase>): Boolean = write(records)
 
     @Synchronized
-    fun clear(): Boolean = try { prefs.edit().remove(KEY).commit() }
+    fun clear(): Boolean = try {
+        prefs.edit().remove(KEY).remove(PrivatePhraseShortcuts.KEY).commit()
+    }
     catch (_: RuntimeException) { false }
 }
