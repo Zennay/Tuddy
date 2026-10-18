@@ -92,6 +92,10 @@ private fun TuddyScreen() {
         surface = androidx.compose.ui.graphics.Color(0xFF202238)
     )
     val lines = remember { mutableStateListOf<Line>() }
+    // Local-only bookmarks: never persisted or associated with external identity.
+    var captionPins by remember { mutableStateOf(emptySet<Long>()) }
+    var pinsOpen by remember { mutableStateOf(false) }
+    var pinsNotice by remember { mutableStateOf("") }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
     var pronunciationNotice by remember { mutableStateOf("") }
     val savedVocabulary = remember(context) { PrivateVocabularyDeck(context) }
@@ -561,7 +565,8 @@ private fun TuddyScreen() {
                         // Late callbacks for evicted IDs are already denied by
                         // translationStillRelevant(lines.any { it.id == id }).
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
-                            lines.removeAt(0)
+                            val removed = lines.removeAt(0)
+                            captionPins = captionPins - removed.id
                         }
                         translate(sentence, id, selectedTarget, observedSource, token)
                     }
@@ -812,6 +817,95 @@ private fun TuddyScreen() {
                 }
             )
         }
+
+        if (pinsOpen) {
+            val pinnedLines = lines.filter { it.id in captionPins }
+            AlertDialog(
+                onDismissRequest = { pinsOpen = false },
+                title = { Text("Gemarkeerde gespreksregels") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Alleen in dit gesprek, maximaal ${SessionCaptionPins.MAX_PINS}. " +
+                                "Sluiten wist de markeringen niet; Wis gesprek wel.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (pinnedLines.isEmpty()) {
+                            Text("Geen gemarkeerde zinnen in dit gesprek.")
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 370.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(pinnedLines, key = { it.id }) { line ->
+                                    Column {
+                                        Text(
+                                            DateFormat.getTimeInstance(DateFormat.SHORT)
+                                                .format(Date(line.recordedAtMillis)) +
+                                                " · " + line.sourceCode + " → " + line.targetCode,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                        Text(line.original, style = MaterialTheme.typography.bodyMedium)
+                                        if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
+                                            Text(line.translated,
+                                                color = MaterialTheme.colorScheme.primary)
+                                        } else {
+                                            Text("[Vertaling niet voltooid]",
+                                                style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        TextButton(onClick = {
+                                            val index = lines.indexOfFirst { it.id == line.id }
+                                            pinsOpen = false
+                                            if (index >= 0) {
+                                                follow = false
+                                                coroutineScope.launch {
+                                                    listState.animateScrollToItem(index)
+                                                }
+                                            }
+                                        }) { Text("Ga naar uitspraak") }
+                                        HorizontalDivider()
+                                    }
+                                }
+                            }
+                        }
+                        if (pinsNotice.isNotBlank()) {
+                            Text(pinsNotice, style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (pinnedLines.isNotEmpty()) {
+                            TextButton(onClick = {
+                                captionPins = emptySet()
+                                pinsNotice = "Alle markeringen van dit gesprek zijn gewist."
+                            }) { Text("Wis markeringen") }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { pinsOpen = false }) { Text("Sluiten") }
+                },
+                dismissButton = {
+                    TextButton(
+                        enabled = pinnedLines.isNotEmpty() && !listening,
+                        onClick = {
+                            val snapshot = PrivateTranscriptExport.snapshot(
+                                pinnedLines.map { line ->
+                                    TranscriptExportRow(
+                                        line.original, line.translated, line.status,
+                                        line.sourceCode, line.targetCode, line.recordedAtMillis
+                                    )
+                                }
+                            )
+                            if (snapshot == null) {
+                                pinsNotice = "Selectie kan niet veilig worden geëxporteerd."
+                            } else {
+                                pendingTranscriptExport = generation to snapshot
+                                pinsOpen = false
+                                saveTranscript.launch("Tuddy-gemarkeerde-zinnen.txt")
+                            }
+                        }
+                    ) { Text("Bewaar selectie…") }
+                }
+            )
+        }
         if (personalPhrasesOpen) {
             MyOfflinePhrasesPanel(
                 deck = personalPhrases,
@@ -860,6 +954,9 @@ private fun TuddyScreen() {
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
+                        captionPins = emptySet()
+                        pinsOpen = false
+                        pinsNotice = ""
                         historySearchQuery = ""
                         historySearchOpen = false
                         previewInput = ""
@@ -1277,6 +1374,10 @@ private fun TuddyScreen() {
                     }, enabled = lines.isNotEmpty()) {
                         Text(if (historySearchOpen) "Sluit zoeken" else "Zoek in gesprek")
                     }
+                    TextButton(
+                        enabled = captionPins.isNotEmpty(),
+                        onClick = { pinsOpen = true }
+                    ) { Text("★ ${captionPins.size} gemarkeerd") }
                     if (historySearchOpen && normalizedHistoryQuery.isNotBlank()) {
                         Text("${historyMatches.size} gevonden",
                             style = MaterialTheme.typography.bodySmall,
@@ -1377,6 +1478,18 @@ private fun TuddyScreen() {
                                         color = MaterialTheme.colorScheme.primary)
                                 }
                                 Text(line.status, style = MaterialTheme.typography.labelSmall)
+                                TextButton(onClick = {
+                                    val before = captionPins
+                                    val currentIds = lines.map { it.id }.toSet()
+                                    captionPins = SessionCaptionPins.toggle(before, line.id, currentIds)
+                                    pinsNotice = when {
+                                        line.id in before -> "Markering verwijderd."
+                                        line.id in captionPins -> "Uitspraak tijdelijk gemarkeerd."
+                                        else -> "Maximaal ${SessionCaptionPins.MAX_PINS} markeringen."
+                                    }
+                                }) {
+                                    Text(if (line.id in captionPins) "★ Gemarkeerd" else "☆ Markeer")
+                                }
                                 TextButton(onClick = {
                                     val payload = PrivateCaptionCopy.snapshot(
                                         TranscriptExportRow(
