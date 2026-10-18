@@ -164,6 +164,9 @@ private fun TuddyScreen(
     var pinsNotice by remember { mutableStateOf("") }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
     var pronunciationNotice by remember { mutableStateOf("") }
+    val captionHaptics = remember(context) { CaptionHapticCues(context) }
+    var hapticAlertsOn by remember(context) { mutableStateOf(captionHaptics.enabled()) }
+    var hapticNotice by remember { mutableStateOf("") }
     val savedVocabulary = remember(context) { PrivateVocabularyDeck(context) }
     var savedWordRevision by remember { mutableIntStateOf(0) }
     val savedWordCount = remember(savedWordRevision) { savedVocabulary.entries().size }
@@ -791,6 +794,10 @@ private fun TuddyScreen(
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
                         lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
+                        // Only real completed speech recognition triggers a short cue:
+                        // not interim results, typed text, retries or translations.
+                        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
+                            captionHaptics.notifyCompletedSpeechCaption()
                         // Evict old RAM-only captions before scheduling more work.
                         // Late callbacks for evicted IDs are already denied by
                         // translationStillRelevant(lines.any { it.id == id }).
@@ -2598,6 +2605,52 @@ private fun TuddyScreen(
                 if (!offlineAvailable) {
                     Text("Geen lokale spraakherkenning op dit apparaat. Geen cloudfallback.", color = MaterialTheme.colorScheme.error)
                 }
+                HorizontalDivider()
+                Text("Toegankelijkheid · melding bij nieuwe spraakzin",
+                    style = MaterialTheme.typography.titleSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        if (hapticAlertsOn) "Korte trilling bij afgeronde ondertitel · aan"
+                        else "Korte trilling bij afgeronde ondertitel · uit",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Switch(
+                        checked = hapticAlertsOn,
+                        enabled = captionHaptics.available(),
+                        onCheckedChange = { requested ->
+                            val saved = captionHaptics.changeEnabled(requested)
+                            if (saved) hapticAlertsOn = requested
+                            hapticNotice = if (saved) {
+                                if (requested) "Trilsignaal aangezet voor volgende afgeronde spraakzin."
+                                else "Trilsignaal uitgezet."
+                            } else "Deze telefoon kan het trilsignaal niet instellen."
+                        }
+                    )
+                }
+                Text(
+                    "Alleen na een echt afgeronde on-device spraakzin, maximaal " +
+                        "één korte puls per 3 seconden. Geen trilling bij voorlopige " +
+                        "woorden, getypte zinnen of vertalingen. Android-instellingen " +
+                        "kunnen de trilling verminderen of blokkeren.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (hapticAlertsOn) {
+                    TextButton(onClick = {
+                        hapticNotice = if (captionHaptics.preview())
+                            "Voorbeeldtrilling aangevraagd bij Android."
+                        else "Voorbeeldtrilling is op dit toestel niet beschikbaar."
+                    }) { Text("Voel een voorbeeldtrilling") }
+                }
+                if (!captionHaptics.available())
+                    Text("Geen trilhardware gemeld door Android.",
+                        style = MaterialTheme.typography.bodySmall)
+                if (hapticNotice.isNotBlank())
+                    Text(hapticNotice, style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 Text("Privacy · privéweergave",
                     style = MaterialTheme.typography.titleSmall)

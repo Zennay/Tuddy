@@ -103,6 +103,18 @@ begint opnieuw vanaf het moment van kiezen.
 Alleen de gekozen minutenwaarde wordt privé opgeslagen.
 [Werking en grenzen](docs/MICROPHONE_SESSION_LIMIT.md).
 
+## Nieuw: optioneel trilsignaal bij nieuwe spraakzin
+
+Via **Taal- en modelinstellingen → Toegankelijkheid** kun je een
+kort trilalarm aanzetten als de lokale Android-herkenner een
+**afgeronde** ondertitel oplevert. Maximaal één puls per drie
+seconden, niet bij voorlopige woorden of vertaalupdates.
+Standaard uit; de voorbeeldtrilling wordt alleen op je eigen
+tik afgespeeld. Er worden geen woorden, audio, tijdstempels
+of extra persoonlijke gegevens opgeslagen. Android kan haptiek
+dempen; dit is geen garantie op geslaagde herkenning.
+[Uitleg en grenzen](docs/COMPLETED_CAPTION_HAPTICS.md).
+
 ## Nieuw: optionele privéweergave
 
 Via **Taal- en modelinstellingen → Privacy · privéweergave** kun je
