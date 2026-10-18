@@ -97,7 +97,9 @@ private data class Line(
     val targetCode: String,
     val recordedAtMillis: Long = System.currentTimeMillis(),
     val translationRevision: Int = 0,
-    val userCorrected: Boolean = false
+    val userCorrected: Boolean = false,
+    // Human-authored session-only meaning: never overwrite model result or exports.
+    val personalMeaning: String? = null
 )
 
 class MainActivity : ComponentActivity() {
@@ -323,6 +325,9 @@ private fun TuddyScreen(
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
     var editingCaptionId by remember { mutableStateOf<Long?>(null) }
     var captionCorrectionDraft by remember { mutableStateOf("") }
+    var editingMeaning by remember { mutableStateOf<Triple<Long, String, Int>?>(null) }
+    var meaningDraft by remember { mutableStateOf("") }
+    var meaningNotice by remember { mutableStateOf("") }
     // One explicitly chosen row; keep its original and revision so confirmation
     // cannot accidentally delete a different or subsequently corrected caption.
     var pendingSingleCaptionDelete by remember {
@@ -845,6 +850,10 @@ private fun TuddyScreen(
                             if (editingCaptionId == removed.id) {
                                 editingCaptionId = null
                                 captionCorrectionDraft = ""
+                            }
+                            if (editingMeaning?.first == removed.id) {
+                                editingMeaning = null
+                                meaningDraft = ""
                             }
                         }
                         translate(sentence, id, selectedTarget, observedSource, token)
@@ -1418,7 +1427,7 @@ private fun TuddyScreen(
                     FocusCaptionLine(
                         it.id, it.original, it.translated, it.status,
                         it.sourceCode, it.targetCode,
-                        manuallyAssignedSpeakers[it.id]
+                        manuallyAssignedSpeakers[it.id], it.personalMeaning
                     )
                 },
                 initialId = presented,
@@ -1429,7 +1438,8 @@ private fun TuddyScreen(
             FocusTranscriptDialog(
                 captions = lines.map {
                     FocusCaptionLine(it.id, it.original, it.translated, it.status,
-                        it.sourceCode, it.targetCode, manuallyAssignedSpeakers[it.id])
+                        it.sourceCode, it.targetCode, manuallyAssignedSpeakers[it.id],
+                        it.personalMeaning)
                 },
                 interimOriginal = partial,
                 interimTranslated = partialTranslation,
@@ -1522,6 +1532,83 @@ private fun TuddyScreen(
                 }
             )
         }
+        val noteRequest = editingMeaning
+        if (noteRequest != null) {
+            val liveRow = lines.firstOrNull { it.id == noteRequest.first }
+            val stillSame = !listening && liveRow != null &&
+                liveRow.original == noteRequest.second &&
+                liveRow.translationRevision == noteRequest.third
+            val trimmed = meaningDraft.trim()
+            val validNote = trimmed.isNotEmpty() && trimmed.length <= 280 &&
+                !trimmed.any { it.isISOControl() }
+            AlertDialog(
+                onDismissRequest = {
+                    editingMeaning = null
+                    meaningDraft = ""
+                },
+                title = { Text("Eigen betekenis bij één gesprekszin") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Schrijf uitsluitend je eigen interpretatie. " +
+                            "De lokale modelvertaling en de herkende woorden veranderen niet. " +
+                            "Je notitie wordt niet automatisch bewaard, vertaald, " +
+                            "gedeeld of toegevoegd aan het ondertitel-/gespreksarchief.")
+                        if (!stillSame) {
+                            Text("Deze gesprekszin is gewijzigd of de microfoon staat aan. " +
+                                "Sluit dit venster en kies de actuele zin opnieuw.",
+                                color = MaterialTheme.colorScheme.error)
+                        }
+                        OutlinedTextField(
+                            value = meaningDraft,
+                            onValueChange = { candidate ->
+                                if (candidate.length <= 280) meaningDraft = candidate
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Mijn eigen betekenis (max. 280 tekens)") },
+                            minLines = 2,
+                            maxLines = 5
+                        )
+                        Text("Alleen tijdelijk in dit gesprek. Niet door Tuddy gecontroleerd.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(enabled = stillSame && validNote, onClick = {
+                        val position = lines.indexOfFirst { it.id == noteRequest.first }
+                        if (position >= 0 && !listening &&
+                            lines[position].original == noteRequest.second &&
+                            lines[position].translationRevision == noteRequest.third &&
+                            validNote) {
+                            lines[position] = lines[position].copy(personalMeaning = trimmed)
+                            meaningNotice = "Eigen betekenis uitsluitend tijdelijk bij de gekozen regel bewaard."
+                        }
+                        editingMeaning = null
+                        meaningDraft = ""
+                    }) { Text("Bewaar mijn eigen uitleg") }
+                },
+                dismissButton = {
+                    Row {
+                        if (liveRow?.personalMeaning != null) {
+                            TextButton(enabled = stillSame, onClick = {
+                                val position = lines.indexOfFirst { it.id == noteRequest.first }
+                                if (position >= 0 && !listening &&
+                                    lines[position].original == noteRequest.second &&
+                                    lines[position].translationRevision == noteRequest.third) {
+                                    lines[position] = lines[position].copy(personalMeaning = null)
+                                    meaningNotice = "Eigen uitleg uit dit gesprek verwijderd."
+                                }
+                                editingMeaning = null
+                                meaningDraft = ""
+                            }) { Text("Wis eigen uitleg") }
+                        }
+                        TextButton(onClick = {
+                            editingMeaning = null
+                            meaningDraft = ""
+                        }) { Text("Annuleren") }
+                    }
+                }
+            )
+        }
         val correctionId = editingCaptionId
         val correctionLine = lines.firstOrNull { it.id == correctionId }
         if (correctionId != null && correctionLine != null) {
@@ -1575,7 +1662,9 @@ private fun TuddyScreen(
                                     translated = "Vertalen…",
                                     status = "Bezig",
                                     translationRevision = previous.translationRevision + 1,
-                                    userCorrected = true
+                                    userCorrected = true,
+                                    // A newly corrected original invalidates the human meaning.
+                                    personalMeaning = null
                                 )
                                 translate(corrected, previous.id, previous.targetCode,
                                     previous.sourceCode, generation)
@@ -2233,6 +2322,9 @@ private fun TuddyScreen(
                         pendingSpeakerExport = null
                         editingCaptionId = null
                         captionCorrectionDraft = ""
+                        editingMeaning = null
+                        meaningDraft = ""
+                        meaningNotice = ""
                         correctionNotice = ""
                         pendingSingleCaptionDelete = null
                         captionDeleteNotice = ""
@@ -3266,6 +3358,22 @@ private fun TuddyScreen(
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                line.personalMeaning?.let { meaning ->
+                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("Mijn eigen uitleg · niet geverifieerd",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(meaning, style = MaterialTheme.typography.bodyLarge)
+                                        Text("Niet opgenomen in SRT, WebVTT of gespreksarchief.",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                                if (meaningNotice.isNotBlank()) {
+                                    Text(meaningNotice,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     TextButton(
                                         enabled = !listening,
@@ -3275,6 +3383,17 @@ private fun TuddyScreen(
                                             correctionNotice = ""
                                         }
                                     ) { Text("✎ Corrigeer tekst") }
+                                    TextButton(
+                                        enabled = !listening && line.original.isNotBlank(),
+                                        onClick = {
+                                            editingMeaning = Triple(line.id, line.original, line.translationRevision)
+                                            meaningDraft = line.personalMeaning ?: ""
+                                            meaningNotice = ""
+                                        }
+                                    ) {
+                                        Text(if (line.personalMeaning == null) "✎ Eigen uitleg"
+                                            else "✎ Wijzig eigen uitleg")
+                                    }
                                     if (line.status == "Fout" || line.status == "Model ontbreekt") {
                                         TextButton(
                                             enabled = !listening,
