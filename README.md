@@ -260,3 +260,21 @@ achtergrondback-up. Een door jou gekozen cloudbestandsprovider kan
 de back-up buiten Tuddy synchroniseren. Exporteer geen gevoelige
 persoonsgegevens. De zelf ingevulde betekenissen zijn en blijven
 niet-gecontroleerde persoonlijke notities, **geen** nieuwe vertaalmodellen.
+
+
+### Eén afgeronde tweetalige zin bewust delen
+
+Bij een afgeronde lokaal vertaalde ondertitel verschijnt nu **Deel deze zin…**
+naast de bestaande kopieerknop. Eerst volgt een afzonderlijke
+privacybevestiging: de getoonde zin kan daarna buiten Tuddy terechtkomen.
+Pas na **Open deelvenster** geeft Tuddy alleen die ene originele tekst
+plus de daadwerkelijk afgeronde vertaling aan het standaard
+Android-deelvenster door. Geen volledig gespreksarchief, transcript
+in opbouw, onvoltooide vertaling of automatische achtergrondverzending.
+Als de zin of sessie intussen verandert, vervalt de toestemming en moet
+je opnieuw kiezen. Na weggaan uit de app verdwijnt het openstaande
+toestemmingsvenster. De gekozen externe app kan tekst zelf opslaan,
+doorsturen of synchroniseren: deel geen vertrouwelijke persoonsgegevens.
+Het openen van Androids chooser bewijst niet dat er werkelijk iets is
+verzonden. Deze wijziging levert uitsluitend broncode; fysieke
+toestelacceptatie, taalmodelbeschikbaarheid en getekende APK blijven apart.
