@@ -147,6 +147,12 @@ internal fun FullscreenCaptionCard(
                                     style = MaterialTheme.typography.bodySmall)
                             }
                         }
+                        card.personalMeaning?.let { own ->
+                            HorizontalDivider()
+                            Text("Mijn eigen uitleg · niet geverifieerd, niet gedeeld",
+                                style = MaterialTheme.typography.labelLarge)
+                            CaptionSide(own, card.targetCode, large)
+                        }
                         if (card.speaker == "A" || card.speaker == "B") {
                             Text("Spreker " + card.speaker + " · handmatig gelabeld",
                                 style = MaterialTheme.typography.labelSmall)
