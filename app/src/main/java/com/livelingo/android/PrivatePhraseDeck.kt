@@ -174,6 +174,26 @@ internal class PrivatePhraseDeck(context: Context) {
         } catch (_: Exception) { null }
     }
 
+    /**
+     * Explicit, non-destructive merge of a user-selected note backup.
+     * A local entry always wins on duplicate language+phrase identity; imported
+     * meanings cannot silently overwrite personal edits. Either the whole
+     * merged deck is committed or nothing changes (e.g. capacity exceeded).
+     */
+    @Synchronized
+    fun mergeImported(records: List<PersonalPhrase>): Boolean {
+        if (records.isEmpty() || records.size > MAX_ROWS || records.any { !valid(it) })
+            return false
+        fun identity(record: PersonalPhrase) =
+            record.language + "|" + record.phrase.lowercase(Locale.ROOT)
+        if (records.map(::identity).toSet().size != records.size) return false
+        val current = decode() ?: return false
+        val owned = current.map(::identity).toSet()
+        val additions = records.filterNot { identity(it) in owned }
+        if (current.size + additions.size > MAX_ROWS) return false
+        return if (additions.isEmpty()) true else write(current + additions)
+    }
+
     /** Runs only after a separate, visible replacement confirmation. */
     @Synchronized
     fun replaceImported(records: List<PersonalPhrase>): Boolean = write(records)

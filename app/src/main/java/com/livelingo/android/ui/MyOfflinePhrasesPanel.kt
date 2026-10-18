@@ -294,25 +294,60 @@ internal fun MyOfflinePhrasesPanel(
     )
     if (pendingImport != null) {
         val imported = pendingImport!!
+        val ownedKeys = phrases.orEmpty().map {
+            it.language + "|" + it.phrase.lowercase(java.util.Locale.ROOT)
+        }.toSet()
+        val newCount = imported.count {
+            it.language + "|" + it.phrase.lowercase(java.util.Locale.ROOT) !in ownedKeys
+        }
+        val duplicateCount = imported.size - newCount
+        val mergeFits = phrases != null && phrases.size + newCount <= 80
         AlertDialog(
             onDismissRequest = { pendingImport = null },
             title = { Text("Eigen zinnen vervangen?") },
-            text = { Text("Je hebt ${imported.size} geldige eigen zinnen geselecteerd. " +
-                "Hiermee worden alle lokaal opgeslagen eigen zinnen vervangen. " +
-                "Er is geen automatische vertaling of broncontrole.") },
+            text = {
+                Text("Geselecteerd: ${imported.size} eigen zinnen. " +
+                    "${newCount} nieuw, ${duplicateCount} bestaan al in je privé-lijst. " +
+                    "Samenvoegen bewaart altijd je bestaande tekst en betekenis bij " +
+                    "een dubbele zin. Vervangen verwijdert de huidige lijst en " +
+                    "zet alleen het gekozen bestand terug. " +
+                    (if (mergeFits) "Samenvoegen past binnen 80 zinnen."
+                    else "Samenvoegen kan niet: beschadigde lijst of meer dan 80 zinnen.") +
+                    " Dit is geen gecontroleerde vertaling.")
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    val saved = deck.replaceImported(imported)
-                    if (saved) {
-                        revision++
-                        editingPhrase = null
-                        phrase = ""
-                        meaning = ""
-                    }
-                    info = if (saved) "Back-up lokaal hersteld. Alle betekenissen zijn door mensen ingevoerd."
+                Column {
+                    TextButton(
+                        enabled = mergeFits,
+                        onClick = {
+                            val merged = deck.mergeImported(imported)
+                            if (merged) {
+                                revision++
+                                editingPhrase = null
+                                phrase = ""
+                                meaning = ""
+                            }
+                            info = if (merged)
+                                "Nieuwe eigen zinnen toegevoegd; bestaande betekenissen behouden."
+                            else "Samenvoegen geweigerd. Controleer de limiet en lijst; " +
+                                "je bestaande zinnen zijn behouden."
+                            pendingImport = null
+                        }
+                    ) { Text("Voeg alleen nieuwe zinnen toe") }
+                    TextButton(onClick = {
+                        val saved = deck.replaceImported(imported)
+                        if (saved) {
+                            revision++
+                            editingPhrase = null
+                            phrase = ""
+                            meaning = ""
+                        }
+                        info = if (saved)
+                            "Back-up heeft de lokale lijst vervangen na jouw keuze."
                         else "Herstellen mislukt. De oude lijst blijft behouden."
-                    pendingImport = null
-                }) { Text("Vervang eigen zinnen") }
+                        pendingImport = null
+                    }) { Text("Vervang volledige lijst") }
+                }
             },
             dismissButton = {
                 TextButton(onClick = {
