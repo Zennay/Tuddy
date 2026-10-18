@@ -1,5 +1,7 @@
 package com.livelingo.android.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,11 +12,18 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateOwnWordDeck
+import com.livelingo.android.PrivateStudyCalendar
 import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivateVocabularyDeck
 import java.time.LocalDate
@@ -88,6 +97,31 @@ internal fun UpcomingReviewForecastDialog(
     phrases: PrivatePhraseDeck,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    var pending by remember { mutableStateOf<ByteArray?>(null) }
+    var exportNotice by remember { mutableStateOf("") }
+    val documentPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/calendar")
+    ) { uri ->
+        val previous = pending
+        pending = null
+        if (uri != null && previous != null) {
+            val current = PrivateStudyCalendar.snapshot(words, ownWords, phrases)
+            if (current == null || !current.contentEquals(previous)) {
+                exportNotice = "Herhaaldatums of kaarten zijn gewijzigd. Kies opnieuw exporteren."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use {
+                        it.write(previous)
+                        it.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                exportNotice = if (saved) "Agenda-export opgeslagen."
+                    else "Opslaan mislukt; je herhaalplanning is niet veranderd."
+            }
+        }
+    }
     val data = forecast(words, ownWords, phrases)
     val format = DateTimeFormatter.ofPattern("EEE d MMM", Locale.forLanguageTag("nl-NL"))
     AlertDialog(
@@ -137,6 +171,30 @@ internal fun UpcomingReviewForecastDialog(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
+
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = total > 0,
+                            onClick = {
+                                val snapshot = PrivateStudyCalendar.snapshot(
+                                    words, ownWords, phrases
+                                )
+                                if (snapshot == null) {
+                                    exportNotice = "Geen geldige vervaldatums om te exporteren."
+                                } else {
+                                    pending = snapshot
+                                    exportNotice = ""
+                                    documentPicker.launch("Tuddy-studieplanning.ics")
+                                }
+                            }
+                        ) { Text("Bewaar alleen datums en aantallen als agenda…") }
+                        Text(
+                            "Je kiest zelf een externe Android-bestandsprovider; " +
+                                "die kan dit kalenderbestand synchroniseren. " +
+                                "Er staan geen woorden, zinnen of betekenissen in.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
                         if (data.outsideWindow > 0) {
                             HorizontalDivider()
                             Text(
@@ -146,6 +204,10 @@ internal fun UpcomingReviewForecastDialog(
                         }
                     }
                 }
+                if (exportNotice.isNotBlank()) Text(
+                    exportNotice, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 Text(
                     "Alleen de datum en kaartgroep worden tijdelijk getoond. " +
                         "Dit is geen automatische herinnering, taaldiagnose of cloudsync. " +
