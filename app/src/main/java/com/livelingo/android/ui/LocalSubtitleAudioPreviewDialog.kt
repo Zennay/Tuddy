@@ -2,6 +2,7 @@ package com.livelingo.android.ui
 
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.media.PlaybackParams
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -57,6 +58,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var positionMs by remember { mutableLongStateOf(0L) }
     var dragPositionMs by remember { mutableLongStateOf(-1L) }
     var durationMs by remember { mutableLongStateOf(0L) }
+    var playbackSpeed by remember { mutableStateOf(1f) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
 
     fun closeAudio() {
@@ -67,6 +69,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         positionMs = 0L
         dragPositionMs = -1L
         durationMs = 0L
+        playbackSpeed = 1f
         if (old != null) runCatching {
             old.setOnPreparedListener(null)
             old.setOnErrorListener(null)
@@ -92,6 +95,21 @@ internal fun LocalSubtitleAudioPreviewDialog(
         runCatching { current.seekTo(target.toInt()) }
             .onSuccess { positionMs = target }
             .onFailure { notice = "Naar deze tijd springen is niet gelukt." }
+    }
+
+    fun changeSpeed(value: Float) {
+        if (!prepared || value !in listOf(0.75f, 1f, 1.25f)) return
+        val current = player ?: return
+        if (playing) {
+            val applied = runCatching {
+                current.playbackParams = PlaybackParams().setSpeed(value).setPitch(1f)
+            }.isSuccess
+            if (!applied) {
+                notice = "Snelheid wijzigen wordt niet ondersteund door deze audiospeler."
+                return
+            }
+        }
+        playbackSpeed = value
     }
 
     val audioPicker = rememberLauncherForActivityResult(
@@ -247,11 +265,29 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 runCatching {
                                     current.start()
                                     playing = true
-                                }.onFailure { notice = "Afspelen is niet gelukt." }
+                                    if (playbackSpeed != 1f) {
+                                        current.playbackParams = PlaybackParams()
+                                            .setSpeed(playbackSpeed).setPitch(1f)
+                                    }
+                                }.onFailure {
+                                    playing = runCatching { current.isPlaying }.getOrDefault(false)
+                                    playbackSpeed = 1f
+                                    notice = "Aangepast afspelen niet mogelijk; probeer normale snelheid."
+                                }
                             }
                         }) { Text(if (playing) "Ⅱ Pauze" else "▶ Afspelen") }
                         OutlinedButton(onClick = { seekTo(cues[nextIndex].startMillis) },
                             enabled = nextIndex >= 0) { Text("Volgende ▶") }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(0.75f to "Rustig 0,75×", 1f to "1×",
+                            1.25f to "Vlot 1,25×").forEach { (value, label) ->
+                            TextButton(onClick = { changeSpeed(value) },
+                                modifier = Modifier.weight(1f)) {
+                                Text((if (playbackSpeed == value) "✓ " else "") + label)
+                            }
+                        }
                     }
                     Text("Verschuiving? Pas de tijdcodes in de editor aan; " +
                         "de originele SRT/VTT wordt niet overschreven.",
