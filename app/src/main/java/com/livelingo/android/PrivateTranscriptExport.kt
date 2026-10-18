@@ -1,5 +1,9 @@
 package com.livelingo.android
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 /**
  * User-initiated, bounded plain-text export of completed RAM-only captions.
  *
@@ -12,7 +16,8 @@ internal data class TranscriptExportRow(
     val translated: String,
     val status: String,
     val sourceCode: String,
-    val targetCode: String
+    val targetCode: String,
+    val recordedAtMillis: Long
 )
 
 internal object PrivateTranscriptExport {
@@ -32,7 +37,11 @@ internal object PrivateTranscriptExport {
             "Tuddy · privé gespreksexport\n" +
                 "Door jou opgeslagen; het bestand kan buiten Tuddy worden gesynchroniseerd.\n\n"
         )
+        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT)
         rows.forEachIndexed { index, row ->
+            if (row.recordedAtMillis <= 0L || row.recordedAtMillis > System.currentTimeMillis() + 86_400_000L) {
+                return null // No invented or future-dated evidence in a private export.
+            }
             if (listOf(row.original, row.translated, row.sourceCode, row.targetCode)
                     .any { it.length > MAX_FIELD_UNITS }) return null
             val from = printable(row.sourceCode)
@@ -42,6 +51,7 @@ internal object PrivateTranscriptExport {
             val isComplete = row.status == "Lokaal" || row.status == "Lokaal vertaald"
             val translation = if (isComplete) printable(row.translated) else "[Vertaling niet voltooid]"
             result.append(index + 1).append(". ").append(from).append(" → ").append(to)
+                .append(" · ").append(formatter.format(Date(row.recordedAtMillis)))
                 .append("\nOrigineel: ").append(original)
                 .append("\nVertaling: ").append(translation).append("\n\n")
             if (result.length > MAX_BYTES) return null
