@@ -45,6 +45,7 @@ internal fun DailyStudyHub(
     var phraseReviewOpen by remember { mutableStateOf(false) }
     var ownWordReviewOpen by remember { mutableStateOf(false) }
     var dailyBookOpen by remember { mutableStateOf(false) }
+    var mixedReviewOpen by remember { mutableStateOf(false) }
     var viewRevision by remember { mutableIntStateOf(0) }
 
     if (wordReviewOpen) {
@@ -64,6 +65,18 @@ internal fun DailyStudyHub(
         return
     }
 
+    if (mixedReviewOpen) {
+        MixedDueReviewPanel(
+            words = words,
+            ownWords = ownWords,
+            phrases = phrases,
+            onWordChanged = { viewRevision++; onWordChanged() },
+            onOwnWordChanged = { viewRevision++; onOwnWordChanged() },
+            onPhraseChanged = { viewRevision++ },
+            onDismiss = { mixedReviewOpen = false }
+        )
+        return
+    }
     if (dailyBookOpen) {
         PrivateDueStudyBookDialog(
             words = words,
@@ -119,6 +132,15 @@ internal fun DailyStudyHub(
                     style = MaterialTheme.typography.headlineSmall
                 )
                 if (totalDue > 0) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { mixedReviewOpen = true }
+                    ) { Text("▶ Oefen alle groepen door elkaar") }
+                    Text(
+                        "Eén ronde van maximaal 30 kaarten uit je gekozen, al " +
+                            "ingeschakelde herhaalplannen; niets wordt automatisch aangezet.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = { dailyBookOpen = true }
