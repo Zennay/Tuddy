@@ -37,7 +37,8 @@ import com.livelingo.android.LocalSpeechPace
 import java.io.ByteArrayOutputStream
 
 /**
- * Offline review/delete screen; only curated language+word keys ever persist.
+ * Offline review/delete screen. Optional date and interval metadata persist only
+ * after separate consent; curated word keys are the only study content stored.
  * A full conversation is never loaded from or saved to device storage.
  */
 @Composable
@@ -58,6 +59,9 @@ internal fun SavedWordsPanel(
     }
     var confirmDelete by remember { mutableStateOf(false) }
     var practiceOpen by remember { mutableStateOf(false) }
+    var scheduledReviewOpen by remember { mutableStateOf(false) }
+    var confirmStartReview by remember { mutableStateOf(false) }
+    var confirmEraseReview by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingStudySheet by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var pendingImport by remember { mutableStateOf<List<String>?>(null) }
@@ -139,6 +143,15 @@ internal fun SavedWordsPanel(
         return
     }
 
+    if (scheduledReviewOpen) {
+        ScheduledWordReviewPanel(
+            deck = deck,
+            onChanged = onChanged,
+            onDismiss = { scheduledReviewOpen = false }
+        )
+        return
+    }
+
     // One speaker for the visible word list, not a TTS engine per saved word.
     val owner = LocalLifecycleOwner.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
@@ -178,6 +191,37 @@ internal fun SavedWordsPanel(
                     onClick = { speaker.stop(); practiceOpen = true },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Oefen opgeslagen woorden") }
+                if (!deck.reviewsEnabled()) {
+                    OutlinedButton(
+                        enabled = allWords.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { speaker.stop(); confirmStartReview = true }
+                    ) { Text("Start privé herhaalplanning…") }
+                    Text(
+                        "Alleen na jouw toestemming bewaart Tuddy een niveau en " +
+                            "volgende herhaaldatum per bewaard woord, volledig lokaal.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    val reviewWords = deck.scheduledReviews()
+                    val dueCount = reviewWords.count {
+                        it.dueDay <= java.time.LocalDate.now().toEpochDay()
+                    }
+                    OutlinedButton(
+                        enabled = dueCount > 0,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { speaker.stop(); scheduledReviewOpen = true }
+                    ) { Text("Herhaal vandaag · $dueCount van ${reviewWords.size}") }
+                    Text(
+                        if (dueCount == 0) "Geen woorden vandaag. Later opnieuw openen."
+                        else "Bekijk de betekenis en beoordeel zelf. Bekende woorden " +
+                            "komen later terug, moeilijke eerder.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    TextButton(onClick = { confirmEraseReview = true }) {
+                        Text("Wis mijn herhaalplanning")
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         enabled = allWords.isNotEmpty(),
@@ -292,11 +336,61 @@ internal fun SavedWordsPanel(
         }
     )
 
+    if (confirmStartReview) {
+        AlertDialog(
+            onDismissRequest = { confirmStartReview = false },
+            title = { Text("Lokale herhaalplanning starten?") },
+            text = { Text(
+                "Tuddy bewaart vanaf nu alleen herhaalniveau en volgende datum " +
+                    "voor zelf opgeslagen basiswoorden op dit toestel. " +
+                    "Geen gesprekken, account, cloudsync of meldingen. " +
+                    "Je kunt dit later afzonderlijk wissen; woorden blijven dan bewaard."
+            ) },
+            confirmButton = {
+                TextButton(onClick = {
+                    transferStatus = if (deck.enableReviews()) {
+                        onChanged()
+                        "Herhaalplanning gestart; alle opgeslagen woorden zijn nu beschikbaar."
+                    } else "Herhaalplanning kon niet worden gestart."
+                    confirmStartReview = false
+                }) { Text("Start alleen lokaal") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmStartReview = false }) {
+                    Text("Annuleren")
+                }
+            }
+        )
+    }
+
+    if (confirmEraseReview) {
+        AlertDialog(
+            onDismissRequest = { confirmEraseReview = false },
+            title = { Text("Herhaalplanning wissen?") },
+            text = { Text(
+                "Alle lokale herhaaldatums en niveaus worden gewist. " +
+                    "Je opgeslagen woorden en bestaande oefenmodus blijven bestaan."
+            ) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val cleared = deck.disableReviews()
+                    if (cleared) onChanged()
+                    transferStatus = if (cleared) "Herhaalplanning definitief gewist."
+                        else "Wissen mislukt; probeer opnieuw."
+                    confirmEraseReview = false
+                }) { Text("Wis planning") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmEraseReview = false }) { Text("Annuleren") }
+            }
+        )
+    }
+
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Alle opgeslagen woorden wissen?") },
-            text = { Text("Dit wist de lokale woordenlijst definitief, niet je tijdelijke gesprek.") },
+            text = { Text("Dit wist de lokale woordenlijst en de optionele herhaalplanning definitief, niet je tijdelijke gesprek.") },
             confirmButton = {
                 TextButton(onClick = {
                     if (deck.clear()) onChanged()
@@ -317,7 +411,8 @@ internal fun SavedWordsPanel(
             text = {
                 Text("Deze back-up bevat ${importCandidate.size} herkende woorden uit Tuddy's " +
                     "kleine lokale woordenlijst. Hiermee vervang je je huidige woorden. " +
-                    "Gesprekken of eigen zinnen worden niet geïmporteerd.")
+                    "Gesprekken of eigen zinnen worden niet geïmporteerd. " +
+                    "Een bestaande herhaalplanning wordt voor deze woorden opnieuw gestart.")
             },
             confirmButton = {
                 TextButton(onClick = {
