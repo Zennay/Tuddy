@@ -5,7 +5,7 @@ zelf een **agenda-export (.ics)** bewaren. Dit is een extra mogelijkheid
 boven op de read-only kalender, niet een automatisch ingestelde
 herinnering of kalenderkoppeling.
 
-Het bestand bevat maximaal 56 kalenderdagen. Eerder verschuldigde
+Het bestand bevat maximaal 56 kalenderdagen. Vóór de Android-bestandskeuze bepaal je bewust welke van de al ingeschakelde groepen (basiswoorden, eigen woorden en/of eigen zinnen) in de dagtellingen zijn opgenomen. Een uitgeschakelde groep kan niet worden geselecteerd, en een lege selectie levert geen bestand op. Verandert de selectie tijdens het opslaan, dan wordt de export geweigerd. Eerder verschuldigde
 kaarten tellen één keer onder vandaag. Alleen de datum en aantallen
 uit de drie afzonderlijk ingestelde herhaalplannen worden als
 dagafspraak opgeslagen. **Geen** woorden, eigen zinnen, betekenissen,
