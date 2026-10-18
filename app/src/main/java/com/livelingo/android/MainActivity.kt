@@ -47,6 +47,8 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.launch
 import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
+import java.text.DateFormat
+import java.util.Date
 
 private data class LanguageChoice(val label: String, val speechCode: String, val translateCode: String)
 private val spoken = listOf(
@@ -63,7 +65,8 @@ private data class Line(
     val translated: String,
     val status: String,
     val sourceCode: String,
-    val targetCode: String
+    val targetCode: String,
+    val recordedAtMillis: Long
 )
 
 class MainActivity : ComponentActivity() {
@@ -503,7 +506,8 @@ private fun TuddyScreen() {
                     clearInterim()
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
-                        lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
+                        lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget,
+                            System.currentTimeMillis()))
                         // Evict old RAM-only captions before scheduling more work.
                         // Late callbacks for evicted IDs are already denied by
                         // translationStillRelevant(lines.any { it.id == id }).
@@ -671,7 +675,8 @@ private fun TuddyScreen() {
                                 lines.map { line ->
                                     TranscriptExportRow(
                                         line.original, line.translated, line.status,
-                                        line.sourceCode, line.targetCode
+                                        line.sourceCode, line.targetCode,
+                                    line.recordedAtMillis
                                     )
                                 }
                             )
@@ -866,7 +871,7 @@ private fun TuddyScreen() {
                             val selectedSource = source.translateCode
                             val selectedTarget = target.translateCode
                             lines.add(Line(id, sentence, "Vertalen…", "Bezig",
-                                selectedSource, selectedTarget))
+                                selectedSource, selectedTarget, System.currentTimeMillis()))
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                                 lines.removeAt(0)
                             }
@@ -1005,6 +1010,12 @@ private fun TuddyScreen() {
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    DateFormat.getTimeInstance(DateFormat.SHORT)
+                                        .format(Date(line.recordedAtMillis)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                                 OfflineWordText(
                                     line.original, line.sourceCode,
                                     MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
