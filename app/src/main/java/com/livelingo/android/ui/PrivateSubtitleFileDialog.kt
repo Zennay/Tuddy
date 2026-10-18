@@ -67,6 +67,7 @@ private data class PendingSubtitleImport(
 internal fun PrivateSubtitleFileDialog(
     cues: List<PrivateSubtitleCue>,
     onDismiss: () -> Unit,
+    onChooseAudio: (List<PrivateSubtitleCue>) -> Unit,
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
@@ -105,7 +106,6 @@ internal fun PrivateSubtitleFileDialog(
     var practiceOpen by remember { mutableStateOf(false) }
     var retimingOpen by remember { mutableStateOf(false) }
     var inspectorOpen by remember { mutableStateOf(false) }
-    var audioPreviewOpen by remember { mutableStateOf(false) }
     var twoAnchorOpen by remember { mutableStateOf(false) }
     var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var sourceAtPicker by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
@@ -348,7 +348,10 @@ internal fun PrivateSubtitleFileDialog(
                 ) { Text("⌁ Bekijk de ondertiteltijdlijn…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { speaker.stop(); audioPreviewOpen = true }
+                    onClick = {
+                        speaker.stop()
+                        onChooseAudio(draft.toList())
+                    }
                 ) { Text("▶ Eigen audio met tijdcodes afspelen…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
@@ -516,13 +519,6 @@ internal fun PrivateSubtitleFileDialog(
                 twoAnchorOpen = false
             },
             onDismiss = { twoAnchorOpen = false }
-        )
-    }
-
-    if (audioPreviewOpen) {
-        LocalSubtitleAudioPreviewDialog(
-            cues = draft,
-            onDismiss = { audioPreviewOpen = false }
         )
     }
 

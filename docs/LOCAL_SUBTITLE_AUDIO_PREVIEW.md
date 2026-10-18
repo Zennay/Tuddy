@@ -13,3 +13,24 @@ De grote ondertitelkaart volgt alleen de **begin- en eindtijd die in jouw SRT/VT
 - Het is geen vervanging voor de ontbrekende fysieke Android-vliegtuigmodusacceptatie, native-speaker beoordeelde vrij gelicentieerde Kurmanji/Sorani/Pasjtoe ASR+MT, signed release of zCloud admission.
 
 Geen testsuites, fictieve live audio-woorden of automatische netwerkfallback zijn aan dit productonderdeel toegevoegd.
+
+## Langzaam luisteren en één cue herhalen
+
+Na het laden van audio kun je kiezen uit **Rustig 0,75×**, **1×** en
+**Vlot 1,25×**. De tempo-optie geldt uitsluitend voor lokaal beluisteren en
+wijzigt nooit het audiobestand of de SRT/VTT. Op een Android-speler die de
+andere snelheid weigert meldt Tuddy dat; normaal afspelen blijft mogelijk.
+
+Met **↻ Herhaal deze ondertitelregel** herhaal je tijdens het afspelen
+alleen het in jouw document ingestelde tijdvak van de huidige cue.
+De lengte moet minstens 0,75 seconden zijn en volledig binnen de
+gekozen audio vallen. Tik nogmaals om herhaling uit te schakelen; naar
+een tijdstip buiten de gekozen cue springen stopt herhaling eveneens.
+Sluiten, audio wisselen en een nieuw gesprek starten houden geen
+herhaalsessie of instellingen vast. Audio-pauze bij achtergrond blijft
+van kracht, ook tijdens herhaling. Tijdvakken kunnen fout of overlappend
+zijn: er wordt niets automatisch op spraakwoorden uitgelijnd.
+
+## Android-bestandskiezer en veilig terugkeren naar de editor
+
+Tuddy gebruikt voor de audio een **bestandskiezer die aan de hoofdactiviteit hangt**. Als Android de app tijdens de externe bestandskeuze op de achtergrond zet, verdwijnen de open editor en eventuele live microfoon zoals de privacyregels voorschrijven. Alleen het exact op dat moment door jou gekozen tijdelijke SRT/VTT-concept wordt voor die expliciete pickeractie kort in RAM behouden; na een geldige audioselectie opent een zelfstandige afspeelmodus. **Annuleren** keert terug naar dat concept. **Sluiten** in de audiomodus opent datzelfde tijdelijke tekst-/tijdcodeconcept weer; eerdere editor-undo-stappen worden niet meeverhuisd. Niets hiervan overleeft procesafsluiting of wordt ongevraagd naar schijf geschreven. Audio wordt nooit automatisch afgespeeld na terugkeer.

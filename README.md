@@ -4,7 +4,9 @@
 
 Open een SRT/VTT in de tijdelijke ondertiteleditor en kies **▶ Eigen audio
 met tijdcodes afspelen…**. Selecteer zelf een audio-opname, speel af of pauzeer,
-schuif naar een audiotijd of spring naar de vorige/volgende cue. De grote
+schuif naar een audiotijd of spring naar de vorige/volgende cue. Voor 
+uitspraak en luisteroefeningen kun je tussen 0,75×, 1× en 1,25× 
+schakelen en de tijdcode van één ondertitelregel herhaald afspelen. De grote
 ondertitelkaart volgt uitsluitend de tijden uit jouw document en laat gaten
 zonder actieve ondertitel eerlijk zien. Niets wordt automatisch afgespeeld,
 opgeslagen of met een server gesynchroniseerd door Tuddy. Een gekozen

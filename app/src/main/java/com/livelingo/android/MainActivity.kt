@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -59,6 +60,7 @@ import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.SessionMeaningIndexDialog
 import com.livelingo.android.ui.SessionMeaningRow
 import com.livelingo.android.ui.PrivateSubtitleFileDialog
+import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.SubtitleDraftControls
@@ -299,6 +301,14 @@ private fun TuddyScreen(
     // Explicitly opened SRT/WebVTT file; separate from the active transcript.
     var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
     var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    // Exact, user-authorized draft retained only across Android's audio picker.
+    var pendingSubtitleAudio by remember {
+        mutableStateOf<Pair<Int, List<PrivateSubtitleCue>>?>(null)
+    }
+    // Chosen URI and cue snapshot are RAM-only, removed on background.
+    var subtitleAudioPreview by remember {
+        mutableStateOf<Pair<List<PrivateSubtitleCue>, Uri>?>(null)
+    }
     // A user-confirmed immutable copy survives the Android document picker only.
     var pendingSubtitleDraft by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     // The user selects one completed row from a read-only, unverified
@@ -1407,6 +1417,24 @@ private fun TuddyScreen(
         }
     }
 
+    val openSubtitleAudio = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val pending = pendingSubtitleAudio
+        pendingSubtitleAudio = null
+        if (pending != null && pending.first == generation) {
+            if (uri?.scheme == "content") {
+                subtitleAudioPreview = pending.second to uri
+                subtitleFileCues = null
+            } else {
+                // Cancelled/invalid SAF choice: restore only the exact user-opened
+                // temporary draft rather than losing it after ON_STOP.
+                subtitleFileCues = pending.second
+                error = if (uri == null) "" else "Alleen Android-bestandskeuzes zijn toegestaan."
+            }
+        }
+    }
+
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -1436,6 +1464,7 @@ private fun TuddyScreen(
                 manualText = ""
                 previewArchiveRows = null
                 subtitleFileCues = null
+                subtitleAudioPreview = null
                 archiveStudyOpen = false
                 archiveReaderOpen = false
                 archiveSearchQuery = ""
@@ -1474,6 +1503,8 @@ private fun TuddyScreen(
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             subtitleFileCues = null
+            pendingSubtitleAudio = null
+            subtitleAudioPreview = null
             pendingSubtitleOpenGeneration = null
             archiveStudyOpen = false
             archiveReaderOpen = false
@@ -1813,6 +1844,10 @@ private fun TuddyScreen(
             PrivateSubtitleFileDialog(
                 cues = opened,
                 onDismiss = { subtitleFileCues = null },
+                onChooseAudio = { draftCues ->
+                    pendingSubtitleAudio = generation to draftCues.toList()
+                    openSubtitleAudio.launch(arrayOf("audio/*"))
+                },
                 onSaveCopy = { editedCues, format ->
                     val snapshot = PrivateSubtitleDraftEditor.snapshot(editedCues, format)
                     if (snapshot == null) {
@@ -1823,6 +1858,23 @@ private fun TuddyScreen(
                             "Tuddy-handmatig-ondertitelconcept.vtt"
                         else "Tuddy-handmatig-ondertitelconcept.srt")
                     }
+                }
+            )
+        }
+        subtitleAudioPreview?.let { (audioCues, audioUri) ->
+            LocalSubtitleAudioPreviewDialog(
+                cues = audioCues,
+                audioUri = audioUri,
+                onChangeAudio = {
+                    pendingSubtitleAudio = generation to audioCues.toList()
+                    subtitleAudioPreview = null
+                    openSubtitleAudio.launch(arrayOf("audio/*"))
+                },
+                onDismiss = {
+                    subtitleAudioPreview = null
+                    // Reopen the exact temporary draft as an editable copy.
+                    // The originally picked SRT/VTT is never overwritten.
+                    subtitleFileCues = audioCues
                 }
             )
         }
