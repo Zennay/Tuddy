@@ -93,6 +93,10 @@ internal fun OfflineWordText(
                         else "Geen gecontroleerde lokale betekenis voor dit woord of deze taal.",
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    OfflineWordPronunciation(
+                        word = selectedWord,
+                        language = language
+                    )
                     if (ownMeaning != null) {
                         Text("Mijn eigen notitie (niet geverifieerd): " + ownMeaning,
                             style = MaterialTheme.typography.bodyMedium,
