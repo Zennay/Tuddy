@@ -87,6 +87,8 @@ private fun TuddyScreen() {
         surface = androidx.compose.ui.graphics.Color(0xFF202238)
     )
     val lines = remember { mutableStateListOf<Line>() }
+    val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
+    var pronunciationNotice by remember { mutableStateOf("") }
     val savedVocabulary = remember(context) { PrivateVocabularyDeck(context) }
     var savedWordRevision by remember { mutableIntStateOf(0) }
     val savedWordCount = remember(savedWordRevision) { savedVocabulary.entries().size }
@@ -428,6 +430,7 @@ private fun TuddyScreen() {
     }
 
     fun stop() {
+        captionSpeaker.stop() // No device speech output after Stop/background/clear.
         offlinePreparationEpoch.invalidate() // A stale model receipt never applies after Stop/background.
         textInventory.invalidate() // Late inventory callbacks never publish after Stop/background.
         if (textReceipt.stage == OfflineTextStage.CHECKING) {
@@ -643,6 +646,7 @@ private fun TuddyScreen() {
             lifecycleOwner.lifecycle.removeObserver(observer)
             generation++
             stop() // stop() already releases and nulls Android's recognizer
+            captionSpeaker.close()
         }
     }
 
@@ -751,6 +755,17 @@ private fun TuddyScreen() {
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (pronunciationNotice.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(pronunciationNotice, modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick = {
+                            captionSpeaker.stop()
+                            pronunciationNotice = "Voorlezen gestopt."
+                        }) { Text("Stop stem") }
+                    }
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -1140,6 +1155,16 @@ private fun TuddyScreen() {
                                             color = MaterialTheme.colorScheme.primary),
                                         onSaveWord = ::saveVerifiedWord
                                     )
+                                    TextButton(onClick = {
+                                        if (listening) {
+                                            pronunciationNotice =
+                                                "Stop eerst de microfoon voordat je een vertaling laat voorlezen."
+                                        } else {
+                                            captionSpeaker.speak(line.translated, line.targetCode) {
+                                                pronunciationNotice = it
+                                            }
+                                        }
+                                    }) { Text("🔊 Spreek vertaling uit") }
                                 } else {
                                     Text(line.translated, style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.primary)
@@ -1165,7 +1190,7 @@ private fun TuddyScreen() {
                     }
                 }
                 Text(
-                    "Privacy: gesprekken blijven in tijdelijk geheugen, behalve wanneer je zelf Bewaar gesprek kiest. Alleen zelf bewaarde gecontroleerde basiswoorden blijven privé op je telefoon. De gekozen exportlocatie kan synchroniseren.",
+                    "Privacy: gesprekken blijven tijdelijk, behalve bij expliciete export. Opgeslagen basiswoorden blijven privé op je telefoon. Voorlezen gebruikt uitsluitend stemmen die Android als offline meldt; toestelondersteuning en uitspraak zijn niet gegarandeerd.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
