@@ -3,17 +3,19 @@ package com.livelingo.android
 import android.content.Intent
 
 /**
- * Opt-in Android Sharesheet ingress. Only literal text/plain ACTION_SEND
- * content is accepted; never follow URLs, attachments or HTML providers.
+ * Opt-in Android Sharesheet and text-selection ingress. Accept literal
+ * text/plain ACTION_SEND or ACTION_PROCESS_TEXT only; never follow URLs,
+ * attachments or HTML providers.
  * Importing prepares an editable draft, not an automatic translation/export.
  */
 internal data class IncomingSharedText(val draft: String?, val notice: String?)
 
 internal object SharedPlainTextIntent {
     fun read(intent: Intent?): IncomingSharedText? {
-        if (intent?.action != Intent.ACTION_SEND ||
-            intent.type?.substringBefore(';')?.trim()?.lowercase() != "text/plain"
-        ) return null
+        val action = intent?.action
+        if (action != Intent.ACTION_SEND && action != Intent.ACTION_PROCESS_TEXT) return null
+        if (intent.type?.substringBefore(';')?.trim()?.lowercase() != "text/plain")
+            return null
 
         // Even a mislabeled text/plain send can carry attachments or HTML.
         // Refuse rather than reading or silently downgrading that payload.
@@ -24,14 +26,16 @@ internal object SharedPlainTextIntent {
         }
 
         val supplied = runCatching {
-            intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+            val key = if (action == Intent.ACTION_PROCESS_TEXT)
+                Intent.EXTRA_PROCESS_TEXT else Intent.EXTRA_TEXT
+            intent.getCharSequenceExtra(key)?.toString()
         }.getOrNull()
         val clean = supplied?.let(OfflineTypedCaptionPolicy::normalize)
         return if (clean != null) {
             IncomingSharedText(clean, null)
         } else {
             IncomingSharedText(null,
-                "Gedeelde tekst niet overgenomen. Gebruik platte tekst van maximaal " +
+                "Tekst niet overgenomen. Gebruik platte tekst van maximaal " +
                     "${OfflineTypedCaptionPolicy.MAX_INPUT_UNITS} tekens, zonder stuurtekens.")
         }
     }

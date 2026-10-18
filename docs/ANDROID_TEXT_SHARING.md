@@ -4,6 +4,21 @@ Tuddy kan vanuit het standaard Android-deelmenu als bestemming verschijnen voor 
 
 Na **Delen → Tuddy** opent het normale venster **Gedeelde tekst · eerst controleren**. De tekst is slechts een bewerkbaar concept in het tijdelijke geheugen. Controleer de inhoud, geselecteerde talen en eventuele persoonlijke gegevens. Pas na **Vertaal lokaal** wordt de tekst als nieuwe regel aan het tijdelijke Tuddy-gesprek toegevoegd en via de bestaande ML Kit-tekstvertaler verwerkt. **Annuleren** en naar de achtergrond gaan wissen het open concept.
 
+## Geselecteerde tekst vertalen
+
+Selecteer tekst in een Android-app en kies waar die app het aanbiedt
+**Tekst verwerken / Tuddy**. Android geeft slechts die selectie mee via
+`ACTION_PROCESS_TEXT`, `text/plain` en `EXTRA_PROCESS_TEXT`. Tuddy
+opent exact hetzelfde tijdelijke, bewerkbare bevestigingsvenster als
+via Delen. De selectie wordt **niet** direct vertaald en de originele
+tekst in de andere app wordt **niet** vervangen. Tuddy geeft geen
+gewijzigde tekst als resultaat terug; eerdere apps houden hun eigen data.
+
+Deze systeemactie is niet in elk tekstveld of elke app beschikbaar.
+Ontbrekende selectie, HTML, bestanden, te lange tekst en onverwachte
+stuurtekens worden geweigerd. Ontvangen tekst wordt na eenmalig
+verwerken ook uit de relevante Android-Intent-extra verwijderd.
+
 ## Grenzen en privacy
 
 - **Geen automatische vertaling, opslag, export, microfoonactivatie of serverupload** bij binnenkomst van een deelverzoek.
