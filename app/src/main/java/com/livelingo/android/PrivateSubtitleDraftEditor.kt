@@ -50,6 +50,34 @@ internal object PrivateSubtitleDraftEditor {
         }
     }
 
+    /** Exact, user-selected one-cue adjustment; never retime neighboring cues. */
+    fun adjustCue(
+        current: List<PrivateSubtitleCue>, index: Int,
+        startChangeMs: Long, endChangeMs: Long
+    ): List<PrivateSubtitleCue>? {
+        if (index !in current.indices || current.size > MAX_CUES ||
+            startChangeMs !in setOf(0L, -500L, 500L) ||
+            endChangeMs !in setOf(0L, -500L, 500L) ||
+            (startChangeMs == 0L && endChangeMs == 0L)) return null
+        val old = current[index]
+        val start = old.startMillis + startChangeMs
+        val end = old.endMillis + endChangeMs
+        if (start < 0L || end > MAX_TIME || start >= end ||
+            (index > 0 && start < current[index - 1].startMillis) ||
+            (index < current.lastIndex && start > current[index + 1].startMillis)
+        ) return null
+        return current.toMutableList().apply {
+            this[index] = old.copy(startMillis = start, endMillis = end,
+                startLabel = stamp(start, SubtitleDraftFormat.SRT),
+                endLabel = stamp(end, SubtitleDraftFormat.SRT))
+        }
+    }
+
+    /** Deleting a cue edits only RAM and cannot remove the last row. */
+    fun dropCue(current: List<PrivateSubtitleCue>, index: Int): List<PrivateSubtitleCue>? =
+        if (current.size <= 1 || current.size > MAX_CUES || index !in current.indices) null
+        else current.filterIndexed { position, _ -> position != index }
+
     private fun stamp(time: Long, format: SubtitleDraftFormat): String {
         val separator = if (format == SubtitleDraftFormat.WEBVTT) "." else ","
         return String.format(Locale.ROOT, "%02d:%02d:%02d%s%03d",
