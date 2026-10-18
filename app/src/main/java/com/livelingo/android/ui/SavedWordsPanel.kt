@@ -45,7 +45,8 @@ internal fun SavedWordsPanel(
     deck: PrivateVocabularyDeck,
     revision: Int,
     onChanged: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    allowSpeech: Boolean = true
 ) {
     val allWords = remember(revision) { deck.entries() }
     var search by remember { mutableStateOf("") }
@@ -132,7 +133,8 @@ internal fun SavedWordsPanel(
     if (practiceOpen) {
         WordPracticePanel(
             savedWords = allWords,
-            onDismiss = { practiceOpen = false }
+            onDismiss = { practiceOpen = false },
+            allowSpeech = allowSpeech
         )
         return
     }
@@ -153,9 +155,9 @@ internal fun SavedWordsPanel(
             speaker.close()
         }
     }
-    LaunchedEffect(search, revision) {
+    LaunchedEffect(search, revision, allowSpeech) {
         speaker.stop()
-        audioNotice = ""
+        audioNotice = if (allowSpeech) "" else "Voorlezen uit terwijl de microfoon luistert."
     }
 
     AlertDialog(
@@ -263,11 +265,11 @@ internal fun SavedWordsPanel(
                             }) { Text("Verwijder") }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TextButton(onClick = {
+                            TextButton(enabled = allowSpeech, onClick = {
                                 speaker.speak(word.word, word.language,
                                     LocalSpeechPace.NORMAL) { audioNotice = it }
                             }) { Text("🔊 Hoor woord") }
-                            TextButton(onClick = {
+                            TextButton(enabled = allowSpeech, onClick = {
                                 speaker.speak(word.word, word.language,
                                     LocalSpeechPace.SLOW) { audioNotice = it }
                             }) { Text("Rustig") }
