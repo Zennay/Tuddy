@@ -11,6 +11,17 @@ zelf een offline .ics-agendabestand met uitsluitend datums en aantallen,
 na een afzonderlijke keuze in de Android-bestandskiezer.
 [Meer informatie](docs/OFFLINE_STUDY_FORECAST.md).
 
+## Nieuw: alle geplande kaarten in één gemengde offline ronde
+
+In **Vandaag offline oefenen** kun je nu basiswoorden, eigen zinnen
+en zelfgeschreven woordbetekenissen door elkaar oefenen zonder tussen
+drie schermen te wisselen. De antwoorden verschijnen pas na een tik.
+Je beoordeelt elke kaart afzonderlijk; die keuze wordt uitsluitend
+in de al bestaande privéplanning bewaard. Overslaan laat de kaart
+onbeoordeeld. Er ontstaat geen gezamenlijk leerprofiel of
+automatische vertaalgarantie.
+[Werking en privacy](docs/MIXED_OFFLINE_DAILY_REVIEW.md).
+
 
 ## Nieuw: een eigen voorbereide zin gebruiken in een tekstgesprek
 

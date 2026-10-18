@@ -45,6 +45,7 @@ internal fun DailyStudyHub(
     var phraseReviewOpen by remember { mutableStateOf(false) }
     var ownWordReviewOpen by remember { mutableStateOf(false) }
     var dailyBookOpen by remember { mutableStateOf(false) }
+    var mixedRoundOpen by remember { mutableStateOf(false) }
     var viewRevision by remember { mutableIntStateOf(0) }
     var forecastOpen by remember { mutableStateOf(false) }
 
@@ -65,6 +66,18 @@ internal fun DailyStudyHub(
         return
     }
 
+    if (mixedRoundOpen) {
+        MixedDailyReviewPanel(
+            words = words,
+            ownWords = ownWords,
+            phrases = phrases,
+            onWordChanged = { viewRevision++; onWordChanged() },
+            onOwnWordChanged = { viewRevision++; onOwnWordChanged() },
+            onPhraseChanged = { viewRevision++ },
+            onDismiss = { mixedRoundOpen = false }
+        )
+        return
+    }
     if (forecastOpen) {
         UpcomingReviewForecastDialog(
             words = words,
@@ -138,6 +151,15 @@ internal fun DailyStudyHub(
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (totalDue > 0) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { mixedRoundOpen = true }
+                    ) { Text("🧠 Mix alle kaarten van vandaag · één ronde") }
+                    Text(
+                        "Wisselt tussen leergroepen. Je beoordeelt elke kaart zelf; " +
+                            "overslaan laat de bestaande herhaaldatum intact.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = { dailyBookOpen = true }
