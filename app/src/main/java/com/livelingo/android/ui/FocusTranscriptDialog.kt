@@ -48,18 +48,17 @@ internal fun FocusTranscriptDialog(
     val listState = rememberLazyListState()
     var followLive by remember { mutableStateOf(true) }
     var speakerFilter by remember { mutableStateOf<String?>(null) }
+    var captionQuery by remember { mutableStateOf("") }
     var speakerMenuOpen by remember { mutableStateOf(false) }
     // Columns only when Android reports adequate width; never crush two
     // full-length languages into half a narrow portrait phone screen.
     val isWide = LocalConfiguration.current.screenWidthDp >= 600
     var preferColumns by remember { mutableStateOf(true) }
     val showColumns = isWide && preferColumns
-    val displayedCaptions = when (if (archiveMode) null else speakerFilter) {
-        "A", "B" -> captions.filter { it.speaker == speakerFilter }
-        "?" -> captions.filter { it.speaker == null }
-        else -> captions
-    }
-    val showInterim = !archiveMode && speakerFilter == null
+    val displayedCaptions = SessionCaptionSearch.filter(
+        captions, captionQuery, if (archiveMode) null else speakerFilter
+    )
+    val showInterim = !archiveMode && speakerFilter == null && captionQuery.isBlank()
     val manualScroll = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -69,6 +68,10 @@ internal fun FocusTranscriptDialog(
                 return Offset.Zero
             }
         }
+    }
+
+    LaunchedEffect(captionQuery, speakerFilter) {
+        if (captionQuery.isNotBlank()) listState.scrollToItem(0)
     }
 
     LaunchedEffect(speakerFilter, displayedCaptions.size,
@@ -115,7 +118,11 @@ internal fun FocusTranscriptDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
-                        onClick = { followLive = true },
+                        onClick = {
+                            captionQuery = ""
+                            if (!archiveMode) speakerFilter = null
+                            followLive = true
+                        },
                         enabled = !followLive
                     ) { Text(if (archiveMode) "↓ Laatste archiefregel" else
                         if (followLive) "Live ✓" else "Volg live") }
@@ -152,7 +159,7 @@ internal fun FocusTranscriptDialog(
                                 DropdownMenuItem(text = { Text(title) }, onClick = {
                                     speakerFilter = choice
                                     speakerMenuOpen = false
-                                    followLive = true
+                                    followLive = captionQuery.isBlank()
                                 })
                             }
                         }
@@ -164,6 +171,35 @@ internal fun FocusTranscriptDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                }
+                OutlinedTextField(
+                    value = captionQuery,
+                    onValueChange = { input ->
+                        captionQuery = input.take(120)
+                        if (captionQuery.isNotBlank()) followLive = false
+                    },
+                    label = { Text(if (archiveMode) "Zoek in geopende archiefregels"
+                        else "Zoek in deze live-sessie") },
+                    placeholder = { Text("Origineel, lokale vertaling of eigen uitleg") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (captionQuery.isNotBlank()) {
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("${displayedCaptions.size} gevonden van ${captions.size} regels",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = { captionQuery = "" }) {
+                            Text("Zoekopdracht wissen")
+                        }
+                    }
+                    Text("Zoeken gebruikt alleen afgeronde sessieregels. De " +
+                        "microfoon blijft onafhankelijk werken; live volgen " +
+                        "hervat alleen na een tik op Volg live.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (isWide) {
                     OutlinedButton(
@@ -196,6 +232,8 @@ internal fun FocusTranscriptDialog(
                         item(key = "empty") {
                             Text(
                                 if (archiveMode) "Geen regels in deze archiefselectie. Sluit en wijzig de zoekterm."
+                                 else if (captionQuery.isNotBlank())
+                                    "Geen afgeronde regels met deze zoekterm. Wis de zoekopdracht."
                                  else if (speakerFilter == null)
                                     "Nog geen ondertitels. Sluit de leesmodus en tik op Luister."
                                 else "Geen afgeronde regels met dit handmatige sprekerlabel. Kies Alle sprekers.",
@@ -222,9 +260,10 @@ internal fun FocusTranscriptDialog(
                                     Text("Mijn eigen uitleg (niet geverifieerd; geen export)",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(own, style = MaterialTheme.typography.titleMedium.copy(
-                                        fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale
-                                    ))
+                                    SessionCaptionSearchText(own, captionQuery,
+                                        MaterialTheme.typography.titleMedium.copy(
+                                            fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale
+                                        ))
                                 }
                                 if (showColumns) {
                                     BilingualCaptionColumns(
@@ -234,15 +273,16 @@ internal fun FocusTranscriptDialog(
                                         targetCode = line.targetCode,
                                         status = line.status,
                                         fontScale = fontScale,
-                                        isInterim = false
+                                        isInterim = false,
+                                        searchQuery = captionQuery
                                     )
                                 } else {
-                                    Text(line.original,
+                                    SessionCaptionSearchText(line.original, captionQuery,
                                     style = MaterialTheme.typography.headlineSmall.copy(
                                         fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale
                                     ))
                                     if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
-                                    Text(line.translated,
+                                    SessionCaptionSearchText(line.translated, captionQuery,
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             color = MaterialTheme.colorScheme.primary,
                                             fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale
