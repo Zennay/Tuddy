@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PrivateSubtitleBatchReplace
+import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateSubtitleTimelineNavigation
@@ -79,6 +80,9 @@ internal fun PrivateSubtitleFileDialog(
     var insertStart by remember { mutableStateOf("") }
     var insertEnd by remember { mutableStateOf("") }
     var insertContent by remember { mutableStateOf("") }
+    var clipOpen by remember { mutableStateOf(false) }
+    var clipStart by remember { mutableStateOf("") }
+    var clipEnd by remember { mutableStateOf("") }
     val found = draft.mapIndexed { idx, row -> idx to row }
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
     val current = found.getOrNull(shownIndex)?.second
@@ -194,6 +198,13 @@ internal fun PrivateSubtitleFileDialog(
                             insertContent = ""
                             insertOpen = true
                         }) { Text("+ Nieuwe ondertitel…") }
+                OutlinedButton(onClick = {
+                    clipStart = "00:00:00.000"
+                    clipEnd = draft.lastOrNull()?.endLabel?.replace(',', '.') ?: ""
+                    clipOpen = true
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Text("✂ Maak een ondertitelclip…")
+                }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     OutlinedButton(onClick = { requestSave = SubtitleDraftFormat.SRT }) {
@@ -399,6 +410,65 @@ internal fun PrivateSubtitleFileDialog(
             },
             dismissButton = {
                 TextButton(onClick = { insertOpen = false }) { Text("Annuleren") }
+            }
+        )
+    }
+    if (clipOpen) {
+        val from = PrivateSubtitleTimelineNavigation.timestamp(clipStart)
+        val to = PrivateSubtitleTimelineNavigation.timestamp(clipEnd)
+        val preview = if (from != null && to != null)
+            PrivateSubtitleClip.extract(draft, from, to) else null
+        AlertDialog(
+            onDismissRequest = { clipOpen = false },
+            title = { Text("Ondertitels voor een clip uitsnijden") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Kies zelf een tijdvenster. Regels buiten dit venster " +
+                        "vallen uit het tijdelijke concept; deels overlappende " +
+                        "regels worden op de clipranden afgekapt. Alles begint " +
+                        "daarna vanaf 00:00. Dit is geen audio-/videotimingcontrole.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = clipStart,
+                        onValueChange = { clipStart = it.take(13) },
+                        label = { Text("Clip begint bij · hh:mm:ss.000") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = clipEnd,
+                        onValueChange = { clipEnd = it.take(13) },
+                        label = { Text("Clip eindigt bij · hh:mm:ss.000") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Text(
+                        if (preview == null)
+                            "Geen geldige clip. Kies begin < einde binnen de " +
+                                "huidige ondertitelregels."
+                        else "${preview.retainedCount} regels blijven over, " +
+                            "${preview.clippedCount} aan begin/einde ingekort. " +
+                            "Clip duurt ${preview.windowDurationMs / 1000} seconden.",
+                        style = MaterialTheme.typography.bodyMedium)
+                    Text("Dit verandert alleen het RAM-concept. Herstel haalt " +
+                        "de oorspronkelijke regels terug; voor een nieuwe SRT/VTT-" +
+                        "kopie moet je daarna zelf Bewaar kopie… kiezen.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = preview != null, onClick = {
+                    val confirmed = PrivateSubtitleClip.extract(
+                        draft, from!!, to!!)
+                    if (confirmed != null) {
+                        draft = confirmed.cues
+                        edited = true
+                        query = ""
+                        shownIndex = -1
+                        notice = "Clip met ${confirmed.retainedCount} regels als " +
+                            "tijdelijk concept ingesteld. Bewaar eventueel een nieuwe kopie."
+                    }
+                    clipOpen = false
+                }) { Text("Maak tijdelijke ondertitelclip") }
+            },
+            dismissButton = {
+                TextButton(onClick = { clipOpen = false }) { Text("Annuleren") }
             }
         )
     }
