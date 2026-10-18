@@ -282,6 +282,7 @@ private fun TuddyScreen(
     // The read-only archive is not part of the current live conversation.
     var previewArchiveRows by remember { mutableStateOf<List<TranscriptExportRow>?>(null) }
     var archiveStudyOpen by remember { mutableStateOf(false) }
+    var archiveReaderOpen by remember { mutableStateOf(false) }
     var archiveSubtitleConsentOpen by remember { mutableStateOf(false) }
     var pendingArchiveSubtitleExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var archiveSearchQuery by remember { mutableStateOf("") }
@@ -1368,6 +1369,7 @@ private fun TuddyScreen(
                 manualText = ""
                 previewArchiveRows = null
                 archiveStudyOpen = false
+                archiveReaderOpen = false
                 archiveSearchQuery = ""
                 pendingArchiveExcerpt = null
                 archiveExcerptNotice = ""
@@ -1403,6 +1405,7 @@ private fun TuddyScreen(
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             archiveStudyOpen = false
+            archiveReaderOpen = false
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
             pendingArchiveExcerpt = null
@@ -2242,6 +2245,24 @@ private fun TuddyScreen(
         val archive = previewArchiveRows
         val matchedArchive = if (archive == null) emptyList() else
             PrivateArchiveSearch.filter(archive, archiveSearchQuery)
+        if (archiveReaderOpen && archive != null) {
+            // The source remains the user-selected imported file, NEVER the
+            // live recognizer transcript. Reuse the read-only RAM viewer.
+            FocusTranscriptDialog(
+                captions = matchedArchive.mapIndexed { index, row ->
+                    FocusCaptionLine(
+                        index.toLong(), row.original, row.translated, row.status,
+                        row.sourceCode, row.targetCode
+                    )
+                },
+                interimOriginal = "",
+                interimTranslated = "",
+                listening = false,
+                fontScale = captionSize.scale,
+                onStop = {},
+                onClose = { archiveReaderOpen = false }
+            )
+        }
         if (archiveStudyOpen && archive != null) {
             SessionCaptionStudyDialog(
                 captions = matchedArchive.mapIndexed { index, row ->
@@ -2254,7 +2275,8 @@ private fun TuddyScreen(
                 originLabel = "de gevonden archiefregels"
             )
         }
-        if (archive != null && pendingArchiveExcerpt == null && !archiveStudyOpen) {
+        if (archive != null && pendingArchiveExcerpt == null &&
+            !archiveStudyOpen && !archiveReaderOpen) {
             AlertDialog(
                 onDismissRequest = {
                     pendingArchiveExcerpt = null
@@ -2272,6 +2294,14 @@ private fun TuddyScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(Modifier.height(10.dp))
+                        OutlinedButton(
+                            enabled = !listening && matchedArchive.isNotEmpty(),
+                            onClick = {
+                                captionSpeaker.stop()
+                                archiveReaderOpen = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("▣ Lees gevonden archiefregels groot") }
                         OutlinedButton(
                             enabled = !listening && matchedArchive.any { row ->
                                 row.status == "Lokaal vertaald" &&
