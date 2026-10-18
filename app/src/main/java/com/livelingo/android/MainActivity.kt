@@ -87,14 +87,38 @@ private data class Line(
 )
 
 class MainActivity : ComponentActivity() {
+    // Lives only in Activity memory; no savedInstanceState or external text logs.
+    private var pendingExternalText by mutableStateOf<IncomingSharedText?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { TuddyScreen() }
+        // A configuration recreation must never re-import private text from
+        // the original Intent after it was already dismissed or consumed.
+        pendingExternalText = if (savedInstanceState == null)
+            SharedPlainTextIntent.read(intent) else null
+        // Do not keep the original other-app text in Activity Intent extras.
+        intent?.removeExtra(Intent.EXTRA_TEXT)
+        setContent {
+            TuddyScreen(
+                incomingExternalText = pendingExternalText,
+                onExternalTextConsumed = { pendingExternalText = null }
+            )
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        pendingExternalText = SharedPlainTextIntent.read(intent)
+        intent.removeExtra(Intent.EXTRA_TEXT)
+        setIntent(intent)
     }
 }
 
 @Composable
-private fun TuddyScreen() {
+private fun TuddyScreen(
+    incomingExternalText: IncomingSharedText?,
+    onExternalTextConsumed: () -> Unit
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val colors = darkColorScheme(
@@ -176,6 +200,7 @@ private fun TuddyScreen() {
     var previewInput by remember { mutableStateOf("") }
     var manualText by remember { mutableStateOf("") }
     var quickTypedOpen by remember { mutableStateOf(false) }
+    var draftFromExternalShare by remember { mutableStateOf(false) }
     // The export snapshot exists only between an explicit Save tap and the
     // Android document picker result; no automatic disk/history persistence.
     var pendingTranscriptExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
@@ -885,6 +910,7 @@ private fun TuddyScreen() {
             if (event == Lifecycle.Event.ON_STOP) {
                 focusMode = false
                 quickTypedOpen = false
+                draftFromExternalShare = false
                 manualText = ""
                 previewArchiveRows = null
                 archiveSearchQuery = ""
@@ -913,6 +939,7 @@ private fun TuddyScreen() {
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
             quickTypedOpen = false
+            draftFromExternalShare = false
             manualText = ""
             pendingSpeakerExport = null
             editingCaptionId = null
@@ -920,6 +947,27 @@ private fun TuddyScreen() {
             pendingSingleCaptionDelete = null
             manuallyAssignedSpeakers.clear()
             captionSpeaker.close()
+        }
+    }
+
+    // Android Sharesheet text is only offered as an editable RAM draft.
+    // No auto-submit, network call, persistence or microphone permission.
+    LaunchedEffect(incomingExternalText) {
+        val shared = incomingExternalText
+        if (shared != null) {
+            if (shared.draft == null) {
+                error = shared.notice ?: "Deze gedeelde inhoud is geen ondersteunde platte tekst."
+                quickTypedOpen = false
+                draftFromExternalShare = false
+                manualText = ""
+            } else {
+                stop()
+                manualText = shared.draft
+                quickTypedOpen = true
+                draftFromExternalShare = true
+                error = ""
+            }
+            onExternalTextConsumed()
         }
     }
 
@@ -949,9 +997,11 @@ private fun TuddyScreen() {
             AlertDialog(
                 onDismissRequest = {
                     quickTypedOpen = false
+                    draftFromExternalShare = false
                     manualText = ""
                 },
-                title = { Text("Zin typen · lokaal vertalen") },
+                title = { Text(if (draftFromExternalShare) "Gedeelde tekst · eerst controleren"
+                    else "Zin typen · lokaal vertalen") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
@@ -959,6 +1009,24 @@ private fun TuddyScreen() {
                                 "Bij ontbrekende ML Kit-tekstmodellen kan eerst wifi nodig zijn.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        if (draftFromExternalShare) {
+                            Text(
+                                "Deze tekst kwam uit een andere app. Hij wordt pas na jouw " +
+                                    "bevestiging in het tijdelijke gesprek opgenomen en lokaal " +
+                                    "vertaald. Controleer de inhoud en taal zelf.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        if (draftFromExternalShare) {
+                            TextButton(onClick = {
+                                // Keep the already-reviewed draft in RAM while the
+                                // user adjusts the actual target/source picker.
+                                quickTypedOpen = false
+                                showSettings = true
+                                conversationToolsOpen = false
+                            }) { Text("Wijzig talen · bewaar dit concept") }
+                        }
                         OutlinedTextField(
                             value = manualText,
                             onValueChange = { candidate ->
@@ -986,6 +1054,7 @@ private fun TuddyScreen() {
                         onClick = {
                             if (submitTypedCaption()) {
                                 quickTypedOpen = false
+                                draftFromExternalShare = false
                                 follow = true
                             }
                         }
@@ -994,6 +1063,7 @@ private fun TuddyScreen() {
                 dismissButton = {
                     TextButton(onClick = {
                         quickTypedOpen = false
+                        draftFromExternalShare = false
                         manualText = ""
                     }) { Text("Annuleren") }
                 }
