@@ -73,6 +73,27 @@ internal object PrivateSubtitleDraftEditor {
         }
     }
 
+    /** Insert a fully user-authored cue at an exact user-typed time. */
+    fun insertCue(
+        current: List<PrivateSubtitleCue>,
+        start: Long, end: Long, text: String
+    ): List<PrivateSubtitleCue>? {
+        if (current.isEmpty() || current.size >= MAX_CUES ||
+            start < 0L || end > MAX_TIME || end <= start ||
+            revise(current, 0, text) == null) return null
+        val newCue = PrivateSubtitleCue(
+            startMillis = start, endMillis = end,
+            startLabel = stamp(start, SubtitleDraftFormat.SRT),
+            endLabel = stamp(end, SubtitleDraftFormat.SRT),
+            text = text)
+        val index = current.indexOfFirst { it.startMillis > start }
+            .let { if (it < 0) current.size else it }
+        val result = current.toMutableList().apply { add(index, newCue) }
+        if (snapshot(result, SubtitleDraftFormat.SRT) == null ||
+            snapshot(result, SubtitleDraftFormat.WEBVTT) == null) return null
+        return result
+    }
+
     /** Deleting a cue edits only RAM and cannot remove the last row. */
     fun dropCue(current: List<PrivateSubtitleCue>, index: Int): List<PrivateSubtitleCue>? =
         if (current.size <= 1 || current.size > MAX_CUES || index !in current.indices) null
