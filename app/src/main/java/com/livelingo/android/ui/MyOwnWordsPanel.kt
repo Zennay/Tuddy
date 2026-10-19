@@ -478,10 +478,24 @@ internal fun MyOwnWordsPanel(
                 Button(
                     enabled = items != null && word.isNotBlank() && meaning.isNotBlank(),
                     onClick = {
-                        val saved = deck.save(language, word, meaning)
-                        notice = if (saved) "Jouw eigen betekenis is lokaal opgeslagen."
-                            else "Niet opgeslagen: controleer tekst, dubbele gegevens " +
-                                "of limiet van 120 woorden."
+                        val old = editing
+                        val saved = if (old == null) {
+                            deck.saveNew(language, word, meaning)
+                        } else {
+                            deck.edit(old, meaning)
+                        }
+                        notice = if (saved) {
+                            if (old == null) "Nieuw eigen woord veilig lokaal opgeslagen."
+                            else "Je gekozen eigen betekenis is bewust bijgewerkt."
+                        } else if (old == null) {
+                            "Niet opgeslagen: dit woord bestaat mogelijk al. " +
+                                "Gebruik de knop Bewerk betekenis bij het bestaande woord. " +
+                                "Je eerdere betekenis is behouden."
+                        } else {
+                            "Wijziging geweigerd: dit woord is intussen aangepast, " +
+                                "niet beschikbaar of de nieuwe betekenis is ongeldig. " +
+                                "De huidige woordenlijst is behouden."
+                        }
                         if (saved) {
                             editing = null
                             word = ""
