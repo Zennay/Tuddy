@@ -197,6 +197,23 @@ internal fun LocalSubtitleAudioPreviewDialog(
         playing = false
     }
 
+    // Only user-selected Kurmanji, Sorani and Pashto text can become an
+    // authored personal phrase. Never infer the language or translation.
+    fun openPersonalSubtitlePhrase(cue: PrivateSubtitleCue) {
+        val manualLanguage = chosenSubtitleLanguage
+        if (manualLanguage !in setOf("kmr", "ckb", "ps") || cue.text.isBlank()) {
+            notice = "Kies eerst zelf Kurmanji, Sorani of Pasjtoe als ondertiteltaal."
+            return
+        }
+        pauseAudio()
+        phraseDraftLanguage = manualLanguage
+        phraseDraftText = cue.text.trim()
+        phraseDraftMeaning = ""
+        phraseDraftMeaningLanguage = "nl"
+        phraseDraftApproved = false
+        phraseDraftNotice = ""
+    }
+
     fun cueStart(cue: PrivateSubtitleCue) = cue.startMillis + subtitleOffsetMs
     fun cueEnd(cue: PrivateSubtitleCue) = cue.endMillis + subtitleOffsetMs
     fun cuePlayable(cue: PrivateSubtitleCue) =
@@ -1203,15 +1220,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = active != null && active.text.isNotBlank() &&
                             chosenSubtitleLanguage in setOf("kmr", "ckb", "ps"),
-                        onClick = {
-                            pauseAudio()
-                            phraseDraftLanguage = chosenSubtitleLanguage
-                            phraseDraftText = active?.text?.trim().orEmpty()
-                            phraseDraftMeaning = ""
-                            phraseDraftMeaningLanguage = "nl"
-                            phraseDraftApproved = false
-                            phraseDraftNotice = ""
-                        }
+                        onClick = { active?.let(::openPersonalSubtitlePhrase) }
                     ) { Text("＋ Bewaar deze zin met mijn eigen betekenis…") }
                     Text("Mijn eigen zinnen ondersteunt alleen zelf gekozen Kurmanji, " +
                         "Sorani of Pasjtoe, met een door jou geschreven betekenis in NL of EN. " +
@@ -1563,6 +1572,17 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 }
 
 
+                                OutlinedButton(
+                                    enabled = !guidedActive && cue.text.isNotBlank() &&
+                                        chosenSubtitleLanguage in setOf("kmr", "ckb", "ps"),
+                                    onClick = {
+                                        cuePickerOpen = false
+                                        openPersonalSubtitlePhrase(cue)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("＋ Regel ${index + 1} als eigen zin met betekenis bewaren")
+                                }
                                 Row(modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     TextButton(
