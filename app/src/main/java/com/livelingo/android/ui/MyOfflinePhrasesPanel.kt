@@ -59,6 +59,7 @@ internal fun MyOfflinePhrasesPanel(
     var search by remember { mutableStateOf("") }
     var chosenTopicFilter by remember { mutableStateOf<String?>(null) }
     var manageTopicsOpen by remember { mutableStateOf(false) }
+    var bulkTopicsOpen by remember { mutableStateOf(false) }
     var assigningTopicTo by remember { mutableStateOf<PersonalPhrase?>(null) }
     var revision by remember { mutableIntStateOf(0) }
     var info by remember { mutableStateOf("") }
@@ -332,6 +333,17 @@ internal fun MyOfflinePhrasesPanel(
         return
     }
 
+    if (bulkTopicsOpen) {
+        BulkAssignPrivatePhraseTopicsDialog(
+            notes = topicPracticeNotes,
+            topics = topics,
+            storage = phraseTopics,
+            fromGroup = selectedTopic ?: "__all__",
+            onChanged = { revision++ },
+            onDismiss = { bulkTopicsOpen = false }
+        )
+        return
+    }
     if (manageTopicsOpen) {
         PrivatePhraseTopicsDialog(
             storage = phraseTopics,
@@ -590,6 +602,18 @@ internal fun MyOfflinePhrasesPanel(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { manageTopicsOpen = true }
                 ) { Text("Mijn zinnenthema’s beheren · ${topics.size}/12") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = selectedTopic != null && topics.isNotEmpty() &&
+                        topicPracticeNotes.isNotEmpty(),
+                    onClick = { bulkTopicsOpen = true }
+                ) {
+                    Text("Verplaats ${topicPracticeNotes.size} eigen zinnen naar één thema…")
+                }
+                Text("Kies eerst een specifieke themagroep of 'Zonder thema'. " +
+                    "Je kunt dan die hele groep bewust en atomair verplaatsen. " +
+                    "Zo verandert 'Alle thema’s' nooit per ongeluk je hele zinnenboek.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("Filter mijn eigen zinnen op zelfgekozen thema",
                     style = MaterialTheme.typography.labelMedium)
                 TextButton(onClick = { chosenTopicFilter = null }) {
@@ -919,4 +943,109 @@ internal fun MyOfflinePhrasesPanel(
             }
         )
     }
+}
+
+/**
+ * Explicit group-scoped topic reassignment; does not rewrite phrase text.
+ * Requires a named source group and a consciously selected destination.
+ */
+@Composable
+private fun BulkAssignPrivatePhraseTopicsDialog(
+    notes: List<PersonalPhrase>,
+    topics: List<String>,
+    storage: PrivatePhraseTopics,
+    fromGroup: String,
+    onChanged: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var destination by remember { mutableStateOf<String?>(null) }
+    var accepted by remember { mutableStateOf(false) }
+    var notice by remember { mutableStateOf("") }
+    val sourceLabel = if (fromGroup == "__without__") "Zonder thema" else fromGroup
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Mijn eigen zinnen als groep indelen") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 470.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    "Geselecteerde brongroep: $sourceLabel · ${notes.size} eigen zinnen. " +
+                        "Deze actie wijzigt uitsluitend hun lokale thema. " +
+                        "Zelfgeschreven teksten, betekenissen, favorieten en " +
+                        "herhaalplanning blijven ongewijzigd. Geen uploads.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text("Kies bewust het nieuwe thema", style = MaterialTheme.typography.labelMedium)
+                topics.forEach { name ->
+                    TextButton(onClick = {
+                        destination = name
+                        accepted = false
+                        notice = ""
+                    }) { Text(if (destination == name) "✓ $name" else name) }
+                }
+                TextButton(onClick = {
+                    destination = "__none__"
+                    accepted = false
+                    notice = ""
+                }) { Text(if (destination == "__none__")
+                    "✓ Verwijder alleen de themakoppeling" else "Zonder thema plaatsen") }
+                if (destination != null) {
+                    Text(
+                        "Voorbeeld: $sourceLabel → " +
+                            (if (destination == "__none__") "Zonder thema" else destination) +
+                            ". Bekijk alle eigen zinnen:",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    notes.forEachIndexed { index, item ->
+                        HorizontalDivider()
+                        Text("${index + 1}. ${item.language.uppercase()} · ${item.phrase}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (item.language == "ckb" ||
+                                    item.language == "ps") TextDirection.Rtl
+                                    else TextDirection.Ltr
+                            ))
+                        Text("Huidig thema: ${storage.topicFor(item) ?: "Geen"}",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    TextButton(onClick = { accepted = !accepted }) {
+                        Text(if (accepted) "✓ Deze volledige groep wijzigen"
+                            else "○ Ik heb alle ${notes.size} zinnen bekeken en bevestig")
+                    }
+                }
+                if (notice.isNotBlank()) {
+                    Text(notice, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = destination != null && accepted &&
+                    notes.isNotEmpty() && notes.size <= 80 &&
+                    fromGroup != "__all__",
+                onClick = {
+                    val target = destination!!.takeUnless { it == "__none__" }
+                    val nowMatches = notes.all { phrase ->
+                        val current = storage.topicFor(phrase)
+                        if (fromGroup == "__without__") current == null
+                        else current == fromGroup
+                    }
+                    val result = nowMatches && storage.assignMany(notes, target)
+                    if (result) {
+                        onChanged()
+                        onDismiss()
+                    } else {
+                        notice = "Groep of bronzinnen zijn veranderd, of opslaan is mislukt. " +
+                            "Niets gedeeltelijk gewijzigd. Kies opnieuw vanaf de lijst."
+                        accepted = false
+                    }
+                }
+            ) { Text("Bevestig groepsthema") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annuleren") }
+        }
+    )
 }
