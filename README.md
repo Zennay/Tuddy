@@ -1,5 +1,19 @@
 # Tuddy 🎙️
 
+## Nieuw: hele ondertitelpassage als begeleid oefenfragment
+
+Een langere zin verdeeld over verschillende SRT/VTT-regels kun je nu
+in de bestaande eigen-audiospeler met **A-start** en **B-einde**
+afgrenzen en direct met **Bewaar deze complete A–B-passage** toevoegen
+aan de begeleide luisterroute. Tuddy gebruikt uitsluitend je bestaande
+zelf opgegeven tijdcodes (0,75 s–5 min, maximaal vier kaartjes en acht
+markeringen), toont de bronpassage en laat jou de volgorde en 1×/3×/5×
+herhalingen kiezen. Dit start geen audio, wijzigt geen documenten en
+gebruikt geen netwerk-ASR. [Handleiding](docs/LOCAL_AUDIO_TIME_BOOKMARKS.md).
+
+---
+
+
 ## Nieuw: ondertitelregel meteen aan je offline oefenroute toevoegen
 
 In **▶ Eigen audio met tijdcodes afspelen…** kun je nu een actieve
