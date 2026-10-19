@@ -64,6 +64,7 @@ internal fun MyOfflinePhrasesPanel(
     var revision by remember { mutableIntStateOf(0) }
     var info by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
+    var pendingGroupRemoval by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var practiceOpen by remember { mutableStateOf(false) }
     var scheduledOpen by remember { mutableStateOf(false) }
     var startScheduleConsent by remember { mutableStateOf(false) }
@@ -328,6 +329,73 @@ internal fun MyOfflinePhrasesPanel(
                     pasteLines = ""
                     pasteError = ""
                 }) { Text("Annuleren") }
+            }
+        )
+        return
+    }
+
+    val removingGroup = pendingGroupRemoval
+    if (removingGroup != null) {
+        AlertDialog(
+            onDismissRequest = { pendingGroupRemoval = null },
+            title = { Text("Eigen zinnen uit deze themagroep wissen?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Je staat op het punt ${removingGroup.size} zelfgeschreven " +
+                            "zinnen uit de gekozen themagroep op dit toestel te verwijderen. " +
+                            "Hieronder staat de HELE selectie. Dit wist ook bijbehorende " +
+                            "favorieten en herhaaldatums voor deze zinnen, maar laat " +
+                            "andere thema's, zinnen en afspraken intact.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        "Maak eventueel eerst zelf een privé-back-up via 'Bewaar back-up'. " +
+                            "Deze knop verstuurt niets en de verwijdering kan niet " +
+                            "automatisch ongedaan worden gemaakt.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    removingGroup.forEachIndexed { index, item ->
+                        HorizontalDivider()
+                        Text("${index + 1}. ${item.language.uppercase()} · ${item.phrase}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (item.language == "ckb" ||
+                                    item.language == "ps") TextDirection.Rtl
+                                    else TextDirection.Ltr
+                            ))
+                        Text("Eigen betekenis: ${item.ownMeaning}",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val removed = deck.removeMany(removingGroup)
+                    if (removed) {
+                        revision++
+                        if (editingPhrase?.let { it in removingGroup } == true) {
+                            editingPhrase = null
+                            phrase = ""
+                            meaning = ""
+                        }
+                    }
+                    info = if (removed)
+                        "${removingGroup.size} eigen zinnen uit één themagroep gewist. " +
+                            "Andere zinnen en de themanamen zijn behouden."
+                    else "Verwijderen geweigerd: de eigen lijst is gewijzigd, beschadigd " +
+                        "of niet schrijfbaar. Je bestaande zinnen zijn behouden."
+                    pendingGroupRemoval = null
+                }) { Text("Verwijder uitsluitend deze ${removingGroup.size} zinnen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingGroupRemoval = null }) {
+                    Text("Behoud al mijn zinnen")
+                }
             }
         )
         return
@@ -613,6 +681,18 @@ internal fun MyOfflinePhrasesPanel(
                 Text("Kies eerst een specifieke themagroep of 'Zonder thema'. " +
                     "Je kunt dan die hele groep bewust en atomair verplaatsen. " +
                     "Zo verandert 'Alle thema’s' nooit per ongeluk je hele zinnenboek.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = selectedTopic != null && topicPracticeNotes.isNotEmpty() &&
+                        phrases != null,
+                    onClick = { pendingGroupRemoval = topicPracticeNotes.toList() }
+                ) {
+                    Text("Wis mijn ${topicPracticeNotes.size} zinnen uit dit thema…")
+                }
+                Text("Alleen de expliciet gekozen themagroep, nooit automatisch " +
+                    "je volledige eigen zinnenboek. Na een volledige preview en " +
+                    "jouw aparte bevestiging worden de zinnen atomair verwijderd.",
                     style = MaterialTheme.typography.bodySmall)
                 Text("Filter mijn eigen zinnen op zelfgekozen thema",
                     style = MaterialTheme.typography.labelMedium)

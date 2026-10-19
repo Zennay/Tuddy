@@ -247,6 +247,24 @@ internal class PrivatePhraseDeck(context: Context) {
     }
 
     /**
+     * Explicit bulk removal from a user-reviewed selection of immutable own
+     * phrases. Unlike looping over remove(), this writes all affected phrases,
+     * favorites, schedules and topic assignments atomically or not at all.
+     * Prevents a stale dialog from deleting notes edited since its preview.
+     */
+    @Synchronized
+    fun removeMany(snapshot: List<PersonalPhrase>): Boolean {
+        if (snapshot.isEmpty() || snapshot.size > MAX_ROWS) return false
+        val selected = snapshot.toSet()
+        if (selected.size != snapshot.size) return false
+        val current = decode() ?: return false
+        if (!current.containsAll(selected)) return false
+        val remaining = current.filterNot { it in selected }
+        if (current.size - remaining.size != selected.size) return false
+        return write(remaining)
+    }
+
+    /**
      * Portable TSV matches the strict self-authored import format byte-for-byte.
      * Only user notes are included; no transcripts, model outputs or cloud calls.
      */
