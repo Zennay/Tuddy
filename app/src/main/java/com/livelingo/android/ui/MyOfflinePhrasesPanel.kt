@@ -71,6 +71,9 @@ internal fun MyOfflinePhrasesPanel(
     var editingPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var importSource by remember { mutableStateOf("json") }
+    var pasteOpen by remember { mutableStateOf(false) }
+    var pasteLines by remember { mutableStateOf("") }
+    var pasteError by remember { mutableStateOf("") }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingTsvExport by remember { mutableStateOf<ByteArray?>(null) }
     var printableConsent by remember { mutableStateOf(false) }
@@ -232,6 +235,102 @@ internal fun MyOfflinePhrasesPanel(
         }
     }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
+
+    if (pasteOpen) {
+        AlertDialog(
+            onDismissRequest = { pasteOpen = false; pasteLines = ""; pasteError = "" },
+            title = { Text("Plak mijn eigen zinnen · offline") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "Kopieer uit jouw eigen notities maximaal 40 regels. Gebruik per regel " +
+                            "TWEE tabgescheiden kolommen: eigen zin ↹ eigen betekenis. " +
+                            "De taalkeuzes uit dit scherm bepalen het taallabel, niet een " +
+                            "spraak- of vertaalmodel. Er wordt niets automatisch opgeslagen " +
+                            "of gedeeld.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        "Huidige invoertalen: ${language.uppercase()} → " +
+                            "${meaningLanguage.uppercase()}. Wijzig deze eerst in het " +
+                            "hoofdscherm als dat niet klopt.",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    OutlinedTextField(
+                        value = pasteLines,
+                        onValueChange = { incoming ->
+                            if (incoming.length <= 12000) {
+                                pasteLines = incoming
+                                pasteError = ""
+                            } else pasteError = "Maximaal 12.000 tekens; geen tekst is overgenomen."
+                        },
+                        label = { Text("Mijn zelfgeschreven zin [tab] eigen betekenis") },
+                        supportingText = { Text("Geen kopregel nodig. Max. 40 regels, per regel precies één tab.") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 4,
+                        maxLines = 10
+                    )
+                    if (pasteError.isNotBlank()) {
+                        Text(pasteError, color = MaterialTheme.colorScheme.error)
+                    }
+                    Text(
+                        "Een volledige voorbeeldlijst verschijnt vóór toevoegen of vervangen. " +
+                            "Bestaande betekenissen blijven bij samenvoegen behouden.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val lines = pasteLines.split('\n').map { it.removeSuffix("\r") }
+                        .dropLastWhile { it.isEmpty() }
+                    if (lines.size !in 1..40 || lines.any { it.isBlank() }) {
+                        pasteError = "Gebruik 1 tot 40 niet-lege regels zonder lege tussenregels."
+                    } else {
+                        val rows = lines.map { it.split('\t') }
+                        if (rows.any { it.size != 2 || it[0].isBlank() || it[1].isBlank() }) {
+                            pasteError = "Iedere regel moet precies twee gevulde tabkolommen bevatten."
+                        } else {
+                            val tsv = buildString {
+                                append("language\\tphrase\\tmeaningLanguage\\townMeaning\\n")
+                                rows.forEach { cells ->
+                                    append(language).append('\t').append(cells[0].trim())
+                                    append('\t').append(meaningLanguage).append('\t')
+                                        .append(cells[1].trim()).append('\n')
+                                }
+                            }
+                            val parsed = deck.previewTsvImport(tsv.toByteArray(Charsets.UTF_8))
+                            if (parsed == null) {
+                                pasteError = "Een of meer regels zijn ongeldig of dubbel. " +
+                                    "Maximaal 120 tekens per zin en 180 per betekenis; " +
+                                    "alles blijft ongewijzigd."
+                            } else {
+                                pendingImport = parsed
+                                importSource = "paste"
+                                pasteOpen = false
+                                pasteLines = ""
+                                pasteError = ""
+                                info = "Zelfgeschreven tekst gecontroleerd. Bekijk iedere " +
+                                    "zin vóór je zelf samenvoegen of vervangen kiest."
+                            }
+                        }
+                    }
+                }) { Text("Controleer alle geplakte zinnen") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pasteOpen = false
+                    pasteLines = ""
+                    pasteError = ""
+                }) { Text("Annuleren") }
+            }
+        )
+        return
+    }
 
     if (manageTopicsOpen) {
         PrivatePhraseTopicsDialog(
@@ -432,6 +531,21 @@ internal fun MyOfflinePhrasesPanel(
                 Text("Maak een zelfstandig HTML-zinnenboek voor bekijken of afdrukken " +
                     "zonder internet. Alleen jouw eigen zinnen, niet geverifieerd.",
                     style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        pendingImport = null
+                        pasteLines = ""
+                        pasteError = ""
+                        pasteOpen = true
+                    }
+                ) { Text("Plak meerdere eigen zinnen uit notities…") }
+                Text(
+                    "Snel toevoegen zonder bestand: één zelfgeschreven zin en betekenis " +
+                        "per tabgescheiden regel. Je kiest beide talen hierboven. " +
+                        "Pas na volledige preview en je eigen bevestiging wordt iets bewaard.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
@@ -702,17 +816,40 @@ internal fun MyOfflinePhrasesPanel(
         val mergeFits = phrases != null && phrases.size + newCount <= 80
         AlertDialog(
             onDismissRequest = { pendingImport = null },
-            title = { Text(if (importSource == "tsv")
+            title = { Text(if (importSource == "paste")
+                "Geplakte eigen zinnen bekijken" else if (importSource == "tsv")
                 "Eigen zinnenlijst importeren?" else "Eigen zinnen vervangen?") },
             text = {
-                Text("Geselecteerd: ${imported.size} eigen zinnen. " +
-                    "${newCount} nieuw, ${duplicateCount} bestaan al in je privé-lijst. " +
-                    "Samenvoegen bewaart altijd je bestaande tekst en betekenis bij " +
-                    "een dubbele zin. Vervangen verwijdert de huidige lijst en " +
-                    "zet alleen het gekozen bestand terug. " +
-                    (if (mergeFits) "Samenvoegen past binnen 80 zinnen."
-                    else "Samenvoegen kan niet: beschadigde lijst of meer dan 80 zinnen.") +
-                    " Dit is geen gecontroleerde vertaling.")
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    Text("Geselecteerd: ${imported.size} eigen zinnen. " +
+                        "${newCount} nieuw, ${duplicateCount} bestaan al in je privé-lijst. " +
+                        "Samenvoegen bewaart altijd je bestaande tekst en betekenis bij " +
+                        "een dubbele zin. Vervangen verwijdert de huidige lijst en " +
+                        "zet alleen de hieronder getoonde zinnen terug. " +
+                        (if (mergeFits) "Samenvoegen past binnen 80 zinnen."
+                        else "Samenvoegen kan niet: beschadigde lijst of meer dan 80 zinnen.") +
+                        " Dit is geen gecontroleerde vertaling.")
+                    Text("Volledige gecontroleerde import · geen opslag tot bevestiging",
+                        style = MaterialTheme.typography.labelMedium)
+                    imported.forEachIndexed { index, record ->
+                        HorizontalDivider()
+                        Text("${index + 1}. ${record.language.uppercase()} → " +
+                            "${record.meaningLanguage.uppercase()}",
+                            style = MaterialTheme.typography.labelSmall)
+                        Text(record.phrase,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (record.language == "ckb" ||
+                                    record.language == "ps") TextDirection.Rtl
+                                    else TextDirection.Ltr
+                            ))
+                        Text("Eigen betekenis: ${record.ownMeaning}",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             },
             confirmButton = {
                 Column {
