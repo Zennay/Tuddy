@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +39,8 @@ internal fun ScheduledPhraseReviewPanel(
     var index by remember { mutableIntStateOf(0) }
     var revealed by remember { mutableStateOf(false) }
     var reverse by remember { mutableStateOf(false) }
+    var writeFirst by remember { mutableStateOf(false) }
+    var typedAnswer by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
     val current = due.getOrNull(index)
     val langNames = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
@@ -75,9 +78,19 @@ internal fun ScheduledPhraseReviewPanel(
                     val answer = if (reverse) phrase.phrase else phrase.ownMeaning
                     Text("Zin ${index + 1} van ${due.size} · ${langNames[phrase.language]}",
                         style = MaterialTheme.typography.labelMedium)
-                    TextButton(onClick = { reverse = !reverse; revealed = false }) {
+                    TextButton(onClick = {
+                        reverse = !reverse
+                        revealed = false
+                        typedAnswer = ""
+                    }) {
                         Text(if (reverse) "Betekenis → eigen zin ⇄" else "Eigen zin → betekenis ⇄")
                     }
+                    TextButton(onClick = {
+                        writeFirst = !writeFirst
+                        typedAnswer = ""
+                        revealed = false
+                    }) { Text(if (writeFirst) "✓ Zelf antwoord schrijven" else
+                        "✍ Zelf antwoord schrijven") }
                     HorizontalDivider()
                     Text(
                         prompt,
@@ -86,7 +99,32 @@ internal fun ScheduledPhraseReviewPanel(
                                 else TextDirection.Ltr
                         )
                     )
+                    if (writeFirst && !revealed) {
+                        OutlinedTextField(
+                            value = typedAnswer,
+                            onValueChange = { typedAnswer = it.take(220) },
+                            label = { Text(if (reverse) "Mijn eigen zin" else "Mijn eigen betekenis") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = if (reverse && rtl) TextDirection.Rtl
+                                    else TextDirection.Ltr
+                            )
+                        )
+                        Text("Alleen tijdelijk in dit scherm; geen automatische taalcontrole.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                     if (revealed) {
+                        if (writeFirst) {
+                            Text("Mijn getypte poging:", style = MaterialTheme.typography.labelMedium)
+                            Text(typedAnswer.ifBlank { "(niet ingevuld)" },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (reverse && rtl) TextDirection.Rtl
+                                        else TextDirection.Ltr
+                                ))
+                            Text("Vergelijk zelf met je oorspronkelijke antwoord hieronder.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                         Text(
                             answer,
                             style = MaterialTheme.typography.titleLarge.copy(
@@ -105,6 +143,7 @@ internal fun ScheduledPhraseReviewPanel(
                                         onChanged()
                                         index++
                                         revealed = false
+                                        typedAnswer = ""
                                         notice = ""
                                     } else notice = "Opslaan mislukt; je beoordeling is niet onthouden."
                                 }
@@ -116,6 +155,7 @@ internal fun ScheduledPhraseReviewPanel(
                                         onChanged()
                                         index++
                                         revealed = false
+                                        typedAnswer = ""
                                         notice = ""
                                     } else notice = "Opslaan mislukt; je beoordeling is niet onthouden."
                                 }
