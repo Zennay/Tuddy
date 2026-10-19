@@ -77,6 +77,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var rangeToolsOpen by remember { mutableStateOf(false) }
     // Up to eight user-tapped audio moments. No cue text, audio bytes or storage.
     var audioBookmarks by remember { mutableStateOf<List<Long>>(emptyList()) }
+    // Four reusable A–B practice cards within this private player session.
+    var savedPracticePassages by remember {
+        mutableStateOf<List<Pair<Long, Long>>>(emptyList())
+    }
     var bookmarkToolsOpen by remember { mutableStateOf(false) }
     var bookmarkStartMs by remember { mutableLongStateOf(-1L) }
     var bookmarkEndMs by remember { mutableLongStateOf(-1L) }
@@ -107,6 +111,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         rangeRepeating = false
         rangeToolsOpen = false
         audioBookmarks = emptyList()
+        savedPracticePassages = emptyList()
         bookmarkToolsOpen = false
         bookmarkStartMs = -1L
         bookmarkEndMs = -1L
@@ -479,6 +484,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     }
                                     TextButton(onClick = {
                                         audioBookmarks = audioBookmarks.filterNot { it == mark }
+                                        savedPracticePassages = savedPracticePassages.filterNot {
+                                            it.first == mark || it.second == mark
+                                        }
                                         if (bookmarkStartMs == mark || bookmarkEndMs == mark) {
                                             bookmarkStartMs = -1L
                                             bookmarkEndMs = -1L
@@ -486,6 +494,86 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         }
                                         notice = "Eigen audiomarkering verwijderd."
                                     }, modifier = Modifier.weight(1f)) { Text("Wis") }
+                                }
+                            }
+                        }
+                        Text("Mijn tijdelijke oefenfragmenten (${savedPracticePassages.size}/4)",
+                            style = MaterialTheme.typography.titleSmall)
+                        OutlinedButton(
+                            enabled = bookmarkBounds() != null &&
+                                savedPracticePassages.size < 4 &&
+                                bookmarkBounds() !in savedPracticePassages,
+                            onClick = {
+                                val bounds = bookmarkBounds()
+                                if (bounds != null && bounds !in savedPracticePassages &&
+                                    savedPracticePassages.size < 4) {
+                                    savedPracticePassages = savedPracticePassages + bounds
+                                    notice = "A–B-fragment opgeslagen voor deze audiosessie."
+                                }
+                            }, modifier = Modifier.fillMaxWidth()
+                        ) { Text("＋ Bewaar gekozen A–B als oefenfragment") }
+                        if (savedPracticePassages.isEmpty()) {
+                            Text("Bewaar A en B om meerdere uitspraken in één sessie terug te vinden.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        savedPracticePassages.forEachIndexed { index, passage ->
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text("Fragment ${index + 1} · ${clock(passage.first)} – " +
+                                    clock(passage.second),
+                                    style = MaterialTheme.typography.bodyMedium)
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        enabled = prepared && passage.first in audioBookmarks &&
+                                            passage.second in audioBookmarks,
+                                        onClick = {
+                                            // Seek before switching repeat modes so the old
+                                            // bounds can never cancel the selected new preset.
+                                            seekTo(passage.first)
+                                            bookmarkStartMs = passage.first
+                                            bookmarkEndMs = passage.second
+                                            loopCueIndex = -1
+                                            rangeRepeating = false
+                                            bookmarkRepeating = true
+                                            completedPasses = 0
+                                            lastLoopAtMs = 0L
+                                            notice = "Fragment ${index + 1} actief. " +
+                                                "Druk op Afspelen indien gepauzeerd."
+                                        }, modifier = Modifier.weight(2f)
+                                    ) { Text("▶ Oefen") }
+                                    TextButton(
+                                        enabled = index > 0,
+                                        onClick = {
+                                            savedPracticePassages =
+                                                savedPracticePassages.toMutableList().apply {
+                                                    add(index - 1, removeAt(index))
+                                                }
+                                        }, modifier = Modifier.weight(1f)
+                                    ) { Text("↑") }
+                                    TextButton(
+                                        enabled = index < savedPracticePassages.lastIndex,
+                                        onClick = {
+                                            savedPracticePassages =
+                                                savedPracticePassages.toMutableList().apply {
+                                                    add(index + 1, removeAt(index))
+                                                }
+                                        }, modifier = Modifier.weight(1f)
+                                    ) { Text("↓") }
+                                    TextButton(
+                                        onClick = {
+                                            savedPracticePassages =
+                                                savedPracticePassages.filterIndexed { i, _ ->
+                                                    i != index
+                                                }
+                                            if (bookmarkRepeating &&
+                                                bookmarkStartMs == passage.first &&
+                                                bookmarkEndMs == passage.second) {
+                                                bookmarkRepeating = false
+                                                completedPasses = 0
+                                            }
+                                            notice = "Oefenfragment uit deze sessie verwijderd."
+                                        }, modifier = Modifier.weight(1f)
+                                    ) { Text("Wis") }
                                 }
                             }
                         }
