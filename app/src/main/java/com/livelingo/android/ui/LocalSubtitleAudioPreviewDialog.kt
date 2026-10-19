@@ -12,6 +12,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleAudioAlignment
 import com.livelingo.android.PrivateSubtitleClip
+import com.livelingo.android.TargetCatalog
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -58,6 +61,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     audioUri: Uri,
     onChangeAudio: () -> Unit,
     onApplyAdjustedCues: (List<PrivateSubtitleCue>) -> Unit,
+    readOwnMeaning: (String, String) -> String?,
+    saveOwnMeaning: (String, String, String) -> Boolean,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -111,6 +116,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var confirmApplyOpen by remember { mutableStateOf(false) }
     var confirmClipOpen by remember { mutableStateOf(false) }
     var cueQuery by remember { mutableStateOf("") }
+    // Imported subtitle files have no trusted language marker: user picks it.
+    var chosenSubtitleLanguage by remember(audioUri) { mutableStateOf<String?>(null) }
+    var wordLanguageMenuOpen by remember { mutableStateOf(false) }
 
     fun closeAudio() {
         val old = player
@@ -146,6 +154,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         confirmApplyOpen = false
         confirmClipOpen = false
         cueQuery = ""
+        chosenSubtitleLanguage = null
+        wordLanguageMenuOpen = false
         lastLoopAtMs = 0L
         completedPasses = 0
         if (old != null) runCatching {
@@ -1078,8 +1088,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     ) { Text(if (rangeRepeating) "Stop A–B-herhaling ✓"
                         else "↻ Herhaal mijn A–B-passage") }
                     if (rangeBounds() != null) {
-                        Text("Gekozen bronpassage: regel $"+"{rangeStartIndex + 1} tot en met " +
-                            "$"+"{rangeEndIndex + 1} · $"+"{clock(rangeBounds()!!.first)} – " +
+                        Text("Gekozen bronpassage: regel ${rangeStartIndex + 1} tot en met " +
+                            "${rangeEndIndex + 1} · ${clock(rangeBounds()!!.first)} – " +
                             clock(rangeBounds()!!.second) +
                             ". Alleen jouw SRT/VTT-tijdcodes, geen automatische audio-uitlijning.",
                             style = MaterialTheme.typography.bodySmall)
@@ -1117,17 +1127,55 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             " · in audio ${clock(cueStart(active!!))}"
                     else "Geen ondertitel actief op deze audiopositie.",
                         style = MaterialTheme.typography.labelLarge)
+                    Text("Woordkaarten bij je eigen SRT/VTT: kies zelf de teksttaal. " +
+                        "Onbekende talen krijgen geen verzonnen vertaling of woordtiming.",
+                        style = MaterialTheme.typography.labelSmall)
+                    Box {
+                        TextButton(onClick = { wordLanguageMenuOpen = true }) {
+                            val languageLabel = TargetCatalog.targets.firstOrNull {
+                                it.code == chosenSubtitleLanguage
+                            }?.title ?: "Kies de taal van mijn ondertiteltekst…"
+                            Text(languageLabel)
+                        }
+                        DropdownMenu(
+                            expanded = wordLanguageMenuOpen,
+                            onDismissRequest = { wordLanguageMenuOpen = false }
+                        ) {
+                            TargetCatalog.targets.forEach { language ->
+                                DropdownMenuItem(
+                                    text = { Text(language.title) },
+                                    onClick = {
+                                        chosenSubtitleLanguage = language.code
+                                        wordLanguageMenuOpen = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                     Column(
                         modifier = Modifier.fillMaxWidth().weight(1f)
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(active?.text.orEmpty().ifBlank {
-                            "Gebruik Vorige/Volgende om naar een ondertitel te springen."
-                        }, style = MaterialTheme.typography.headlineMedium.copy(
-                            textDirection = TextDirection.ContentOrRtl
-                        ))
+                        if (active == null) {
+                            Text("Gebruik Vorige/Volgende om naar een ondertitel te springen.",
+                                style = MaterialTheme.typography.headlineMedium)
+                        } else {
+                            OfflineWordText(
+                                text = active.text,
+                                language = chosenSubtitleLanguage,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    textDirection = TextDirection.ContentOrRtl),
+                                readOwnMeaning = readOwnMeaning,
+                                saveOwnMeaning = saveOwnMeaning,
+                                allowSpeech = false
+                            )
+                        }
                     }
+                    Text("Tik op een woord voor de bestaande lokale woordkaart. " +
+                        "Je eigen betekenis wordt uitsluitend na afzonderlijk Bewaar " +
+                        "opgeslagen in Mijn eigen woorden; het audiobestand blijft ongewijzigd.",
+                        style = MaterialTheme.typography.labelSmall)
                 } else {
                     Text("Geen audio geladen. Je ondertitels blijven in de " +
                         "tijdelijke editor; niets wordt automatisch bewaard.",

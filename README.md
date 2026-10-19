@@ -1,5 +1,19 @@
 # Tuddy 🎙️
 
+## Nieuw: tik op ondertitelwoorden tijdens je eigen audio
+
+In de SRT/VTT-audiospeler kun je nu een teksttaal kiezen en meteen op
+een woord in de actieve ondertitel tikken. De bestaande lokale woordkaart
+toont alleen beperkte gecontroleerde basisbetekenissen en laat je een
+**zelf bedachte betekenis** na expliciete toestemming toevoegen aan
+**Mijn eigen woorden**. Dat is een blijvende app-private woordnotitie,
+terwijl het audio/SRT-bestand en luisterfragmenten tijdelijk blijven.
+Geen cloud-vertaling of automatische taalherkenning.
+[Bediening en privacy](docs/LOCAL_SUBTITLE_AUDIO_PREVIEW.md).
+
+---
+
+
 ## Nieuw: mijn privé luisteroverzicht na een oefenroute
 
 Open in de eigen-audiospeler de audiomarkeringen en kies **Mijn privé
