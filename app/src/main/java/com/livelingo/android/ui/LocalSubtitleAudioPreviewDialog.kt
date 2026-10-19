@@ -97,6 +97,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var guidedIndex by remember { mutableIntStateOf(0) }
     var guidedRounds by remember { mutableIntStateOf(1) }
     var guidedPasses by remember { mutableIntStateOf(0) }
+    // Human judgement only: no speech recognition or pronunciation scoring.
+    var passageRatings by remember {
+        mutableStateOf<Map<Pair<Long, Long>, String>>(emptyMap())
+    }
+    var guidedNeedsOnly by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
     var confirmApplyOpen by remember { mutableStateOf(false) }
@@ -123,6 +128,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         guidedQueue = emptyList()
         guidedIndex = 0
         guidedPasses = 0
+        passageRatings = emptyMap()
+        guidedNeedsOnly = false
         bookmarkToolsOpen = false
         bookmarkStartMs = -1L
         bookmarkEndMs = -1L
@@ -532,6 +539,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         savedPracticePassages = savedPracticePassages.filterNot {
                                             it.first == mark || it.second == mark
                                         }
+                                        passageRatings = passageRatings.filterKeys {
+                                            it.first != mark && it.second != mark
+                                        }
                                         if (bookmarkStartMs == mark || bookmarkEndMs == mark) {
                                             bookmarkStartMs = -1L
                                             bookmarkEndMs = -1L
@@ -612,6 +622,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                                 savedPracticePassages.filterIndexed { i, _ ->
                                                     i != index
                                                 }
+                                            passageRatings = passageRatings - passage
                                             if (bookmarkRepeating &&
                                                 bookmarkStartMs == passage.first &&
                                                 bookmarkEndMs == passage.second) {
@@ -622,11 +633,56 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         }, modifier = Modifier.weight(1f)
                                     ) { Text("Wis") }
                                 }
+                                Text("Mijn eigen luisterinschatting, geen automatisch taalniveau",
+                                    style = MaterialTheme.typography.labelSmall)
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    listOf(
+                                        "repeat" to "Nog oefenen",
+                                        "okay" to "Gaat goed",
+                                        "easy" to "Makkelijk"
+                                    ).forEach { (choice, label) ->
+                                        TextButton(
+                                            enabled = !guidedActive,
+                                            modifier = Modifier.weight(1f),
+                                            onClick = {
+                                                passageRatings = passageRatings +
+                                                    (passage to choice)
+                                            }
+                                        ) { Text((if (passageRatings[passage] == choice)
+                                            "✓ " else "") + label,
+                                            style = MaterialTheme.typography.labelSmall) }
+                                    }
+                                }
                             }
                         }
                         HorizontalDivider()
                         Text("Begeleide A–B-oefenroute",
                             style = MaterialTheme.typography.titleSmall)
+                        val needsPractice = savedPracticePassages.filter {
+                            passageRatings[it] == "repeat"
+                        }
+                        Text("Zelf beoordeeld: " +
+                            "${needsPractice.size} nog oefenen · " +
+                            "${savedPracticePassages.count { passageRatings[it] == "okay" }} gaat goed · " +
+                            "${savedPracticePassages.count { passageRatings[it] == "easy" }} makkelijk.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = !guidedActive,
+                                onClick = { guidedNeedsOnly = false }
+                            ) { Text((if (!guidedNeedsOnly) "✓ " else "") + "Alle fragmenten") }
+                            TextButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = !guidedActive && needsPractice.isNotEmpty(),
+                                onClick = { guidedNeedsOnly = true }
+                            ) { Text((if (guidedNeedsOnly) "✓ " else "") +
+                                "Alleen nog oefenen") }
+                        }
+                        val practiceCandidates =
+                            if (guidedNeedsOnly) needsPractice else savedPracticePassages
                         Text("Speel mijn opgeslagen fragmenten in gekozen volgorde " +
                             "achter elkaar af. Begin bewust met Afspelen als audio gepauzeerd is. " +
                             "Bij voltooiing pauzeert de speler vanzelf; Android-background blijft pauzeren.",
@@ -645,9 +701,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = guidedActive || (prepared &&
-                                savedPracticePassages.isNotEmpty() &&
-                                savedPracticePassages.size <= 4 &&
-                                savedPracticePassages.all { (start, end) ->
+                                practiceCandidates.isNotEmpty() &&
+                                practiceCandidates.size <= 4 &&
+                                practiceCandidates.all { (start, end) ->
                                     start in audioBookmarks && end in audioBookmarks &&
                                         start >= 0L && end <= durationMs &&
                                         end - start in 750L..300_000L
@@ -661,7 +717,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     guidedPasses = 0
                                     notice = "Oefenroute gestopt. Audio staat gepauzeerd."
                                 } else {
-                                    val snapshot = savedPracticePassages.toList()
+                                    val snapshot = practiceCandidates.toList()
                                     if (prepared && snapshot.isNotEmpty()) {
                                         // Seek before activating the queue to avoid
                                         // accidental cancellation by an old repeat mode.
