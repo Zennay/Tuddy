@@ -168,18 +168,20 @@ internal fun OfflineStudyFlashcards(
                         Text(if (mode == PracticeMode.TYPE) "Antwoord typen ✓" else "Antwoord typen")
                     }
 
-                    TextButton(
-                        enabled = personalPhrases.orEmpty().any {
-                            PrivatePhraseGap.from(it) != null
-                        },
-                        onClick = {
-                            filter = PracticeFilter.OWN_PHRASES
-                            mode = PracticeMode.GAP
-                        }
-                    ) {
-                        Text(if (mode == PracticeMode.GAP) "Ontbrekend woord ✓"
-                            else "Ontbrekend woord")
-                    }
+                }
+                OutlinedButton(
+                    enabled = personalPhrases.orEmpty().any {
+                        PrivatePhraseGap.from(it) != null
+                    },
+                    onClick = {
+                        filter = PracticeFilter.OWN_PHRASES
+                        mode = PracticeMode.GAP
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (mode == PracticeMode.GAP)
+                        "✓ Mijn eigen zinnen · ontbrekend woord"
+                        else "Oefen ontbrekende woorden uit eigen zinnen")
                 }
                 Text("Oefenronde · kies hoeveel kaarten je nu wilt oefenen",
                     style = MaterialTheme.typography.labelMedium)
