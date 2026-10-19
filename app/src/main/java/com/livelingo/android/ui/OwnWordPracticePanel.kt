@@ -48,13 +48,14 @@ internal fun OwnWordPracticePanel(
     }
     // Ephemeral user-selected focus list, reset if language/shuffle source changes.
     var focusNotes by remember(selectedNotes) { mutableStateOf<List<OwnWord>?>(null) }
+    var focusRoundVersion by remember(selectedNotes) { mutableIntStateOf(0) }
     val studyNotes = focusNotes ?: selectedNotes
-    var offset by remember(studyNotes) { mutableIntStateOf(0) }
-    var index by remember(studyNotes, offset) { mutableIntStateOf(0) }
-    var revealed by remember(studyNotes, offset) { mutableStateOf(false) }
-    var known by remember(studyNotes, offset) { mutableIntStateOf(0) }
-    var hard by remember(studyNotes, offset) { mutableIntStateOf(0) }
-    var missed by remember(studyNotes, offset) { mutableStateOf<List<OwnWord>>(emptyList()) }
+    var offset by remember(studyNotes, focusNotes != null, focusRoundVersion) { mutableIntStateOf(0) }
+    var index by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableIntStateOf(0) }
+    var revealed by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableStateOf(false) }
+    var known by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableIntStateOf(0) }
+    var hard by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableIntStateOf(0) }
+    var missed by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableStateOf<List<OwnWord>>(emptyList()) }
     val group = studyNotes.drop(offset).take(20)
     val current = group.getOrNull(index)
     val rtlCodes = setOf("ckb", "ps", "ar", "fa", "ur", "sd", "ug")
@@ -92,7 +93,7 @@ internal fun OwnWordPracticePanel(
                         style = MaterialTheme.typography.bodySmall)
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
-                        onClick = { focusNotes = null }
+                        onClick = { focusNotes = null; focusRoundVersion++ }
                     ) { Text("Terug naar de hele woordenlijst") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -127,7 +128,7 @@ internal fun OwnWordPracticePanel(
                                 style = MaterialTheme.typography.bodySmall)
                             Button(
                                 modifier = Modifier.fillMaxWidth(),
-                                onClick = { focusNotes = missed.toList() }
+                                onClick = { focusNotes = missed.toList(); focusRoundVersion++ }
                             ) { Text("Oefen mijn ${missed.size} lastige woorden") }
                         }
                         Text("De beoordeling blijft alleen bestaan zolang je deze ronde opent.",
