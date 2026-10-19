@@ -53,6 +53,9 @@ internal fun MyOwnWordsPanel(
     var word by remember { mutableStateOf("") }
     var meaning by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
+    var searchAllLanguages by remember { mutableStateOf(false) }
+    var practiceScope by remember { mutableStateOf<List<OwnWord>?>(null) }
+    var practiceLanguage by remember { mutableStateOf(initialLanguage) }
     var practiceOpen by remember { mutableStateOf(false) }
     var plannedReviewOpen by remember { mutableStateOf(false) }
     var consentStartReview by remember { mutableStateOf(false) }
@@ -203,7 +206,7 @@ internal fun MyOwnWordsPanel(
     }
     val items = remember(revision) { deck.entries() }
     val filtered = items.orEmpty().filter {
-        it.language == language && (query.isBlank() ||
+        (searchAllLanguages || it.language == language) && (query.isBlank() ||
             it.word.contains(query.trim(), ignoreCase = true) ||
             it.ownMeaning.contains(query.trim(), ignoreCase = true))
     }
@@ -262,9 +265,12 @@ internal fun MyOwnWordsPanel(
     }
     if (practiceOpen) {
         OwnWordPracticePanel(
-            notes = items.orEmpty(),
-            initialLanguage = language,
-            onDismiss = { practiceOpen = false }
+            notes = practiceScope ?: items.orEmpty(),
+            initialLanguage = practiceLanguage,
+            onDismiss = {
+                practiceOpen = false
+                practiceScope = null
+            }
         )
         return
     }
@@ -625,8 +631,12 @@ internal fun MyOwnWordsPanel(
                 OutlinedButton(
                     enabled = items?.isNotEmpty() == true,
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { practiceOpen = true }
-                ) { Text("🧠 Oefen mijn eigen woorden · zonder opslag") }
+                    onClick = {
+                        practiceScope = null
+                        practiceLanguage = language
+                        practiceOpen = true
+                    }
+                ) { Text("🧠 Oefen alle eigen woorden · zonder opslag") }
                 Text(
                     "Alleen je eigen, ongeverifieerde betekenissen. Je ziet het " +
                         "antwoord pas na een tik; resultaten verdwijnen bij sluiten.",
@@ -741,8 +751,13 @@ internal fun MyOwnWordsPanel(
                     "De gekozen Android-bestandsprovider kan ze extern opslaan of synchroniseren.",
                     style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
-                Text("Mijn woorden in " + language.uppercase() +
+                Text((if (searchAllLanguages) "Eigen woorden in alle talen"
+                    else "Mijn woorden in " + language.uppercase()) +
                     ": " + filtered.size, style = MaterialTheme.typography.titleSmall)
+                TextButton(onClick = { searchAllLanguages = !searchAllLanguages }) {
+                    Text(if (searchAllLanguages) "✓ Zoek in alle eigen talen"
+                        else "Zoek ook in andere eigen talen")
+                }
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it.take(70) },
@@ -750,14 +765,36 @@ internal fun MyOwnWordsPanel(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+                OutlinedButton(
+                    enabled = items != null && filtered.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        // Explicitly capture the visible read-only search result
+                        // set. Search never silently alters whole-deck practice.
+                        practiceScope = filtered.toList()
+                        practiceLanguage = if (searchAllLanguages) "all" else language
+                        practiceOpen = true
+                    }
+                ) { Text("Oefen uitsluitend deze ${filtered.size} gevonden woorden") }
+                Text("Alleen de bovenstaande taal- en zoekfilters bepalen deze " +
+                    "oefenronde. Niets wordt automatisch opgeslagen of gedeeld.",
+                    style = MaterialTheme.typography.bodySmall)
                 filtered.forEach { saved ->
-                    Text(saved.word + " — " + saved.ownMeaning,
-                        style = MaterialTheme.typography.bodyMedium)
+                    Text(saved.language.uppercase() + " · Mijn eigen woord",
+                        style = MaterialTheme.typography.labelSmall)
+                    Text(saved.word,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textDirection = if (saved.language in setOf("ckb", "ps", "ar",
+                                    "fa", "ur", "sd", "ug")) TextDirection.Rtl
+                                else TextDirection.Ltr
+                        ))
+                    Text(saved.ownMeaning, style = MaterialTheme.typography.bodySmall)
                     Text("Zelf ingevoerd · niet geverifieerd",
                         style = MaterialTheme.typography.labelSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = {
                             editing = saved
+                            language = saved.language
                             word = saved.word
                             meaning = saved.ownMeaning
                             notice = ""
