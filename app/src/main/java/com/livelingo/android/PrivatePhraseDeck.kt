@@ -384,6 +384,22 @@ internal class PrivatePhraseDeck(context: Context) {
     @Synchronized
     fun replaceImported(records: List<PersonalPhrase>): Boolean = write(records, resetReview = true)
 
+    /**
+     * An old import dialog may outlive another local edit. Only replace the
+     * precise original notes that were present when the user saw the preview;
+     * nullable expected entries also allow explicit recovery from unreadable
+     * legacy/corrupt storage when that state has not become valid meanwhile.
+     */
+    @Synchronized
+    fun replaceImportedIfUnchanged(
+        records: List<PersonalPhrase>,
+        expectedOriginal: List<PersonalPhrase>?
+    ): Boolean {
+        if (decode() != expectedOriginal) return false
+        return write(records, resetReview = true)
+    }
+
+
     @Synchronized
     fun clear(): Boolean = try {
         prefs.edit().remove(KEY).remove(PrivatePhraseShortcuts.KEY)
