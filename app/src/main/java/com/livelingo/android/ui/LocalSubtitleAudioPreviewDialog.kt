@@ -192,24 +192,22 @@ internal fun LocalSubtitleAudioPreviewDialog(
     }
 
 
-    // Reuse the existing bounded personal audio A/B deck from an exact SRT/VTT
-    // cue. Nothing is inferred from speech, written to disk or sent to a server.
-    fun saveCueForPractice(index: Int) {
+    // Source-cue and selected multi-cue ranges use exactly one bounded
+    // ephemeral deck. No additional playback state or storage route.
+    fun saveBoundsForPractice(bounds: Pair<Long, Long>, label: String) {
         if (!prepared || guidedActive) {
             notice = "Stop eerst de oefenroute en open zelf een bruikbaar audiobestand."
             return
         }
-        val cue = cues.getOrNull(index) ?: return
-        val start = cueStart(cue)
-        val end = cueEnd(cue)
-        val bounds = start to end
-        if (start < 0L || end > durationMs || end - start !in 750L..300_000L) {
-            notice = "Deze ondertitel past niet volledig in je audio of duurt buiten 0,75 s–5 min."
+        val (start, end) = bounds
+        if (start < 0L || start >= durationMs || end > durationMs ||
+            end - start !in 750L..300_000L) {
+            notice = "Dit fragment valt buiten de audio of duurt niet 0,75 s–5 min."
             return
         }
         if (bounds in savedPracticePassages) {
             bookmarkToolsOpen = true
-            notice = "Deze exacte ondertitel staat al in je oefenroute."
+            notice = "Dit exacte fragment staat al in je oefenroute."
             return
         }
         if (savedPracticePassages.size >= 4) {
@@ -220,7 +218,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val missing = listOf(start, end).distinct().filterNot { it in audioBookmarks }
         if (audioBookmarks.size + missing.size > 8) {
             bookmarkToolsOpen = true
-            notice = "Te weinig ruimte voor twee audiomarkeringen (maximaal 8). Wis eerst zelf markeringen."
+            notice = "Te weinig ruimte voor audiomarkeringen (maximaal 8). Wis eerst zelf markeringen."
             return
         }
         if (missing.any { mark ->
@@ -229,15 +227,28 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 }
             }) {
             bookmarkToolsOpen = true
-            notice = "Een bestaand audiomoment ligt binnen 0,5 s van deze regelgrens. " +
+            notice = "Een bestaand audiomoment ligt binnen 0,5 s van deze passagegrens. " +
                 "Pas de markeringen zelf aan om een onduidelijk fragment te vermijden."
             return
         }
         audioBookmarks = (audioBookmarks + missing).distinct().sorted()
         savedPracticePassages = savedPracticePassages + bounds
         bookmarkToolsOpen = true
-        notice = "Ondertitelregel ${index + 1} als eigen oefenfragment " +
-            "(${savedPracticePassages.size}/4) opgeslagen; start de oefenroute zelf."
+        notice = "$"+"{label} toegevoegd als oefenfragment " +
+            "($"+"{savedPracticePassages.size}/4). Start de begeleide route zelf."
+    }
+
+    fun saveCueForPractice(index: Int) {
+        val cue = cues.getOrNull(index) ?: return
+        saveBoundsForPractice(cueStart(cue) to cueEnd(cue), "Ondertitelregel $"+"{index + 1}")
+    }
+
+    fun saveCueRangeForPractice() {
+        val bounds = rangeBounds() ?: run {
+            notice = "Kies eerst een volledig geldige A–B-passage in je eigen ondertitels."
+            return
+        }
+        saveBoundsForPractice(bounds, "Ondertitelpassage regel $"+"{rangeStartIndex + 1} t/m $"+"{rangeEndIndex + 1}")
     }
 
     fun currentRepeatBounds(): Pair<Long, Long>? {
@@ -625,11 +636,19 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 Text("Fragment ${index + 1} · ${clock(passage.first)} – " +
                                     clock(passage.second),
                                     style = MaterialTheme.typography.bodyMedium)
-                                val sourceCue = cues.firstOrNull {
-                                    cueStart(it) == passage.first && cueEnd(it) == passage.second
+                                val fromCue = cues.indexOfFirst {
+                                    cueStart(it) == passage.first
                                 }
-                                if (sourceCue != null) {
-                                    Text("Ondertitel: " + sourceCue.text.take(120),
+                                val toCue = cues.indexOfLast {
+                                    cueEnd(it) == passage.second
+                                }
+                                if (fromCue >= 0 && toCue >= fromCue) {
+                                    val summary = if (fromCue == toCue)
+                                        "Ondertitel: " + cues[fromCue].text.take(120)
+                                    else "Ondertitelregels $"+"{fromCue + 1}–$"+"{toCue + 1}: " +
+                                        cues[fromCue].text.take(55) + " … " +
+                                        cues[toCue].text.take(55)
+                                    Text(summary,
                                         style = MaterialTheme.typography.bodySmall.copy(
                                             textDirection = TextDirection.ContentOrRtl))
                                 }
@@ -1029,6 +1048,20 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         }
                     ) { Text(if (rangeRepeating) "Stop A–B-herhaling ✓"
                         else "↻ Herhaal mijn A–B-passage") }
+                    if (rangeBounds() != null) {
+                        Text("Gekozen bronpassage: regel $"+"{rangeStartIndex + 1} tot en met " +
+                            "$"+"{rangeEndIndex + 1} · $"+"{clock(rangeBounds()!!.first)} – " +
+                            clock(rangeBounds()!!.second) +
+                            ". Alleen jouw SRT/VTT-tijdcodes, geen automatische audio-uitlijning.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !guidedActive && rangeBounds() != null,
+                        onClick = { saveCueRangeForPractice() }
+                    ) {
+                        Text("＋ Bewaar deze complete A–B-passage in mijn begeleide oefenroute")
+                    }
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = passageDraft != null,
