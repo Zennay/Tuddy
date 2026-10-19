@@ -1,5 +1,21 @@
 # Tuddy 🎙️
 
+## Nieuw: ondertitelregel meteen aan je offline oefenroute toevoegen
+
+In **▶ Eigen audio met tijdcodes afspelen…** kun je nu een actieve
+ondertitel of een gevonden zoekresultaat met één tik als oefenfragment
+bewaren. Tuddy neemt alleen de bestaande SRT/VTT-begin- en eindtijd,
+met je huidige handmatige tijdcorrectie; het bewaart de selectie
+in de bestaande route van maximaal vier fragmenten en acht audio-A/B-markeringen.
+Bekijk de tekst bij je oefenfragment, kies zelf de volgorde en oefen
+desgewenst 1×, 3× of 5× per fragment. Dubbelen, te korte/lange
+of buiten-audio vallende regels worden niet toegevoegd.
+Er wordt niets opgenomen, herkend, opgeslagen, geüpload of automatisch
+afgespeeld. [Bediening en grenzen](docs/LOCAL_AUDIO_TIME_BOOKMARKS.md).
+
+---
+
+
 ## Nieuw: acht vrije audiomarkeringen en A–B-herhaling zonder ondertitelgrenzen
 
 In **▶ Eigen audio met tijdcodes afspelen…** kun je nu
