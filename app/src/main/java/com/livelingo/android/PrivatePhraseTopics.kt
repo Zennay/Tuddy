@@ -220,6 +220,36 @@ internal class PrivatePhraseTopics(context: Context) {
             .commit()
     }
 
+    /**
+     * Atomic, user-confirmed group reassignment of existing personal notes.
+     * Never writes phrases or changes their meanings, bookmarks or due dates.
+     * A stale UI snapshot or corrupt storage fails without partial writes.
+     */
+    @Synchronized
+    fun assignMany(notes: List<PersonalPhrase>, topic: String?): Boolean {
+        if (notes.isEmpty() || notes.size > MAX_PHRASES) return false
+        val availableTopics = readTopics() ?: return false
+        val assigned = readAssignments() ?: return false
+        if (topic != null && topic !in availableTopics) return false
+        val stored = deck.entries() ?: return false
+        val byIdentity = stored.associateBy { PrivatePhraseShortcuts.fingerprint(it) }
+        if (byIdentity.size != stored.size) return false
+        val selected = notes.map { PrivatePhraseShortcuts.fingerprint(it) }
+        if (selected.toSet().size != selected.size) return false
+        // Equality includes the user's own meaning. Editing a phrase during a
+        // long-open confirmation must not accidentally retarget another record.
+        if (notes.any { byIdentity[PrivatePhraseShortcuts.fingerprint(it)] != it })
+            return false
+        val next = assigned.filterKeys { it in byIdentity }.toMutableMap()
+        for (identity in selected) {
+            if (topic == null) next.remove(identity) else next[identity] = topic
+        }
+        if (next.size > MAX_PHRASES) return false
+        return try {
+            prefs.edit().putStringSet(ASSIGNMENTS_KEY, rows(next)).commit()
+        } catch (_: RuntimeException) { false }
+    }
+
     /** An assignment is made only for a note currently saved in this app. */
     @Synchronized
     fun assign(note: PersonalPhrase, topic: String?): Boolean {
