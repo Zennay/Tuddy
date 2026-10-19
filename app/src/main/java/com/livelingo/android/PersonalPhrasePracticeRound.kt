@@ -11,7 +11,10 @@ internal data class PersonalPhrasePracticeRound(
     val attempts: Int = 0,
     val recalled: Int = 0,
     val needsPractice: Int = 0,
-    val repeated: Set<String> = emptySet()
+    val repeated: Set<String> = emptySet(),
+    // Session-only original notes first marked difficult. Never persisted or
+    // inferred by an automatic language model; the user can explicitly retry.
+    val missed: List<PersonalPhrase> = emptyList()
 ) {
     val current: PersonalPhrase? get() = remaining.firstOrNull()
     val completed: Boolean get() = remaining.isEmpty()
@@ -29,12 +32,14 @@ internal data class PersonalPhrasePracticeRound(
             recalled = recalled + 1
         )
         val retry = key !in repeated
+        val firstMiss = missed.none { it.language == item.language && it.phrase == item.phrase }
         return copy(
             remaining = if (retry) rest + item else rest,
             revealed = false,
             attempts = attempts + 1,
             needsPractice = needsPractice + if (retry) 0 else 1,
-            repeated = repeated + key
+            repeated = repeated + key,
+            missed = if (firstMiss) missed + item else missed
         )
     }
 
