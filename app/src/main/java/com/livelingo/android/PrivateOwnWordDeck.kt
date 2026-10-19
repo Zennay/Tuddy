@@ -197,6 +197,37 @@ internal class PrivateOwnWordDeck(context: Context) {
         return write(current.filterNot { key(it) == key(candidate) } + candidate)
     }
 
+    /**
+     * Create a new personal meaning without silently replacing an existing key.
+     * The existence check and write are performed under one storage lock.
+     */
+    @Synchronized
+    fun saveNew(languageTag: String, word: String, meaning: String): Boolean {
+        val candidate = OwnWord(
+            cleanCode(languageTag), word.trim().trim('\'', '’', '-'), meaning.trim()
+        )
+        if (!valid(candidate)) return false
+        val current = read() ?: return false
+        if (current.any { key(it) == key(candidate) }) return false
+        return write(current + candidate)
+    }
+
+    /**
+     * Deliberate edit of exactly the entry the user reviewed. Fail closed if
+     * another editor already changed it; never restore an old definition.
+     */
+    @Synchronized
+    fun edit(original: OwnWord, meaning: String): Boolean {
+        val replacement = original.copy(ownMeaning = meaning.trim())
+        if (!valid(replacement)) return false
+        val current = read() ?: return false
+        val index = current.indexOfFirst { key(it) == key(original) }
+        if (index < 0 || current[index] != original) return false
+        val changed = current.toMutableList()
+        changed[index] = replacement
+        return write(changed)
+    }
+
     @Synchronized
     fun remove(entry: OwnWord): Boolean {
         val current = read() ?: return false

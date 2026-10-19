@@ -68,6 +68,9 @@ internal fun MyOwnWordsPanel(
     var pendingPrintable by remember { mutableStateOf<Pair<String?, ByteArray>?>(null) }
     var pendingRestore by remember { mutableStateOf<List<OwnWord>?>(null) }
     var restoreOrigin by remember { mutableStateOf("json") }
+    var pasteWordsOpen by remember { mutableStateOf(false) }
+    var pasteLines by remember { mutableStateOf("") }
+    var pasteError by remember { mutableStateOf("") }
     val context = LocalContext.current
     val backupPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -266,6 +269,99 @@ internal fun MyOwnWordsPanel(
         return
     }
 
+    if (pasteWordsOpen) {
+        AlertDialog(
+            onDismissRequest = {
+                pasteWordsOpen = false
+                pasteLines = ""
+                pasteError = ""
+            },
+            title = { Text("Plak mijn eigen woorden · offline") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Plak maximaal 50 regels uit je eigen notities: " +
+                        "WOORD [tab] MIJN BETEKENIS. Tuddy verzint of " +
+                        "vertaalt geen betekenissen en leest niet automatisch het klembord.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("Vaste taalkeuze: ${language.uppercase()}. " +
+                        "Sluit dit venster om een andere taal te kiezen.",
+                        style = MaterialTheme.typography.labelMedium)
+                    OutlinedTextField(
+                        value = pasteLines,
+                        onValueChange = { incoming ->
+                            if (incoming.length <= 12000) {
+                                pasteLines = incoming
+                                pasteError = ""
+                            } else {
+                                pasteError = "Te lange invoer; maximaal 12.000 tekens."
+                            }
+                        },
+                        label = { Text("Woord [tab] zelfgeschreven betekenis") },
+                        supportingText = { Text("Per regel twee tabkolommen, geen kopregel.") },
+                        minLines = 4,
+                        maxLines = 10,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (pasteError.isNotBlank()) Text(
+                        pasteError, color = MaterialTheme.colorScheme.error)
+                    Text("Eerst verschijnt een volledige controlelijst; " +
+                        "pas daarna kies je bewust samenvoegen of vervangen. " +
+                        "Er wordt geen tekst naar een server verzonden.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val lines = pasteLines.split('\n').map { it.removeSuffix("\r") }
+                        .dropLastWhile { it.isEmpty() }
+                    if (lines.size !in 1..50 || lines.any { it.isBlank() }) {
+                        pasteError = "Gebruik maximaal 50 niet-lege regels zonder lege tussenregels."
+                    } else {
+                        val cells = lines.map { it.split('\t') }
+                        if (cells.any { it.size != 2 || it[0].isBlank() || it[1].isBlank() }) {
+                            pasteError = "Iedere regel moet één woord en één eigen betekenis " +
+                                "met precies één tab ertussen hebben."
+                        } else {
+                            val tsv = buildString {
+                                append("language\tword\tmeaning\n")
+                                cells.forEach { row ->
+                                    append(language).append('\t').append(row[0].trim())
+                                    append('\t').append(row[1].trim()).append('\n')
+                                }
+                            }
+                            val parsed = deck.previewTsvImport(tsv.toByteArray(Charsets.UTF_8))
+                            if (parsed == null) {
+                                pasteError = "Ongeldige of dubbele woorden. Controleer lengte " +
+                                    "(woord maximaal 48, betekenis 180), tabs en tekens; " +
+                                    "niets is gewijzigd."
+                            } else {
+                                pendingRestore = parsed
+                                restoreOrigin = "paste"
+                                pasteWordsOpen = false
+                                pasteLines = ""
+                                pasteError = ""
+                                notice = "Geplakte eigen woorden gecontroleerd. " +
+                                    "Bekijk ALLE woorden voordat je samenvoegt of vervangt."
+                            }
+                        }
+                    }
+                }) { Text("Bekijk mijn woorden vóór opslaan") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pasteWordsOpen = false
+                    pasteLines = ""
+                    pasteError = ""
+                }) { Text("Annuleren") }
+            }
+        )
+        return
+    }
+
     val restore = pendingRestore
     if (restore != null) {
         val existing = items.orEmpty().map {
@@ -278,16 +374,36 @@ internal fun MyOwnWordsPanel(
         val canMerge = items != null && items.size + newCount <= PrivateOwnWordDeck.MAX_ENTRIES
         AlertDialog(
             onDismissRequest = { pendingRestore = null },
-            title = { Text(if (restoreOrigin == "tsv")
+            title = { Text(if (restoreOrigin == "paste")
+                "Controleer mijn geplakte woorden" else if (restoreOrigin == "tsv")
                 "Zelfgeschreven woordenlijst importeren?" else "Eigen woorden herstellen?") },
             text = {
-                Text("Dit bestand bevat " + restore.size + " zelfgeschreven woorden. " +
-                    newCount + " zijn nieuw, " + duplicateCount + " staan al lokaal. " +
-                    "Samenvoegen bewaart altijd je huidige betekenis bij dubbele woorden. " +
-                    (if (canMerge) "Samenvoegen past binnen de limiet."
-                    else "Samenvoegen kan niet door een onleesbare lijst of capaciteitslimiet.") +
-                    " Vervangen wist eerst al je huidige eigen woordbetekenissen. " +
-                    "Deze teksten zijn nooit geverifieerde vertalingen.")
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Deze lijst bevat ${restore.size} eigen woorden: " +
+                        "$newCount nieuw, $duplicateCount al aanwezig. " +
+                        "Samenvoegen bewaart altijd je huidige betekenis bij dubbelen. " +
+                        (if (canMerge) "Samenvoegen past binnen de limiet. "
+                            else "Samenvoegen kan niet wegens onleesbare opslag of capaciteit. ") +
+                        "Vervangen wist alle huidige eigen woordbetekenissen. " +
+                        "Niets is door Tuddy vertaald of gecontroleerd.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("Volledige eigen invoer ter controle:",
+                        style = MaterialTheme.typography.labelMedium)
+                    restore.forEachIndexed { index, note ->
+                        HorizontalDivider()
+                        Text("${index + 1}. ${note.language.uppercase()} · ${note.word}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (note.language in
+                                    setOf("ckb", "ps", "ar", "fa", "ur")) TextDirection.Rtl
+                                    else TextDirection.Ltr
+                            ))
+                        Text(note.ownMeaning, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             },
             confirmButton = {
                 Column {
@@ -478,10 +594,24 @@ internal fun MyOwnWordsPanel(
                 Button(
                     enabled = items != null && word.isNotBlank() && meaning.isNotBlank(),
                     onClick = {
-                        val saved = deck.save(language, word, meaning)
-                        notice = if (saved) "Jouw eigen betekenis is lokaal opgeslagen."
-                            else "Niet opgeslagen: controleer tekst, dubbele gegevens " +
-                                "of limiet van 120 woorden."
+                        val old = editing
+                        val saved = if (old == null) {
+                            deck.saveNew(language, word, meaning)
+                        } else {
+                            deck.edit(old, meaning)
+                        }
+                        notice = if (saved) {
+                            if (old == null) "Nieuw eigen woord veilig lokaal opgeslagen."
+                            else "Je gekozen eigen betekenis is bewust bijgewerkt."
+                        } else if (old == null) {
+                            "Niet opgeslagen: dit woord bestaat mogelijk al. " +
+                                "Gebruik de knop Bewerk betekenis bij het bestaande woord. " +
+                                "Je eerdere betekenis is behouden."
+                        } else {
+                            "Wijziging geweigerd: dit woord is intussen aangepast, " +
+                                "niet beschikbaar of de nieuwe betekenis is ongeldig. " +
+                                "De huidige woordenlijst is behouden."
+                        }
                         if (saved) {
                             editing = null
                             word = ""
@@ -551,6 +681,18 @@ internal fun MyOwnWordsPanel(
                         restorePicker.launch(arrayOf("application/json", "text/plain"))
                     }) { Text("Herstel back-up…") }
                 }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        pendingRestore = null
+                        pasteLines = ""
+                        pasteError = ""
+                        pasteWordsOpen = true
+                    }
+                ) { Text("Plak eigen woorden uit notities…") }
+                Text("Voeg tot 50 zelfgeschreven woord-betekenisregels toe zonder " +
+                    "bestand. Eerst zie je de hele lijst; je beslist daarna zelf " +
+                    "wat bewaard wordt.", style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
