@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -80,6 +81,8 @@ internal fun MixedDailyReviewPanel(
     var index by remember { mutableIntStateOf(0) }
     var revealed by remember { mutableStateOf(false) }
     var reverse by remember { mutableStateOf(false) }
+    var writeFirst by remember { mutableStateOf(false) }
+    var typedAnswer by remember { mutableStateOf("") }
     var remembered by remember { mutableIntStateOf(0) }
     var hard by remember { mutableIntStateOf(0) }
     var skipped by remember { mutableIntStateOf(0) }
@@ -111,6 +114,7 @@ internal fun MixedDailyReviewPanel(
         if (known) remembered++ else hard++
         index++
         revealed = false
+        typedAnswer = ""
         notice = ""
     }
 
@@ -168,10 +172,20 @@ internal fun MixedDailyReviewPanel(
                     Text("Kaart ${index + 1} / ${mixed.size} · ${language.uppercase()}",
                         style = MaterialTheme.typography.labelMedium)
                     Text(sourceLabel, style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = { reverse = !reverse; revealed = false }) {
+                    TextButton(onClick = {
+                        reverse = !reverse
+                        revealed = false
+                        typedAnswer = ""
+                    }) {
                         Text(if (reverse) "Betekenis → woord/zin ⇄"
                             else "Woord/zin → betekenis ⇄")
                     }
+                    TextButton(onClick = {
+                        writeFirst = !writeFirst
+                        typedAnswer = ""
+                        revealed = false
+                    }) { Text(if (writeFirst) "✓ Zelf antwoord schrijven" else
+                        "✍ Zelf antwoord schrijven") }
                     HorizontalDivider()
                     Text(
                         if (reverse) answer else prompt,
@@ -180,12 +194,39 @@ internal fun MixedDailyReviewPanel(
                                 TextDirection.Rtl else TextDirection.Ltr
                         )
                     )
+                    if (writeFirst && !revealed) {
+                        OutlinedTextField(
+                            value = typedAnswer,
+                            onValueChange = { typedAnswer = it.take(220) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(if (reverse) "Schrijf mijn woord of zin" else
+                                "Schrijf mijn betekenis") },
+                            maxLines = 3,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = if (reverse && language in rtlLanguages)
+                                    TextDirection.Rtl else TextDirection.Ltr
+                            )
+                        )
+                        Text("Jouw poging wordt niet opgeslagen, verstuurd of automatisch beoordeeld.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                     if (!revealed) {
                         Button(modifier = Modifier.fillMaxWidth(),
                             onClick = { revealed = true }) {
                             Text("Toon antwoord")
                         }
                     } else {
+                        if (writeFirst) {
+                            Text("Jouw getypte poging:",
+                                style = MaterialTheme.typography.labelMedium)
+                            Text(typedAnswer.ifBlank { "(niet ingevuld)" },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (reverse && language in rtlLanguages)
+                                        TextDirection.Rtl else TextDirection.Ltr
+                                ))
+                            Text("Vergelijk zelf met het oorspronkelijke antwoord.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                         Text(
                             if (reverse) prompt else answer,
                             style = MaterialTheme.typography.titleLarge.copy(
