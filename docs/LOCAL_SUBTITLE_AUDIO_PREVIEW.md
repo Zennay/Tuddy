@@ -50,3 +50,32 @@ melding; **Terug naar audio** verandert het gekozen bronbestand niet.
 De zoekterm bestaat alleen in de tijdelijke afspeelmodus. Er wordt geen
 audio doorzocht, geen spraak herkend en geen tijdcode tegen geluid
 geverifieerd. De functie verstuurt geen tekst naar een server.
+
+
+## Tik op een ondertitelwoord terwijl je naar eigen audio luistert
+
+In **▶ Eigen audio met tijdcodes afspelen…** kun je nu direct op een
+woord in de grote actieve ondertitel tikken. Kies eerst zelf de
+**taal van de tekst** via de nieuwe taalkiezer: uit een geïmporteerde
+SRT/VTT kan Tuddy immers geen betrouwbare gesproken taal afleiden.
+De woordkaart gebruikt dezelfde beperkt beschikbare lokale woordenlijst
+als de bestaande ondertiteleditor. Wanneer er geen gecontroleerde
+lokale betekenis is, zegt Tuddy dat eerlijk en verzint geen vertaling.
+
+Je kunt vervolgens bewust een **eigen betekenis** typen (maximaal 180
+tekens) en alleen met **Bewaar mijn eigen betekenis** toevoegen aan
+de reeds bestaande app-privénotities **Mijn eigen woorden**. Deze zelf
+geschreven betekenis is nadrukkelijk niet geverifieerd. Een bekende
+eigen notitie wordt in dezelfde kaart teruggelezen; je kunt hem
+later in Mijn eigen woorden beheren, vervangen, exporteren of wissen.
+Het openen van een woordkaart, pauzeren of veranderen van audio slaat
+niets op. Alleen een afzonderlijke opslagactie op de woordkaart
+schrijft naar de bestaande lokale woordenlijst; de gebruiker kan
+die duurzame notities via **Wis mijn oefengegevens** verwijderen.
+
+Dit maakt geen audio-opname, kopie van een SRT/VTT, transcriptgeschiedenis,
+AI-spraakherkenning, woorduitlijning, cloudverzoek of nieuwe permissie.
+De tijdelijke **teksttaalkeuze** verdwijnt bij sluiten/audio wisselen;
+opgeslagen eigen notities blijven bestaan totdat je ze bewust wijzigt
+of wist. Androids zelfgekozen bestandsprovider kan afhankelijk van de
+locatie zelfstandig audio downloaden of synchroniseren.
