@@ -63,6 +63,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     onApplyAdjustedCues: (List<PrivateSubtitleCue>) -> Unit,
     readOwnMeaning: (String, String) -> String?,
     saveOwnMeaning: (String, String, String) -> Boolean,
+    savePersonalPhrase: (String, String, String, String) -> Boolean,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -119,6 +120,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
     // Imported subtitle files have no trusted language marker: user picks it.
     var chosenSubtitleLanguage by remember(audioUri) { mutableStateOf<String?>(null) }
     var wordLanguageMenuOpen by remember { mutableStateOf(false) }
+    var phraseDraftLanguage by remember { mutableStateOf<String?>(null) }
+    var phraseDraftText by remember { mutableStateOf("") }
+    var phraseDraftMeaning by remember { mutableStateOf("") }
+    var phraseDraftMeaningLanguage by remember { mutableStateOf("nl") }
+    var phraseDraftApproved by remember { mutableStateOf(false) }
+    var phraseDraftNotice by remember { mutableStateOf("") }
 
     fun closeAudio() {
         val old = player
@@ -156,6 +163,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
         cueQuery = ""
         chosenSubtitleLanguage = null
         wordLanguageMenuOpen = false
+        phraseDraftLanguage = null
+        phraseDraftText = ""
+        phraseDraftMeaning = ""
+        phraseDraftApproved = false
+        phraseDraftNotice = ""
         lastLoopAtMs = 0L
         completedPasses = 0
         if (old != null) runCatching {
@@ -1176,6 +1188,24 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         "Je eigen betekenis wordt uitsluitend na afzonderlijk Bewaar " +
                         "opgeslagen in Mijn eigen woorden; het audiobestand blijft ongewijzigd.",
                         style = MaterialTheme.typography.labelSmall)
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = active != null && active.text.isNotBlank() &&
+                            chosenSubtitleLanguage in setOf("kmr", "ckb", "ps"),
+                        onClick = {
+                            pauseAudio()
+                            phraseDraftLanguage = chosenSubtitleLanguage
+                            phraseDraftText = active?.text?.trim().orEmpty()
+                            phraseDraftMeaning = ""
+                            phraseDraftMeaningLanguage = "nl"
+                            phraseDraftApproved = false
+                            phraseDraftNotice = ""
+                        }
+                    ) { Text("＋ Bewaar deze zin met mijn eigen betekenis…") }
+                    Text("Mijn eigen zinnen ondersteunt alleen zelf gekozen Kurmanji, " +
+                        "Sorani of Pasjtoe, met een door jou geschreven betekenis in NL of EN. " +
+                        "Niets wordt automatisch vertaald of opgeslagen.",
+                        style = MaterialTheme.typography.labelSmall)
                 } else {
                     Text("Geen audio geladen. Je ondertitels blijven in de " +
                         "tijdelijke editor; niets wordt automatisch bewaard.",
@@ -1188,6 +1218,123 @@ internal fun LocalSubtitleAudioPreviewDialog(
             }
         }
     }
+
+    val activePhraseLanguage = phraseDraftLanguage
+    if (activePhraseLanguage != null) {
+        val validPhraseText = phraseDraftText.isNotBlank() &&
+            phraseDraftText.length <= 120 && phraseDraftText == phraseDraftText.trim() &&
+            phraseDraftText.none { char ->
+                Character.isISOControl(char) || Character.isSurrogate(char) ||
+                    (Character.getType(char) == Character.FORMAT.toInt() && char != '\u200C') ||
+                    char == '\u2028' || char == '\u2029'
+            }
+        val validPhraseMeaning = phraseDraftMeaning.isNotBlank() &&
+            phraseDraftMeaning.length <= 180 &&
+            phraseDraftMeaning == phraseDraftMeaning.trim() &&
+            phraseDraftMeaning.none { char ->
+                Character.isISOControl(char) || Character.isSurrogate(char) ||
+                    (Character.getType(char) == Character.FORMAT.toInt() && char != '\u200C') ||
+                    char == '\u2028' || char == '\u2029'
+            }
+        AlertDialog(
+            onDismissRequest = { phraseDraftLanguage = null },
+            title = { Text("Mijn eigen zin bewust bewaren?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("Deze tekst komt uitsluitend uit jouw zelf gekozen SRT/VTT " +
+                        "en is niet op uitspraak of betekenis gecontroleerd. " +
+                        "Je schrijft de betekenis zelf. Een opslag in Mijn eigen zinnen " +
+                        "blijft app-privé bestaan na het sluiten van deze audiosessie.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("Eigen gekozen zinta(a)l: " + activePhraseLanguage.uppercase(Locale.ROOT))
+                    OutlinedTextField(
+                        value = phraseDraftText,
+                        onValueChange = {
+                            phraseDraftText = it.take(400)
+                            phraseDraftApproved = false
+                            phraseDraftNotice = ""
+                        },
+                        label = { Text("Mijn eigen zin (maximaal 120 tekens)") },
+                        minLines = 2,
+                        maxLines = 4,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (!validPhraseText) {
+                        Text("Maak de zin zelf maximaal 120 tekens zonder " +
+                            "besturingstekens of onzichtbare tekens.",
+                            style = MaterialTheme.typography.labelSmall)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("nl" to "Nederlands", "en" to "Engels").forEach { (code, label) ->
+                            TextButton(
+                                enabled = phraseDraftMeaningLanguage != code,
+                                onClick = {
+                                    phraseDraftMeaningLanguage = code
+                                    phraseDraftApproved = false
+                                }
+                            ) {
+                                Text((if (phraseDraftMeaningLanguage == code) "✓ " else "") + label)
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = phraseDraftMeaning,
+                        onValueChange = {
+                            phraseDraftMeaning = it.take(180)
+                            phraseDraftApproved = false
+                            phraseDraftNotice = ""
+                        },
+                        label = { Text("Mijn eigen betekenis (maximaal 180 tekens)") },
+                        minLines = 2,
+                        maxLines = 4,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text("Een identieke zin die al in Mijn eigen zinnen staat wordt " +
+                        "hier bewust niet overschreven. Bewerk die in de bestaande woordenlijst.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material3.Checkbox(
+                            checked = phraseDraftApproved,
+                            enabled = validPhraseText && validPhraseMeaning,
+                            onCheckedChange = { phraseDraftApproved = it }
+                        )
+                        Text("Ik heb de zin en mijn zelf geschreven betekenis nagelezen " +
+                            "en wil deze privé opslaan.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (phraseDraftNotice.isNotBlank()) {
+                        Text(phraseDraftNotice, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = validPhraseText && validPhraseMeaning && phraseDraftApproved,
+                    onClick = {
+                        val saved = savePersonalPhrase(
+                            activePhraseLanguage, phraseDraftText,
+                            phraseDraftMeaningLanguage, phraseDraftMeaning
+                        )
+                        if (saved) {
+                            phraseDraftLanguage = null
+                            notice = "Mijn eigen zin bewust privé bewaard; geen automatische vertaling."
+                        } else {
+                            phraseDraftApproved = false
+                            phraseDraftNotice = "Zin niet opgeslagen: bestaat mogelijk al, " +
+                                "de woordenlijst is vol, of privéopslag is niet beschikbaar. " +
+                                "Je bestaande zinnen zijn ongemoeid."
+                        }
+                    }
+                ) { Text("Bewaar alleen deze zelf gecontroleerde zin") }
+            },
+            dismissButton = {
+                TextButton(onClick = { phraseDraftLanguage = null }) {
+                    Text("Annuleer · niets opslaan")
+                }
+            }
+        )
+    }
+
     if (practiceReportOpen && prepared) {
         AlertDialog(
             onDismissRequest = { practiceReportOpen = false },
