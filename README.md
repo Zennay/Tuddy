@@ -1,5 +1,31 @@
 # Tuddy 🎙️
 
+## Nieuw: acht vrije audiomarkeringen en A–B-herhaling zonder ondertitelgrenzen
+
+In **▶ Eigen audio met tijdcodes afspelen…** kun je nu
+**▾ Markeer audiomomenten en herhaal vrij A–B** openen. Tik op
+**Markeer huidige audiopositie** om maximaal acht momenten in je
+zelfgekozen audio te onthouden, spring met één tik terug naar een eerder
+moment of verwijder die markering individueel.
+
+Kies bij twee markeringen **Kies A** en **Kies B**. Als B minstens
+0,75 seconde en maximaal 5 minuten ná A ligt, kun je het exacte
+audiofragment in een lus beluisteren, óók wanneer jouw SRT/VTT geen
+ondertitel op die precieze tijdstippen heeft. Het bestaande herhalen
+van een enkele ondertitelregel of een A–B-passage van meerdere
+ondertitelregels blijft apart beschikbaar; slechts één van de drie
+herhaalmodi speelt tegelijk. Een zoek-/tijdsprong buiten de actieve lus
+stopt de lus.
+
+Dit is **handmatige offline audiobediening** en geen automatische
+spraakherkenning, woorduitlijning of vertaling. De markeringen worden
+niet in een SRT/VTT geschreven, niet gedeeld of opgeslagen: andere
+audio kiezen of dit scherm sluiten wist alles. De door jou gekozen
+Android-bestandsprovider kan zelf cloudtoegang gebruiken. Zie
+[handleiding](docs/LOCAL_AUDIO_TIME_BOOKMARKS.md).
+
+---
+
 ## Nieuw: een A–B-passage met meerdere ondertitelregels herhalen
 
 Voor langere zinnen of gesprekjes kun je nu binnen **▶ Eigen audio met

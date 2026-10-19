@@ -75,6 +75,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var rangeEndIndex by remember { mutableIntStateOf(-1) }
     var rangeRepeating by remember { mutableStateOf(false) }
     var rangeToolsOpen by remember { mutableStateOf(false) }
+    // Up to eight user-tapped audio moments. No cue text, audio bytes or storage.
+    var audioBookmarks by remember { mutableStateOf<List<Long>>(emptyList()) }
+    var bookmarkToolsOpen by remember { mutableStateOf(false) }
+    var bookmarkStartMs by remember { mutableLongStateOf(-1L) }
+    var bookmarkEndMs by remember { mutableLongStateOf(-1L) }
+    var bookmarkRepeating by remember { mutableStateOf(false) }
     var lastLoopAtMs by remember { mutableLongStateOf(0L) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
@@ -96,6 +102,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
         rangeEndIndex = -1
         rangeRepeating = false
         rangeToolsOpen = false
+        audioBookmarks = emptyList()
+        bookmarkToolsOpen = false
+        bookmarkStartMs = -1L
+        bookmarkEndMs = -1L
+        bookmarkRepeating = false
         subtitleOffsetMs = 0L
         cuePickerOpen = false
         confirmApplyOpen = false
@@ -143,7 +154,17 @@ internal fun LocalSubtitleAudioPreviewDialog(
         return start to end
     }
 
+    fun bookmarkBounds(): Pair<Long, Long>? {
+        val start = bookmarkStartMs
+        val end = bookmarkEndMs
+        if (start !in 0L until durationMs || end > durationMs ||
+            end - start !in 750L..300_000L ||
+            start !in audioBookmarks || end !in audioBookmarks) return null
+        return start to end
+    }
+
     fun currentRepeatBounds(): Pair<Long, Long>? {
+        if (bookmarkRepeating) return bookmarkBounds()
         if (rangeRepeating) return rangeBounds()
         val single = cues.getOrNull(loopCueIndex) ?: return null
         if (!cuePlayable(single) || single.endMillis - single.startMillis < 750L)
@@ -173,6 +194,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         if (repeat != null && target !in repeat.first until repeat.second) {
             loopCueIndex = -1
             rangeRepeating = false
+            bookmarkRepeating = false
         }
         runCatching { current.seekTo(target.toInt()) }
             .onSuccess { positionMs = target }
@@ -271,7 +293,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     }
 
     LaunchedEffect(player, playing, loopCueIndex, rangeRepeating,
-        rangeStartIndex, rangeEndIndex, subtitleOffsetMs) {
+        rangeStartIndex, rangeEndIndex, bookmarkRepeating, bookmarkStartMs,
+        bookmarkEndMs, subtitleOffsetMs) {
         val current = player
         while (playing && current != null && player === current) {
             val now = runCatching { current.currentPosition.toLong() }.getOrNull()
@@ -381,6 +404,97 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     )
                     Text("${clock(displayTimeMs)} / ${clock(durationMs)}",
                         style = MaterialTheme.typography.labelLarge)
+                    TextButton(
+                        onClick = { bookmarkToolsOpen = !bookmarkToolsOpen },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (bookmarkToolsOpen) "▴ Verberg audio-tijdmarkeringen"
+                            else "▾ Markeer audiomomenten en herhaal vrij A–B")
+                    }
+                    if (bookmarkToolsOpen) {
+                        HorizontalDivider()
+                        Text("Markeer maximaal 8 zelf gekozen punten in de audio. " +
+                            "Spring terug om een uitspraak opnieuw te horen of kies " +
+                            "twee markeringen als A en B (0,75 s tot 5 min). " +
+                            "De gekozen SRT/VTT hoeft geen ondertitelregel op die tijden te hebben. " +
+                            "Alle markeringen verdwijnen bij sluiten of andere audio.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedButton(
+                            enabled = audioBookmarks.size < 8 && durationMs > 0L,
+                            onClick = {
+                                val mark = positionMs.coerceIn(0L, durationMs)
+                                if (audioBookmarks.any { kotlin.math.abs(it - mark) < 500L }) {
+                                    notice = "Hier staat al bijna dezelfde audiomarkering (binnen 0,5 s)."
+                                } else {
+                                    audioBookmarks = (audioBookmarks + mark).sorted()
+                                    notice = "Audiomoment ${clock(mark)} toegevoegd; alleen in dit scherm."
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("＋ Markeer huidige audiopositie (${audioBookmarks.size}/8)") }
+                        audioBookmarks.forEachIndexed { index, mark ->
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                OutlinedButton(onClick = {
+                                    seekTo(mark)
+                                    notice = "Naar eigen audiomarkering ${clock(mark)} gesprongen."
+                                }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("▶ Naar markering ${index + 1} · ${clock(mark)}")
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(onClick = {
+                                        bookmarkStartMs = mark
+                                        bookmarkRepeating = false
+                                        notice = "Audio A-start: ${clock(mark)}."
+                                    }, modifier = Modifier.weight(1f)) {
+                                        Text(if (mark == bookmarkStartMs) "A-start ✓" else "Kies A")
+                                    }
+                                    TextButton(onClick = {
+                                        bookmarkEndMs = mark
+                                        bookmarkRepeating = false
+                                        notice = "Audio B-einde: ${clock(mark)}."
+                                    }, modifier = Modifier.weight(1f)) {
+                                        Text(if (mark == bookmarkEndMs) "B-einde ✓" else "Kies B")
+                                    }
+                                    TextButton(onClick = {
+                                        audioBookmarks = audioBookmarks.filterNot { it == mark }
+                                        if (bookmarkStartMs == mark || bookmarkEndMs == mark) {
+                                            bookmarkStartMs = -1L
+                                            bookmarkEndMs = -1L
+                                            bookmarkRepeating = false
+                                        }
+                                        notice = "Eigen audiomarkering verwijderd."
+                                    }, modifier = Modifier.weight(1f)) { Text("Wis") }
+                                }
+                            }
+                        }
+                        OutlinedButton(
+                            enabled = bookmarkRepeating || bookmarkBounds() != null,
+                            onClick = {
+                                if (bookmarkRepeating) {
+                                    bookmarkRepeating = false
+                                    notice = "Vrije audio A–B-herhaling gestopt."
+                                } else {
+                                    val bounds = bookmarkBounds()
+                                    if (bounds == null) {
+                                        notice = "Kies twee geldige markeringen met 0,75 s tot 5 min afstand."
+                                    } else {
+                                        loopCueIndex = -1
+                                        rangeRepeating = false
+                                        bookmarkRepeating = true
+                                        lastLoopAtMs = 0L
+                                        seekTo(bounds.first)
+                                        notice = "Vrije audio A–B ${clock(bounds.first)} tot " +
+                                            "${clock(bounds.second)}; druk op Afspelen indien gepauzeerd."
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (bookmarkRepeating) "↻ Stop vrije audio A–B-herhaling"
+                                else "↻ Herhaal tussen mijn audio A- en B-markeringen")
+                        }
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(7.dp)
@@ -468,6 +582,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         onClick = {
                             loopCueIndex = if (loopCueIndex >= 0) -1 else activeIndex
                             rangeRepeating = false
+                            bookmarkRepeating = false
                             lastLoopAtMs = 0L
                         }
                     ) {
@@ -497,6 +612,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 rangeStartIndex = activeIndex
                                 rangeEndIndex = -1
                                 rangeRepeating = false
+                                bookmarkRepeating = false
                                 loopCueIndex = -1
                                 confirmClipOpen = false
                                 notice = "A ingesteld op regel " + (activeIndex + 1) +
@@ -511,6 +627,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             onClick = {
                                 rangeEndIndex = activeIndex
                                 rangeRepeating = false
+                                bookmarkRepeating = false
                                 loopCueIndex = -1
                                 confirmClipOpen = false
                                 notice = "B ingesteld op regel " + (activeIndex + 1) + "."
@@ -531,6 +648,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 val bounds = rangeBounds()
                                 if (bounds != null) {
                                     loopCueIndex = -1
+                                    bookmarkRepeating = false
                                     lastLoopAtMs = 0L
                                     rangeRepeating = true
                                     seekTo(bounds.first)
