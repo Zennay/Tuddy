@@ -327,7 +327,7 @@ internal fun MyOwnWordsPanel(
                                 "met precies één tab ertussen hebben."
                         } else {
                             val tsv = buildString {
-                                append("language\\tword\\tmeaning\\n")
+                                append("language\tword\tmeaning\n")
                                 cells.forEach { row ->
                                     append(language).append('\t').append(row[0].trim())
                                     append('\t').append(row[1].trim()).append('\n')
