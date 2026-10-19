@@ -2023,11 +2023,7 @@ private fun TuddyScreen(
                 savePersonalPhrase = { language, phrase, meaningLanguage, ownMeaning ->
                     // This is a deliberately new personally-authored card, never
                     // a silent replacement of an existing private phrase note.
-                    val existing = personalPhrases.entries()
-                    existing != null && existing.none {
-                        it.language == language &&
-                            it.phrase.equals(phrase.trim(), ignoreCase = true)
-                    } && personalPhrases.save(language, phrase, meaningLanguage, ownMeaning)
+                    personalPhrases.saveNew(language, phrase, meaningLanguage, ownMeaning)
                 },
                 onApplyAdjustedCues = { adjustedCues ->
                     // A separate RAM-only candidate from explicit audio-preview consent.

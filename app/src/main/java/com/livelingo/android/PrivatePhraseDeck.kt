@@ -216,6 +216,22 @@ internal class PrivatePhraseDeck(context: Context) {
     }
 
     /**
+     * New-note UI must never silently replace a previously authored meaning.
+     * The existence check and write share this synchronized transaction; other
+     * explicit replacement/import routes keep their independent consent flow.
+     */
+    @Synchronized
+    fun saveNew(language: String, phrase: String, meaningLanguage: String, ownMeaning: String): Boolean {
+        val record = PersonalPhrase(language, phrase.trim(), meaningLanguage, ownMeaning.trim())
+        if (!valid(record)) return false
+        val current = decode() ?: return false
+        if (current.any {
+                it.language == record.language && it.phrase.equals(record.phrase, ignoreCase = true)
+            }) return false
+        return write(current + record)
+    }
+
+    /**
      * Replace one existing user-written sentence with one atomic preferences
      * write. The old record snapshot must still match; duplicate language/phrase
      * identities are rejected by the same whole-deck validator as normal saves.
