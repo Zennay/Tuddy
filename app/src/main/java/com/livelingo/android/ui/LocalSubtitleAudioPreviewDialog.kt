@@ -90,6 +90,13 @@ internal fun LocalSubtitleAudioPreviewDialog(
     // counted in actually completed, not merely selected, cue/audio passes.
     var repeatPassLimit by remember { mutableIntStateOf(0) }
     var completedPasses by remember { mutableIntStateOf(0) }
+    // Guided queue is a frozen copy: later marker edits cannot retarget a
+    // playing fragment. Nothing persists beyond this user-opened dialog.
+    var guidedActive by remember { mutableStateOf(false) }
+    var guidedQueue by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
+    var guidedIndex by remember { mutableIntStateOf(0) }
+    var guidedRounds by remember { mutableIntStateOf(1) }
+    var guidedPasses by remember { mutableIntStateOf(0) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
     var confirmApplyOpen by remember { mutableStateOf(false) }
@@ -112,6 +119,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
         rangeToolsOpen = false
         audioBookmarks = emptyList()
         savedPracticePassages = emptyList()
+        guidedActive = false
+        guidedQueue = emptyList()
+        guidedIndex = 0
+        guidedPasses = 0
         bookmarkToolsOpen = false
         bookmarkStartMs = -1L
         bookmarkEndMs = -1L
@@ -174,12 +185,37 @@ internal fun LocalSubtitleAudioPreviewDialog(
     }
 
     fun currentRepeatBounds(): Pair<Long, Long>? {
+        if (guidedActive) return guidedQueue.getOrNull(guidedIndex)
         if (bookmarkRepeating) return bookmarkBounds()
         if (rangeRepeating) return rangeBounds()
         val single = cues.getOrNull(loopCueIndex) ?: return null
         if (!cuePlayable(single) || single.endMillis - single.startMillis < 750L)
             return null
         return cueStart(single) to cueEnd(single)
+    }
+
+    fun advanceGuidedPass(): Pair<Long, Long>? {
+        if (!guidedActive) return null
+        val current = guidedQueue.getOrNull(guidedIndex)
+        if (current == null) {
+            guidedActive = false
+            pauseAudio()
+            notice = "Oefenroute gestopt: fragment niet meer beschikbaar."
+            return null
+        }
+        guidedPasses += 1
+        if (guidedPasses < guidedRounds) return current
+        if (guidedIndex + 1 < guidedQueue.size) {
+            guidedIndex += 1
+            guidedPasses = 0
+            notice = "Oefenroute: fragment ${guidedIndex + 1} van ${guidedQueue.size}."
+            return guidedQueue[guidedIndex]
+        }
+        guidedActive = false
+        pauseAudio()
+        notice = "Begeleide oefenroute voltooid: ${guidedQueue.size} fragmenten " +
+            "${guidedRounds}× gehoord. Audio is gepauzeerd."
+        return null
     }
 
     fun finishRepeatPass(): Boolean {
@@ -216,6 +252,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val target = position.coerceIn(0L, durationMs)
         val repeat = currentRepeatBounds()
         if (repeat != null && target !in repeat.first until repeat.second) {
+            guidedActive = false
+            guidedQueue = emptyList()
+            guidedIndex = 0
+            guidedPasses = 0
             loopCueIndex = -1
             rangeRepeating = false
             bookmarkRepeating = false
@@ -274,15 +314,17 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     next.setOnCompletionListener { finished ->
                         if (player === finished) {
                             val repeat = currentRepeatBounds()
-                            val replayed = if (repeat != null && !finishRepeatPass()) runCatching {
-                                finished.seekTo(repeat.first.toInt())
+                            val nextPass = if (guidedActive) advanceGuidedPass() else
+                                if (repeat != null && !finishRepeatPass()) repeat else null
+                            val replayed = if (nextPass != null) runCatching {
+                                finished.seekTo(nextPass.first.toInt())
                                 finished.start()
-                                positionMs = repeat.first
+                                positionMs = nextPass.first
                                 true
                             }.getOrDefault(false) else false
                             if (!replayed) {
                                 playing = false
-                                positionMs = durationMs
+                                if (player === finished && !guidedActive) positionMs = durationMs
                             }
                         }
                     }
@@ -319,7 +361,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
 
     LaunchedEffect(player, playing, loopCueIndex, rangeRepeating,
         rangeStartIndex, rangeEndIndex, bookmarkRepeating, bookmarkStartMs,
-        bookmarkEndMs, subtitleOffsetMs) {
+        bookmarkEndMs, subtitleOffsetMs, guidedActive, guidedIndex, guidedRounds) {
         val current = player
         while (playing && current != null && player === current) {
             val now = runCatching { current.currentPosition.toLong() }.getOrNull()
@@ -329,14 +371,16 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 val elapsed = SystemClock.elapsedRealtime()
                 if (repeat != null && now >= repeat.second &&
                     elapsed - lastLoopAtMs >= 450L) {
-                    if (finishRepeatPass()) break
+                    val nextPass = if (guidedActive) advanceGuidedPass() else
+                        if (finishRepeatPass()) null else repeat
+                    if (nextPass == null) break
                     val rewound = runCatching {
-                        current.seekTo(repeat.first.toInt())
+                        current.seekTo(nextPass.first.toInt())
                         true
                     }.getOrDefault(false)
                     if (rewound) {
                         lastLoopAtMs = elapsed
-                        positionMs = repeat.first
+                        positionMs = nextPass.first
                     }
                 }
             }
@@ -446,7 +490,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             "Alle markeringen verdwijnen bij sluiten of andere audio.",
                             style = MaterialTheme.typography.bodySmall)
                         OutlinedButton(
-                            enabled = audioBookmarks.size < 8 && durationMs > 0L,
+                            enabled = !guidedActive &&
+                                audioBookmarks.size < 8 && durationMs > 0L,
                             onClick = {
                                 val mark = positionMs.coerceIn(0L, durationMs)
                                 if (audioBookmarks.any { kotlin.math.abs(it - mark) < 500L }) {
@@ -468,21 +513,21 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 }
                                 Row(modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    TextButton(onClick = {
+                                    TextButton(enabled = !guidedActive, onClick = {
                                         bookmarkStartMs = mark
                                         bookmarkRepeating = false
                                         notice = "Audio A-start: ${clock(mark)}."
                                     }, modifier = Modifier.weight(1f)) {
                                         Text(if (mark == bookmarkStartMs) "A-start ✓" else "Kies A")
                                     }
-                                    TextButton(onClick = {
+                                    TextButton(enabled = !guidedActive, onClick = {
                                         bookmarkEndMs = mark
                                         bookmarkRepeating = false
                                         notice = "Audio B-einde: ${clock(mark)}."
                                     }, modifier = Modifier.weight(1f)) {
                                         Text(if (mark == bookmarkEndMs) "B-einde ✓" else "Kies B")
                                     }
-                                    TextButton(onClick = {
+                                    TextButton(enabled = !guidedActive, onClick = {
                                         audioBookmarks = audioBookmarks.filterNot { it == mark }
                                         savedPracticePassages = savedPracticePassages.filterNot {
                                             it.first == mark || it.second == mark
@@ -500,7 +545,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         Text("Mijn tijdelijke oefenfragmenten (${savedPracticePassages.size}/4)",
                             style = MaterialTheme.typography.titleSmall)
                         OutlinedButton(
-                            enabled = bookmarkBounds() != null &&
+                            enabled = !guidedActive && bookmarkBounds() != null &&
                                 savedPracticePassages.size < 4 &&
                                 bookmarkBounds() !in savedPracticePassages,
                             onClick = {
@@ -524,7 +569,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 Row(modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(
-                                        enabled = prepared && passage.first in audioBookmarks &&
+                                        enabled = !guidedActive && prepared &&
+                                            passage.first in audioBookmarks &&
                                             passage.second in audioBookmarks,
                                         onClick = {
                                             // Seek before switching repeat modes so the old
@@ -542,7 +588,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         }, modifier = Modifier.weight(2f)
                                     ) { Text("▶ Oefen") }
                                     TextButton(
-                                        enabled = index > 0,
+                                        enabled = !guidedActive && index > 0,
                                         onClick = {
                                             savedPracticePassages =
                                                 savedPracticePassages.toMutableList().apply {
@@ -551,7 +597,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         }, modifier = Modifier.weight(1f)
                                     ) { Text("↑") }
                                     TextButton(
-                                        enabled = index < savedPracticePassages.lastIndex,
+                                        enabled = !guidedActive && index < savedPracticePassages.lastIndex,
                                         onClick = {
                                             savedPracticePassages =
                                                 savedPracticePassages.toMutableList().apply {
@@ -560,6 +606,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         }, modifier = Modifier.weight(1f)
                                     ) { Text("↓") }
                                     TextButton(
+                                        enabled = !guidedActive,
                                         onClick = {
                                             savedPracticePassages =
                                                 savedPracticePassages.filterIndexed { i, _ ->
@@ -577,8 +624,72 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 }
                             }
                         }
+                        HorizontalDivider()
+                        Text("Begeleide A–B-oefenroute",
+                            style = MaterialTheme.typography.titleSmall)
+                        Text("Speel mijn opgeslagen fragmenten in gekozen volgorde " +
+                            "achter elkaar af. Begin bewust met Afspelen als audio gepauzeerd is. " +
+                            "Bij voltooiing pauzeert de speler vanzelf; Android-background blijft pauzeren.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(1, 3, 5).forEach { rounds ->
+                                TextButton(
+                                    enabled = !guidedActive && guidedRounds != rounds,
+                                    onClick = { guidedRounds = rounds },
+                                    modifier = Modifier.weight(1f)
+                                ) { Text((if (guidedRounds == rounds) "✓ " else "") +
+                                    "${rounds}× per fragment") }
+                            }
+                        }
                         OutlinedButton(
-                            enabled = bookmarkRepeating || bookmarkBounds() != null,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = guidedActive || (prepared &&
+                                savedPracticePassages.isNotEmpty() &&
+                                savedPracticePassages.size <= 4 &&
+                                savedPracticePassages.all { (start, end) ->
+                                    start in audioBookmarks && end in audioBookmarks &&
+                                        start >= 0L && end <= durationMs &&
+                                        end - start in 750L..300_000L
+                                }),
+                            onClick = {
+                                if (guidedActive) {
+                                    pauseAudio()
+                                    guidedActive = false
+                                    guidedQueue = emptyList()
+                                    guidedIndex = 0
+                                    guidedPasses = 0
+                                    notice = "Oefenroute gestopt. Audio staat gepauzeerd."
+                                } else {
+                                    val snapshot = savedPracticePassages.toList()
+                                    if (prepared && snapshot.isNotEmpty()) {
+                                        // Seek before activating the queue to avoid
+                                        // accidental cancellation by an old repeat mode.
+                                        seekTo(snapshot.first().first)
+                                        bookmarkRepeating = false
+                                        rangeRepeating = false
+                                        loopCueIndex = -1
+                                        guidedQueue = snapshot
+                                        guidedIndex = 0
+                                        guidedPasses = 0
+                                        lastLoopAtMs = 0L
+                                        guidedActive = true
+                                        notice = "Oefenroute klaar: fragment 1 van ${snapshot.size}, " +
+                                            "${guidedRounds}× per fragment. Afspelen als nodig."
+                                    }
+                                }
+                            }
+                        ) { Text(if (guidedActive) "■ Stop begeleide oefenroute" else
+                            "▶ Start mijn begeleide A–B-oefenroute") }
+                        if (guidedActive) {
+                            Text("Fragment ${guidedIndex + 1}/${guidedQueue.size} · " +
+                                "afgeronde herhalingen: ${guidedPasses}/${guidedRounds}. " +
+                                "Pauseer met de bestaande afspeelknop of stop de hele route.",
+                                style = MaterialTheme.typography.bodyMedium)
+                        }
+                        OutlinedButton(
+                            enabled = !guidedActive &&
+                                (bookmarkRepeating || bookmarkBounds() != null),
                             onClick = {
                                 if (bookmarkRepeating) {
                                     bookmarkRepeating = false
@@ -686,9 +797,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     }
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = loopCueIndex >= 0 || (active != null &&
+                        enabled = !guidedActive && (loopCueIndex >= 0 || (active != null &&
                             active.endMillis - active.startMillis >= 750L &&
-                            cuePlayable(active)),
+                            cuePlayable(active))),
                         onClick = {
                             loopCueIndex = if (loopCueIndex >= 0) -1 else activeIndex
                             completedPasses = 0
@@ -713,7 +824,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         completedPasses = 0
                                         lastLoopAtMs = 0L
                                     },
-                                    enabled = repeatPassLimit != limit,
+                                    enabled = !guidedActive && repeatPassLimit != limit,
                                     modifier = Modifier.weight(1f)
                                 ) { Text((if (repeatPassLimit == limit) "✓ " else "") + label) }
                             }
@@ -740,7 +851,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
-                            enabled = activeIndex >= 0 && active != null && cuePlayable(active),
+                            enabled = !guidedActive && activeIndex >= 0 && active != null && cuePlayable(active),
                             onClick = {
                                 rangeStartIndex = activeIndex
                                 rangeEndIndex = -1
@@ -755,7 +866,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         ) { Text(if (rangeStartIndex >= 0) "A ✓ regel " +
                             (rangeStartIndex + 1) else "Kies A-start") }
                         OutlinedButton(
-                            enabled = rangeStartIndex >= 0 && activeIndex >= rangeStartIndex &&
+                            enabled = !guidedActive && rangeStartIndex >= 0 && activeIndex >= rangeStartIndex &&
                                 active != null && cuePlayable(active),
                             onClick = {
                                 rangeEndIndex = activeIndex
@@ -772,7 +883,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     }
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = rangeRepeating || rangeBounds() != null,
+                        enabled = !guidedActive && (rangeRepeating || rangeBounds() != null),
                         onClick = {
                             if (rangeRepeating) {
                                 rangeRepeating = false
