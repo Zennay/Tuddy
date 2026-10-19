@@ -257,6 +257,29 @@ internal class PrivateOwnWordDeck(context: Context) {
     }
 
     /**
+     * Export only explicitly reviewed personal words, not the whole private
+     * dictionary. Reject a stale list if any original note changed or vanished.
+     * The Android file chooser and separate preview remain UI responsibilities.
+     */
+    @Synchronized
+    fun exportTsvSelection(selected: List<OwnWord>): ByteArray? {
+        if (selected.isEmpty() || selected.size > MAX_ENTRIES ||
+            selected.map(::key).toSet().size != selected.size) return null
+        val current = entries() ?: return null
+        if (!current.containsAll(selected)) return null
+        val text = buildString {
+            append("language\tword\tmeaning\n")
+            selected.forEach { note ->
+                append(note.language).append('\t').append(note.word).append('\t')
+                append(note.ownMeaning).append('\n')
+            }
+        }
+        return text.toByteArray(Charsets.UTF_8).takeIf { bytes ->
+            bytes.size <= MAX_BACKUP_BYTES && previewTsvImport(bytes) == selected
+        }
+    }
+
+    /**
      * Explicit user-selected JSON backup. No transcript/audio/provider data
      * is included, only the user's word, language and their own meaning.
      */
