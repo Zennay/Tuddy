@@ -1240,7 +1240,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
             onDismissRequest = { phraseDraftLanguage = null },
             title = { Text("Mijn eigen zin bewust bewaren?") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
                     Text("Deze tekst komt uitsluitend uit jouw zelf gekozen SRT/VTT " +
                         "en is niet op uitspraak of betekenis gecontroleerd. " +
                         "Je schrijft de betekenis zelf. Een opslag in Mijn eigen zinnen " +
