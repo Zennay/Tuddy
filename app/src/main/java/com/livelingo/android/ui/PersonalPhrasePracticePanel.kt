@@ -99,11 +99,15 @@ internal fun PersonalPhrasePracticePanel(
     val gap = if (gapMode && card != null) PrivatePhraseGap.from(card, round.attempts) else null
     val names = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val isRtl = card?.language == "ckb" || card?.language == "ps"
+    LaunchedEffect(card?.phrase, card?.language, round.attempts,
+        selectedLanguage, shuffleVersion, favoritesOnly, reverse, gapMode) {
+        // Do not erase the user's draft when revealing the hidden answer.
+        typedGap = ""
+    }
     LaunchedEffect(card?.phrase, card?.language, round.revealed, round.attempts,
         selectedLanguage, shuffleVersion, favoritesOnly, reverse, gapMode) {
         speaker.stop()
         audioNotice = ""
-        typedGap = ""
     }
 
     AlertDialog(
@@ -164,6 +168,7 @@ internal fun PersonalPhrasePracticePanel(
                 }
                 TextButton(onClick = {
                     gapMode = !gapMode
+                    if (gapMode) reverse = false
                     typedGap = ""
                     speaker.stop()
                     round = PersonalPhrasePracticeRound.start(selected, offset)
