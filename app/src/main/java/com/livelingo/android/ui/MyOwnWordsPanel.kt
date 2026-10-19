@@ -72,6 +72,7 @@ internal fun MyOwnWordsPanel(
     var printableAllLanguages by remember { mutableStateOf(false) }
     var pendingPrintable by remember { mutableStateOf<Pair<String?, ByteArray>?>(null) }
     var pendingRestore by remember { mutableStateOf<List<OwnWord>?>(null) }
+    var pendingRestoreBase by remember { mutableStateOf<List<OwnWord>?>(null) }
     var restoreOrigin by remember { mutableStateOf("json") }
     var pasteWordsOpen by remember { mutableStateOf(false) }
     var pasteLines by remember { mutableStateOf("") }
@@ -175,6 +176,7 @@ internal fun MyOwnWordsPanel(
                     "Je bestaande woorden zijn behouden."
             } else {
                 pendingRestore = imported
+                pendingRestoreBase = deck.entries()?.toList()
                 notice = "Back-up ingelezen. Kies hieronder bewust samenvoegen of vervangen."
             }
         }
@@ -206,6 +208,7 @@ internal fun MyOwnWordsPanel(
             } else {
                 restoreOrigin = "tsv"
                 pendingRestore = imported
+                pendingRestoreBase = deck.entries()?.toList()
                 notice = "Woordlijst veilig ingelezen. Kies bewust samenvoegen of vervangen."
             }
         }
@@ -404,6 +407,7 @@ internal fun MyOwnWordsPanel(
                                     "niets is gewijzigd."
                             } else {
                                 pendingRestore = parsed
+                                pendingRestoreBase = deck.entries()?.toList()
                                 restoreOrigin = "paste"
                                 pasteWordsOpen = false
                                 pasteLines = ""
@@ -437,7 +441,10 @@ internal fun MyOwnWordsPanel(
         val duplicateCount = restore.size - newCount
         val canMerge = items != null && items.size + newCount <= PrivateOwnWordDeck.MAX_ENTRIES
         AlertDialog(
-            onDismissRequest = { pendingRestore = null },
+            onDismissRequest = {
+                pendingRestore = null
+                pendingRestoreBase = null
+            },
             title = { Text(if (restoreOrigin == "paste")
                 "Controleer mijn geplakte woorden" else if (restoreOrigin == "tsv")
                 "Zelfgeschreven woordenlijst importeren?" else "Eigen woorden herstellen?") },
@@ -483,11 +490,16 @@ internal fun MyOwnWordsPanel(
                             meaning = ""
                         }
                         pendingRestore = null
+                        pendingRestoreBase = null
                     }) { Text("Voeg alleen nieuwe woorden toe") }
                     TextButton(onClick = {
-                        val saved = deck.replaceImported(restore)
+                        val saved = deck.replaceImportedIfUnchanged(
+                            restore, pendingRestoreBase
+                        )
                         notice = if (saved) "Eigen woorden zijn na jouw keuze vervangen."
-                            else "Vervangen is mislukt; je huidige lijst is behouden."
+                            else "Vervangen geweigerd: sinds de preview zijn de " +
+                                "eigen woorden gewijzigd of de opslag is niet beschikbaar. " +
+                                "Kies opnieuw een importbestand of plak de lijst opnieuw."
                         if (saved) {
                             revision++
                             onChanged()
@@ -496,10 +508,14 @@ internal fun MyOwnWordsPanel(
                             meaning = ""
                         }
                         pendingRestore = null
+                        pendingRestoreBase = null
                     }) { Text("Vervang volledige eigen lijst") }
                 }
             },
-            dismissButton = { TextButton(onClick = { pendingRestore = null }) {
+            dismissButton = { TextButton(onClick = {
+                pendingRestore = null
+                pendingRestoreBase = null
+            }) {
                 Text("Annuleren")
             } }
         )
