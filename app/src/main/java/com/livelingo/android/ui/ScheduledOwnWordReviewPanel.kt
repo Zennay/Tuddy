@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,6 +40,8 @@ internal fun ScheduledOwnWordReviewPanel(
     var index by remember { mutableIntStateOf(0) }
     var reveal by remember { mutableStateOf(false) }
     var reverse by remember { mutableStateOf(false) }
+    var writeFirst by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
     val card = due.getOrNull(index)
     val rtlCodes = setOf("ckb", "ps", "ar", "fa", "ur", "sd", "ug")
@@ -70,8 +73,11 @@ internal fun ScheduledOwnWordReviewPanel(
                     val rtl = note.language in rtlCodes
                     Text("Kaart ${index + 1} van ${due.size} · ${note.language.uppercase()}",
                         style = MaterialTheme.typography.labelMedium)
-                    TextButton(onClick = { reverse = !reverse; reveal = false }) {
+                    TextButton(onClick = { reverse = !reverse; reveal = false; draft = "" }) {
                         Text(if (reverse) "Eigen betekenis → woord ⇄" else "Woord → eigen betekenis ⇄")
+                    }
+                    TextButton(onClick = { writeFirst = !writeFirst; reveal = false; draft = "" }) {
+                        Text(if (writeFirst) "✓ Typ eerst zelf" else "✍ Typ eerst zelf")
                     }
                     HorizontalDivider()
                     Text(
@@ -81,12 +87,32 @@ internal fun ScheduledOwnWordReviewPanel(
                                 else TextDirection.Ltr
                         )
                     )
+                    if (writeFirst && !reveal) {
+                        OutlinedTextField(
+                            value = draft,
+                            onValueChange = { draft = it.take(220) },
+                            label = { Text(if (reverse) "Mijn woord" else "Mijn eigen betekenis") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = if (reverse && rtl) TextDirection.Rtl else TextDirection.Ltr
+                            )
+                        )
+                        Text("Alleen tijdelijk, niet opgeslagen of automatisch beoordeeld.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                     if (!reveal) {
                         Button(modifier = Modifier.fillMaxWidth(),
                             onClick = { reveal = true }) {
                             Text("Toon mijn eigen antwoord")
                         }
                     } else {
+                        if (writeFirst) {
+                            Text("Mijn poging: " + draft.ifBlank { "(niet ingevuld)" },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (reverse && rtl) TextDirection.Rtl else TextDirection.Ltr
+                                ))
+                        }
                         Text(
                             if (reverse) note.word else note.ownMeaning,
                             style = MaterialTheme.typography.titleLarge.copy(
@@ -103,6 +129,7 @@ internal fun ScheduledOwnWordReviewPanel(
                                         onChanged()
                                         index++
                                         reveal = false
+                                        draft = ""
                                         notice = ""
                                     } else notice = "Opslaan mislukt; kaart niet beoordeeld."
                                 }
@@ -114,6 +141,7 @@ internal fun ScheduledOwnWordReviewPanel(
                                         onChanged()
                                         index++
                                         reveal = false
+                                        draft = ""
                                         notice = ""
                                     } else notice = "Opslaan mislukt; kaart niet beoordeeld."
                                 }
