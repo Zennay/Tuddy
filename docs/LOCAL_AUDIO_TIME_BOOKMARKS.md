@@ -50,3 +50,39 @@ Dit is bronfunctionaliteit, niet een bewezen fysieke Android 12+ acceptatie
 of native Kurmanji/Sorani/Pasjtoe ASR/MT. Bestaande verplichte Gradle/Android
 CI, review, APK signing en fysieke offline toestel-/licentiegates blijven
 van kracht. Geen zelfstandige QA-/regressiesuites toegevoegd of gestart.
+
+
+## Nieuw: vanuit een ondertitelregel meteen naar je oefenroute
+
+Je hoeft niet langer eerst twee losse audio-A/B-markeringen op het gehoor
+te plaatsen als jouw eigen SRT/VTT al bruikbare tijden heeft. Zoek onder
+**⌕ Zoek passage** een ondertitel en kies bij die regel
+**＋ Regel … in mijn oefenroute bewaren**; of gebruik vanuit de speler
+**＋ Huidige ondertitel als A–B-oefenfragment bewaren**. De bronregel
+blijft ongewijzigd en audio start niet automatisch.
+
+Tuddy gebruikt exact de begintijd en eindtijd uit jouw SRT/VTT, inclusief
+alleen de op dat moment handmatig gekozen tijdelijke tijdverschuiving.
+De hele regel moet binnen de gekozen audio vallen en tussen 0,75 seconde
+en 5 minuten duren. De regel wordt toegevoegd aan de bestaande
+**tijdelijke oefenfragmenten** (maximaal vier), met maximaal acht
+unieke audiomarkeringen. Een exact dubbel fragment wordt niet opgeslagen;
+markeringen die op minder dan 0,5 s van een andere grens liggen,
+of onvoldoende beschikbare plekken, worden geweigerd met uitleg in
+de speler. Bij een weigering blijft de bestaande route intact.
+
+Een geslaagde toevoeging opent de bestaande markeringenlijst en toont
+bij passende actuele ondertiteltijden tevens een kort broncuerelaas.
+Daar kun je in de eigen volgorde, met eigen beoordeling
+(*Nog oefenen / Gaat goed / Makkelijk*) en een eindige begeleide
+A–B-oefenroute doorgaan. Zelf gekozen audiomarkeringen en vrije
+A–B-punten blijven als onafhankelijke bedieningsopties beschikbaar.
+Veranderen van audio, sluiten of een spelerfout wist de tijdelijke
+fragmenten; een latere tijdverschuiving verandert opgeslagen audiotijden
+niet heimelijk. Wie echt passende ondertiteltijden wil, moet ze zelf
+controleren en opnieuw opslaan.
+
+Geen spraakdetectie, automatische synchronisatie, woordscore,
+transcriptmodel, server, account, nieuwe permissie of automatische
+bestandsopslag. De gekozen SAF-bestandsprovider kan zelf cloudtoegang
+gebruiken; kies lokaal opgeslagen media voor daadwerkelijk offline gebruik.
