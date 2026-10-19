@@ -191,6 +191,55 @@ internal fun LocalSubtitleAudioPreviewDialog(
         return start to end
     }
 
+
+    // Reuse the existing bounded personal audio A/B deck from an exact SRT/VTT
+    // cue. Nothing is inferred from speech, written to disk or sent to a server.
+    fun saveCueForPractice(index: Int) {
+        if (!prepared || guidedActive) {
+            notice = "Stop eerst de oefenroute en open zelf een bruikbaar audiobestand."
+            return
+        }
+        val cue = cues.getOrNull(index) ?: return
+        val start = cueStart(cue)
+        val end = cueEnd(cue)
+        val bounds = start to end
+        if (start < 0L || end > durationMs || end - start !in 750L..300_000L) {
+            notice = "Deze ondertitel past niet volledig in je audio of duurt buiten 0,75 s–5 min."
+            return
+        }
+        if (bounds in savedPracticePassages) {
+            bookmarkToolsOpen = true
+            notice = "Deze exacte ondertitel staat al in je oefenroute."
+            return
+        }
+        if (savedPracticePassages.size >= 4) {
+            bookmarkToolsOpen = true
+            notice = "De oefenroute is vol (4/4). Verwijder eerst bewust een fragment."
+            return
+        }
+        val missing = listOf(start, end).distinct().filterNot { it in audioBookmarks }
+        if (audioBookmarks.size + missing.size > 8) {
+            bookmarkToolsOpen = true
+            notice = "Te weinig ruimte voor twee audiomarkeringen (maximaal 8). Wis eerst zelf markeringen."
+            return
+        }
+        if (missing.any { mark ->
+                (audioBookmarks + missing).any { other ->
+                    other != mark && kotlin.math.abs(other - mark) < 500L
+                }
+            }) {
+            bookmarkToolsOpen = true
+            notice = "Een bestaand audiomoment ligt binnen 0,5 s van deze regelgrens. " +
+                "Pas de markeringen zelf aan om een onduidelijk fragment te vermijden."
+            return
+        }
+        audioBookmarks = (audioBookmarks + missing).distinct().sorted()
+        savedPracticePassages = savedPracticePassages + bounds
+        bookmarkToolsOpen = true
+        notice = "Ondertitelregel ${index + 1} als eigen oefenfragment " +
+            "(${savedPracticePassages.size}/4) opgeslagen; start de oefenroute zelf."
+    }
+
     fun currentRepeatBounds(): Pair<Long, Long>? {
         if (guidedActive) return guidedQueue.getOrNull(guidedIndex)
         if (bookmarkRepeating) return bookmarkBounds()
@@ -576,6 +625,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 Text("Fragment ${index + 1} · ${clock(passage.first)} – " +
                                     clock(passage.second),
                                     style = MaterialTheme.typography.bodyMedium)
+                                val sourceCue = cues.firstOrNull {
+                                    cueStart(it) == passage.first && cueEnd(it) == passage.second
+                                }
+                                if (sourceCue != null) {
+                                    Text("Ondertitel: " + sourceCue.text.take(120),
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            textDirection = TextDirection.ContentOrRtl))
+                                }
                                 Row(modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(
@@ -806,6 +863,18 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("⌕ Zoek passage en spring naar ondertitel…") }
+
+                    OutlinedButton(
+                        enabled = !guidedActive && activeIndex >= 0,
+                        onClick = { saveCueForPractice(activeIndex) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("＋ Huidige ondertitel als A–B-oefenfragment bewaren")
+                    }
+                    Text("Gebruikt uitsluitend de originele, eventueel tijdelijk verschoven " +
+                        "SRT/VTT-begin- en eindtijd. Fragmenten vind je onder " +
+                        "audiomarkeringen en begeleide oefenroute (maximaal vier).",
+                        style = MaterialTheme.typography.labelSmall)
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf(0.75f to "Rustig 0,75×", 1f to "1×",
@@ -1140,6 +1209,19 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                                 textDirection = TextDirection.ContentOrRtl
                                             ))
                                     }
+                                }
+
+
+                                OutlinedButton(
+                                    enabled = !guidedActive,
+                                    onClick = {
+                                        saveCueForPractice(index)
+                                        // Remain in search after adding: choose more phrases
+                                        // without restarting playback or copying audio.
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("＋ Regel ${index + 1} in mijn oefenroute bewaren")
                                 }
 
                                 val anchorOffset = positionMs - cue.startMillis
