@@ -93,7 +93,9 @@ internal fun PersonalPhrasePracticePanel(
     var focusMissed by remember(selected) { mutableStateOf<List<PersonalPhrase>?>(null) }
     var reverse by remember { mutableStateOf(false) }
     var gapMode by remember { mutableStateOf(false) }
+    var freeRecallMode by remember { mutableStateOf(false) }
     var typedGap by remember { mutableStateOf("") }
+    var typedRecall by remember { mutableStateOf("") }
     var round by remember(selected) {
         mutableStateOf(PersonalPhrasePracticeRound.start(selected))
     }
@@ -102,9 +104,10 @@ internal fun PersonalPhrasePracticePanel(
     val names = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val isRtl = card?.language == "ckb" || card?.language == "ps"
     LaunchedEffect(card?.phrase, card?.language, round.attempts,
-        selectedLanguage, shuffleVersion, favoritesOnly, reverse, gapMode) {
-        // Do not erase the user's draft when revealing the hidden answer.
+        selectedLanguage, shuffleVersion, favoritesOnly, reverse, gapMode, freeRecallMode) {
+        // Never erase a draft just because the answer is revealed.
         typedGap = ""
+        typedRecall = ""
     }
     LaunchedEffect(card?.phrase, card?.language, round.revealed, round.attempts,
         selectedLanguage, shuffleVersion, favoritesOnly, reverse, gapMode) {
@@ -180,8 +183,12 @@ internal fun PersonalPhrasePracticePanel(
                 }
                 TextButton(onClick = {
                     gapMode = !gapMode
-                    if (gapMode) reverse = false
+                    if (gapMode) {
+                        reverse = false
+                        freeRecallMode = false
+                    }
                     typedGap = ""
+                    typedRecall = ""
                     speaker.stop()
                     round = PersonalPhrasePracticeRound.start(
                         focusMissed ?: selected, if (focusMissed == null) offset else 0
@@ -189,6 +196,25 @@ internal fun PersonalPhrasePracticePanel(
                 }) {
                     Text(if (gapMode) "✓ Ontbrekend woord oefenen" else
                         "◻ Ontbrekend woord oefenen")
+                }
+                TextButton(onClick = {
+                    freeRecallMode = !freeRecallMode
+                    if (freeRecallMode) gapMode = false
+                    typedGap = ""
+                    typedRecall = ""
+                    speaker.stop()
+                    round = PersonalPhrasePracticeRound.start(
+                        focusMissed ?: selected, if (focusMissed == null) offset else 0
+                    )
+                }) {
+                    Text(if (freeRecallMode) "✓ Schrijf zelf het hele antwoord" else
+                        "✍ Schrijf zelf het hele antwoord")
+                }
+                if (freeRecallMode) {
+                    Text("Typ uit je hoofd jouw eigen betekenis of oorspronkelijke zin, " +
+                        "onthul daarna en vergelijk zelf. De poging blijft tijdelijk " +
+                        "op je toestel, wordt niet bewaard of verstuurd en krijgt geen AI-score.",
+                        style = MaterialTheme.typography.bodySmall)
                 }
                 if (gapMode) {
                     Text("Vul zelf één verborgen woord uit jouw eigen zin in. " +
@@ -256,6 +282,20 @@ internal fun PersonalPhrasePracticePanel(
                             "het ontbrekende woord verraden.",
                             style = MaterialTheme.typography.bodySmall)
                     } else {
+                        if (freeRecallMode && !round.revealed) {
+                            OutlinedTextField(
+                                value = typedRecall,
+                                onValueChange = { typedRecall = it.take(220) },
+                                label = { Text(if (reverse) "Schrijf mijn eigen zin" else
+                                    "Schrijf mijn eigen betekenis") },
+                                modifier = Modifier.fillMaxWidth(),
+                                maxLines = 3,
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (reverse && isRtl) TextDirection.Rtl
+                                        else TextDirection.Ltr
+                                )
+                            )
+                        }
                         OfflinePhraseSpeechActions(
                             original = if (gapMode) card.phrase else if (reverse)
                                 card.ownMeaning else card.phrase,
@@ -302,6 +342,17 @@ internal fun PersonalPhrasePracticePanel(
                                 ))
                             Text("Zelfgeschreven betekenis: " + card.ownMeaning,
                                 style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (freeRecallMode && gap == null) {
+                            Text("Jouw getypte poging (alleen tijdelijk):",
+                                style = MaterialTheme.typography.labelMedium)
+                            Text(typedRecall.ifBlank { "(niet ingevuld)" },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (reverse && isRtl) TextDirection.Rtl
+                                        else TextDirection.Ltr
+                                ))
+                            Text("Vergelijk hieronder met je eigen opgeslagen antwoord.",
+                                style = MaterialTheme.typography.bodySmall)
                         }
                         if (gap == null) Text(
                             if (reverse) card.phrase else card.ownMeaning,
