@@ -46,12 +46,17 @@ internal fun OwnWordPracticePanel(
             else notes.filter { it.language == selectedLanguage }
         if (shuffledVersion == 0) filtered else filtered.shuffled(Random(shuffledVersion))
     }
-    var offset by remember(selectedNotes) { mutableIntStateOf(0) }
-    var index by remember(selectedNotes, offset) { mutableIntStateOf(0) }
-    var revealed by remember(selectedNotes, offset) { mutableStateOf(false) }
-    var known by remember(selectedNotes, offset) { mutableIntStateOf(0) }
-    var hard by remember(selectedNotes, offset) { mutableIntStateOf(0) }
-    val group = selectedNotes.drop(offset).take(20)
+    // Ephemeral user-selected focus list, reset if language/shuffle source changes.
+    var focusNotes by remember(selectedNotes) { mutableStateOf<List<OwnWord>?>(null) }
+    var focusRoundVersion by remember(selectedNotes) { mutableIntStateOf(0) }
+    val studyNotes = focusNotes ?: selectedNotes
+    var offset by remember(studyNotes, focusNotes != null, focusRoundVersion) { mutableIntStateOf(0) }
+    var index by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableIntStateOf(0) }
+    var revealed by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableStateOf(false) }
+    var known by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableIntStateOf(0) }
+    var hard by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableIntStateOf(0) }
+    var missed by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableStateOf<List<OwnWord>>(emptyList()) }
+    val group = studyNotes.drop(offset).take(20)
     val current = group.getOrNull(index)
     val rtlCodes = setOf("ckb", "ps", "ar", "fa", "ur", "sd", "ug")
     val names = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
@@ -82,6 +87,15 @@ internal fun OwnWordPracticePanel(
                         Text(if (selectedLanguage == lang) "$name ✓" else name)
                     }
                 }
+                if (focusNotes != null) {
+                    Text("Focusronde: alleen ${focusNotes?.size ?: 0} woorden die jij " +
+                        "eerder lastig vond. Dit blijft uitsluitend tijdens deze sessie.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { focusNotes = null; focusRoundVersion++ }
+                    ) { Text("Terug naar de hele woordenlijst") }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(
                         enabled = selectedNotes.size > 1,
@@ -99,6 +113,24 @@ internal fun OwnWordPracticePanel(
                     )
                     if (group.isNotEmpty()) {
                         Text(scoreLine, style = MaterialTheme.typography.bodyMedium)
+                        if (missed.isNotEmpty()) {
+                            Text("Door jou lastig gevonden: ${missed.size} unieke woorden. " +
+                                "Je kunt deze apart oefenen, zonder een automatische taalcontrole.",
+                                style = MaterialTheme.typography.bodySmall)
+                            missed.take(8).forEach { note ->
+                                Text("• ${note.word}",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        textDirection = if (note.language in rtlCodes)
+                                            TextDirection.Rtl else TextDirection.Ltr
+                                    ))
+                            }
+                            if (missed.size > 8) Text("En ${missed.size - 8} andere woorden.",
+                                style = MaterialTheme.typography.bodySmall)
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { focusNotes = missed.toList(); focusRoundVersion++ }
+                            ) { Text("Oefen mijn ${missed.size} lastige woorden") }
+                        }
                         Text("De beoordeling blijft alleen bestaan zolang je deze ronde opent.",
                             style = MaterialTheme.typography.bodySmall)
                         OutlinedButton(
@@ -111,7 +143,7 @@ internal fun OwnWordPracticePanel(
                                 revealed = false
                             }
                         ) { Text("Begin deze woordselectie opnieuw") }
-                        if (offset + group.size < selectedNotes.size) {
+                        if (focusNotes == null && offset + group.size < selectedNotes.size) {
                             Button(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
@@ -159,7 +191,12 @@ internal fun OwnWordPracticePanel(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
                                 modifier = Modifier.weight(1f),
-                                onClick = { hard++; index++; revealed = false }
+                                onClick = {
+                                    if (current !in missed) missed = missed + current
+                                    hard++
+                                    index++
+                                    revealed = false
+                                }
                             ) { Text("Nog oefenen") }
                             Button(
                                 modifier = Modifier.weight(1f),
@@ -170,7 +207,8 @@ internal fun OwnWordPracticePanel(
                     Text(scoreLine, style = MaterialTheme.typography.bodySmall)
                 }
                 Text(
-                    "Maximaal 20 kaarten per ronde. Vrij oefenen; geen automatische " +
+                    "Maximaal 20 kaarten per ronde. Je kunt zelf aangewezen " +
+                        "lastige woorden direct opnieuw oefenen. Geen automatische " +
                         "taalcontrole, voortgangsopslag of pushmelding.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
