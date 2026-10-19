@@ -433,35 +433,39 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("＋ Markeer huidige audiopositie (${audioBookmarks.size}/8)") }
                         audioBookmarks.forEachIndexed { index, mark ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
                                 OutlinedButton(onClick = {
                                     seekTo(mark)
                                     notice = "Naar eigen audiomarkering ${clock(mark)} gesprongen."
-                                }, modifier = Modifier.weight(1f)) {
-                                    Text("${index + 1} · ${clock(mark)}")
+                                }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("▶ Naar markering ${index + 1} · ${clock(mark)}")
                                 }
-                                TextButton(onClick = {
-                                    bookmarkStartMs = mark
-                                    bookmarkRepeating = false
-                                    notice = "Audio A-start: ${clock(mark)}."
-                                }) { Text(if (mark == bookmarkStartMs) "A ✓" else "A") }
-                                TextButton(onClick = {
-                                    bookmarkEndMs = mark
-                                    bookmarkRepeating = false
-                                    notice = "Audio B-einde: ${clock(mark)}."
-                                }) { Text(if (mark == bookmarkEndMs) "B ✓" else "B") }
-                                TextButton(onClick = {
-                                    audioBookmarks = audioBookmarks.filterNot { it == mark }
-                                    if (bookmarkStartMs == mark || bookmarkEndMs == mark) {
-                                        bookmarkStartMs = -1L
-                                        bookmarkEndMs = -1L
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(onClick = {
+                                        bookmarkStartMs = mark
                                         bookmarkRepeating = false
+                                        notice = "Audio A-start: ${clock(mark)}."
+                                    }, modifier = Modifier.weight(1f)) {
+                                        Text(if (mark == bookmarkStartMs) "A-start ✓" else "Kies A")
                                     }
-                                    notice = "Eigen audiomarkering verwijderd."
-                                }) { Text("Wis") }
+                                    TextButton(onClick = {
+                                        bookmarkEndMs = mark
+                                        bookmarkRepeating = false
+                                        notice = "Audio B-einde: ${clock(mark)}."
+                                    }, modifier = Modifier.weight(1f)) {
+                                        Text(if (mark == bookmarkEndMs) "B-einde ✓" else "Kies B")
+                                    }
+                                    TextButton(onClick = {
+                                        audioBookmarks = audioBookmarks.filterNot { it == mark }
+                                        if (bookmarkStartMs == mark || bookmarkEndMs == mark) {
+                                            bookmarkStartMs = -1L
+                                            bookmarkEndMs = -1L
+                                            bookmarkRepeating = false
+                                        }
+                                        notice = "Eigen audiomarkering verwijderd."
+                                    }, modifier = Modifier.weight(1f)) { Text("Wis") }
+                                }
                             }
                         }
                         OutlinedButton(
@@ -608,6 +612,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 rangeStartIndex = activeIndex
                                 rangeEndIndex = -1
                                 rangeRepeating = false
+                                bookmarkRepeating = false
                                 loopCueIndex = -1
                                 confirmClipOpen = false
                                 notice = "A ingesteld op regel " + (activeIndex + 1) +
@@ -622,6 +627,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             onClick = {
                                 rangeEndIndex = activeIndex
                                 rangeRepeating = false
+                                bookmarkRepeating = false
                                 loopCueIndex = -1
                                 confirmClipOpen = false
                                 notice = "B ingesteld op regel " + (activeIndex + 1) + "."
