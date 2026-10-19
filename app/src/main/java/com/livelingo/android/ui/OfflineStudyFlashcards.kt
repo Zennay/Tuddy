@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.PrivatePhraseGap
 import com.livelingo.android.OwnWord
 import com.livelingo.android.SavedWord
 import java.text.Normalizer
@@ -48,11 +49,12 @@ private data class PracticeCard(
     val note: String,
     val rtlAnswer: Boolean,
     val spokenText: String,
-    val spokenLanguage: String
+    val spokenLanguage: String,
+    val selfAuthoredPhrase: PersonalPhrase? = null
 )
 
 private enum class PracticeFilter { ALL, WORDS, OWN_PHRASES }
-private enum class PracticeMode { REVEAL, TYPE }
+private enum class PracticeMode { REVEAL, TYPE, GAP }
 private enum class PracticeLength(val limit: Int) { QUICK(12), FOCUSED(30), ALL(200) }
 
 /** Case/spacing/width normalization only: exact typed text, NOT meaning verification. */
@@ -81,7 +83,7 @@ internal fun OfflineStudyFlashcards(
     var voiceNotice by remember { mutableStateOf("") }
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
     val allCards = remember(savedWords, personalPhrases, ownWords, filter, mode) {
-        val wordCards = if (filter != PracticeFilter.OWN_PHRASES) savedWords.mapNotNull { saved ->
+        val wordCards = if (filter != PracticeFilter.OWN_PHRASES && mode != PracticeMode.GAP) savedWords.mapNotNull { saved ->
             val definition = saved.entry.definition.trim()
             if (definition.isEmpty() || definition.length > 250) null
             else PracticeCard(
@@ -94,18 +96,22 @@ internal fun OfflineStudyFlashcards(
                 spokenLanguage = saved.language
             )
         } else emptyList()
-        val phraseCards = if (filter != PracticeFilter.WORDS) personalPhrases.orEmpty().map { phrase ->
+        val phraseCards = if (filter != PracticeFilter.WORDS || mode == PracticeMode.GAP)
+            personalPhrases.orEmpty().mapNotNull { phrase ->
+            val gap = if (mode == PracticeMode.GAP) PrivatePhraseGap.from(phrase) else null
+            if (mode == PracticeMode.GAP && gap == null) return@mapNotNull null
             PracticeCard(
-                prompt = phrase.ownMeaning,
-                answer = phrase.phrase,
+                prompt = gap?.hiddenPhrase ?: phrase.ownMeaning,
+                answer = gap?.missingToken ?: phrase.phrase,
                 language = phrase.language.uppercase(),
                 note = "Jouw eigen betekenis in ${phrase.meaningLanguage.uppercase()} · niet geverifieerd",
                 rtlAnswer = phrase.language == "ckb" || phrase.language == "ps",
                 spokenText = phrase.phrase,
-                spokenLanguage = phrase.language
+                spokenLanguage = phrase.language,
+                selfAuthoredPhrase = phrase
             )
         } else emptyList()
-        val ownWordCards = if (filter != PracticeFilter.OWN_PHRASES) ownWords.orEmpty().map { saved ->
+        val ownWordCards = if (filter != PracticeFilter.OWN_PHRASES && mode != PracticeMode.GAP) ownWords.orEmpty().map { saved ->
             PracticeCard(
                 prompt = if (mode == PracticeMode.TYPE) saved.ownMeaning else saved.word,
                 answer = if (mode == PracticeMode.TYPE) saved.word else saved.ownMeaning,
@@ -138,10 +144,16 @@ internal fun OfflineStudyFlashcards(
                     "Antwoorden en voortgang blijven tijdelijk in deze oefensessie.",
                     style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    TextButton(onClick = { filter = PracticeFilter.ALL }) {
+                    TextButton(onClick = {
+                        filter = PracticeFilter.ALL
+                        if (mode == PracticeMode.GAP) mode = PracticeMode.REVEAL
+                    }) {
                         Text(if (filter == PracticeFilter.ALL) "Alles ✓" else "Alles")
                     }
-                    TextButton(onClick = { filter = PracticeFilter.WORDS }) {
+                    TextButton(onClick = {
+                        filter = PracticeFilter.WORDS
+                        if (mode == PracticeMode.GAP) mode = PracticeMode.REVEAL
+                    }) {
                         Text(if (filter == PracticeFilter.WORDS) "Woorden ✓" else "Woorden")
                     }
                     TextButton(onClick = { filter = PracticeFilter.OWN_PHRASES }) {
@@ -155,6 +167,21 @@ internal fun OfflineStudyFlashcards(
                     TextButton(onClick = { mode = PracticeMode.TYPE }) {
                         Text(if (mode == PracticeMode.TYPE) "Antwoord typen ✓" else "Antwoord typen")
                     }
+
+                }
+                OutlinedButton(
+                    enabled = personalPhrases.orEmpty().any {
+                        PrivatePhraseGap.from(it) != null
+                    },
+                    onClick = {
+                        filter = PracticeFilter.OWN_PHRASES
+                        mode = PracticeMode.GAP
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (mode == PracticeMode.GAP)
+                        "✓ Mijn eigen zinnen · ontbrekend woord"
+                        else "Oefen ontbrekende woorden uit eigen zinnen")
                 }
                 Text("Oefenronde · kies hoeveel kaarten je nu wilt oefenen",
                     style = MaterialTheme.typography.labelMedium)
@@ -184,6 +211,13 @@ internal fun OfflineStudyFlashcards(
                         "Dit is geen controle van uitspraak, grammatica of betekenis.",
                         style = MaterialTheme.typography.bodySmall)
                 }
+                if (mode == PracticeMode.GAP) {
+                    Text("Uit je eigen zinnen wordt één woord verborgen. " +
+                        "Typ je poging, onthul het woord en beoordeel zelf. " +
+                        "De app beoordeelt je taal niet en bewaart geen antwoorden; " +
+                        "er is geen netwerkverzoek of nieuw audiobestand.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 if (ownWords == null && filter != PracticeFilter.OWN_PHRASES) {
                     Text("Eigen woordnotities konden niet veilig worden geladen.",
                         color = MaterialTheme.colorScheme.error,
@@ -199,7 +233,7 @@ internal fun OfflineStudyFlashcards(
                     Text("Nog geen kaarten in deze selectie. Bewaar eerst privéwoorden " +
                         "of eigen oefenzinnen.", style = MaterialTheme.typography.bodyMedium)
                 } else {
-                    PracticeCardsSession(cards, mode == PracticeMode.TYPE, speaker) {
+                    PracticeCardsSession(cards, mode, speaker) {
                         voiceNotice = it
                     }
                     if (voiceNotice.isNotBlank()) {
@@ -236,19 +270,20 @@ internal fun OfflineStudyFlashcards(
 @Composable
 private fun PracticeCardsSession(
     cards: List<PracticeCard>,
-    typedMode: Boolean,
+    mode: PracticeMode,
     speaker: LocalCaptionSpeaker,
     onVoiceNotice: (String) -> Unit
 ) {
-    val pending = remember(cards, typedMode) {
+    val typedMode = mode != PracticeMode.REVEAL
+    val pending = remember(cards, mode) {
         mutableStateListOf<PracticeCard>().apply { addAll(cards) }
     }
-    var revealed by remember(cards, typedMode) { mutableStateOf(false) }
-    var typedAnswer by remember(cards, typedMode) { mutableStateOf("") }
-    var mastered by remember(cards, typedMode) { mutableIntStateOf(0) }
-    var retries by remember(cards, typedMode) { mutableIntStateOf(0) }
-    var skipped by remember(cards, typedMode) { mutableIntStateOf(0) }
-    val repeatsByCard = remember(cards, typedMode) { mutableStateMapOf<PracticeCard, Int>() }
+    var revealed by remember(cards, mode) { mutableStateOf(false) }
+    var typedAnswer by remember(cards, mode) { mutableStateOf("") }
+    var mastered by remember(cards, mode) { mutableIntStateOf(0) }
+    var retries by remember(cards, mode) { mutableIntStateOf(0) }
+    var skipped by remember(cards, mode) { mutableIntStateOf(0) }
+    val repeatsByCard = remember(cards, mode) { mutableStateMapOf<PracticeCard, Int>() }
 
     fun nextCard(remembered: Boolean, repeat: Boolean = false) {
         if (pending.isEmpty()) return
@@ -282,18 +317,27 @@ private fun PracticeCardsSession(
     }
     val card = pending.first()
     // Never continue pronouncing an earlier answer when the learning mode changes.
-    DisposableEffect(cards, typedMode) {
+    DisposableEffect(cards, mode) {
         onDispose { speaker.stop() }
     }
     Text(card.language + " · " + card.note,
         style = MaterialTheme.typography.labelSmall)
-    Text(card.prompt, style = MaterialTheme.typography.titleLarge)
+    // A repeated card hides a different interior word, with unchanged original text.
+    val gap = if (mode == PracticeMode.GAP) card.selfAuthoredPhrase?.let {
+        PrivatePhraseGap.from(it, repeatsByCard[card] ?: 0)
+    } else null
+    Text(gap?.hiddenPhrase ?: card.prompt,
+        style = MaterialTheme.typography.titleLarge.copy(
+            textDirection = if (gap != null && card.rtlAnswer) TextDirection.Rtl
+                else TextDirection.Ltr
+        ))
 
     if (typedMode && !revealed) {
         OutlinedTextField(
             value = typedAnswer,
             onValueChange = { typedAnswer = it.take(300) },
-            label = { Text("Mijn letterlijke antwoord") },
+            label = { Text(if (gap != null) "Mijn ontbrekende woord" else
+                "Mijn letterlijke antwoord") },
             textStyle = MaterialTheme.typography.bodyLarge.copy(
                 textDirection = if (card.rtlAnswer) TextDirection.Rtl else TextDirection.Ltr
             ),
@@ -309,7 +353,7 @@ private fun PracticeCardsSession(
     } else if (revealed) {
         HorizontalDivider()
         Text("Opgeslagen antwoord", style = MaterialTheme.typography.labelMedium)
-        Text(card.answer,
+        Text(gap?.missingToken ?: card.answer,
             style = MaterialTheme.typography.titleMedium.copy(
                 textDirection = if (card.rtlAnswer) TextDirection.Rtl else TextDirection.Ltr
             ),
@@ -335,7 +379,28 @@ private fun PracticeCardsSession(
                 }) { Text("Stop stem") }
             }
         }
-        if (typedMode) {
+        if (gap != null) {
+            Text("Jouw poging: " + (typedAnswer.ifBlank { "(niet ingevuld)" }),
+                style = MaterialTheme.typography.bodyMedium)
+            Text("Hele eigen zin: " + (card.selfAuthoredPhrase?.phrase ?: ""),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    textDirection = if (card.rtlAnswer) TextDirection.Rtl
+                        else TextDirection.Ltr
+                ))
+            Text("Zelfgeschreven betekenis: " +
+                (card.selfAuthoredPhrase?.ownMeaning ?: ""),
+                style = MaterialTheme.typography.bodySmall)
+            Text("Vergelijk zelf: de app controleert geen grammatica of vertaling.",
+                style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if ((repeatsByCard[card] ?: 0) < 2) {
+                    OutlinedButton(onClick = { nextCard(false, repeat = true) }) {
+                        Text("Nog eens")
+                    }
+                }
+                Button(onClick = { nextCard(true) }) { Text("Ik wist het ✓") }
+            }
+        } else if (typedMode) {
             val matches = literalAnswerMatches(typedAnswer, card.answer)
             Text(
                 if (matches) "De tekst komt overeen met je bewaarde antwoord."
