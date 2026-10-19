@@ -2018,6 +2018,8 @@ private fun TuddyScreen(
                     subtitleAudioPreview = null
                     openSubtitleAudio.launch(arrayOf("audio/*"))
                 },
+                readOwnMeaning = ::readOwnWordMeaning,
+                saveOwnMeaning = ::saveOwnWordMeaning,
                 onApplyAdjustedCues = { adjustedCues ->
                     // A separate RAM-only candidate from explicit audio-preview consent.
                     // Existing editor owns its own undo/redo and explicit SAF save flow.
