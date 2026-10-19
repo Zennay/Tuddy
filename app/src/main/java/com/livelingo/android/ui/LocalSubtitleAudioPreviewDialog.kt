@@ -6,6 +6,7 @@ import android.media.PlaybackParams
 import android.net.Uri
 import android.os.SystemClock
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
@@ -97,6 +98,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var guidedIndex by remember { mutableIntStateOf(0) }
     var guidedRounds by remember { mutableIntStateOf(1) }
     var guidedPasses by remember { mutableIntStateOf(0) }
+    var completedGuidedRoute by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
+    var completedGuidedRounds by remember { mutableIntStateOf(0) }
+    var practiceReportOpen by remember { mutableStateOf(false) }
     // Human judgement only: no speech recognition or pronunciation scoring.
     var passageRatings by remember {
         mutableStateOf<Map<Pair<Long, Long>, String>>(emptyMap())
@@ -124,6 +128,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
         rangeToolsOpen = false
         audioBookmarks = emptyList()
         savedPracticePassages = emptyList()
+        completedGuidedRoute = emptyList()
+        completedGuidedRounds = 0
+        practiceReportOpen = false
         guidedActive = false
         guidedQueue = emptyList()
         guidedIndex = 0
@@ -240,7 +247,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
 
     fun saveCueForPractice(index: Int) {
         val cue = cues.getOrNull(index) ?: return
-        saveBoundsForPractice(cueStart(cue) to cueEnd(cue), "Ondertitelregel $"+"{index + 1}")
+        saveBoundsForPractice(cueStart(cue) to cueEnd(cue), "Ondertitelregel ${index + 1}")
     }
 
     fun saveCueRangeForPractice() {
@@ -248,7 +255,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
             notice = "Kies eerst een volledig geldige A–B-passage in je eigen ondertitels."
             return
         }
-        saveBoundsForPractice(bounds, "Ondertitelpassage regel $"+"{rangeStartIndex + 1} t/m $"+"{rangeEndIndex + 1}")
+        saveBoundsForPractice(bounds, "Ondertitelpassage regel ${rangeStartIndex + 1} t/m ${rangeEndIndex + 1}")
     }
 
     fun currentRepeatBounds(): Pair<Long, Long>? {
@@ -278,6 +285,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
             notice = "Oefenroute: fragment ${guidedIndex + 1} van ${guidedQueue.size}."
             return guidedQueue[guidedIndex]
         }
+        completedGuidedRoute = guidedQueue.toList()
+        completedGuidedRounds = guidedRounds
         guidedActive = false
         pauseAudio()
         notice = "Begeleide oefenroute voltooid: ${guidedQueue.size} fragmenten " +
@@ -453,6 +462,16 @@ internal fun LocalSubtitleAudioPreviewDialog(
             }
             delay(160L)
         }
+    }
+
+    val practiceSummaryText = remember(
+        cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
+        completedGuidedRoute, completedGuidedRounds, guidedActive
+    ) {
+        privatePracticeSummary(
+            cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
+            completedGuidedRoute, completedGuidedRounds, guidedActive
+        )
     }
 
     val adjustedDraft = remember(cues, subtitleOffsetMs) {
@@ -735,6 +754,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         HorizontalDivider()
                         Text("Begeleide A–B-oefenroute",
                             style = MaterialTheme.typography.titleSmall)
+                        OutlinedButton(
+                            enabled = prepared,
+                            onClick = {
+                                pauseAudio()
+                                practiceReportOpen = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Mijn privé oefenoverzicht bekijken · tekst zelf selecteren") }
                         val needsPractice = savedPracticePassages.filter {
                             passageRatings[it] == "repeat"
                         }
@@ -802,6 +829,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         rangeRepeating = false
                                         loopCueIndex = -1
                                         guidedQueue = snapshot
+                                        completedGuidedRoute = emptyList()
+                                        completedGuidedRounds = 0
                                         guidedIndex = 0
                                         guidedPasses = 0
                                         lastLoopAtMs = 0L
@@ -1110,6 +1139,34 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     style = MaterialTheme.typography.labelSmall)
             }
         }
+    }
+    if (practiceReportOpen && prepared) {
+        AlertDialog(
+            onDismissRequest = { practiceReportOpen = false },
+            title = { Text("Mijn privé luisteroverzicht") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Hier staan je eigen ondertitels, tijdvakken en beoordelingen. " +
+                        "Selecteer alleen zelf tekst als je die via Android wilt kopiëren; " +
+                        "je klembord- of toetsenbord-app kan een kopie dan lezen.",
+                        style = MaterialTheme.typography.bodySmall)
+                    SelectionContainer {
+                        Text(
+                            practiceSummaryText,
+                            modifier = Modifier.fillMaxWidth()
+                                .heightIn(max = 340.dp)
+                                .verticalScroll(rememberScrollState()),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { practiceReportOpen = false }) {
+                    Text("Sluit zonder opslaan")
+                }
+            }
+        )
     }
     if (confirmClipOpen && passageDraft != null) {
         AlertDialog(
