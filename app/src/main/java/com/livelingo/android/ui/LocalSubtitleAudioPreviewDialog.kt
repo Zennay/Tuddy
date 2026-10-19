@@ -82,6 +82,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var bookmarkEndMs by remember { mutableLongStateOf(-1L) }
     var bookmarkRepeating by remember { mutableStateOf(false) }
     var lastLoopAtMs by remember { mutableLongStateOf(0L) }
+    // Zero preserves the existing open-ended repeat. Finite practice is
+    // counted in actually completed, not merely selected, cue/audio passes.
+    var repeatPassLimit by remember { mutableIntStateOf(0) }
+    var completedPasses by remember { mutableIntStateOf(0) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
     var confirmApplyOpen by remember { mutableStateOf(false) }
@@ -113,6 +117,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         confirmClipOpen = false
         cueQuery = ""
         lastLoopAtMs = 0L
+        completedPasses = 0
         if (old != null) runCatching {
             old.setOnPreparedListener(null)
             old.setOnErrorListener(null)
@@ -172,6 +177,19 @@ internal fun LocalSubtitleAudioPreviewDialog(
         return cueStart(single) to cueEnd(single)
     }
 
+    fun finishRepeatPass(): Boolean {
+        completedPasses += 1
+        if (repeatPassLimit == 0 || completedPasses < repeatPassLimit) return false
+        loopCueIndex = -1
+        rangeRepeating = false
+        bookmarkRepeating = false
+        pauseAudio()
+        notice = "Oefening klaar: ${completedPasses} volledige " +
+            (if (completedPasses == 1) "herhaling" else "herhalingen") +
+            ". Kies opnieuw een fragment om verder te oefenen."
+        return true
+    }
+
     fun shiftSubtitles(deltaMs: Long) {
         val shifted = (subtitleOffsetMs + deltaMs).coerceIn(-30_000L, 30_000L)
         if (shifted == subtitleOffsetMs) return
@@ -183,6 +201,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         confirmApplyOpen = false
         confirmClipOpen = false
         lastLoopAtMs = 0L
+        completedPasses = 0
         notice = "Verschuiving aangepast; dit wijzigt je SRT/VTT-bestand niet."
     }
 
@@ -195,6 +214,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
             loopCueIndex = -1
             rangeRepeating = false
             bookmarkRepeating = false
+            completedPasses = 0
         }
         runCatching { current.seekTo(target.toInt()) }
             .onSuccess { positionMs = target }
@@ -249,7 +269,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     next.setOnCompletionListener { finished ->
                         if (player === finished) {
                             val repeat = currentRepeatBounds()
-                            val replayed = if (repeat != null) runCatching {
+                            val replayed = if (repeat != null && !finishRepeatPass()) runCatching {
                                 finished.seekTo(repeat.first.toInt())
                                 finished.start()
                                 positionMs = repeat.first
@@ -304,6 +324,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 val elapsed = SystemClock.elapsedRealtime()
                 if (repeat != null && now >= repeat.second &&
                     elapsed - lastLoopAtMs >= 450L) {
+                    if (finishRepeatPass()) break
                     val rewound = runCatching {
                         current.seekTo(repeat.first.toInt())
                         true
@@ -483,6 +504,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         rangeRepeating = false
                                         bookmarkRepeating = true
                                         lastLoopAtMs = 0L
+                                        completedPasses = 0
                                         seekTo(bounds.first)
                                         notice = "Vrije audio A–B ${clock(bounds.first)} tot " +
                                             "${clock(bounds.second)}; druk op Afspelen indien gepauzeerd."
@@ -581,6 +603,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             cuePlayable(active)),
                         onClick = {
                             loopCueIndex = if (loopCueIndex >= 0) -1 else activeIndex
+                            completedPasses = 0
                             rangeRepeating = false
                             bookmarkRepeating = false
                             lastLoopAtMs = 0L
@@ -589,6 +612,28 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         Text(if (loopCueIndex >= 0)
                             "↻ Herhaal regel ${loopCueIndex + 1} ✓ · tik om te stoppen"
                         else "↻ Herhaal deze ondertitelregel")
+                    }
+                    Text("Aantal keren beluisteren per herhaalfragment",
+                        style = MaterialTheme.typography.labelSmall)
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(0 to "Doorlopend", 1 to "1×", 3 to "3×", 5 to "5×")
+                            .forEach { (limit, label) ->
+                                TextButton(
+                                    onClick = {
+                                        repeatPassLimit = limit
+                                        completedPasses = 0
+                                        lastLoopAtMs = 0L
+                                    },
+                                    enabled = repeatPassLimit != limit,
+                                    modifier = Modifier.weight(1f)
+                                ) { Text((if (repeatPassLimit == limit) "✓ " else "") + label) }
+                            }
+                    }
+                    if (completedPasses > 0) {
+                        Text("Afgeronde fragmenten: $completedPasses" +
+                            (if (repeatPassLimit == 0) "" else " / $repeatPassLimit"),
+                            style = MaterialTheme.typography.labelSmall)
                     }
                     Text("Herhalen gebruikt alleen de door jou ingevoerde tijdcodes " +
                         "(minimaal 0,75 s). Geen automatische woord- of audiouitlijning.",
@@ -651,6 +696,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     bookmarkRepeating = false
                                     lastLoopAtMs = 0L
                                     rangeRepeating = true
+                                    completedPasses = 0
                                     seekTo(bounds.first)
                                     notice = "Herhaal A–B vanaf de gekozen startregel; " +
                                         "druk op Afspelen als de audio pauzeert."
