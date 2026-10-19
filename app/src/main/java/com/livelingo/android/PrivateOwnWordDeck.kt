@@ -380,6 +380,22 @@ internal class PrivateOwnWordDeck(context: Context) {
     fun replaceImported(imported: List<OwnWord>): Boolean =
         if (imported.isEmpty()) false else write(imported, resetReviews = true)
 
+    /**
+     * A backup may remain open while the user edits their own words elsewhere.
+     * Refuse a stale replacement rather than silently discarding recent notes.
+     * Null means unreadable legacy storage, which can still be explicitly
+     * recovered if it hasn't become a valid word list in the meantime.
+     */
+    @Synchronized
+    fun replaceImportedIfUnchanged(
+        imported: List<OwnWord>,
+        expectedOriginal: List<OwnWord>?
+    ): Boolean {
+        if (read() != expectedOriginal || imported.isEmpty()) return false
+        return write(imported, resetReviews = true)
+    }
+
+
     @Synchronized
     fun clear(): Boolean = try { prefs.edit()
         .remove(KEY).remove(REVIEW_OPT_IN).remove(REVIEW_DATA).commit() }
