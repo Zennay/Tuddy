@@ -86,3 +86,30 @@ Geen spraakdetectie, automatische synchronisatie, woordscore,
 transcriptmodel, server, account, nieuwe permissie of automatische
 bestandsopslag. De gekozen SAF-bestandsprovider kan zelf cloudtoegang
 gebruiken; kies lokaal opgeslagen media voor daadwerkelijk offline gebruik.
+
+
+## Meerdere ondertitelregels als één begeleid A–B-fragment
+
+Open in de speler **▾ Oefen een A–B-passage van meerdere regels**.
+Gebruik de bestaande **Kies A-start** en **Kies B-einde** bij de eerste en
+laatste gewenste ondertitel. Wanneer alle betrokken regels volledig binnen
+je gekozen audio vallen en het gezamenlijke fragment tussen 0,75 seconde
+en vijf minuten duurt, toont Tuddy de twee gekozen regelposities en de
+bijbehorende bestaande (eventueel handmatig verschoven) tijdcodes.
+
+Met **＋ Bewaar deze complete A–B-passage in mijn begeleide oefenroute**
+wordt het gehele tijdvak vervolgens als één tijdelijk kaartje toegevoegd
+aan de bestaande vier-kaartjes luisterroute. Een kaartje met één ondertitel
+uit de vorige uitbreiding werkt hetzelfde, maar langere conversatiezinnen
+hoeven nu niet meer via losse audiomarkeringen herbouwd te worden.
+Kaartjes met een bronmatch tonen de eerste en laatste eigen
+ondertiteltekst als herkenningslabel. Markeringen blijven maximaal acht
+in dezelfde audiosessie; duplicaten en punten binnen 0,5 seconde van een
+andere grens worden niet heimelijk samengevoegd. De app verandert
+de oorspronkelijke SRT/VTT-tekst, audio of offset niet.
+
+De gebruiker kiest zelf de volgorde en het aantal herhalingen;
+bewaren begint nooit uit zichzelf af te spelen. Sluiten en audio wisselen
+wissen alles zoals voorheen. Dit is geen bewijs van echte synchronisatie,
+uitspraakscore of woordgrenzen: broncues moeten door de gebruiker zelf
+kloppen. Geen opslag, microfoon, cloudverbinding of nieuwe permissie.
