@@ -79,3 +79,41 @@ De tijdelijke **teksttaalkeuze** verdwijnt bij sluiten/audio wisselen;
 opgeslagen eigen notities blijven bestaan totdat je ze bewust wijzigt
 of wist. Androids zelfgekozen bestandsprovider kan afhankelijk van de
 locatie zelfstandig audio downloaden of synchroniseren.
+
+
+## Zelfgekozen ondertitelzin bewaren in Mijn eigen zinnen
+
+Tijdens het beluisteren van je eigen SRT/VTT kun je na het
+expliciet selecteren van **Kurmanji (kmr)**, **Sorani (ckb)** of
+**Pasjtoe (ps)** kiezen voor **Bewaar deze zin met mijn eigen betekenis…**.
+De volledige actieve cue wordt als **bewerkbaar concept** geopend.
+Je moet de frase zelf controleren, indien nodig inkorten tot maximaal
+120 tekens, en **zelf** een betekenis van maximaal 180 tekens
+in het Nederlands of Engels typen. Dit is geen officiële of door
+een model gecontroleerde vertaling.
+
+Tuddy slaat pas op na het aanvinken van de aparte bewaartoestemming
+en een tweede bewuste klik. Een bestaande zin met hetzelfde
+taallabel en dezelfde tekst wordt **niet** overschreven: wijzig
+hem uitsluitend bewust vanuit het bestaande paneel
+**Mijn eigen zinnen**. Bij onbekende taal, ongeldige tekens,
+een volle privézinnenlijst of weigering van app-opslag
+wordt geen bestaand item gewijzigd.
+
+Je eigen zin wordt in de bestaande app-private woorden-/zinnenomgeving
+bewaard. Dit is een **bewuste uitzondering** op de verder volledig
+tijdelijke audiopreview: de zelfstandige zin en zelf geschreven betekenis
+blijven na het sluiten van het audio-SRT-scherm beschikbaar
+voor persoonlijk oefenen en kunnen via bestaande functies gewijzigd,
+geëxporteerd of gewist worden. Het bron-SRT/VTT en de audio zelf
+worden nooit veranderd of opgeslagen, er is geen ASR, automatische
+tekstvertaling, netwerkverzoek of nieuwe Android-permissie.
+
+
+Een zelf gekozen zin kan bovendien vanuit **⌕ Zoek passage** worden
+bewaard: zoek zelf de gewenste ondertitelregel en kies onder dat
+zoekresultaat **Regel … als eigen zin met betekenis bewaren**. Dit opent
+precies hetzelfde bewerkbare privéconcept en dezelfde dubbele
+opslagtoestemming; er wordt niets automatisch van de zoeklijst
+of audio naar de persoonlijke zinnenlijst gekopieerd. Je hoeft
+de afspeelpositie niet te verplaatsen om een gevonden zin te bewaren.

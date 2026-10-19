@@ -1,5 +1,17 @@
 # Tuddy 🎙️
 
+## Nieuw: bewaar zelf gekozen ondertitelzinnen als privé-oefenzin
+
+In de eigen SRT/VTT-audiospeler kun je een actieve Kurmanji-, Sorani-
+of Pasjtoe-zin als bewerkbaar concept openen, er zelf een betekenis
+in Nederlands of Engels bij schrijven en deze pas na een tweede
+expliciete toestemming bewaren in **Mijn eigen zinnen**. De app
+genereert geen vertaling en overschrijft geen bestaande zin.
+[Uitleg](docs/LOCAL_SUBTITLE_AUDIO_PREVIEW.md).
+
+---
+
+
 ## Nieuw: tik op ondertitelwoorden tijdens je eigen audio
 
 In de SRT/VTT-audiospeler kun je nu een teksttaal kiezen en meteen op
