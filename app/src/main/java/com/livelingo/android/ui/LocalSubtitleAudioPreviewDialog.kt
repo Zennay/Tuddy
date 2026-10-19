@@ -48,6 +48,14 @@ import com.livelingo.android.TextTarget
 import kotlinx.coroutines.delay
 import java.util.Locale
 
+// Manual-only note languages intentionally absent from the ML Kit text targets.
+// Never present these as supported offline translation or ASR engines.
+private val manualSubtitleNoteLanguages = listOf(
+    TextTarget("kmr", "Kurmancî · Kurmanji (eigen notities)"),
+    TextTarget("ckb", "سۆرانی · Sorani (eigen notities)"),
+    TextTarget("ps", "پښتو · Pasjtoe (eigen notities)")
+)
+
 /**
  * User-selected audio + user-selected SRT/VTT timecodes. This is a private
  * playback aid, NOT ASR, word-level timing or a verified synchronized track.
@@ -1145,7 +1153,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         style = MaterialTheme.typography.labelSmall)
                     Box {
                         TextButton(onClick = { wordLanguageMenuOpen = true }) {
-                            val languageLabel = TargetCatalog.targets.firstOrNull {
+                            val languageLabel = (manualSubtitleNoteLanguages + TargetCatalog.targets).firstOrNull {
                                 it.code == chosenSubtitleLanguage
                             }?.title ?: "Kies de taal van mijn ondertiteltekst…"
                             Text(languageLabel)
@@ -1156,11 +1164,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         ) {
                             // These three languages support *manual* word/phrase
                             // notes, not ML Kit text translation or verified ASR.
-                            (listOf(
-                                TextTarget("kmr", "Kurmancî · Kurmanji (eigen notities)"),
-                                TextTarget("ckb", "سۆرانی · Sorani (eigen notities)"),
-                                TextTarget("ps", "پښتو · Pasjtoe (eigen notities)")
-                            ) + TargetCatalog.targets).forEach { language ->
+                            (manualSubtitleNoteLanguages + TargetCatalog.targets).forEach { language ->
                                 DropdownMenuItem(
                                     text = { Text(language.title) },
                                     onClick = {
