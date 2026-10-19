@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,6 +41,7 @@ internal fun OwnWordPracticePanel(
     var selectedLanguage by remember { mutableStateOf(initialLanguage) }
     var shuffledVersion by remember { mutableIntStateOf(0) }
     var reverse by remember { mutableStateOf(false) }
+    var writingMode by remember { mutableStateOf(false) }
     val availableLanguages = remember(notes) { notes.map { it.language }.distinct().sorted() }
     val selectedNotes = remember(notes, selectedLanguage, shuffledVersion) {
         val filtered = if (selectedLanguage == "all") notes
@@ -56,6 +58,9 @@ internal fun OwnWordPracticePanel(
     var known by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableIntStateOf(0) }
     var hard by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableIntStateOf(0) }
     var missed by remember(studyNotes, focusNotes != null, focusRoundVersion, offset) { mutableStateOf<List<OwnWord>>(emptyList()) }
+    // Drafts are tied to one displayed word and never stored outside Compose.
+    var typedAnswer by remember(studyNotes, focusNotes != null, focusRoundVersion,
+        offset, index, reverse, writingMode) { mutableStateOf("") }
     val group = studyNotes.drop(offset).take(20)
     val current = group.getOrNull(index)
     val rtlCodes = setOf("ckb", "ps", "ar", "fa", "ur", "sd", "ug")
@@ -104,6 +109,14 @@ internal fun OwnWordPracticePanel(
                     TextButton(onClick = { reverse = !reverse; revealed = false }) {
                         Text(if (reverse) "Betekenis → woord ⇄" else "Woord → betekenis ⇄")
                     }
+                }
+                TextButton(onClick = {
+                    writingMode = !writingMode
+                    typedAnswer = ""
+                    revealed = false
+                }) {
+                    Text(if (writingMode) "✍ Zelf antwoord typen ✓"
+                        else "✍ Zelf antwoord typen (optioneel)")
                 }
                 if (current == null) {
                     Text(
@@ -173,11 +186,38 @@ internal fun OwnWordPracticePanel(
                         )
                     )
                     if (!revealed) {
+                        if (writingMode) {
+                            OutlinedTextField(
+                                value = typedAnswer,
+                                onValueChange = { typedAnswer = it.take(180) },
+                                label = { Text(if (reverse) "Mijn eigen woord"
+                                    else "Mijn eigen betekenis") },
+                                supportingText = { Text("Je antwoord blijft alleen hier. " +
+                                    "Na onthullen beoordeel jij zelf, niet Tuddy.") },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 1,
+                                maxLines = 3,
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (reverse && isRtlWord)
+                                        TextDirection.Rtl else TextDirection.Ltr
+                                )
+                            )
+                        }
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { revealed = true }
                         ) { Text("Toon mijn eigen betekenis") }
                     } else {
+                        if (writingMode) {
+                            Text("Mijn ingevulde antwoord:",
+                                style = MaterialTheme.typography.labelMedium)
+                            Text(typedAnswer.ifBlank { "(niets ingevuld)" },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (reverse && isRtlWord)
+                                        TextDirection.Rtl else TextDirection.Ltr
+                                ))
+                            HorizontalDivider()
+                        }
                         Text(
                             answer,
                             style = MaterialTheme.typography.titleLarge.copy(
@@ -186,7 +226,8 @@ internal fun OwnWordPracticePanel(
                             ),
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Text("Zelfgeschreven en niet geverifieerd.",
+                        Text("Zelfgeschreven en niet geverifieerd. " +
+                            "Vergelijk je eigen poging zelf met deze bewaarde betekenis.",
                             style = MaterialTheme.typography.bodySmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
@@ -208,8 +249,9 @@ internal fun OwnWordPracticePanel(
                 }
                 Text(
                     "Maximaal 20 kaarten per ronde. Je kunt zelf aangewezen " +
-                        "lastige woorden direct opnieuw oefenen. Geen automatische " +
-                        "taalcontrole, voortgangsopslag of pushmelding.",
+                        "lastige woorden direct opnieuw oefenen of eerst zelf " +
+                        "een antwoord typen. Geen automatische taalcontrole, " +
+                        "voortgangs- of antwoordopslag of pushmelding.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
