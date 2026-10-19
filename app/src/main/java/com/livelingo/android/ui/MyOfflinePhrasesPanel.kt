@@ -296,7 +296,7 @@ internal fun MyOfflinePhrasesPanel(
                             pasteError = "Iedere regel moet precies twee gevulde tabkolommen bevatten."
                         } else {
                             val tsv = buildString {
-                                append("language\\tphrase\\tmeaningLanguage\\townMeaning\\n")
+                                append("language\tphrase\tmeaningLanguage\townMeaning\n")
                                 rows.forEach { cells ->
                                     append(language).append('\t').append(cells[0].trim())
                                     append('\t').append(meaningLanguage).append('\t')
