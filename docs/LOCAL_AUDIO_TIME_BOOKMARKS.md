@@ -139,3 +139,34 @@ Na een succesvolle expliciete bewaaractie ga je terug naar de
 bestaande eigen-audiospeler met de opgeslagen oefenkaart en
 beschikbare begeleide route. Geen automatisch starten,
 spraakherkenning, audio-opslag, cloudcontact of nieuwe permissie.
+
+
+## Mijn tijdelijke privé luisteroverzicht
+
+Binnen **▾ Markeer audiomomenten en herhaal vrij A–B**, onder de
+zelfbeoordelingen, verschijnt **Mijn privé oefenoverzicht bekijken**.
+Deze knop pauzeert de speler en toont een scrollbaar tekstoverzicht
+van maximaal vier actuele oefenfragmenten in eigen volgorde.
+Per fragment zie je het audiotijdvak, alleen bij een exacte
+bronmatch een afgekorte eigen SRT/VTT-tekst, en je zelfgekozen
+inschatting **Nog oefenen / Gaat goed / Makkelijk**. Ontbrekende
+beoordelingen blijven expliciet onbekend. Een gewijzigde offset
+wordt zichtbaar vermeld; een fragment met niet-meer-passende
+ondertiteltijden wordt niet alsnog als correcte transcriptie getoond.
+
+Het overzicht toont ook of de vorige begeleide oefenroute **daadwerkelijk
+helemaal is afgespeeld**. Een gestarte, gepauzeerde of vroegtijdig gestopte
+route is nooit stilzwijgend een succesvolle voltooide route. Zodra
+je bewust een nieuwe route start, vervalt de eerdere voltooiingsindicatie.
+Dit is een beschrijving van fragmentafspelen en van jouw eigen oordeel,
+**geen** uitspraakscore, taalniveau, auditbewijs of bewezen
+audio-/ondertiteluitlijning.
+
+Het tekstblok is alleen met de ingebouwde Android-tekstselectie handmatig
+te kopiëren. Tuddy schrijft niet zelf naar het klembord en maakt geen
+exportbestand of netwerkverzoek. Let op: **zodra jij tekst kopieert,
+kan jouw Android-klembord, toetsenbord-app of een andere app die tekst
+verwerken.** Sluiten, fout of andere audio kiezen wist de tijdelijke
+gegevens van Tuddy. Geen extra toestemming of achtergrondopslag.
+Een bronfout in oudere meldingen waarbij regel-nummers als
+letterlijke interpolatietekst verschenen, is tegelijk hersteld.
