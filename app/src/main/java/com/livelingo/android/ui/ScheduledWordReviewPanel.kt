@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,6 +42,8 @@ internal fun ScheduledWordReviewPanel(
     val cards = remember { deck.scheduledReviews().filter { it.dueDay <= today } }
     var index by remember { mutableIntStateOf(0) }
     var revealed by remember { mutableStateOf(false) }
+    var writeFirst by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
     val current = cards.getOrNull(index)
 
@@ -77,6 +80,12 @@ internal fun ScheduledWordReviewPanel(
                             "${cards.size - index - 1} hierna",
                         style = MaterialTheme.typography.labelMedium
                     )
+                    TextButton(onClick = {
+                        writeFirst = !writeFirst
+                        revealed = false
+                        draft = ""
+                    }) { Text(if (writeFirst) "✓ Eerst zelf betekenis schrijven" else
+                        "✍ Eerst zelf betekenis schrijven") }
                     HorizontalDivider()
                     Text(
                         "${current.saved.entry.illustration}  ${current.saved.word}",
@@ -87,7 +96,26 @@ internal fun ScheduledWordReviewPanel(
                         "Taal: ${current.saved.language} · Bedenk de betekenis.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (writeFirst && !revealed) {
+                        OutlinedTextField(
+                            value = draft,
+                            onValueChange = { draft = it.take(220) },
+                            label = { Text("Mijn bedachte betekenis") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3
+                        )
+                        Text("Alleen tijdelijk; geen automatische toets of opslag van je poging.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                     if (revealed) {
+                        if (writeFirst) {
+                            Text("Mijn getypte poging:",
+                                style = MaterialTheme.typography.labelMedium)
+                            Text(draft.ifBlank { "(niet ingevuld)" },
+                                style = MaterialTheme.typography.bodyLarge)
+                            Text("Vergelijk met de ingebouwde definitie hieronder.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                         Text(current.saved.entry.definition,
                             style = MaterialTheme.typography.titleLarge)
                         Text(
@@ -104,6 +132,7 @@ internal fun ScheduledWordReviewPanel(
                                         onChanged()
                                         index++
                                         revealed = false
+                                        draft = ""
                                         notice = ""
                                     } else notice = "Opslaan mislukt. Deze kaart is niet beoordeeld."
                                 }
@@ -116,6 +145,7 @@ internal fun ScheduledWordReviewPanel(
                                         onChanged()
                                         index++
                                         revealed = false
+                                        draft = ""
                                         notice = ""
                                     } else notice = "Opslaan mislukt. Deze kaart is niet beoordeeld."
                                 }
