@@ -12,6 +12,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,6 +35,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PersonalPhrasePracticeRound
+import com.livelingo.android.PrivatePhraseGap
 import com.livelingo.android.PrivatePhraseShortcuts
 import com.livelingo.android.LocalCaptionSpeaker
 
@@ -88,16 +90,20 @@ internal fun PersonalPhrasePracticePanel(
     }
     var offset by remember(selected) { mutableIntStateOf(0) }
     var reverse by remember { mutableStateOf(false) }
+    var gapMode by remember { mutableStateOf(false) }
+    var typedGap by remember { mutableStateOf("") }
     var round by remember(selected) {
         mutableStateOf(PersonalPhrasePracticeRound.start(selected))
     }
     val card = round.current
+    val gap = if (gapMode && card != null) PrivatePhraseGap.from(card, round.attempts) else null
     val names = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val isRtl = card?.language == "ckb" || card?.language == "ps"
     LaunchedEffect(card?.phrase, card?.language, round.revealed, round.attempts,
-        selectedLanguage, shuffleVersion, favoritesOnly, reverse) {
+        selectedLanguage, shuffleVersion, favoritesOnly, reverse, gapMode) {
         speaker.stop()
         audioNotice = ""
+        typedGap = ""
     }
 
     AlertDialog(
@@ -152,9 +158,24 @@ internal fun PersonalPhrasePracticePanel(
                 Text("Je oefent ${selected.size} eigen zinnen. Favorieten zijn " +
                     "een privé-selectie, geen controle op juistheid.",
                     style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { reverse = !reverse }) {
+                TextButton(enabled = !gapMode, onClick = { reverse = !reverse }) {
                     Text(if (reverse) "Oefen: eigen betekenis → zin  ↔"
                         else "Oefen: zin → eigen betekenis  ↔")
+                }
+                TextButton(onClick = {
+                    gapMode = !gapMode
+                    typedGap = ""
+                    speaker.stop()
+                    round = PersonalPhrasePracticeRound.start(selected, offset)
+                }) {
+                    Text(if (gapMode) "✓ Ontbrekend woord oefenen" else
+                        "◻ Ontbrekend woord oefenen")
+                }
+                if (gapMode) {
+                    Text("Vul zelf één verborgen woord uit jouw eigen zin in. " +
+                        "Na onthullen beoordeel je zelf; Tuddy controleert geen spelling " +
+                        "of taalcorrectheid. Korte zinnen zonder twee woorden gebruiken " +
+                        "de normale oefenkaart.", style = MaterialTheme.typography.bodySmall)
                 }
                 if (round.total == 0) {
                     Text(if (favoritesOnly)
@@ -171,16 +192,17 @@ internal fun PersonalPhrasePracticePanel(
                     )
                     HorizontalDivider()
                     Text(
-                        if (reverse) card.ownMeaning else card.phrase,
+                        if (gap != null) gap.hiddenPhrase else if (reverse) card.ownMeaning else card.phrase,
                         modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Medium,
-                            textDirection = if (!reverse && isRtl) TextDirection.Rtl
+                            textDirection = if ((gap != null || !reverse) && isRtl) TextDirection.Rtl
                                 else TextDirection.Ltr
                         )
                     )
                     Text(
-                        if (reverse) "Eigen betekenis (${card.meaningLanguage})"
+                        if (gap != null) "Mijn eigen zin · ontbrekend woord"
+                            else if (reverse) "Eigen betekenis (${card.meaningLanguage})"
                             else "Eigen zin · ${names[card.language] ?: card.language}",
                         style = MaterialTheme.typography.labelSmall
                     )
@@ -200,29 +222,69 @@ internal fun PersonalPhrasePracticePanel(
                         Text(if (card in pinnedNotes) "★ Favoriet verwijderen"
                             else "☆ Bewaar als favoriet")
                     }
-                    OfflinePhraseSpeechActions(
-                        original = if (reverse) card.ownMeaning else card.phrase,
-                        originalLanguage = if (reverse) card.meaningLanguage else card.language,
-                        meaning = if (reverse) card.phrase else card.ownMeaning,
-                        meaningLanguage = if (reverse) card.language else card.meaningLanguage,
-                        originalLabel = "Vraag",
-                        meaningLabel = "Antwoord",
-                        speaker = speaker,
-                        onNotice = { audioNotice = it },
-                        meaningReady = round.revealed
-                    )
+                    if (gap != null && !round.revealed) {
+                        OutlinedTextField(
+                            value = typedGap,
+                            onValueChange = { typedGap = it.take(100) },
+                            label = { Text("Mijn ontbrekende woord (niet opgeslagen)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = if (isRtl) TextDirection.Rtl else TextDirection.Ltr
+                            )
+                        )
+                        Text("Voor het onthullen geen gesproken volledige zin: die zou " +
+                            "het ontbrekende woord verraden.",
+                            style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        OfflinePhraseSpeechActions(
+                            original = if (gapMode) card.phrase else if (reverse)
+                                card.ownMeaning else card.phrase,
+                            originalLanguage = if (gapMode) card.language else if (reverse)
+                                card.meaningLanguage else card.language,
+                            meaning = if (gapMode) card.ownMeaning else if (reverse)
+                                card.phrase else card.ownMeaning,
+                            meaningLanguage = if (gapMode) card.meaningLanguage else if (reverse)
+                                card.language else card.meaningLanguage,
+                            originalLabel = "Vraag",
+                            meaningLabel = "Antwoord",
+                            speaker = speaker,
+                            onNotice = { audioNotice = it },
+                            meaningReady = round.revealed
+                        )
+                    }
                     if (audioNotice.isNotBlank()) {
                         Text(audioNotice, style = MaterialTheme.typography.bodySmall)
                     }
                     Text(
-                        "Hoor het antwoord pas na Toon mijn betekenis. " +
+                        (if (gapMode) "Volledige zin beluisteren kan pas na onthullen. "
+                        else "Hoor het antwoord pas na Toon mijn betekenis. ") +
                             "Alleen reeds geïnstalleerde lokale Android-stemmen, " +
                             "geen online stem of automatisch doorspelen.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (round.revealed) {
-                        Text(
+                        if (gap != null) {
+                            Text("Ontbrekend woord uit je eigen zin:",
+                                style = MaterialTheme.typography.labelMedium)
+                            Text(gap.missingToken,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    textDirection = if (isRtl) TextDirection.Rtl
+                                        else TextDirection.Ltr
+                                ))
+                            Text("Jouw poging: " + (typedGap.takeIf { it.isNotBlank() }
+                                ?: "(niet ingevuld)"),
+                                style = MaterialTheme.typography.bodyMedium)
+                            Text("Volledige eigen zin: " + card.phrase,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    textDirection = if (isRtl) TextDirection.Rtl
+                                        else TextDirection.Ltr
+                                ))
+                            Text("Zelfgeschreven betekenis: " + card.ownMeaning,
+                                style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (gap == null) Text(
                             if (reverse) card.phrase else card.ownMeaning,
                             modifier = Modifier.fillMaxWidth(),
                             style = MaterialTheme.typography.titleMedium.copy(
@@ -249,7 +311,8 @@ internal fun PersonalPhrasePracticePanel(
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { round = round.reveal() }
-                        ) { Text("Toon mijn betekenis") }
+                        ) { Text(if (gap != null) "Toon ontbrekend woord" else
+                            "Toon mijn betekenis") }
                     }
                     Text(
                         "Alleen de geselecteerde eigen taalset. Schud kaarten begint " +
