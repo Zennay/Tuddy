@@ -73,6 +73,8 @@ internal fun MyOfflinePhrasesPanel(
     var displayedPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var editingPhrase by remember { mutableStateOf<PersonalPhrase?>(null) }
     var pendingImport by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
+    // Capture originals when the complete import preview is presented.
+    var pendingImportBase by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var importSource by remember { mutableStateOf("json") }
     var pasteOpen by remember { mutableStateOf(false) }
     var pasteLines by remember { mutableStateOf("") }
@@ -185,6 +187,7 @@ internal fun MyOfflinePhrasesPanel(
                     "De huidige zinnen zijn behouden."
             } else {
                 pendingImport = candidate
+                pendingImportBase = deck.entries()?.toList()
                 info = "Bestand gecontroleerd. Bevestig zelf of je de huidige zinnen wilt vervangen."
             }
         }
@@ -217,6 +220,7 @@ internal fun MyOfflinePhrasesPanel(
             } else {
                 importSource = "tsv"
                 pendingImport = candidate
+                pendingImportBase = deck.entries()?.toList()
                 info = "Zelfgeschreven zinnenlijst ingelezen. " +
                     "Kies bewust samenvoegen of vervangen."
             }
@@ -313,6 +317,7 @@ internal fun MyOfflinePhrasesPanel(
                                     "alles blijft ongewijzigd."
                             } else {
                                 pendingImport = parsed
+                                pendingImportBase = deck.entries()?.toList()
                                 importSource = "paste"
                                 pasteOpen = false
                                 pasteLines = ""
@@ -970,7 +975,10 @@ internal fun MyOfflinePhrasesPanel(
         val duplicateCount = imported.size - newCount
         val mergeFits = phrases != null && phrases.size + newCount <= 80
         AlertDialog(
-            onDismissRequest = { pendingImport = null },
+            onDismissRequest = {
+                pendingImport = null
+                pendingImportBase = null
+            },
             title = { Text(if (importSource == "paste")
                 "Geplakte eigen zinnen bekijken" else if (importSource == "tsv")
                 "Eigen zinnenlijst importeren?" else "Eigen zinnen vervangen?") },
@@ -1023,10 +1031,13 @@ internal fun MyOfflinePhrasesPanel(
                             else "Samenvoegen geweigerd. Controleer de limiet en lijst; " +
                                 "je bestaande zinnen zijn behouden."
                             pendingImport = null
+                            pendingImportBase = null
                         }
                     ) { Text("Voeg alleen nieuwe zinnen toe") }
                     TextButton(onClick = {
-                        val saved = deck.replaceImported(imported)
+                        val saved = deck.replaceImportedIfUnchanged(
+                            imported, pendingImportBase
+                        )
                         if (saved) {
                             revision++
                             editingPhrase = null
@@ -1035,14 +1046,18 @@ internal fun MyOfflinePhrasesPanel(
                         }
                         info = if (saved)
                             "Back-up heeft de lokale lijst vervangen na jouw keuze."
-                        else "Herstellen mislukt. De oude lijst blijft behouden."
+                        else "Vervangen geweigerd: de lokale eigen zinnen zijn " +
+                            "sinds de volledige preview gewijzigd of de opslag is " +
+                            "niet beschikbaar. Maak een nieuwe importkeuze."
                         pendingImport = null
+                        pendingImportBase = null
                     }) { Text("Vervang volledige lijst") }
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
                     pendingImport = null
+                    pendingImportBase = null
                     info = "Import geannuleerd; eigen zinnen zijn behouden."
                 }) { Text("Annuleren") }
             }
