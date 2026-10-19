@@ -89,6 +89,8 @@ internal fun PersonalPhrasePracticePanel(
         if (shuffleVersion == 0) filtered else filtered.shuffled(Random(shuffleVersion))
     }
     var offset by remember(selected) { mutableIntStateOf(0) }
+    // Opt-in temporary focus round. Changing the selected language/deck clears it.
+    var focusMissed by remember(selected) { mutableStateOf<List<PersonalPhrase>?>(null) }
     var reverse by remember { mutableStateOf(false) }
     var gapMode by remember { mutableStateOf(false) }
     var typedGap by remember { mutableStateOf("") }
@@ -162,6 +164,16 @@ internal fun PersonalPhrasePracticePanel(
                 Text("Je oefent ${selected.size} eigen zinnen. Favorieten zijn " +
                     "een privé-selectie, geen controle op juistheid.",
                     style = MaterialTheme.typography.bodySmall)
+                if (focusMissed != null) {
+                    Text("Focusronde · alleen ${focusMissed?.size ?: 0} kaarten " +
+                        "die jij eerder lastig vond. Dit blijft alleen in dit scherm.",
+                        style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = {
+                        focusMissed = null
+                        speaker.stop()
+                        round = PersonalPhrasePracticeRound.start(selected, offset)
+                    }) { Text("Terug naar volledige oefenset") }
+                }
                 TextButton(enabled = !gapMode, onClick = { reverse = !reverse }) {
                     Text(if (reverse) "Oefen: eigen betekenis → zin  ↔"
                         else "Oefen: zin → eigen betekenis  ↔")
@@ -171,7 +183,9 @@ internal fun PersonalPhrasePracticePanel(
                     if (gapMode) reverse = false
                     typedGap = ""
                     speaker.stop()
-                    round = PersonalPhrasePracticeRound.start(selected, offset)
+                    round = PersonalPhrasePracticeRound.start(
+                        focusMissed ?: selected, if (focusMissed == null) offset else 0
+                    )
                 }) {
                     Text(if (gapMode) "✓ Ontbrekend woord oefenen" else
                         "◻ Ontbrekend woord oefenen")
@@ -328,6 +342,30 @@ internal fun PersonalPhrasePracticePanel(
                 } else {
                     Text("Oefenronde klaar", style = MaterialTheme.typography.headlineSmall)
                     Text("${round.recalled} zelf herkend, ${round.needsPractice} nog lastig.")
+                    if (round.missed.isNotEmpty()) {
+                        Text("Je markeerde ${round.missed.size} unieke zinnen als lastig. " +
+                            "Je kunt juist die zelfgeschreven zinnen nog één keer oefenen.",
+                            style = MaterialTheme.typography.bodySmall)
+                        round.missed.take(6).forEach { missed ->
+                            Text("• " + missed.phrase, style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = if (missed.language == "ckb" ||
+                                    missed.language == "ps") TextDirection.Rtl else TextDirection.Ltr
+                            ))
+                        }
+                        if (round.missed.size > 6) Text(
+                            "En nog ${round.missed.size - 6} zinnen.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                val difficult = round.missed
+                                focusMissed = difficult
+                                speaker.stop()
+                                round = PersonalPhrasePracticeRound.start(difficult)
+                            }
+                        ) { Text("Oefen mijn ${round.missed.size} lastige zinnen") }
+                    }
                     Text(
                         "Dit is alleen jouw oordeel; resultaten verdwijnen bij sluiten.",
                         style = MaterialTheme.typography.bodySmall
@@ -335,10 +373,13 @@ internal fun PersonalPhrasePracticePanel(
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
-                            round = PersonalPhrasePracticeRound.start(selected, offset)
+                            round = PersonalPhrasePracticeRound.start(
+                                focusMissed ?: selected, if (focusMissed == null) offset else 0
+                            )
                         }
                     ) { Text("Oefen dezelfde set opnieuw") }
-                    if (selected.size > PersonalPhrasePracticeRound.BATCH_SIZE) {
+                    if (focusMissed == null &&
+                        selected.size > PersonalPhrasePracticeRound.BATCH_SIZE) {
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
