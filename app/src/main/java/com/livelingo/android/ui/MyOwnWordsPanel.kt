@@ -66,6 +66,8 @@ internal fun MyOwnWordsPanel(
     var notice by remember { mutableStateOf("") }
     var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
     var pendingTsvExport by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingTsvScope by remember { mutableStateOf<List<OwnWord>?>(null) }
+    var selectedTsvPreview by remember { mutableStateOf<List<OwnWord>?>(null) }
     var printableConsent by remember { mutableStateOf(false) }
     var printableAllLanguages by remember { mutableStateOf(false) }
     var pendingPrintable by remember { mutableStateOf<Pair<String?, ByteArray>?>(null) }
@@ -101,9 +103,13 @@ internal fun MyOwnWordsPanel(
         ActivityResultContracts.CreateDocument("text/tab-separated-values")
     ) { uri ->
         val snapshot = pendingTsvExport
+        val selectedScope = pendingTsvScope
         pendingTsvExport = null
+        pendingTsvScope = null
         if (uri != null && snapshot != null) {
-            if (deck.exportTsvSnapshot()?.contentEquals(snapshot) != true) {
+            val latest = if (selectedScope == null) deck.exportTsvSnapshot()
+                else deck.exportTsvSelection(selectedScope)
+            if (latest?.contentEquals(snapshot) != true) {
                 notice = "Eigen woorden zijn gewijzigd. Maak de TSV-lijst opnieuw."
             } else {
                 val saved = runCatching {
@@ -270,6 +276,58 @@ internal fun MyOwnWordsPanel(
             onDismiss = {
                 practiceOpen = false
                 practiceScope = null
+            }
+        )
+        return
+    }
+
+    val exportSelection = selectedTsvPreview
+    if (exportSelection != null) {
+        AlertDialog(
+            onDismissRequest = { selectedTsvPreview = null },
+            title = { Text("Alleen deze eigen woorden exporteren?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 450.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Dit bestand bevat uitsluitend de ${exportSelection.size} " +
+                        "hieronder geselecteerde, zelfgeschreven woordbetekenissen. " +
+                        "Andere talen of woorden buiten het zoekresultaat blijven privé. " +
+                        "De Android-bestandsprovider kan de gekozen export later " +
+                        "wel synchroniseren; Tuddy verstuurt zelf niets.",
+                        style = MaterialTheme.typography.bodySmall)
+                    exportSelection.forEachIndexed { index, entry ->
+                        HorizontalDivider()
+                        Text("${index + 1}. ${entry.language.uppercase()} · ${entry.word}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (entry.language in setOf("ckb", "ps",
+                                        "ar", "fa", "ur", "sd", "ug")) TextDirection.Rtl
+                                    else TextDirection.Ltr
+                            ))
+                        Text(entry.ownMeaning, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val bytes = deck.exportTsvSelection(exportSelection)
+                    selectedTsvPreview = null
+                    if (bytes == null) {
+                        notice = "Selectie inmiddels gewijzigd of onleesbaar. " +
+                            "Maak opnieuw een keuze; niets is geëxporteerd."
+                    } else {
+                        pendingTsvScope = exportSelection.toList()
+                        pendingTsvExport = bytes
+                        tsvExportPicker.launch("tuddy-selectie-eigen-woorden.tsv")
+                    }
+                }) { Text("Ik kies zelf een opslaglocatie…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedTsvPreview = null }) {
+                    Text("Behoud mijn eigen woorden privé")
+                }
             }
         )
         return
@@ -722,11 +780,21 @@ internal fun MyOwnWordsPanel(
                         if (snapshot == null) {
                             notice = "Geen geldige eigen woorden voor TSV-export."
                         } else {
+                            pendingTsvScope = null
                             pendingTsvExport = snapshot
                             tsvExportPicker.launch("tuddy-mijn-eigen-woorden.tsv")
                         }
                     }
                 ) { Text("Exporteer mijn eigen woorden (TSV)…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = items != null && filtered.isNotEmpty(),
+                    onClick = { selectedTsvPreview = filtered.toList() }
+                ) { Text("Exporteer uitsluitend deze ${filtered.size} zoekresultaten…") }
+                Text("De selectie volgt exact het zichtbare taal- en zoekfilter. " +
+                    "Je ziet eerst alle woordbetekenissen en kiest daarna zelf " +
+                    "de bestandslocatie; de overige notities worden niet meegenomen.",
+                    style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = items?.isNotEmpty() == true,
