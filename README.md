@@ -1,5 +1,18 @@
 # Tuddy 🎙️
 
+## Nieuw: mijn privé luisteroverzicht na een oefenroute
+
+Open in de eigen-audiospeler de audiomarkeringen en kies **Mijn privé
+oefenoverzicht bekijken**. Je ziet actuele fragmenten, begin/eindtijden,
+eventuele brontekst en je persoonlijke beoordeling. Een begeleide route
+telt alleen als afgerond wanneer alle herhalingen echt voorbij zijn.
+De tekst kan desgewenst met Android-tekstselectie door jou worden
+gekopieerd; Tuddy slaat niets automatisch op of deelt niets.
+[Bediening en privacy](docs/LOCAL_AUDIO_TIME_BOOKMARKS.md).
+
+---
+
+
 ## Nieuw: maak A–B-oefenfragmenten direct vanuit zoekresultaten
 
 In de offline SRT/VTT-audiospeler kun je bij **⌕ Zoek passage** nu
