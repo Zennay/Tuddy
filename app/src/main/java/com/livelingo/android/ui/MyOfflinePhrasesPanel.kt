@@ -65,6 +65,7 @@ internal fun MyOfflinePhrasesPanel(
     var info by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
     var pendingGroupRemoval by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
+    var pendingSingleRemoval by remember { mutableStateOf<PersonalPhrase?>(null) }
     var practiceOpen by remember { mutableStateOf(false) }
     var scheduledOpen by remember { mutableStateOf(false) }
     var startScheduleConsent by remember { mutableStateOf(false) }
@@ -401,6 +402,63 @@ internal fun MyOfflinePhrasesPanel(
         return
     }
 
+    val removingSingle = pendingSingleRemoval
+    if (removingSingle != null) {
+        AlertDialog(
+            onDismissRequest = { pendingSingleRemoval = null },
+            title = { Text("Deze eigen zin definitief verwijderen?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 370.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Alleen de hieronder getoonde eigen zin wordt verwijderd. " +
+                        "Bijbehorende favoriet, herhaalplanning en thema worden dan ook " +
+                        "verwijderd. Andere zinnen blijven behouden. Dit is niet " +
+                        "automatisch ongedaan te maken.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text(removingSingle.phrase,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            textDirection = if (removingSingle.language == "ckb" ||
+                                removingSingle.language == "ps") TextDirection.Rtl
+                                else TextDirection.Ltr
+                        ))
+                    Text("Mijn eigen betekenis: ${removingSingle.ownMeaning}",
+                        style = MaterialTheme.typography.bodyMedium)
+                    Text("Maak indien nodig eerst een privé-back-up. " +
+                        "Tuddy deelt of verstuurt deze zin niet.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    // Full immutable record must still match; never remove an
+                    // edited meaning by an old language/phrase identity alone.
+                    val removed = deck.removeMany(listOf(removingSingle))
+                    if (removed) {
+                        if (editingPhrase == removingSingle) {
+                            editingPhrase = null
+                            phrase = ""
+                            meaning = ""
+                        }
+                        revision++
+                    }
+                    info = if (removed) "De gekozen eigen zin is verwijderd." else
+                        "Verwijderen geweigerd: de zin is tussentijds gewijzigd of " +
+                            "de opslag is niet beschikbaar. Je zinnen zijn behouden."
+                    pendingSingleRemoval = null
+                }) { Text("Verwijder uitsluitend deze zin") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingSingleRemoval = null }) {
+                    Text("Behoud mijn eigen zin")
+                }
+            }
+        )
+        return
+    }
+
     if (bulkTopicsOpen) {
         BulkAssignPrivatePhraseTopicsDialog(
             notes = topicPracticeNotes,
@@ -523,7 +581,7 @@ internal fun MyOfflinePhrasesPanel(
                     onClick = {
                         val old = editingPhrase
                         val saved = if (old == null) {
-                            deck.save(language, phrase, meaningLanguage, meaning)
+                            deck.saveNew(language, phrase, meaningLanguage, meaning)
                         } else {
                             deck.edit(old, PersonalPhrase(language, phrase,
                                 meaningLanguage, meaning))
@@ -537,9 +595,10 @@ internal fun MyOfflinePhrasesPanel(
                                 "Je eigen zin is lokaal opgeslagen. Niet automatisch vertaald."
                             else "Je bestaande eigen zin is bijgewerkt. Niet gecontroleerd door Tuddy."
                         } else {
-                            info = "Opslaan mislukt. Controleer op dubbele zinnen, " +
-                                "gewijzigde invoer of te veel tekens (120/180). " +
-                                "De bestaande zinnen zijn behouden."
+                            info = "Opslaan geweigerd. Deze zin bestaat mogelijk al " +
+                                "in dezelfde taal: gebruik Bewerk bij de bestaande zin " +
+                                "om die bewust te wijzigen. Controleer ook de invoer " +
+                                "(max. 120/180 tekens). Niets is overschreven."
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -763,16 +822,8 @@ internal fun MyOfflinePhrasesPanel(
                                 "Kies 'Bewaar wijziging' om precies dit item te vervangen."
                         }) { Text("✎ Bewerk deze zin") }
                         TextButton(onClick = {
-                            if (deck.remove(item.language, item.phrase)) {
-                                if (editingPhrase == item) {
-                                    editingPhrase = null
-                                    phrase = ""
-                                    meaning = ""
-                                }
-                                revision++
-                                info = "Eigen zin verwijderd."
-                            } else info = "Verwijderen mislukt."
-                        }) { Text("Verwijder eigen zin") }
+                            pendingSingleRemoval = item
+                        }) { Text("Verwijder eigen zin…") }
                     }
                 }
                 TextButton(onClick = { confirmClear = true }) {
