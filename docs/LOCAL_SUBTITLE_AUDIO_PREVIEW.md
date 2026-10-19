@@ -108,3 +108,12 @@ voor persoonlijk oefenen en kunnen via bestaande functies gewijzigd,
 geëxporteerd of gewist worden. Het bron-SRT/VTT en de audio zelf
 worden nooit veranderd of opgeslagen, er is geen ASR, automatische
 tekstvertaling, netwerkverzoek of nieuwe Android-permissie.
+
+
+Een zelf gekozen zin kan bovendien vanuit **⌕ Zoek passage** worden
+bewaard: zoek zelf de gewenste ondertitelregel en kies onder dat
+zoekresultaat **Regel … als eigen zin met betekenis bewaren**. Dit opent
+precies hetzelfde bewerkbare privéconcept en dezelfde dubbele
+opslagtoestemming; er wordt niets automatisch van de zoeklijst
+of audio naar de persoonlijke zinnenlijst gekopieerd. Je hoeft
+de afspeelpositie niet te verplaatsen om een gevonden zin te bewaren.
