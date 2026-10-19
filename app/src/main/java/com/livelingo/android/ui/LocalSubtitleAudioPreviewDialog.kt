@@ -44,6 +44,7 @@ import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleAudioAlignment
 import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.TargetCatalog
+import com.livelingo.android.TextTarget
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -1153,7 +1154,13 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             expanded = wordLanguageMenuOpen,
                             onDismissRequest = { wordLanguageMenuOpen = false }
                         ) {
-                            TargetCatalog.targets.forEach { language ->
+                            // These three languages support *manual* word/phrase
+                            // notes, not ML Kit text translation or verified ASR.
+                            (listOf(
+                                TextTarget("kmr", "Kurmancî · Kurmanji (eigen notities)"),
+                                TextTarget("ckb", "سۆرانی · Sorani (eigen notities)"),
+                                TextTarget("ps", "پښتو · Pasjtoe (eigen notities)")
+                            ) + TargetCatalog.targets).forEach { language ->
                                 DropdownMenuItem(
                                     text = { Text(language.title) },
                                     onClick = {
