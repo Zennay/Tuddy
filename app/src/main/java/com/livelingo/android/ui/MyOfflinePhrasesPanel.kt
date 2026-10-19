@@ -378,7 +378,7 @@ internal fun MyOfflinePhrasesPanel(
                     val removed = deck.removeMany(removingGroup)
                     if (removed) {
                         revision++
-                        if (editingPhrase in removingGroup) {
+                        if (editingPhrase?.let { it in removingGroup } == true) {
                             editingPhrase = null
                             phrase = ""
                             meaning = ""
