@@ -464,6 +464,16 @@ internal fun LocalSubtitleAudioPreviewDialog(
         }
     }
 
+    val practiceSummaryText = remember(
+        cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
+        completedGuidedRoute, completedGuidedRounds, guidedActive
+    ) {
+        privatePracticeSummary(
+            cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
+            completedGuidedRoute, completedGuidedRounds, guidedActive
+        )
+    }
+
     val adjustedDraft = remember(cues, subtitleOffsetMs) {
         PrivateSubtitleAudioAlignment.preview(cues, subtitleOffsetMs)
     }
@@ -744,6 +754,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         HorizontalDivider()
                         Text("Begeleide A–B-oefenroute",
                             style = MaterialTheme.typography.titleSmall)
+                        OutlinedButton(
+                            enabled = prepared,
+                            onClick = {
+                                pauseAudio()
+                                practiceReportOpen = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Mijn privé oefenoverzicht bekijken · tekst zelf selecteren") }
                         val needsPractice = savedPracticePassages.filter {
                             passageRatings[it] == "repeat"
                         }
@@ -1121,6 +1139,34 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     style = MaterialTheme.typography.labelSmall)
             }
         }
+    }
+    if (practiceReportOpen && prepared) {
+        AlertDialog(
+            onDismissRequest = { practiceReportOpen = false },
+            title = { Text("Mijn privé luisteroverzicht") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Hier staan je eigen ondertitels, tijdvakken en beoordelingen. " +
+                        "Selecteer alleen zelf tekst als je die via Android wilt kopiëren; " +
+                        "je klembord- of toetsenbord-app kan een kopie dan lezen.",
+                        style = MaterialTheme.typography.bodySmall)
+                    SelectionContainer {
+                        Text(
+                            practiceSummaryText,
+                            modifier = Modifier.fillMaxWidth()
+                                .heightIn(max = 340.dp)
+                                .verticalScroll(rememberScrollState()),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { practiceReportOpen = false }) {
+                    Text("Sluit zonder opslaan")
+                }
+            }
+        )
     }
     if (confirmClipOpen && passageDraft != null) {
         AlertDialog(
