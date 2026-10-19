@@ -113,3 +113,29 @@ bewaren begint nooit uit zichzelf af te spelen. Sluiten en audio wisselen
 wissen alles zoals voorheen. Dit is geen bewijs van echte synchronisatie,
 uitspraakscore of woordgrenzen: broncues moeten door de gebruiker zelf
 kloppen. Geen opslag, microfoon, cloudverbinding of nieuwe permissie.
+
+
+## A–B-passage kiezen zonder eerst door de audio te schuiven
+
+Open **⌕ Zoek passage en spring naar ondertitel…** en zoek op een woord
+of originele begintijd. Bij iedere gevonden regel staat nu ook
+**Kies A-start** en, zodra een begin is gekozen, **Kies B-einde**.
+Selecteer eerst A, dan een gelijke of latere B-regel. Je hoeft niet
+eerst naar de ondertitel in de audioschuifbalk te springen: deze
+handelingen veranderen de afspeelpositie, originele SRT/VTT en
+handmatige tijdcorrectie niet.
+
+Boven de zoekresultaten verschijnen de gekozen begin- en eindregels
+met korte brontekst. Pas als **alle** tussengelegen ondertitelregels
+volledig in de eigen audio passen én het gezamenlijke fragment
+0,75 seconden tot maximaal vijf minuten duurt, verschijnt een exacte
+begin-/eindpreview en de knop **Bewaar deze bekeken A–B-passage als
+oefenfragment**. De bestaande routecapaciteit van vier kaartjes en
+acht audiomarkeringen, en de grensafstand van 0,5 seconde, gelden
+ook hier. Bij een geweigerde selectie blijft de zoeklijst open;
+er wordt niet heimelijk ingekort of gequoot.
+
+Na een succesvolle expliciete bewaaractie ga je terug naar de
+bestaande eigen-audiospeler met de opgeslagen oefenkaart en
+beschikbare begeleide route. Geen automatisch starten,
+spraakherkenning, audio-opslag, cloudcontact of nieuwe permissie.

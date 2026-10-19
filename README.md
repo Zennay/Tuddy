@@ -1,5 +1,18 @@
 # Tuddy 🎙️
 
+## Nieuw: maak A–B-oefenfragmenten direct vanuit zoekresultaten
+
+In de offline SRT/VTT-audiospeler kun je bij **⌕ Zoek passage** nu
+**A-start** en **B-einde** kiezen bij twee zelf gevonden ondertitelregels.
+Bekijk bovenaan de exacte tijdcode en brontekst, bevestig vervolgens
+**Bewaar A–B-passage** om je bestaande tijdelijke oefenroute aan te vullen,
+zonder handmatig in de audio te schuiven of de bron te wijzigen.
+Begrensd, geen auto-afspelen en geen netwerk-ASR.
+[Handleiding](docs/LOCAL_AUDIO_TIME_BOOKMARKS.md).
+
+---
+
+
 ## Nieuw: hele ondertitelpassage als begeleid oefenfragment
 
 Een langere zin verdeeld over verschillende SRT/VTT-regels kun je nu

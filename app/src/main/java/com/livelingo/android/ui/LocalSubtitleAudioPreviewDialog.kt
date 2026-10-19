@@ -1211,6 +1211,44 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     )
                     Text("${matchingCues.size} van ${cues.size} regels",
                         style = MaterialTheme.typography.labelMedium)
+
+                    Text("Selecteer hier eerst A (eerste regel), dan B (dezelfde of een latere). " +
+                        "Je bekijkt de volledige bronpassage vóór je deze bewust bewaart.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (rangeStartIndex >= 0) {
+                        val first = cues.getOrNull(rangeStartIndex)
+                        val last = cues.getOrNull(rangeEndIndex)
+                        Text("Mijn A-start: regel ${rangeStartIndex + 1} · " +
+                            (first?.text?.take(70) ?: "?") +
+                            if (last == null) " · kies nog B-einde" else
+                                " · B-einde: regel ${rangeEndIndex + 1} · " +
+                                    last.text.take(70),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                textDirection = TextDirection.ContentOrRtl))
+                        val bounds = rangeBounds()
+                        if (bounds != null) {
+                            Text("Volledige passage: ${rangeEndIndex - rangeStartIndex + 1} regels; " +
+                                "${clock(bounds.first)} tot ${clock(bounds.second)} " +
+                                "(0,75 seconde–5 minuten). Geen automatische synchronisatie.",
+                                style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(
+                                enabled = !guidedActive && savedPracticePassages.size < 4,
+                                onClick = {
+                                    saveCueRangeForPractice()
+                                    // When invalid due to an existing nearby audio marker,
+                                    // keep search open so the refusal remains visible.
+                                    if (bounds in savedPracticePassages) cuePickerOpen = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("＋ Bewaar deze bekeken A–B-passage als oefenfragment")
+                            }
+                        } else if (last != null) {
+                            Text("Deze selectie heeft ongeldige of te lange ondertiteltijden; " +
+                                "kies een kleinere, volledige passage.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                     if (matchingCues.isEmpty()) {
                         Text("Geen ondertitelregels gevonden; probeer een ander woord.",
                             style = MaterialTheme.typography.bodyMedium)
@@ -1255,6 +1293,47 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text("＋ Regel ${index + 1} in mijn oefenroute bewaren")
+                                }
+
+
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    TextButton(
+                                        enabled = !guidedActive && cuePlayable(cue),
+                                        onClick = {
+                                            rangeStartIndex = index
+                                            rangeEndIndex = -1
+                                            rangeToolsOpen = true
+                                            rangeRepeating = false
+                                            bookmarkRepeating = false
+                                            loopCueIndex = -1
+                                            confirmClipOpen = false
+                                            notice = "Begin A gekozen op regel ${index + 1}; kies B in dezelfde zoeklijst."
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(if (rangeStartIndex == index) "✓ A-start" else "Kies A-start",
+                                            style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    TextButton(
+                                        enabled = !guidedActive && rangeStartIndex >= 0 &&
+                                            index >= rangeStartIndex && cuePlayable(cue),
+                                        onClick = {
+                                            rangeEndIndex = index
+                                            rangeToolsOpen = true
+                                            rangeRepeating = false
+                                            bookmarkRepeating = false
+                                            loopCueIndex = -1
+                                            confirmClipOpen = false
+                                            notice = "Einde B gekozen op regel ${index + 1}; " +
+                                                "bekijk de passage bovenaan vóór bewaren."
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(if (rangeEndIndex == index && index >= rangeStartIndex)
+                                            "✓ B-einde" else "Kies B-einde",
+                                            style = MaterialTheme.typography.labelSmall)
+                                    }
                                 }
 
                                 val anchorOffset = positionMs - cue.startMillis
