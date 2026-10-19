@@ -250,6 +250,7 @@ internal fun MixedDailyReviewPanel(
                         skipped++
                         index++
                         revealed = false
+                        typedAnswer = ""
                         notice = ""
                     }) { Text("Sla zonder beoordeling over") }
                     Text(
