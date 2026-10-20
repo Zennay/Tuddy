@@ -18,6 +18,19 @@ Tuddy laat je handmatig een volledig SRT- of WebVTT-document plakken, zonder dat
 4. Bekijk de resultaten, zoek over het hele document en blader in pagina's van 15 cues. De getoonde tijdcodes zijn **handmatig gesimuleerd**, niet gebaseerd op audio/spraakherkenning.
 5. Open het concept alleen na de bevestigingsknop, bewerk tekst en tijden zo nodig, en bewaar een aparte SRT/VTT-kopie met de bestaande documentkiezer. Er vindt geen automatische bestandsopslag plaats.
 
+## Twee losse tekstvakken op je telefoon (zonder spreadsheet)
+
+Als bronzin en eigen betekenis in twee losse tekstlijsten staan, hoef je geen tabs of spreadsheetindeling te maken.
+
+1. Kies **Gewone zinnen** en vervolgens **Twee losse tekstvakken: bron en eigen betekenis**.
+2. Plak of typ elke originele zin op een eigen regel in het **eerste vak**. Typ of plak daaronder in het **tweede vak** dezelfde hoeveelheid zelfgeschreven betekenissen, één betekenis per oorspronkelijke zin.
+3. Tuddy koppelt regel 1 aan regel 1, regel 2 aan regel 2, enzovoort. **Ongelijke aantallen of een leeg veld** worden met een concrete melding (en zo nodig het eerste betrokken regelnummer) geweigerd. De app verschuift of vertaalt geen regels automatisch.
+4. Kies de **geschatte** starttijd en duur per cue; beide lijsten worden één tijdelijk, doorzoekbaar tweetalig ondertitelconcept. Controleer tijd en tekst vóór het openen en later eventueel opnieuw in de bestaande editor.
+5. De gezamenlijke bron- en betekenisinvoer is maximaal **256 KiB UTF-8**, maximaal **500 tekstparen**, en iedere bronzin/betekenis maximaal **800 tekens**. De bestaande SRT én WebVTT-exportlimieten gelden ook.
+6. Sluiten of naar de achtergrond gaan verwijdert de niet-opgeslagen plakinhoud. Opslaan gebeurt alleen na een aparte Android-bestandskeuze, waarbij de gekozen provider zelf externe synchronisatie kan verzorgen.
+
+De betekenis is uitsluitend door de gebruiker geschreven; deze route biedt geen automatische vertaling, ASR of audiotiming.
+
 ## Handmatig tweetalige tekst uit twee kolommen
 
 1. Kies **Gewone zinnen** en vervolgens **Twee handmatige tekstkolommen (tab gescheiden)**.
