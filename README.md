@@ -2,7 +2,7 @@
 
 ## Nieuw: leerkaartbestand uitsluitend uit handmatig gecorrigeerde antwoorden
 
-Selecteer bij de TSV-export **Alleen mijn handmatig gecorrigeerde
+Selecteer bij de TSV- of CSV-export **Alleen mijn handmatig gecorrigeerde
 antwoorden** om alle overige modelvertalingen buiten het bestand te
 houden. De selectie, kaartenaantallen en ruwe preview volgen het filter;
 zonder eigen correcties is er geen export. Eigen antwoorden zijn niet
@@ -16,7 +16,7 @@ extern gecontroleerd.
 Bij **★ gemarkeerd** kun je op **✎ Corrigeer alleen studieantwoord**
 tikken, de modelvertaling vergelijken met je zelf geschreven betekenis
 en maximaal 400 Unicode-tekens invoeren. Alleen tijdelijke oefenkaarten
-en de expliciete TSV-leerkaartenexport gebruiken deze eigen correctie;
+en de expliciete TSV-/CSV-leerkaartenexport gebruiken deze eigen correctie;
 het echte gesprek en TXT/JSON/HTML/SRT/WebVTT blijven onveranderd.
 Het antwoord is ongetoetst en wordt bij gewijzigde brontekst of
 modelvertaling niet blind overgenomen. Je kunt een correctie wissen
@@ -51,13 +51,13 @@ toegevoegd aan je vaste studieprofiel.
 
 ---
 
-## Nieuw: exporteer gemarkeerde gesprekszinnen in zes formaten
+## Nieuw: exporteer gemarkeerde gesprekszinnen in zeven formaten
 
 Markeer maximaal 80 regels in je tijdelijke live gesprek en bekijk ze
 onder **★ gemarkeerd**. Via **Exporteer N gekozen…** kies je bewust
 voor TXT, een opnieuw importeerbaar privé-JSON-archief, afdrukbaar HTML,
 een ruw SRT/WebVTT-ondertitelconcept met instelbare tijden of UTF-8
-TSV-leerkaarten met uitsluitend voltooide, ongeverifieerde lokale
+TSV-/CSV-leerkaarten met uitsluitend voltooide, ongeverifieerde lokale
 modelvertalingen. Bij TSV kies je bron naar vertaling, omgekeerd of
 beide richtingen; gelijke paren worden ontdubbeld.
 Kies expliciet één taalrichting of alle richtingen, en tussen alle
