@@ -212,6 +212,7 @@ private fun TuddyScreen(
     // cards. The source transcript, JSON, HTML and subtitles stay untouched.
     val pinnedStudyEdits = remember { mutableStateMapOf<Long, PinnedStudyCorrection>() }
     var pinnedStudyEditId by remember { mutableStateOf<Long?>(null) }
+    var pinnedStudyEditSignature by remember { mutableStateOf<List<String>?>(null) }
     var pinnedStudyDraft by remember { mutableStateOf("") }
     var pinnedStudyEditError by remember { mutableStateOf("") }
     var pinnedExportOpen by remember { mutableStateOf(false) }
@@ -3195,6 +3196,10 @@ private fun TuddyScreen(
                                             TextButton(enabled = !listening, onClick = {
                                                 captionSpeaker.stop()
                                                 pinnedStudyEditId = line.id
+                                                pinnedStudyEditSignature = listOf(
+                                                    line.original, line.translated,
+                                                    line.sourceCode, line.targetCode
+                                                )
                                                 pinnedStudyDraft = authored?.answer
                                                     ?: line.translated
                                                 pinnedStudyEditError = ""
@@ -3310,6 +3315,7 @@ private fun TuddyScreen(
                 editLine.translated.isBlank()) {
                 LaunchedEffect(editId) {
                     pinnedStudyEditId = null
+                    pinnedStudyEditSignature = null
                     pinnedStudyEditError = ""
                 }
             } else {
@@ -3350,7 +3356,15 @@ private fun TuddyScreen(
                     confirmButton = {
                         TextButton(onClick = {
                             val answer = pinnedStudyDraft.trim()
-                            if (!PrivatePinnedCaptionExport.validStudyEdit(answer)) {
+                            val stillOriginal = pinnedStudyEditSignature == listOf(
+                                editLine.original, editLine.translated,
+                                editLine.sourceCode, editLine.targetCode
+                            )
+                            if (!stillOriginal) {
+                                pinnedStudyEditError =
+                                    "De oorspronkelijke zin of vertaling is veranderd. " +
+                                        "Annuleer en open de correctie opnieuw."
+                            } else if (!PrivatePinnedCaptionExport.validStudyEdit(answer)) {
                                 pinnedStudyEditError =
                                     "Vul één veilige tekstregel in (maximaal 400 Unicode-tekens)."
                             } else {
@@ -3363,6 +3377,7 @@ private fun TuddyScreen(
                                     )
                                 }
                                 pinnedStudyEditId = null
+                                pinnedStudyEditSignature = null
                                 pinnedStudyEditError = ""
                                 pinsNotice = "Studieantwoord aangepast, bron ongewijzigd."
                                 pinsOpen = true
