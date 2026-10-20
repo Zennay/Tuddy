@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.livelingo.android.PlainSubtitleSplitMode
 import com.livelingo.android.PrivatePlainTextSubtitleDraft
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
@@ -39,6 +40,7 @@ internal fun SubtitlePasteDialog(
 ) {
     var raw by remember { mutableStateOf("") }
     var plainLines by remember { mutableStateOf(false) }
+    var splitMode by remember { mutableStateOf(PlainSubtitleSplitMode.LINES) }
     var startMs by remember { mutableStateOf(0L) }
     var durationMs by remember { mutableStateOf(3_500L) }
     var durationMenu by remember { mutableStateOf(false) }
@@ -46,8 +48,8 @@ internal fun SubtitlePasteDialog(
     var inputTooLarge by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
-    val parsed = remember(raw, plainLines, startMs, durationMs) {
-        if (plainLines) PrivatePlainTextSubtitleDraft.preview(raw, startMs, durationMs)
+    val parsed = remember(raw, plainLines, startMs, durationMs, splitMode) {
+        if (plainLines) PrivatePlainTextSubtitleDraft.preview(raw, startMs, durationMs, splitMode)
         else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
     }
     val filtered = remember(parsed, search) {
@@ -85,10 +87,23 @@ internal fun SubtitlePasteDialog(
                 }
                 if (plainLines) {
                     Text(
-                        "Iedere niet-lege regel wordt één ondertitel. Kies bewust " +
-                            "geschatte tijden: deze volgen GEEN opgenomen audio.",
+                        "Maak handmatig een ondertitelconcept van losse tekst. " +
+                            "Automatische zinsgrenzen zijn een ruwe tekstheuristiek; " +
+                            "tijden volgen GEEN opgenomen audio.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = {
+                            splitMode = PlainSubtitleSplitMode.LINES
+                            page = 0
+                        }) { Text((if (splitMode == PlainSubtitleSplitMode.LINES) "✓ " else "") +
+                            "Per regel") }
+                        OutlinedButton(onClick = {
+                            splitMode = PlainSubtitleSplitMode.SENTENCES
+                            page = 0
+                        }) { Text((if (splitMode == PlainSubtitleSplitMode.SENTENCES) "✓ " else "") +
+                            "Per zin (schatting)") }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.foundation.layout.Box {
                             OutlinedButton(onClick = { startMenu = true }) {
@@ -146,7 +161,7 @@ internal fun SubtitlePasteDialog(
                             inputTooLarge = true
                         }
                     },
-                    label = { Text(if (plainLines) "Eén eigen zin per regel" else "SRT/WebVTT-brontekst") },
+                    label = { Text(if (plainLines) "Eigen tekst of zinnen" else "SRT/WebVTT-brontekst") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 5,
                     maxLines = 12
@@ -220,7 +235,7 @@ internal fun SubtitlePasteDialog(
                 // Fresh full parse with current settings at consent, never a
                 // filtered preview or previously cached snapshot.
                 val confirmed = if (plainLines)
-                    PrivatePlainTextSubtitleDraft.preview(raw, startMs, durationMs)
+                    PrivatePlainTextSubtitleDraft.preview(raw, startMs, durationMs, splitMode)
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
                 if (confirmed != null) onAccept(confirmed.toList())
             }) { Text("Open tijdelijk concept") }
