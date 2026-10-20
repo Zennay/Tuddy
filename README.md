@@ -4,7 +4,10 @@ Kopieer je eigen SRT/WebVTT-tekst naar de tijdelijke ondertiteleditor
 zonder eerst een bestand te maken. Of kies **Gewone zinnen** om eigen
 tekst per regel of volgens geschatte leestekengrenzen om te zetten naar
 losse ondertitelkaarten met **zelf gekozen, niet aan audio gekoppelde**
-tijden. Je kunt ook **twee zelfgeschreven tekstkolommen** (bron + eigen
+tijden. Voor mobiel gebruik zijn er ook **twee losse tekstvakken**:
+originele zinnen en zelfgeschreven betekenissen, één op één per regel;
+ontbrekende regels worden duidelijk aangegeven, niet verzwegen.
+Je kunt ook **twee zelfgeschreven tekstkolommen** (bron + eigen
 betekenis, gescheiden door een tab) per ondertitelkaart combineren, óf vier
 kolommen plakken met **zelf opgegeven begin- en eindtijd** plus beide
 tekstkolommen. Bestaande tijdcodes worden daarbij behouden, niet geschat.
