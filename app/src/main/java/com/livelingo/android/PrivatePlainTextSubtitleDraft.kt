@@ -3,11 +3,11 @@ package com.livelingo.android
 import java.util.Locale
 
 /**
- * User-authored, one-line-per-cue *draft* with explicitly selected synthetic
- * durations. These are NOT speech timestamps, word alignment, or translations.
+ * User-authored line, sentence or explicitly paired text cue draft with
+ * chosen synthetic durations. These are NOT speech timestamps, word alignment, or translations.
  * Only used after deliberate manual input; no audio, clipboard, or I/O.
  */
-internal enum class PlainSubtitleSplitMode { LINES, SENTENCES }
+internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS }
 
 internal object PrivatePlainTextSubtitleDraft {
     private const val MAX_BYTES = 262_144
@@ -36,23 +36,39 @@ internal object PrivatePlainTextSubtitleDraft {
         val normalized = raw.removePrefix("\uFEFF").replace("\r\n", "\n").replace('\r', '\n')
         // Never classify natural sentences as recognized speech: this merely
         // suggests cut points at punctuation followed by whitespace.
-        val lines = when (splitMode) {
+        val rows = when (splitMode) {
             PlainSubtitleSplitMode.LINES -> normalized.lines()
+                .map { it.trim() }.filter { it.isNotEmpty() }
             PlainSubtitleSplitMode.SENTENCES -> normalized.trim()
                 .replace(Regex("""[ \t\n]+"""), " ")
                 .split(Regex("""(?<=[.!?。！？؟])\s+"""))
-        }.map { it.trim() }.filter { it.isNotEmpty() }
-        if (lines.isEmpty() || lines.size > MAX_CUES ||
-            lines.first().startsWith("WEBVTT", ignoreCase = true) ||
-            lines.any { line ->
-                line.length > 800 || "-->" in line ||
-                line.any { it == '\u0000' || (it.isISOControl() && it != '\t') }
+                .map { it.trim() }.filter { it.isNotEmpty() }
+            PlainSubtitleSplitMode.PAIRED_COLUMNS -> normalized.lines()
+                .map { it.trim() }.filter { it.isNotEmpty() }.map { row ->
+                    val columns = row.split('\t')
+                    // Require exactly two explicit, nonempty author-supplied
+                    // fields. Do not invent a missing translation or split
+                    // language text heuristically.
+                    if (columns.size != 2) return null
+                    val first = columns[0].trim()
+                    val second = columns[1].trim()
+                    if (first.isEmpty() || second.isEmpty() ||
+                        first.length > 800 || second.length > 800) return null
+                    "$" + "{first}\n" + "$" + "{second}"
+                }
+        }
+        if (rows.isEmpty() || rows.size > MAX_CUES ||
+            rows.first().startsWith("WEBVTT", ignoreCase = true) ||
+            rows.any { row ->
+                row.length > 2400 || row.lines().size > 2 ||
+                row.lines().any { it.length > 800 } || "-->" in row ||
+                row.any { it == '\u0000' || (it.isISOControl() && it != '\n') }
             }) return null
-        val cues = lines.mapIndexed { index, line ->
+        val cues = rows.mapIndexed { index, row ->
             val begin = startMillis + index.toLong() * durationMillis
             val end = begin + durationMillis
             if (end > MAX_TIME || end <= begin) return null
-            PrivateSubtitleCue(begin, end, label(begin), label(end), line)
+            PrivateSubtitleCue(begin, end, label(begin), label(end), row)
         }
         // Reuse the same portable SRT/VTT export boundaries as the editor.
         if (PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.SRT) == null ||
