@@ -5,7 +5,10 @@ zonder eerst een bestand te maken. Of kies **Gewone zinnen** om eigen
 tekst per regel of volgens geschatte leestekengrenzen om te zetten naar
 losse ondertitelkaarten met **zelf gekozen, niet aan audio gekoppelde**
 tijden. Je kunt ook **twee zelfgeschreven tekstkolommen** (bron + eigen
-betekenis, gescheiden door een tab) per ondertitelkaart combineren. Bekijk
+betekenis, gescheiden door een tab) per ondertitelkaart combineren, óf vier
+kolommen plakken met **zelf opgegeven begin- en eindtijd** plus beide
+tekstkolommen. Bestaande tijdcodes worden daarbij behouden, niet geschat.
+De invoerkeuzes en tijdmenu's passen op smallere Android-schermen. Bekijk
 het volledige bronmateriaal, filter op tekst en kies desgewenst een exact
 bereik bronregels voordat je alleen die regels opent. Een tweede geplakt
 spoor kan via de bestaande tijdmodi worden gecombineerd
