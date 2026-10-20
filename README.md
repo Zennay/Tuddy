@@ -15,6 +15,21 @@ bestaande aanklikbare woordkaarten te gebruiken.
 
 ---
 
+## Nieuw: mijn offline luisteroefenoverzicht zelf als HTML of TXT bewaren
+
+Bekijk na je eigen SRT/VTT-audiooefening **Mijn privé oefenoverzicht**
+met maximaal vier A–B-fragmenten, handmatig gekozen beoordelingen,
+een optionele eigen oefennotitie (maximaal 240 tekens) per fragment
+en uitsluitend écht afgeronde begeleide rondes. Met **Bewaar zelf HTML…**
+kun je dit bestaande overzicht nu afzonderlijk als offline afdrukbaar
+HTML-bestand óf als eenvoudige UTF-8 TXT-notitie bewaren. Tuddy neemt geen audio of audio-URI mee en controleert
+bij terugkeer uit de bestandskiezer dat het overzicht niet gewijzigd is.
+De opslagprovider kan de tekst zelf synchroniseren; tijdcodes zijn niet
+automatisch met audio gecontroleerd.
+[Bediening en privacy](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 ## Nieuw: bewaar zelf gekozen ondertitelzinnen als privé-oefenzin
 
 In de eigen SRT/VTT-audiospeler kun je een actieve Kurmanji-, Sorani-

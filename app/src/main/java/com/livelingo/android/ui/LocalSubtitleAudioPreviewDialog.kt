@@ -4,7 +4,11 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.net.Uri
+import android.app.Activity
+import android.content.Intent
 import android.os.SystemClock
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.rememberScrollState
@@ -122,8 +126,17 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var completedGuidedRoute by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
     var completedGuidedRounds by remember { mutableIntStateOf(0) }
     var practiceReportOpen by remember { mutableStateOf(false) }
+    // An immutable user-approved document lives only while the Android
+    // destination chooser is open; never retain the audio URI or audio bytes.
+    var pendingPracticeReport by remember {
+        mutableStateOf<PendingPrivatePracticeReport?>(null)
+    }
     // Human judgement only: no speech recognition or pronunciation scoring.
     var passageRatings by remember {
+        mutableStateOf<Map<Pair<Long, Long>, String>>(emptyMap())
+    }
+    // User-written next-step notes, bounded and only for the current audio session.
+    var passageNotes by remember {
         mutableStateOf<Map<Pair<Long, Long>, String>>(emptyMap())
     }
     var guidedNeedsOnly by remember { mutableStateOf(false) }
@@ -141,6 +154,66 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var phraseDraftMeaningLanguage by remember { mutableStateOf("nl") }
     var phraseDraftApproved by remember { mutableStateOf(false) }
     var phraseDraftNotice by remember { mutableStateOf("") }
+
+    fun exportablePracticeSummary(): String = privatePracticeSummary(
+        cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
+        completedGuidedRoute, completedGuidedRounds, guidedActive,
+        forExport = true, notes = passageNotes
+    )
+
+    val savePracticeReport = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val pending = pendingPracticeReport
+        pendingPracticeReport = null
+        val uri = result.data?.data
+        if (result.resultCode == Activity.RESULT_OK && uri != null && pending != null) {
+            val updatedSummary = exportablePracticeSummary()
+            val updatedBytes = when (pending.format) {
+                PrivatePracticeReportFormat.HTML ->
+                    PrivatePrintablePracticeSummary.snapshot(updatedSummary)
+                PrivatePracticeReportFormat.TXT ->
+                    PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
+            }
+            if (!prepared || savedPracticePassages.isEmpty() ||
+                updatedSummary != pending.summary || updatedBytes == null ||
+                !updatedBytes.contentEquals(pending.bytes)
+            ) {
+                notice = "Mijn luisteroefening is gewijzigd. Bekijk en bewaar opnieuw."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use {
+                        it.write(pending.bytes)
+                        it.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                notice = if (saved)
+                    "Privé luisteroverzicht als ${pending.format.title} opgeslagen. Controleer opslag."
+                else "Luisteroverzicht niet opgeslagen. Kies een andere opslaglocatie."
+            }
+        }
+    }
+
+    fun choosePracticeReport(format: PrivatePracticeReportFormat) {
+        if (!prepared || guidedActive || savedPracticePassages.isEmpty()) return
+        val report = exportablePracticeSummary()
+        val payload = when (format) {
+            PrivatePracticeReportFormat.HTML -> PrivatePrintablePracticeSummary.snapshot(report)
+            PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
+        }
+        if (payload == null) {
+            notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
+        } else {
+            pendingPracticeReport = PendingPrivatePracticeReport(report, format, payload)
+            practiceReportOpen = false
+            savePracticeReport.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = format.mime
+                putExtra(Intent.EXTRA_TITLE, format.filename)
+            })
+        }
+    }
 
     fun closeAudio() {
         val old = player
@@ -161,11 +234,13 @@ internal fun LocalSubtitleAudioPreviewDialog(
         completedGuidedRoute = emptyList()
         completedGuidedRounds = 0
         practiceReportOpen = false
+        pendingPracticeReport = null
         guidedActive = false
         guidedQueue = emptyList()
         guidedIndex = 0
         guidedPasses = 0
         passageRatings = emptyMap()
+        passageNotes = emptyMap()
         guidedNeedsOnly = false
         bookmarkToolsOpen = false
         bookmarkStartMs = -1L
@@ -521,11 +596,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
 
     val practiceSummaryText = remember(
         cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
-        completedGuidedRoute, completedGuidedRounds, guidedActive
+        passageNotes, completedGuidedRoute, completedGuidedRounds, guidedActive
     ) {
         privatePracticeSummary(
             cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
-            completedGuidedRoute, completedGuidedRounds, guidedActive
+            completedGuidedRoute, completedGuidedRounds, guidedActive,
+            notes = passageNotes
         )
     }
 
@@ -681,6 +757,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         passageRatings = passageRatings.filterKeys {
                                             it.first != mark && it.second != mark
                                         }
+                                        passageNotes = passageNotes.filterKeys {
+                                            it.first != mark && it.second != mark
+                                        }
                                         if (bookmarkStartMs == mark || bookmarkEndMs == mark) {
                                             bookmarkStartMs = -1L
                                             bookmarkEndMs = -1L
@@ -778,6 +857,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                                     i != index
                                                 }
                                             passageRatings = passageRatings - passage
+                                            passageNotes = passageNotes - passage
                                             if (bookmarkRepeating &&
                                                 bookmarkStartMs == passage.first &&
                                                 bookmarkEndMs == passage.second) {
@@ -788,6 +868,26 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         }, modifier = Modifier.weight(1f)
                                     ) { Text("Wis") }
                                 }
+                                OutlinedTextField(
+                                    value = passageNotes[passage].orEmpty(),
+                                    onValueChange = { value ->
+                                        if (!guidedActive) {
+                                            val bounded = value.take(240)
+                                                .replace('\r', ' ').replace('\n', ' ')
+                                            passageNotes = if (bounded.isBlank())
+                                                passageNotes - passage
+                                            else passageNotes + (passage to bounded)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !guidedActive,
+                                    label = { Text("Mijn eigen volgende oefenstap (optioneel)") },
+                                    supportingText = {
+                                        Text("${passageNotes[passage].orEmpty().length}/240 · " +
+                                            "alleen deze tijdelijke audiosessie")
+                                    },
+                                    maxLines = 3
+                                )
                                 Text("Mijn eigen luisterinschatting, geen automatisch taalniveau",
                                     style = MaterialTheme.typography.labelSmall)
                                 Row(modifier = Modifier.fillMaxWidth(),
@@ -1460,6 +1560,16 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         "Selecteer alleen zelf tekst als je die via Android wilt kopiëren; " +
                         "je klembord- of toetsenbord-app kan een kopie dan lezen.",
                         style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Je kunt het overzicht als afdrukbare HTML of als leesbare " +
+                            "TXT-notitie opslaan. Externe Android-opslag kan synchroniseren; " +
+                            "er gaan geen audio-opnamen of audiobestandsnamen mee.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    TextButton(
+                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        onClick = { choosePracticeReport(PrivatePracticeReportFormat.TXT) }
+                    ) { Text("Bewaar als privé TXT-notitie…") }
                     SelectionContainer {
                         Text(
                             practiceSummaryText,
@@ -1475,6 +1585,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 TextButton(onClick = { practiceReportOpen = false }) {
                     Text("Sluit zonder opslaan")
                 }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                    onClick = { choosePracticeReport(PrivatePracticeReportFormat.HTML) }
+                ) { Text("Bewaar zelf HTML…") }
             }
         )
     }
