@@ -3445,7 +3445,8 @@ private fun TuddyScreen(
                                     format.title)
                             }
                         }
-                        if (pinnedExportFormat == PinnedCaptionFormat.TSV) {
+                        if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.CSV)) {
                             HorizontalDivider()
                             Text("Kies hoe je de tweetalige modelvertalingen wilt oefenen",
                                 style = MaterialTheme.typography.titleSmall)
@@ -3476,7 +3477,11 @@ private fun TuddyScreen(
                                 "Alleen daadwerkelijk voltooide lokale vertalingen komen in " +
                                     "de kaarten. Geen onvoltooide betekenissen, automatische " +
                                     "kwaliteitscontrole of leerprofiel. Handmatig importeren " +
-                                    "als UTF-8 TSV met twee velden (voor- en achterkant).",
+                                    (if (pinnedExportFormat == PinnedCaptionFormat.CSV)
+                                        "als UTF-8 CSV met komma's, aanhalingstekens en twee " +
+                                            "velden (voor- en achterkant)."
+                                    else "als UTF-8 TSV met twee tabgescheiden velden " +
+                                            "(voor- en achterkant)."),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -3515,7 +3520,8 @@ private fun TuddyScreen(
                             }
                         }
                         Text(
-                            if (pinnedExportFormat == PinnedCaptionFormat.TSV)
+                            if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.CSV))
                                 "${included.size} unieke, werkelijk vertaalde paren van " +
                                     "${selection.size} markeringen (identieke paren worden " +
                                     "niet dubbel geëxporteerd)."
@@ -3525,11 +3531,14 @@ private fun TuddyScreen(
                                     "nooit als afgerond voorgesteld.",
                             style = MaterialTheme.typography.bodySmall
                         )
-                        if (pinnedExportFormat == PinnedCaptionFormat.TSV) {
+                        if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.CSV)) {
                             val cards = included.size *
                                 (if (pinnedStudyDirection == PinnedStudyDirection.BOTH) 2 else 1)
                             Text(
-                                "$cards studiekaarten met twee tekstkolommen. " +
+                                "$cards studiekaarten in " +
+                                    (if (pinnedExportFormat == PinnedCaptionFormat.CSV)
+                                        "CSV" else "TSV") + " met twee tekstkolommen. " +
                                     (if (pinnedOnlyPersonalStudy)
                                         "Alleen handmatig gecorrigeerde antwoorden; " +
                                             "nog steeds niet onafhankelijk geverifieerd."
@@ -3584,7 +3593,8 @@ private fun TuddyScreen(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                if (pinnedExportFormat == PinnedCaptionFormat.TSV) {
+                                if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.CSV)) {
                                     val originalRow = selection.firstOrNull {
                                         it.id == record.id
                                     }?.caption
