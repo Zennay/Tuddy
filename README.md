@@ -1,6 +1,6 @@
 # Tuddy 🎙️
 
-## Nieuw: exporteer alleen gemarkeerde gesprekszinnen in vijf formaten
+## Nieuw: exporteer gemarkeerde gesprekszinnen in zes formaten
 
 Markeer maximaal 80 regels in je tijdelijke live gesprek en bekijk ze
 onder **★ gemarkeerd**. Via **Exporteer selectie…** kies je bewust voor
