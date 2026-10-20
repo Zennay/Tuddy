@@ -33,9 +33,10 @@ Dit verandert je markeringen, eigen archief of woordenschat niet.
 ## Alleen mijn gekozen markeringen gebruiken
 
 In **★ gemarkeerd** kun je nu maximaal 80 tijdelijke markeringen
-doorzoeken op bron, vertaling en taalcode. Filter op **Alle**, **Alleen
-afgeronde** of **Alleen voltooide vertalingen** en toon de nieuwste
-regels eerst. Vink per zin aan of die mee mag in je volgende oefenronde
+doorzoeken op bron, vertaling en taalcode. Via **Taalrichting** kies je
+ook één exact bron-/doeltaalpaar, of weer alle richtingen. Filter op
+**Alle**, **Alleen afgeronde** of **Alleen voltooide vertalingen** en
+toon de nieuwste regels eerst. Vink per zin aan of die mee mag in je volgende oefenronde
 of export; dat is iets anders dan de ster verwijderen. Met **Kies
 zichtbare** en **Deselecteer zichtbare** kun je de huidige zoekresultaten
 toevoegen of uit je selectie verwijderen, zonder eerder gekozen
