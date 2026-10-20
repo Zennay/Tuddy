@@ -75,6 +75,11 @@ internal object PrivatePinnedCaptionExport {
         }
         if (format == PinnedCaptionFormat.TSV) return selected.filter {
             it.caption.status == "Lokaal vertaald" && it.caption.translated.isNotBlank()
+        }.distinctBy {
+            // Identical authored pairs need only one card per requested direction,
+            // but different language pairs must never be silently conflated.
+            listOf(it.caption.sourceCode, it.caption.targetCode,
+                it.caption.original, it.caption.translated)
         }
         if (format != PinnedCaptionFormat.SRT &&
             format != PinnedCaptionFormat.WEBVTT) return selected
