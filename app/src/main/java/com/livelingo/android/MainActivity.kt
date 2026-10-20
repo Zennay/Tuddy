@@ -3116,9 +3116,14 @@ private fun TuddyScreen(
                             }
                         }
                         Text(
-                            "${included.size} van ${selection.size} gemarkeerde regels " +
-                                "komen in de export. Een niet-voltooide vertaling wordt " +
-                                "nooit als afgerond voorgesteld.",
+                            if (pinnedExportFormat == PinnedCaptionFormat.TSV)
+                                "${included.size} unieke, werkelijk vertaalde paren van " +
+                                    "${selection.size} markeringen (identieke paren worden " +
+                                    "niet dubbel geëxporteerd)."
+                            else
+                                "${included.size} van ${selection.size} gemarkeerde regels " +
+                                    "komen in de export. Een niet-voltooide vertaling wordt " +
+                                    "nooit als afgerond voorgesteld.",
                             style = MaterialTheme.typography.bodySmall
                         )
                         if (pinnedExportFormat == PinnedCaptionFormat.TSV) {
@@ -3169,14 +3174,31 @@ private fun TuddyScreen(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                Text(
-                                    PrivatePinnedCaptionExport.preview(record.caption.original),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                if (record.caption.status == "Lokaal vertaald") {
-                                    Text("↳ " + PrivatePinnedCaptionExport.preview(
-                                        record.caption.translated),
+                                if (pinnedExportFormat == PinnedCaptionFormat.TSV) {
+                                    val source = PrivatePinnedCaptionExport.preview(
+                                        record.caption.original)
+                                    val meaning = PrivatePinnedCaptionExport.preview(
+                                        record.caption.translated)
+                                    val reverse = pinnedStudyDirection ==
+                                        PinnedStudyDirection.TARGET_TO_SOURCE
+                                    Text("Voorzijde: " + (if (reverse) meaning else source),
                                         style = MaterialTheme.typography.bodySmall)
+                                    Text("Achterzijde: " + (if (reverse) source else meaning),
+                                        style = MaterialTheme.typography.bodySmall)
+                                    if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
+                                        Text("Omgekeerde kaart: " + meaning + " → " + source,
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
+                                } else {
+                                    Text(
+                                        PrivatePinnedCaptionExport.preview(record.caption.original),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    if (record.caption.status == "Lokaal vertaald") {
+                                        Text("↳ " + PrivatePinnedCaptionExport.preview(
+                                            record.caption.translated),
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
                             }
                             if (included.size > 5) {
