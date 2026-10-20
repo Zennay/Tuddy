@@ -4,6 +4,28 @@ import com.livelingo.android.PrivateSubtitleCue
 import java.util.Locale
 
 /**
+ * The guided route plays exactly the locally marked personal passage cards.
+ * These filters never interpret comprehension or produce a score.
+ */
+internal enum class PrivatePracticeRouteScope(val title: String) {
+    ALL("Alle fragmenten"),
+    NEEDS_REPEAT("Nog oefenen"),
+    UNRATED("Nog niet beoordeeld")
+}
+
+internal fun privatePracticeRouteCandidates(
+    passages: List<Pair<Long, Long>>,
+    ratings: Map<Pair<Long, Long>, String>,
+    scope: PrivatePracticeRouteScope
+): List<Pair<Long, Long>> = passages.filter { span ->
+    when (scope) {
+        PrivatePracticeRouteScope.ALL -> true
+        PrivatePracticeRouteScope.NEEDS_REPEAT -> ratings[span] == "repeat"
+        PrivatePracticeRouteScope.UNRATED -> ratings[span] !in listOf("repeat", "okay", "easy")
+    }
+}
+
+/**
  * In-memory personal listening note. This is neither a language evaluation
  * nor evidence of source-audio alignment. Never include the selected SAF URI.
  * The caller alone decides when to present this selectable text.
