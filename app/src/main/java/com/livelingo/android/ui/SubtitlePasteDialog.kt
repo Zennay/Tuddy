@@ -227,7 +227,7 @@ internal fun SubtitlePasteDialog(
                         OutlinedTextField(
                             value = firstRow,
                             onValueChange = {
-                                firstRow = it.filter(Char::isDigit).take(4)
+                                firstRow = it.filter { character -> character in '0'..'9' }.take(4)
                                 page = 0
                             },
                             label = { Text("Van regel") },
@@ -237,7 +237,7 @@ internal fun SubtitlePasteDialog(
                         OutlinedTextField(
                             value = lastRow,
                             onValueChange = {
-                                lastRow = it.filter(Char::isDigit).take(4)
+                                lastRow = it.filter { character -> character in '0'..'9' }.take(4)
                                 page = 0
                             },
                             label = { Text("Tot (leeg = alle)") },
