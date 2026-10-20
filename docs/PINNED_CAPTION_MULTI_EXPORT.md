@@ -44,7 +44,11 @@ Zoek- en filterkeuzes veranderen de oefen-/exportselectie niet automatisch.
 
 **Verwijder alleen deze ster** haalt één regel uit je tijdelijke
 markeringen, zonder de andere regels te verliezen. **Wis markeringen**
-blijft een aparte bewuste actie. De teller en beide knoppen voor oefenen
+blijft een aparte bewuste actie. Bij beide verwijderacties biedt Tuddy
+**↶ Herstel** voor de laatst verwijderde ster(ren), zolang de huidige
+markeringenlijst open blijft en de originele zin nog in het gesprek
+staat. Alleen die laatste verwijderactie kan worden hersteld en nooit
+meer dan 80 sterren. Er is geen permanente herstelgeschiedenis. De teller en beide knoppen voor oefenen
 en exporteren gebruiken uitsluitend de gekozen regels; bij een lege
 keuze blijven ze uitgeschakeld. De keuze wordt bij het opnieuw openen
 van de gemarkeerd-lijst naar alle beschikbare sterren gereset. Een
