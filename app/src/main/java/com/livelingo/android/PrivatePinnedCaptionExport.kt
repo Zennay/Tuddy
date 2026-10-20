@@ -36,6 +36,7 @@ internal data class PendingPinnedCaptionExport(
     val scope: PinnedCaptionScope,
     val languagePair: Pair<String, String>?,
     val studyDirection: PinnedStudyDirection,
+    val studyEdits: Map<Long, String>,
     val subtitleOptions: SubtitleDraftOptions,
     val bytes: ByteArray
 )
@@ -45,6 +46,32 @@ internal data class PendingPinnedCaptionExport(
  * synthesize translations or claim accurate audio/video timing.
  */
 internal object PrivatePinnedCaptionExport {
+    // Only an explicit user edit may replace the local model answer in a study
+    // card. The original transcript/archives and SRT/VTT are never modified.
+    fun validStudyEdit(value: String): Boolean {
+        if (value.isBlank() || value.length > 800) return false
+        var i = 0
+        var count = 0
+        while (i < value.length) {
+            val char = value[i]
+            if (char == '\n' || char == '\r' || char == '\t' ||
+                char.isISOControl() || char in '\u202a'..'\u202e' ||
+                char in '\u2066'..'\u2069' ||
+                char == '\u2028' || char == '\u2029') return false
+            if (Character.isHighSurrogate(char)) {
+                if (i + 1 >= value.length ||
+                    !Character.isLowSurrogate(value[i + 1])) return false
+                i += 2
+            } else {
+                if (Character.isLowSurrogate(char)) return false
+                i++
+            }
+            count++
+            if (count > 400) return false
+        }
+        return true
+    }
+
     fun select(
         rows: List<PinnedCaptionRow>, scope: PinnedCaptionScope
     ): List<PinnedCaptionRow> = when (scope) {
@@ -66,20 +93,30 @@ internal object PrivatePinnedCaptionExport {
         format: PinnedCaptionFormat,
         options: SubtitleDraftOptions,
         scope: PinnedCaptionScope,
-        languagePair: Pair<String, String>? = null
+        languagePair: Pair<String, String>? = null,
+        studyEdits: Map<Long, String> = emptyMap()
     ): List<PinnedCaptionRow> {
         val scoped = select(rows, scope)
         val selected = if (languagePair == null) scoped else scoped.filter {
             it.caption.sourceCode == languagePair.first &&
                 it.caption.targetCode == languagePair.second
         }
-        if (format == PinnedCaptionFormat.TSV) return selected.filter {
-            it.caption.status == "Lokaal vertaald" && it.caption.translated.isNotBlank()
-        }.distinctBy {
-            // Identical authored pairs need only one card per requested direction,
-            // but different language pairs must never be silently conflated.
-            listOf(it.caption.sourceCode, it.caption.targetCode,
-                it.caption.original, it.caption.translated)
+        if (format == PinnedCaptionFormat.TSV) {
+            if (studyEdits.any { (id, edit) ->
+                    selected.any { it.id == id } && !validStudyEdit(edit)
+                }) return emptyList()
+            return selected.filter {
+                it.caption.status == "Lokaal vertaald" && it.caption.translated.isNotBlank()
+            }.map { row ->
+                val authored = studyEdits[row.id]
+                if (authored == null) row
+                else row.copy(caption = row.caption.copy(translated = authored.trim()))
+            }.distinctBy {
+                // Identical actual front/back pairs within the same language
+                // direction produce one card, regardless of timestamp.
+                listOf(it.caption.sourceCode, it.caption.targetCode,
+                    it.caption.original, it.caption.translated)
+            }
         }
         if (format != PinnedCaptionFormat.SRT &&
             format != PinnedCaptionFormat.WEBVTT) return selected
@@ -105,13 +142,14 @@ internal object PrivatePinnedCaptionExport {
         subtitleOptions: SubtitleDraftOptions,
         scope: PinnedCaptionScope = PinnedCaptionScope.ALL,
         languagePair: Pair<String, String>? = null,
-        studyDirection: PinnedStudyDirection = PinnedStudyDirection.SOURCE_TO_TARGET
+        studyDirection: PinnedStudyDirection = PinnedStudyDirection.SOURCE_TO_TARGET,
+        studyEdits: Map<Long, String> = emptyMap()
     ): ByteArray? {
         if (selection.isEmpty() || selection.size > SessionCaptionPins.MAX_PINS ||
             selection.map { it.id }.distinct().size != selection.size
         ) return null
-        val rows = includedRows(selection, format, subtitleOptions, scope, languagePair)
-            .map { it.caption }
+        val rows = includedRows(selection, format, subtitleOptions, scope,
+            languagePair, studyEdits).map { it.caption }
         if (rows.isEmpty()) return null
         return when (format) {
             PinnedCaptionFormat.TXT -> PrivateTranscriptExport.snapshot(rows)
