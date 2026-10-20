@@ -29,6 +29,21 @@ internal enum class PinnedStudyDirection(val title: String) {
 
 internal data class PinnedCaptionRow(val id: Long, val caption: TranscriptExportRow)
 
+/** Explicit authoring is tied to the exact model sentence it corrected. */
+internal data class PinnedStudyCorrection(
+    val source: String,
+    val modelAnswer: String,
+    val sourceLanguage: String,
+    val targetLanguage: String,
+    val answer: String
+) {
+    fun appliesTo(row: TranscriptExportRow): Boolean =
+        source == row.original && modelAnswer == row.translated &&
+            sourceLanguage == row.sourceCode && targetLanguage == row.targetCode &&
+            row.status == "Lokaal vertaald" &&
+            PrivatePinnedCaptionExport.validStudyEdit(answer)
+}
+
 internal data class PendingPinnedCaptionExport(
     val generation: Int,
     val selection: List<PinnedCaptionRow>,
@@ -36,7 +51,7 @@ internal data class PendingPinnedCaptionExport(
     val scope: PinnedCaptionScope,
     val languagePair: Pair<String, String>?,
     val studyDirection: PinnedStudyDirection,
-    val studyEdits: Map<Long, String>,
+    val studyEdits: Map<Long, PinnedStudyCorrection>,
     val subtitleOptions: SubtitleDraftOptions,
     val bytes: ByteArray
 )
@@ -94,7 +109,7 @@ internal object PrivatePinnedCaptionExport {
         options: SubtitleDraftOptions,
         scope: PinnedCaptionScope,
         languagePair: Pair<String, String>? = null,
-        studyEdits: Map<Long, String> = emptyMap()
+        studyEdits: Map<Long, PinnedStudyCorrection> = emptyMap()
     ): List<PinnedCaptionRow> {
         val scoped = select(rows, scope)
         val selected = if (languagePair == null) scoped else scoped.filter {
@@ -102,15 +117,12 @@ internal object PrivatePinnedCaptionExport {
                 it.caption.targetCode == languagePair.second
         }
         if (format == PinnedCaptionFormat.TSV) {
-            if (studyEdits.any { (id, edit) ->
-                    selected.any { it.id == id } && !validStudyEdit(edit)
-                }) return emptyList()
             return selected.filter {
                 it.caption.status == "Lokaal vertaald" && it.caption.translated.isNotBlank()
             }.map { row ->
-                val authored = studyEdits[row.id]
-                if (authored == null) row
-                else row.copy(caption = row.caption.copy(translated = authored.trim()))
+                val edit = studyEdits[row.id]
+                if (edit == null || !edit.appliesTo(row.caption)) row
+                else row.copy(caption = row.caption.copy(translated = edit.answer.trim()))
             }.distinctBy {
                 // Identical actual front/back pairs within the same language
                 // direction produce one card, regardless of timestamp.
@@ -143,7 +155,7 @@ internal object PrivatePinnedCaptionExport {
         scope: PinnedCaptionScope = PinnedCaptionScope.ALL,
         languagePair: Pair<String, String>? = null,
         studyDirection: PinnedStudyDirection = PinnedStudyDirection.SOURCE_TO_TARGET,
-        studyEdits: Map<Long, String> = emptyMap()
+        studyEdits: Map<Long, PinnedStudyCorrection> = emptyMap()
     ): ByteArray? {
         if (selection.isEmpty() || selection.size > SessionCaptionPins.MAX_PINS ||
             selection.map { it.id }.distinct().size != selection.size
