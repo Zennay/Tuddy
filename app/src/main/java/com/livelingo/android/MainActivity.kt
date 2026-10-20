@@ -3034,6 +3034,11 @@ private fun TuddyScreen(
                                         Text(if (pinnedNewestFirst) "Nieuwste eerst ✓"
                                             else "Oudste eerst ✓ · tik voor nieuwste")
                                     }
+                                    TextButton(
+                                        enabled = visiblePinIds.isNotEmpty(),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = { pinnedChosenIds = visiblePinIds }
+                                    ) { Text("Kies uitsluitend ${visiblePinIds.size} zichtbare regels") }
                                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                         TextButton(
                                             enabled = visiblePinIds.isNotEmpty(),
@@ -3042,7 +3047,7 @@ private fun TuddyScreen(
                                                 pinnedChosenIds =
                                                     (pinnedChosenIds ?: captionPins) + visiblePinIds
                                             }
-                                        ) { Text("Kies zichtbare") }
+                                        ) { Text("Voeg zichtbare toe") }
                                         TextButton(
                                             enabled = visiblePinIds.isNotEmpty(),
                                             modifier = Modifier.weight(1f),
