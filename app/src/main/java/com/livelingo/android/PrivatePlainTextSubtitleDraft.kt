@@ -104,8 +104,11 @@ internal object PrivatePlainTextSubtitleDraft {
         if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS) {
             // Four manually supplied columns: start, end, source, own meaning.
             // Unlike the estimated routes, timestamps are copied exactly.
-            val rawRows = normalized.lines().filter { it.isNotBlank() }
-            if (rawRows.isEmpty() || rawRows.size > MAX_CUES) return null
+            val rawRows = pairedRows(raw)
+            // Blank spreadsheet rows must be corrected explicitly, not
+            // skipped: row numbers and user-supplied timing provenance matter.
+            if (rawRows.isEmpty() || rawRows.size > MAX_CUES ||
+                rawRows.any { it.isBlank() }) return null
             val cues = rawRows.map { row ->
                 val columns = row.split('\t')
                 if (columns.size != 4) return null
@@ -142,8 +145,10 @@ internal object PrivatePlainTextSubtitleDraft {
                 .map { it.trim() }.filter { it.isNotEmpty() }
             PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS -> return null // handled above
             PlainSubtitleSplitMode.PAIRED_TEXTBOXES -> return null // handled above
-            PlainSubtitleSplitMode.PAIRED_COLUMNS -> normalized.lines()
-                .map { it.trim() }.filter { it.isNotEmpty() }.map { row ->
+            PlainSubtitleSplitMode.PAIRED_COLUMNS -> pairedRows(raw).map { row ->
+                    // Reject a blank source row rather than shifting displayed
+                    // row numbers relative to the user's spreadsheet.
+                    if (row.isBlank()) return null
                     val columns = row.split('\t')
                     // Require exactly two explicit, nonempty author-supplied
                     // fields. Do not invent a missing translation or split
