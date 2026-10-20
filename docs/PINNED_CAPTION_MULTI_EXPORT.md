@@ -37,8 +37,8 @@ doorzoeken op bron, vertaling en taalcode. Via **Taalrichting** kies je
 ook één exact bron-/doeltaalpaar, of weer alle richtingen. Filter op
 **Alle**, **Alleen afgeronde** of **Alleen voltooide vertalingen** en
 toon de nieuwste regels eerst. Vink per zin aan of die mee mag in je volgende oefenronde
-of export; dat is iets anders dan de ster verwijderen. Met **Kies
-zichtbare** en **Deselecteer zichtbare** kun je de huidige zoekresultaten
+of export; dat is iets anders dan de ster verwijderen. Met **Voeg
+zichtbare toe** en **Deselecteer zichtbare** kun je de huidige zoekresultaten
 toevoegen of uit je selectie verwijderen, zonder eerder gekozen
 niet-zichtbare regels te verliezen. Met **Kies uitsluitend zichtbare
 regels** vervang je de hele selectie door precies je huidige
