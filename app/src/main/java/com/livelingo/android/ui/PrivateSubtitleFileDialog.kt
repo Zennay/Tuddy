@@ -102,6 +102,7 @@ internal fun PrivateSubtitleFileDialog(
     var batchWith by remember { mutableStateOf("") }
     var batchMatchCase by remember { mutableStateOf(false) }
     var batchField by remember { mutableStateOf(SubtitleReplaceField.ALL_TEXT) }
+    var batchReviewPage by remember { mutableIntStateOf(0) }
     var batchFirstRow by remember { mutableStateOf("1") }
     var batchLastRow by remember { mutableStateOf("") }
     var insertOpen by remember { mutableStateOf(false) }
@@ -888,6 +889,8 @@ internal fun PrivateSubtitleFileDialog(
         val changes = proposed?.updated?.withIndex()?.filter { (i, cue) ->
             cue.text != draft[i].text
         }.orEmpty()
+        val reviewPageCount = maxOf(1, (changes.size + 4) / 5)
+        val reviewPage = batchReviewPage.coerceIn(0, reviewPageCount - 1)
         AlertDialog(
             onDismissRequest = { batchOpen = false },
             title = { Text("Zoek en vervang · tijdelijk") },
@@ -951,16 +954,26 @@ internal fun PrivateSubtitleFileDialog(
                             "${scopeFrom}–${scopeTo}.",
 
                         style = MaterialTheme.typography.bodyMedium)
-                    changes.take(5).forEach { (index, cue) ->
-                        Text("Regel ${index + 1}:\n" +
-                            "Voor: ${draft[index].text.take(160)}\n" +
-                            "Na: ${cue.text.take(160)}",
-                            style = MaterialTheme.typography.bodySmall)
-                    }
-                    if (changes.size > 5) {
-                        Text("Daarnaast nog ${changes.size - 5} gewijzigde regels; " +
-                            "alle wijzigingen blijven herstelbaar.",
-                            style = MaterialTheme.typography.bodySmall)
+                    if (changes.isNotEmpty()) {
+                        Text("Previewpagina ${reviewPage + 1} van ${reviewPageCount} " +
+                            "· ${changes.size} veranderde regels (volledige tekst)",
+                            style = MaterialTheme.typography.labelMedium)
+                        changes.drop(reviewPage * 5).take(5).forEach { (index, cue) ->
+                            Text("Regel ${index + 1}:\n" +
+                                "VOOR:\n${draft[index].text}\n" +
+                                "NA:\n${cue.text}",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(enabled = reviewPage > 0, onClick = {
+                                batchReviewPage = reviewPage - 1
+                            }) { Text("← Vorige") }
+                            TextButton(enabled = reviewPage < reviewPageCount - 1,
+                                onClick = { batchReviewPage = reviewPage + 1 }) {
+                                Text("Volgende →")
+                            }
+                        }
                     }
                     Text("De bron blijft ongewijzigd. Alleen via Bewaar kopie… " +
                         "kan je later een nieuw SRT/VTT-bestand maken.",
