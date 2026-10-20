@@ -215,7 +215,8 @@ internal fun SubtitlePasteDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = parsed != null, onClick = {
+            TextButton(enabled = parsed != null && !inputTooLarge, onClick = {
+                if (inputTooLarge) return@TextButton
                 // Fresh full parse with current settings at consent, never a
                 // filtered preview or previously cached snapshot.
                 val confirmed = if (plainLines)
