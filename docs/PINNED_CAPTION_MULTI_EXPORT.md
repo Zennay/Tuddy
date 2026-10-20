@@ -38,8 +38,12 @@ afgeronde** of **Alleen voltooide vertalingen** en toon de nieuwste
 regels eerst. Vink per zin aan of die mee mag in je volgende oefenronde
 of export; dat is iets anders dan de ster verwijderen. Met **Kies
 zichtbare** en **Deselecteer zichtbare** kun je de huidige zoekresultaten
-samen selecteren, zonder eerder gekozen niet-zichtbare regels te verliezen.
-**Kies alle markeringen** herstelt de oorspronkelijke volledige selectie.
+toevoegen of uit je selectie verwijderen, zonder eerder gekozen
+niet-zichtbare regels te verliezen. Met **Kies uitsluitend zichtbare
+regels** vervang je de hele selectie door precies je huidige
+zoek-/filterresultaat. Dit voorkomt dat andere gemarkeerde zinnen
+onbedoeld meegaan in een export. **Kies alle markeringen** herstelt de
+oorspronkelijke volledige selectie.
 Zoek- en filterkeuzes veranderen de oefen-/exportselectie niet automatisch.
 
 **Verwijder alleen deze ster** haalt één regel uit je tijdelijke
