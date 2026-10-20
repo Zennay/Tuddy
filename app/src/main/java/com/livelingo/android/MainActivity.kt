@@ -2984,146 +2984,171 @@ private fun TuddyScreen(
                 onDismissRequest = { pinsOpen = false },
                 title = { Text("Gemarkeerde gespreksregels") },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "Alleen in dit gesprek, maximaal ${SessionCaptionPins.MAX_PINS}. " +
-                                "Sluiten wist de markeringen niet; Wis gesprek wel.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        if (pinnedLines.isEmpty()) {
-                            Text("Geen gemarkeerde zinnen in dit gesprek.")
-                        } else {
-                            OutlinedTextField(
-                                value = pinnedSearchTerm,
-                                onValueChange = { pinnedSearchTerm = it },
-                                label = { Text("Zoek mijn gemarkeerde zinnen") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                    // One scroll owner: on small phones the filters, all selected
+                    // rows and the practice action remain reachable.
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item(key = "intro") {
                             Text(
-                                "${chosenPins.size} van ${pinnedLines.size} gekozen · " +
-                                    "${filteredPins.size} zichtbaar. Zoeken en filters " +
-                                    "veranderen je gekozen selectie niet.",
+                                "Alleen in dit gesprek, maximaal ${SessionCaptionPins.MAX_PINS}. " +
+                                    "Sluiten wist de markeringen niet; Wis gesprek wel.",
                                 style = MaterialTheme.typography.bodySmall
                             )
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                PinnedCaptionScope.entries.forEach { scope ->
-                                    TextButton(onClick = { pinnedManageScope = scope }) {
-                                        Text((if (pinnedManageScope == scope) "● " else "○ ") +
-                                            scope.title)
-                                    }
-                                }
-                                TextButton(onClick = { pinnedNewestFirst = !pinnedNewestFirst }) {
-                                    Text(if (pinnedNewestFirst) "Nieuwste eerst ✓"
-                                        else "Oudste eerst ✓ · tik voor nieuwste")
-                                }
+                        }
+                        if (pinnedLines.isEmpty()) {
+                            item(key = "empty") {
+                                Text("Geen gemarkeerde zinnen in dit gesprek.")
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                TextButton(
-                                    enabled = visiblePinIds.isNotEmpty(),
-                                    onClick = {
-                                        pinnedChosenIds =
-                                            (pinnedChosenIds ?: captionPins) + visiblePinIds
-                                    }
-                                ) { Text("Kies zichtbare") }
-                                TextButton(
-                                    enabled = visiblePinIds.isNotEmpty(),
-                                    onClick = {
-                                        pinnedChosenIds =
-                                            (pinnedChosenIds ?: captionPins) - visiblePinIds
-                                    }
-                                ) { Text("Verwijder keuze zichtbaar") }
-                            }
-                            TextButton(
-                                onClick = { pinnedChosenIds = null },
-                                enabled = chosenPins.size < pinnedLines.size
-                            ) { Text("Kies alle markeringen") }
-                            if (filteredPins.isEmpty()) {
-                                Text("Geen resultaten. Pas je zoekterm of filter aan.")
-                            }
-                            LazyColumn(
-                                modifier = Modifier.fillMaxWidth().heightIn(max = 370.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                items(filteredPins, key = { it.id }) { line ->
-                                    Column {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(
-                                                checked = pinnedChosenIds == null ||
-                                                    line.id in pinnedChosenIds.orEmpty(),
-                                                onCheckedChange = { checked ->
-                                                    val selected = pinnedChosenIds ?: captionPins
-                                                    pinnedChosenIds = if (checked)
-                                                        selected + line.id
-                                                    else selected - line.id
-                                                }
-                                            )
-                                            Text("In mijn oefen-/exportselectie",
-                                                style = MaterialTheme.typography.labelSmall)
+                        } else {
+                            item(key = "filters") {
+                                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    OutlinedTextField(
+                                        value = pinnedSearchTerm,
+                                        onValueChange = { pinnedSearchTerm = it.take(120) },
+                                        label = { Text("Zoek mijn gemarkeerde zinnen") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Text(
+                                        "${chosenPins.size} van ${pinnedLines.size} gekozen · " +
+                                            "${filteredPins.size} zichtbaar. Zoeken en filters " +
+                                            "veranderen je gekozen selectie niet.",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    PinnedCaptionScope.entries.forEach { scope ->
+                                        TextButton(
+                                            onClick = { pinnedManageScope = scope },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text((if (pinnedManageScope == scope) "● " else "○ ") +
+                                                scope.title)
                                         }
-                                        Text(
-                                            DateFormat.getTimeInstance(DateFormat.SHORT)
-                                                .format(Date(line.recordedAtMillis)) +
-                                                " · " + line.sourceCode + " → " + line.targetCode,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                        Text(line.original, style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontSize = MaterialTheme.typography.bodyMedium.fontSize * captionSize.scale
-                                        ))
-                                        if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
-                                            Text(line.translated,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                style = MaterialTheme.typography.bodyLarge.copy(
-                                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
-                                                ))
-                                        } else {
-                                            Text("[Vertaling niet voltooid]",
-                                                style = MaterialTheme.typography.bodySmall)
-                                        }
-                                        TextButton(onClick = {
-                                            val index = lines.indexOfFirst { it.id == line.id }
-                                            pinsOpen = false
-                                            if (index >= 0) {
-                                                follow = false
-                                                coroutineScope.launch {
-                                                    listState.animateScrollToItem(index)
-                                                }
+                                    }
+                                    TextButton(onClick = {
+                                        pinnedNewestFirst = !pinnedNewestFirst
+                                    }, modifier = Modifier.fillMaxWidth()) {
+                                        Text(if (pinnedNewestFirst) "Nieuwste eerst ✓"
+                                            else "Oudste eerst ✓ · tik voor nieuwste")
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        TextButton(
+                                            enabled = visiblePinIds.isNotEmpty(),
+                                            modifier = Modifier.weight(1f),
+                                            onClick = {
+                                                pinnedChosenIds =
+                                                    (pinnedChosenIds ?: captionPins) + visiblePinIds
                                             }
-                                        }) { Text("Ga naar uitspraak") }
-                                        TextButton(onClick = {
-                                            captionPins = captionPins - line.id
-                                            pinnedChosenIds = pinnedChosenIds?.minus(line.id)
-                                            pinsNotice = "Ster van deze uitspraak verwijderd."
-                                        }) { Text("Verwijder alleen deze ster") }
-                                        HorizontalDivider()
+                                        ) { Text("Kies zichtbare") }
+                                        TextButton(
+                                            enabled = visiblePinIds.isNotEmpty(),
+                                            modifier = Modifier.weight(1f),
+                                            onClick = {
+                                                pinnedChosenIds =
+                                                    (pinnedChosenIds ?: captionPins) - visiblePinIds
+                                            }
+                                        ) { Text("Deselecteer zichtbare") }
                                     }
+                                    TextButton(
+                                        onClick = { pinnedChosenIds = null },
+                                        enabled = chosenPins.size < pinnedLines.size,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) { Text("Kies alle markeringen") }
+                                }
+                            }
+                            if (filteredPins.isEmpty()) {
+                                item(key = "no_matches") {
+                                    Text("Geen resultaten. Pas je zoekterm of filter aan.")
+                                }
+                            }
+                            items(filteredPins, key = { it.id }) { line ->
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = pinnedChosenIds == null ||
+                                                line.id in pinnedChosenIds.orEmpty(),
+                                            onCheckedChange = { checked ->
+                                                val selected = pinnedChosenIds ?: captionPins
+                                                pinnedChosenIds = if (checked)
+                                                    selected + line.id else selected - line.id
+                                            }
+                                        )
+                                        Text("In mijn oefen-/exportselectie",
+                                            style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Text(
+                                        DateFormat.getTimeInstance(DateFormat.SHORT)
+                                            .format(Date(line.recordedAtMillis)) +
+                                            " · " + line.sourceCode + " → " + line.targetCode,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                    Text(line.original,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = MaterialTheme.typography.bodyMedium.fontSize *
+                                                captionSize.scale
+                                        ))
+                                    if (line.status == "Lokaal vertaald" ||
+                                        line.status == "Lokaal") {
+                                        Text(line.translated,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = MaterialTheme.typography.bodyLarge.copy(
+                                                fontSize =
+                                                    MaterialTheme.typography.bodyLarge.fontSize *
+                                                        captionSize.scale
+                                            ))
+                                    } else {
+                                        Text("[Vertaling niet voltooid]",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    TextButton(onClick = {
+                                        val index = lines.indexOfFirst { it.id == line.id }
+                                        pinsOpen = false
+                                        if (index >= 0) {
+                                            follow = false
+                                            coroutineScope.launch {
+                                                listState.animateScrollToItem(index)
+                                            }
+                                        }
+                                    }) { Text("Ga naar uitspraak") }
+                                    TextButton(onClick = {
+                                        captionPins = captionPins - line.id
+                                        pinnedChosenIds = pinnedChosenIds?.minus(line.id)
+                                        pinsNotice = "Ster van deze uitspraak verwijderd."
+                                    }) { Text("Verwijder alleen deze ster") }
+                                    HorizontalDivider()
+                                }
+                            }
+                            item(key = "practice") {
+                                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    OutlinedButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = studyReadyPins > 0 && !listening,
+                                        onClick = {
+                                            captionSpeaker.stop()
+                                            pinsOpen = false
+                                            pinnedPracticeOpen = true
+                                        }
+                                    ) {
+                                        Text("Oefen ${studyReadyPins} gekozen vertaalparen")
+                                    }
+                                    Text(
+                                        "Tijdelijke leerkaarten; alleen echt vertaalde zinnen. " +
+                                            "Sluiten wist de oefenronde.",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    TextButton(onClick = {
+                                        captionPins = emptySet()
+                                        pinnedChosenIds = null
+                                        pinsNotice = "Alle markeringen van dit gesprek zijn gewist."
+                                    }) { Text("Wis markeringen") }
                                 }
                             }
                         }
                         if (pinsNotice.isNotBlank()) {
-                            Text(pinsNotice, style = MaterialTheme.typography.bodySmall)
-                        }
-                        if (pinnedLines.isNotEmpty()) {
-                            OutlinedButton(
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = studyReadyPins > 0 && !listening,
-                                onClick = {
-                                    captionSpeaker.stop()
-                                    pinsOpen = false
-                                    pinnedPracticeOpen = true
-                                }
-                            ) {
-                                Text("Oefen ${studyReadyPins} gekozen vertaalparen")
+                            item(key = "notice") {
+                                Text(pinsNotice, style = MaterialTheme.typography.bodySmall)
                             }
-                            Text("Tijdelijk oefenen met omkeerbare kaarten, onthullen en " +
-                                "zelfbeoordeling. Alleen werkelijk afgeronde vertalingen; " +
-                                "sluiten wist de oefenronde.",
-                                style = MaterialTheme.typography.bodySmall)
-                            TextButton(onClick = {
-                                captionPins = emptySet()
-                                pinnedChosenIds = null
-                                pinsNotice = "Alle markeringen van dit gesprek zijn gewist."
-                            }) { Text("Wis markeringen") }
                         }
                     }
                 },
