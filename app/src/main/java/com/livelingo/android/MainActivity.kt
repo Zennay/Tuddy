@@ -205,6 +205,8 @@ private fun TuddyScreen(
     var pinnedRemovedUndo by remember { mutableStateOf(emptySet<Long>()) }
     var pinnedSearchTerm by remember { mutableStateOf("") }
     var pinnedManageScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
+    var pinnedManagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var pinnedPairMenuOpen by remember { mutableStateOf(false) }
     var pinnedNewestFirst by remember { mutableStateOf(false) }
     var pinnedExportOpen by remember { mutableStateOf(false) }
     var pinnedPracticeOpen by remember { mutableStateOf(false) }
@@ -2961,7 +2963,10 @@ private fun TuddyScreen(
                 pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty()
             }
             val term = pinnedSearchTerm.trim()
+            val pinnedPairs = pinnedLines.map { it.sourceCode to it.targetCode }.distinct()
             val filteredPins = pinnedLines.filter { line ->
+                val pairMatches = pinnedManagePair == null ||
+                    (line.sourceCode to line.targetCode) == pinnedManagePair
                 val scopeMatches = when (pinnedManageScope) {
                     PinnedCaptionScope.ALL -> true
                     PinnedCaptionScope.COMPLETED ->
@@ -2969,7 +2974,7 @@ private fun TuddyScreen(
                     PinnedCaptionScope.TRANSLATED ->
                         line.status == "Lokaal vertaald" && line.translated.isNotBlank()
                 }
-                scopeMatches && (term.isBlank() ||
+                pairMatches && scopeMatches && (term.isBlank() ||
                     line.original.contains(term, ignoreCase = true) ||
                     line.translated.contains(term, ignoreCase = true) ||
                     line.sourceCode.contains(term, ignoreCase = true) ||
@@ -3019,6 +3024,40 @@ private fun TuddyScreen(
                                             "veranderen je gekozen selectie niet.",
                                         style = MaterialTheme.typography.bodySmall
                                     )
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        TextButton(
+                                            onClick = { pinnedPairMenuOpen = true },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Taalrichting: " +
+                                                (pinnedManagePair?.let {
+                                                    it.first + " → " + it.second
+                                                } ?: "Alle taalrichtingen") + " ▾")
+                                        }
+                                        DropdownMenu(
+                                            expanded = pinnedPairMenuOpen,
+                                            onDismissRequest = { pinnedPairMenuOpen = false }
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("Alle taalrichtingen") },
+                                                onClick = {
+                                                    pinnedManagePair = null
+                                                    pinnedPairMenuOpen = false
+                                                }
+                                            )
+                                            pinnedPairs.forEach { pair ->
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Text(pair.first + " → " + pair.second)
+                                                    },
+                                                    onClick = {
+                                                        pinnedManagePair = pair
+                                                        pinnedPairMenuOpen = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
                                     PinnedCaptionScope.entries.forEach { scope ->
                                         TextButton(
                                             onClick = { pinnedManageScope = scope },
@@ -4785,6 +4824,8 @@ private fun TuddyScreen(
                             pinnedRemovedUndo = emptySet()
                             pinnedSearchTerm = ""
                             pinnedManageScope = PinnedCaptionScope.ALL
+                            pinnedManagePair = null
+                            pinnedPairMenuOpen = false
                             pinnedNewestFirst = false
                             pinsOpen = true
                         }
