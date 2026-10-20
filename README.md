@@ -1,5 +1,19 @@
 # Tuddy 🎙️
 
+## Nieuw: corrigeer een modelvertaling alleen voor je eigen studie
+
+Bij **★ gemarkeerd** kun je op **✎ Corrigeer alleen studieantwoord**
+tikken, de modelvertaling vergelijken met je zelf geschreven betekenis
+en maximaal 400 Unicode-tekens invoeren. Alleen tijdelijke oefenkaarten
+en de expliciete TSV-leerkaartenexport gebruiken deze eigen correctie;
+het echte gesprek en TXT/JSON/HTML/SRT/WebVTT blijven onveranderd.
+Het antwoord is ongetoetst en wordt bij gewijzigde brontekst of
+modelvertaling niet blind overgenomen. Je kunt een correctie wissen
+en terugkeren naar het oorspronkelijke modelantwoord.
+[Handleiding](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 ## Nieuw: bepaal welke gemarkeerde regels je oefent of bewaart
 
 Onder **★ gemarkeerd** kun je zoeken, op voltooiing én exact
