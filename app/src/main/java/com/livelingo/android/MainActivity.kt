@@ -198,6 +198,12 @@ private fun TuddyScreen(
     val manuallyAssignedSpeakers = remember { mutableStateMapOf<Long, String>() }
     var pinsOpen by remember { mutableStateOf(false) }
     var pinsNotice by remember { mutableStateOf("") }
+    // Null means every pinned caption is selected; a non-null set is an
+    // explicit temporary selection for export or in-app practice.
+    var pinnedChosenIds by remember { mutableStateOf<Set<Long>?>(null) }
+    var pinnedSearchTerm by remember { mutableStateOf("") }
+    var pinnedManageScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
+    var pinnedNewestFirst by remember { mutableStateOf(false) }
     var pinnedExportOpen by remember { mutableStateOf(false) }
     var pinnedPracticeOpen by remember { mutableStateOf(false) }
     var pinnedExportNotice by remember { mutableStateOf("") }
@@ -471,7 +477,8 @@ private fun TuddyScreen(
         }, onlyFinished)
 
     fun currentPinnedSelection(): List<PinnedCaptionRow> = lines
-        .filter { it.id in captionPins }
+        .filter { it.id in captionPins &&
+            (pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty()) }
         .map { line ->
             PinnedCaptionRow(line.id, TranscriptExportRow(
                 line.original, line.translated, line.status,
@@ -2014,7 +2021,9 @@ private fun TuddyScreen(
         }
         if (pinnedPracticeOpen) {
             SessionCaptionStudyDialog(
-                captions = lines.filter { it.id in captionPins }.map { line ->
+                captions = lines.filter { it.id in captionPins &&
+                    (pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty())
+                }.map { line ->
                     FocusCaptionLine(
                         line.id, line.original, line.translated, line.status,
                         line.sourceCode, line.targetCode,
@@ -2946,7 +2955,26 @@ private fun TuddyScreen(
         }
         if (pinsOpen) {
             val pinnedLines = lines.filter { it.id in captionPins }
-            val studyReadyPins = pinnedLines.count {
+            val chosenPins = pinnedLines.filter {
+                pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty()
+            }
+            val term = pinnedSearchTerm.trim()
+            val filteredPins = pinnedLines.filter { line ->
+                val scopeMatches = when (pinnedManageScope) {
+                    PinnedCaptionScope.ALL -> true
+                    PinnedCaptionScope.COMPLETED ->
+                        line.status == "Lokaal" || line.status == "Lokaal vertaald"
+                    PinnedCaptionScope.TRANSLATED ->
+                        line.status == "Lokaal vertaald" && line.translated.isNotBlank()
+                }
+                scopeMatches && (term.isBlank() ||
+                    line.original.contains(term, ignoreCase = true) ||
+                    line.translated.contains(term, ignoreCase = true) ||
+                    line.sourceCode.contains(term, ignoreCase = true) ||
+                    line.targetCode.contains(term, ignoreCase = true))
+            }.let { if (pinnedNewestFirst) it.reversed() else it }
+            val visiblePinIds = filteredPins.map { it.id }.toSet()
+            val studyReadyPins = chosenPins.count {
                 it.status == "Lokaal vertaald" &&
                     it.original.isNotBlank() && it.translated.isNotBlank() &&
                     it.original != it.translated &&
@@ -2965,12 +2993,74 @@ private fun TuddyScreen(
                         if (pinnedLines.isEmpty()) {
                             Text("Geen gemarkeerde zinnen in dit gesprek.")
                         } else {
+                            OutlinedTextField(
+                                value = pinnedSearchTerm,
+                                onValueChange = { pinnedSearchTerm = it },
+                                label = { Text("Zoek mijn gemarkeerde zinnen") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text(
+                                "${chosenPins.size} van ${pinnedLines.size} gekozen · " +
+                                    "${filteredPins.size} zichtbaar. Zoeken en filters " +
+                                    "veranderen je gekozen selectie niet.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                PinnedCaptionScope.entries.forEach { scope ->
+                                    TextButton(onClick = { pinnedManageScope = scope }) {
+                                        Text((if (pinnedManageScope == scope) "● " else "○ ") +
+                                            scope.title)
+                                    }
+                                }
+                                TextButton(onClick = { pinnedNewestFirst = !pinnedNewestFirst }) {
+                                    Text(if (pinnedNewestFirst) "Nieuwste eerst ✓"
+                                        else "Oudste eerst ✓ · tik voor nieuwste")
+                                }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(
+                                    enabled = visiblePinIds.isNotEmpty(),
+                                    onClick = {
+                                        pinnedChosenIds =
+                                            (pinnedChosenIds ?: captionPins) + visiblePinIds
+                                    }
+                                ) { Text("Kies zichtbare") }
+                                TextButton(
+                                    enabled = visiblePinIds.isNotEmpty(),
+                                    onClick = {
+                                        pinnedChosenIds =
+                                            (pinnedChosenIds ?: captionPins) - visiblePinIds
+                                    }
+                                ) { Text("Verwijder keuze zichtbaar") }
+                            }
+                            TextButton(
+                                onClick = { pinnedChosenIds = null },
+                                enabled = chosenPins.size < pinnedLines.size
+                            ) { Text("Kies alle markeringen") }
+                            if (filteredPins.isEmpty()) {
+                                Text("Geen resultaten. Pas je zoekterm of filter aan.")
+                            }
                             LazyColumn(
                                 modifier = Modifier.fillMaxWidth().heightIn(max = 370.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                items(pinnedLines, key = { it.id }) { line ->
+                                items(filteredPins, key = { it.id }) { line ->
                                     Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = pinnedChosenIds == null ||
+                                                    line.id in pinnedChosenIds.orEmpty(),
+                                                onCheckedChange = { checked ->
+                                                    val selected = pinnedChosenIds ?: captionPins
+                                                    pinnedChosenIds = if (checked)
+                                                        selected + line.id
+                                                    else selected - line.id
+                                                }
+                                            )
+                                            Text("In mijn oefen-/exportselectie",
+                                                style = MaterialTheme.typography.labelSmall)
+                                        }
                                         Text(
                                             DateFormat.getTimeInstance(DateFormat.SHORT)
                                                 .format(Date(line.recordedAtMillis)) +
@@ -3000,6 +3090,11 @@ private fun TuddyScreen(
                                                 }
                                             }
                                         }) { Text("Ga naar uitspraak") }
+                                        TextButton(onClick = {
+                                            captionPins = captionPins - line.id
+                                            pinnedChosenIds = pinnedChosenIds?.minus(line.id)
+                                            pinsNotice = "Ster van deze uitspraak verwijderd."
+                                        }) { Text("Verwijder alleen deze ster") }
                                         HorizontalDivider()
                                     }
                                 }
@@ -3018,7 +3113,7 @@ private fun TuddyScreen(
                                     pinnedPracticeOpen = true
                                 }
                             ) {
-                                Text("Oefen ${studyReadyPins} gemarkeerde vertaalparen")
+                                Text("Oefen ${studyReadyPins} gekozen vertaalparen")
                             }
                             Text("Tijdelijk oefenen met omkeerbare kaarten, onthullen en " +
                                 "zelfbeoordeling. Alleen werkelijk afgeronde vertalingen; " +
@@ -3026,6 +3121,7 @@ private fun TuddyScreen(
                                 style = MaterialTheme.typography.bodySmall)
                             TextButton(onClick = {
                                 captionPins = emptySet()
+                                pinnedChosenIds = null
                                 pinsNotice = "Alle markeringen van dit gesprek zijn gewist."
                             }) { Text("Wis markeringen") }
                         }
@@ -3036,7 +3132,7 @@ private fun TuddyScreen(
                 },
                 dismissButton = {
                     TextButton(
-                        enabled = pinnedLines.isNotEmpty() && !listening,
+                        enabled = chosenPins.isNotEmpty() && !listening,
                         onClick = {
                             pinsNotice = ""
                             pinnedExportNotice = ""
@@ -3044,7 +3140,7 @@ private fun TuddyScreen(
                             pinnedExportOpen = true
                             pinsOpen = false
                         }
-                    ) { Text("Exporteer selectie…") }
+                    ) { Text("Exporteer ${chosenPins.size} gekozen…") }
                 }
             )
         }
@@ -3650,6 +3746,8 @@ private fun TuddyScreen(
                         lines.clear()
                         manuallyAssignedSpeakers.clear()
                         captionPins = emptySet()
+                        pinnedChosenIds = null
+                        pinnedSearchTerm = ""
                         pinsOpen = false
                         pinnedExportOpen = false
                         pinsNotice = ""
@@ -4628,7 +4726,13 @@ private fun TuddyScreen(
                     }
                     TextButton(
                         enabled = captionPins.isNotEmpty(),
-                        onClick = { pinsOpen = true }
+                        onClick = {
+                            pinnedChosenIds = null
+                            pinnedSearchTerm = ""
+                            pinnedManageScope = PinnedCaptionScope.ALL
+                            pinnedNewestFirst = false
+                            pinsOpen = true
+                        }
                     ) { Text("★ ${captionPins.size} gemarkeerd") }
                     val ownMeanings = lines.count { it.personalMeaning != null }
                     TextButton(
