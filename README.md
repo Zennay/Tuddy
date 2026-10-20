@@ -43,7 +43,9 @@ automatisch geüpload of opgeslagen.
 Open **★ gemarkeerd** en kies **Oefen ... gekozen vertaalparen**.
 De bestaande lokale oefenkaartjes gebruiken alleen je geselecteerde,
 daadwerkelijk afgeronde lokale modelvertalingen, die niet onafhankelijk
-op inhoud gecontroleerd zijn. Draai de vraag/antwoordrichting
+op inhoud gecontroleerd zijn. Je kunt nu ook **uitsluitend je handmatig
+gecorrigeerde studieantwoorden oefenen** zonder overige modelantwoorden.
+Draai de vraag/antwoordrichting
 om, onthul pas na het nadenken, beoordeel jezelf en oefen moeilijke
 kaarten nogmaals. Alles verdwijnt bij sluiten; er wordt niets
 toegevoegd aan je vaste studieprofiel.
