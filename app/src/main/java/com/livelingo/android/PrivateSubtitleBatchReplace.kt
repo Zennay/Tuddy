@@ -11,6 +11,8 @@ internal data class SubtitleBatchPreview(
     val replacements: Int
 )
 
+internal enum class SubtitleReplaceField { ALL_TEXT, FIRST_LINE, SECOND_LINE }
+
 internal object PrivateSubtitleBatchReplace {
     fun preview(
         cues: List<PrivateSubtitleCue>,
@@ -18,7 +20,8 @@ internal object PrivateSubtitleBatchReplace {
         replacement: String,
         matchCase: Boolean,
         fromRow: Int = 1,
-        throughRow: Int = cues.size
+        throughRow: Int = cues.size,
+        field: SubtitleReplaceField = SubtitleReplaceField.ALL_TEXT
     ): SubtitleBatchPreview? {
         if (cues.isEmpty() || cues.size > 500 ||
             fromRow !in 1..cues.size || throughRow !in fromRow..cues.size ||
@@ -35,9 +38,27 @@ internal object PrivateSubtitleBatchReplace {
         val draft = cues.mapIndexed { index, cue ->
             // Never touch a subtitle outside the explicitly selected 1-based range.
             if (index + 1 !in fromRow..throughRow) return@mapIndexed cue
-            val matches = pattern.findAll(cue.text).count()
+            // For manually paired bilingual cues, restrict changes to the
+            // first or second line. Other lines remain byte-for-byte text
+            // identical. Never infer which language a line represents.
+            val lines = cue.text.lines()
+            val chosen = when (field) {
+                SubtitleReplaceField.ALL_TEXT -> cue.text
+                SubtitleReplaceField.FIRST_LINE -> lines.first()
+                SubtitleReplaceField.SECOND_LINE ->
+                    lines.getOrNull(1) ?: return@mapIndexed cue
+            }
+            val matches = pattern.findAll(chosen).count()
             if (matches == 0) return@mapIndexed cue
-            val edited = pattern.replace(cue.text) { replacement }
+            val substituted = pattern.replace(chosen) { replacement }
+            val edited = when (field) {
+                SubtitleReplaceField.ALL_TEXT -> substituted
+                SubtitleReplaceField.FIRST_LINE ->
+                    (listOf(substituted) + lines.drop(1)).joinToString("\n")
+                SubtitleReplaceField.SECOND_LINE ->
+                    (listOf(lines.first(), substituted) + lines.drop(2))
+                        .joinToString("\n")
+            }
             if (edited == cue.text) return@mapIndexed cue
             if (edited != edited.trim() ||
                 edited.isBlank() ||
