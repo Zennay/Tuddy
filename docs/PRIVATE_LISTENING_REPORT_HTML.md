@@ -1,4 +1,4 @@
-# Mijn privé luisteroefening als afdrukbaar HTML-verslag
+# Mijn privé luisteroefening als HTML of TXT
 
 Open een SRT/VTT-document en selecteer bewust je eigen audio in
 **▶ Eigen audio met tijdcodes afspelen…**. Maak in het paneel voor
@@ -11,10 +11,13 @@ Een niet-afgeronde ronde wordt nooit als afgerond beschreven.
 Kies **Mijn privé oefenoverzicht bekijken · tekst zelf selecteren**.
 Dit scherm toont de volledige samenvatting met eigen tijdvakken,
 eventuele herkenbare brontekst en zelfbeoordeling. Na het bekijken
-kies je bewust **Bewaar zelf HTML…**, daarna pas in de Android-
+kies je bewust **Bewaar zelf HTML…** of **Bewaar als privé TXT-notitie…**, daarna pas in de Android-
 bestandskiezer waar je het verslag opslaat. De HTML is zelfstandig
 leesbaar en afdrukbaar, zonder scripts, externe lettertypen, media
-of netwerkverzoeken. De tekst is veilig ge-escaped.
+of netwerkverzoeken. De tekst is veilig ge-escaped. De TXT-optie
+bevat dezelfde informatie als eenvoudige UTF-8 tekst, handig voor
+persoonlijke notities; er wordt niets automatisch gedeeld.
+Ook teksten met geldige Unicode-emoji blijven leesbaar.
 
 Tuddy kopieert hierbij nooit het geluidsbestand of zijn Android-URI,
 maakt geen nieuwe audiofragmenten en schrijft geen herhaalplanning

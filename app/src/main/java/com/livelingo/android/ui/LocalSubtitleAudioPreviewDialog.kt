@@ -4,6 +4,8 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.net.Uri
+import android.app.Activity
+import android.content.Intent
 import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -120,7 +122,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var practiceReportOpen by remember { mutableStateOf(false) }
     // An immutable user-approved document lives only while the Android
     // destination chooser is open; never retain the audio URI or audio bytes.
-    var pendingPracticeHtml by remember { mutableStateOf<Pair<String, ByteArray>?>(null) }
+    var pendingPracticeReport by remember {
+        mutableStateOf<PendingPrivatePracticeReport?>(null)
+    }
     // Human judgement only: no speech recognition or pronunciation scoring.
     var passageRatings by remember {
         mutableStateOf<Map<Pair<Long, Long>, String>>(emptyMap())
@@ -147,31 +151,57 @@ internal fun LocalSubtitleAudioPreviewDialog(
         forExport = true
     )
 
-    val savePracticeHtml = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("text/html")
-    ) { uri ->
-        val pending = pendingPracticeHtml
-        pendingPracticeHtml = null
-        if (uri != null && pending != null) {
+    val savePracticeReport = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val pending = pendingPracticeReport
+        pendingPracticeReport = null
+        val uri = result.data?.data
+        if (result.resultCode == Activity.RESULT_OK && uri != null && pending != null) {
             val updatedSummary = exportablePracticeSummary()
-            val updatedBytes = PrivatePrintablePracticeSummary.snapshot(updatedSummary)
+            val updatedBytes = when (pending.format) {
+                PrivatePracticeReportFormat.HTML ->
+                    PrivatePrintablePracticeSummary.snapshot(updatedSummary)
+                PrivatePracticeReportFormat.TXT ->
+                    PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
+            }
             if (!prepared || savedPracticePassages.isEmpty() ||
-                updatedSummary != pending.first || updatedBytes == null ||
-                !updatedBytes.contentEquals(pending.second)
+                updatedSummary != pending.summary || updatedBytes == null ||
+                !updatedBytes.contentEquals(pending.bytes)
             ) {
                 notice = "Mijn luisteroefening is gewijzigd. Bekijk en bewaar opnieuw."
             } else {
                 val saved = runCatching {
                     context.contentResolver.openOutputStream(uri, "w")?.use {
-                        it.write(pending.second)
+                        it.write(pending.bytes)
                         it.flush()
                         true
                     } ?: false
                 }.getOrDefault(false)
                 notice = if (saved)
-                    "Alleen het privé luisteroverzicht als HTML opgeslagen. Controleer je bestandsprovider."
+                    "Privé luisteroverzicht als ${pending.format.title} opgeslagen. Controleer opslag."
                 else "Luisteroverzicht niet opgeslagen. Kies een andere opslaglocatie."
             }
+        }
+    }
+
+    fun choosePracticeReport(format: PrivatePracticeReportFormat) {
+        if (!prepared || guidedActive || savedPracticePassages.isEmpty()) return
+        val report = exportablePracticeSummary()
+        val payload = when (format) {
+            PrivatePracticeReportFormat.HTML -> PrivatePrintablePracticeSummary.snapshot(report)
+            PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
+        }
+        if (payload == null) {
+            notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
+        } else {
+            pendingPracticeReport = PendingPrivatePracticeReport(report, format, payload)
+            practiceReportOpen = false
+            savePracticeReport.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = format.mime
+                putExtra(Intent.EXTRA_TITLE, format.filename)
+            })
         }
     }
 
@@ -194,7 +224,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         completedGuidedRoute = emptyList()
         completedGuidedRounds = 0
         practiceReportOpen = false
-        pendingPracticeHtml = null
+        pendingPracticeReport = null
         guidedActive = false
         guidedQueue = emptyList()
         guidedIndex = 0
@@ -1410,11 +1440,15 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         "je klembord- of toetsenbord-app kan een kopie dan lezen.",
                         style = MaterialTheme.typography.bodySmall)
                     Text(
-                        "Je kunt ook bewust een zelfstandig, afdrukbaar HTML-verslag " +
-                            "opslaan. Externe Android-opslag kan het synchroniseren; " +
+                        "Je kunt het overzicht als afdrukbare HTML of als leesbare " +
+                            "TXT-notitie opslaan. Externe Android-opslag kan synchroniseren; " +
                             "er gaan geen audio-opnamen of audiobestandsnamen mee.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    TextButton(
+                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        onClick = { choosePracticeReport(PrivatePracticeReportFormat.TXT) }
+                    ) { Text("Bewaar als privé TXT-notitie…") }
                     SelectionContainer {
                         Text(
                             practiceSummaryText,
@@ -1434,18 +1468,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
             dismissButton = {
                 TextButton(
                     enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
-                    onClick = {
-                        // Full overview was shown before this explicit opt-in.
-                        val report = exportablePracticeSummary()
-                        val html = PrivatePrintablePracticeSummary.snapshot(report)
-                        if (html == null) {
-                            notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
-                        } else {
-                            pendingPracticeHtml = report to html
-                            practiceReportOpen = false
-                            savePracticeHtml.launch("Tuddy-mijn-luisteroefening.html")
-                        }
-                    }
+                    onClick = { choosePracticeReport(PrivatePracticeReportFormat.HTML) }
                 ) { Text("Bewaar zelf HTML…") }
             }
         )

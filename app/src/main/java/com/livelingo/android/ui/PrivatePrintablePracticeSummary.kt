@@ -6,18 +6,50 @@ package com.livelingo.android.ui
  * neither audio bytes nor the Android audio URI are accepted.
  * No external fonts, scripts, links, fetches or persisted state.
  */
+internal enum class PrivatePracticeReportFormat(
+    val mime: String, val filename: String, val title: String
+) {
+    HTML("text/html", "Tuddy-mijn-luisteroefening.html", "HTML"),
+    TXT("text/plain", "Tuddy-mijn-luisteroefening.txt", "TXT")
+}
+
+internal data class PendingPrivatePracticeReport(
+    val summary: String,
+    val format: PrivatePracticeReportFormat,
+    val bytes: ByteArray
+)
+
 internal object PrivatePrintablePracticeSummary {
     private const val MAX_CHARS = 16_384
     private const val MAX_BYTES = 65_536
 
-    fun snapshot(summary: String): ByteArray? {
+    private fun valid(summary: String): Boolean {
         if (summary.isBlank() || summary.length > MAX_CHARS ||
-            !summary.startsWith("TUDDY · MIJN PRIVÉ LUISTEROEFENING\n") ||
-            summary.any {
-                it == '\u0000' || Character.isSurrogate(it) ||
-                    (it.isISOControl() && it != '\n' && it != '\t')
+            !summary.startsWith("TUDDY · MIJN PRIVÉ LUISTEROEFENING\n")
+        ) return false
+        var index = 0
+        while (index < summary.length) {
+            val char = summary[index]
+            if (Character.isHighSurrogate(char)) {
+                if (index + 1 >= summary.length ||
+                    !Character.isLowSurrogate(summary[index + 1])) return false
+                index += 2
+                continue
             }
-        ) return null
+            if (Character.isLowSurrogate(char) ||
+                (char.isISOControl() && char != '\n' && char != '\t')
+            ) return false
+            index++
+        }
+        return true
+    }
+
+    fun snapshotText(summary: String): ByteArray? =
+        if (valid(summary)) summary.toByteArray(Charsets.UTF_8)
+            .takeIf { it.size <= MAX_BYTES } else null
+
+    fun snapshot(summary: String): ByteArray? {
+        if (!valid(summary)) return null
         val escaped = buildString(summary.length) {
             summary.forEach { char ->
                 when (char) {
