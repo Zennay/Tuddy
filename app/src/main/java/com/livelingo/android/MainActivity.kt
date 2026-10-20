@@ -217,6 +217,7 @@ private fun TuddyScreen(
     var pinnedStudyEditError by remember { mutableStateOf("") }
     var pinnedExportOpen by remember { mutableStateOf(false) }
     var pinnedPracticeOpen by remember { mutableStateOf(false) }
+    var pinnedPracticeOnlyPersonal by remember { mutableStateOf(false) }
     var pinnedExportNotice by remember { mutableStateOf("") }
     var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
     var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
@@ -2038,8 +2039,14 @@ private fun TuddyScreen(
         }
         if (pinnedPracticeOpen) {
             SessionCaptionStudyDialog(
-                captions = lines.filter { it.id in captionPins &&
-                    (pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty())
+                captions = lines.filter { line ->
+                    val selected = line.id in captionPins &&
+                        (pinnedChosenIds == null || line.id in pinnedChosenIds.orEmpty())
+                    val correction = pinnedStudyEdits[line.id]?.appliesTo(
+                        TranscriptExportRow(line.original, line.translated, line.status,
+                            line.sourceCode, line.targetCode, line.recordedAtMillis)
+                    ) == true
+                    selected && (!pinnedPracticeOnlyPersonal || correction)
                 }.map { line ->
                     FocusCaptionLine(
                         line.id, line.original,
@@ -3013,6 +3020,8 @@ private fun TuddyScreen(
                     edit.appliesTo(row)
                 }?.answer ?: it.translated
                 it.status == "Lokaal vertaald" &&
+                    (!pinnedPracticeOnlyPersonal ||
+                        pinnedStudyEdits[it.id]?.appliesTo(row) == true) &&
                     it.original.isNotBlank() && answer.isNotBlank() &&
                     it.original != answer &&
                     it.original.codePointCount(0, it.original.length) <= 400 &&
@@ -3240,6 +3249,23 @@ private fun TuddyScreen(
                             }
                             item(key = "practice") {
                                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = pinnedPracticeOnlyPersonal,
+                                            onCheckedChange = {
+                                                pinnedPracticeOnlyPersonal = it
+                                            }
+                                        )
+                                        Text("Oefen alleen mijn handmatig gecorrigeerde antwoorden",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    if (pinnedPracticeOnlyPersonal && studyReadyPins == 0) {
+                                        Text("Geen geschikte eigen studiecorrecties " +
+                                            "in de gekozen zinnen. Corrigeer eerst een " +
+                                            "modelantwoord of zet het filter uit.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error)
+                                    }
                                     OutlinedButton(
                                         modifier = Modifier.fillMaxWidth(),
                                         enabled = studyReadyPins > 0 && !listening,
@@ -5041,6 +5067,7 @@ private fun TuddyScreen(
                             pinnedManageScope = PinnedCaptionScope.ALL
                             pinnedManagePair = null
                             pinnedPairMenuOpen = false
+                            pinnedPracticeOnlyPersonal = false
                             pinnedNewestFirst = false
                             pinsOpen = true
                         }
