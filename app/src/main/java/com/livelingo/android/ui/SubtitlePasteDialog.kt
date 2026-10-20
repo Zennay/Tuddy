@@ -51,6 +51,11 @@ internal fun SubtitlePasteDialog(
     var firstRow by remember { mutableStateOf("1") }
     var lastRow by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
+    val pairedInspection = remember(raw, ownMeaning, plainLines, splitMode) {
+        if (plainLines && splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES)
+            PrivatePlainTextSubtitleDraft.inspectPaired(raw, ownMeaning)
+        else null
+    }
     val parsed = remember(raw, ownMeaning, plainLines, startMs, durationMs, splitMode) {
         if (plainLines) PrivatePlainTextSubtitleDraft.preview(
             raw, startMs, durationMs, splitMode,
@@ -266,9 +271,21 @@ internal fun SubtitlePasteDialog(
                         minLines = 5,
                         maxLines = 12
                     )
-                    Text("Bron: ${raw.lines().size} regels · eigen betekenis: " +
-                        "${ownMeaning.lines().size} regels (inclusief lege regels).",
-                        style = MaterialTheme.typography.bodySmall)
+                    val inspection = pairedInspection
+                    if (inspection != null) {
+                        Text("Bron: ${inspection.sourceRows} regels · eigen betekenis: " +
+                            "${inspection.meaningRows} regels.",
+                            style = MaterialTheme.typography.bodySmall)
+                        if (inspection.message != null) {
+                            Text(inspection.message,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Text("Alle handmatige tekstparen zijn compleet. Bekijk " +
+                                "de gezamenlijke preview hieronder voordat je opent.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                 }
                 if (inputTooLarge) {
                     Text("Invoer geweigerd: meer dan 256 KiB. Verklein de bron.",
