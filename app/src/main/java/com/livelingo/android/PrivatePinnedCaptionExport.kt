@@ -137,6 +137,22 @@ internal object PrivatePinnedCaptionExport {
 internal object PrivatePinnedCaptionStudyTsv {
     private const val MAX_BYTES = 262_144
 
+    private fun wellFormedUtf16(text: String): Boolean {
+        var index = 0
+        while (index < text.length) {
+            val char = text[index]
+            if (Character.isHighSurrogate(char)) {
+                if (index + 1 >= text.length ||
+                    !Character.isLowSurrogate(text[index + 1])) return false
+                index += 2
+            } else {
+                if (Character.isLowSurrogate(char)) return false
+                index++
+            }
+        }
+        return true
+    }
+
     private fun field(text: String): String {
         // Each card must remain exactly one physical TSV line.
         val flattened = text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
@@ -156,8 +172,8 @@ internal object PrivatePinnedCaptionStudyTsv {
         if (rows.any { it.status != "Lokaal vertaald" || it.translated.isBlank() ||
                 it.original.isBlank() || it.original.length > 4096 ||
                 it.translated.length > 4096 ||
-                it.original.any { ch -> Character.isSurrogate(ch) || ch == '\u0000' } ||
-                it.translated.any { ch -> Character.isSurrogate(ch) || ch == '\u0000' }
+                !wellFormedUtf16(it.original) || !wellFormedUtf16(it.translated) ||
+                it.original.contains('\u0000') || it.translated.contains('\u0000')
         }) return null
         // Inherit existing constraints on code fields, timestamps, unsafe controls
         // and entire source row validity before offering an editable export.
