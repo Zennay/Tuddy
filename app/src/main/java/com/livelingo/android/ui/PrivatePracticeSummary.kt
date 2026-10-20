@@ -90,7 +90,11 @@ internal fun privatePracticeSummary(
                 else -> "Nog niet zelf beoordeeld"
             }
             appendLine("   Mijn eigen inschatting: " + assessment)
-            val note = notes[span].orEmpty().take(240).asSequence()
+            val rawNote = notes[span].orEmpty()
+            val noteEnd = rawNote.offsetByCodePoints(
+                0, minOf(240, rawNote.codePointCount(0, rawNote.length))
+            )
+            val note = rawNote.substring(0, noteEnd).asSequence()
                 .filter { it >= ' ' && it != '\u007f' &&
                     it !in '\u202a'..'\u202e' &&
                     it !in '\u2066'..'\u2069'
@@ -100,6 +104,26 @@ internal fun privatePracticeSummary(
             }
         }
         if (bounded.isEmpty()) appendLine("Nog geen oefenkaartjes.")
+        appendLine()
+        appendLine("MIJN VOLGENDE LUISTERRONDE (GEKOZEN VIA MIJN EIGEN INSCHATTING)")
+        val repeat = privatePracticeRouteCandidates(
+            bounded, ratings, PrivatePracticeRouteScope.NEEDS_REPEAT
+        )
+        val unrated = privatePracticeRouteCandidates(
+            bounded, ratings, PrivatePracticeRouteScope.UNRATED
+        )
+        if (repeat.isEmpty() && unrated.isEmpty()) {
+            appendLine("Geen fragmenten als lastig gemarkeerd of nog onbeoordeeld.")
+            appendLine("Dit is geen bewijs dat de woorden worden begrepen.")
+        } else {
+            (repeat + unrated).forEachIndexed { index, span ->
+                appendLine((index + 1).toString() + ". " + clock(span.first) +
+                    " – " + clock(span.second) + ": " +
+                    (if (span in repeat) "Zelf gemarkeerd: nog oefenen"
+                    else "Zelf nog niet beoordeeld"))
+            }
+            appendLine("Dit zijn mijn eigen beoordelingen, geen automatische aanbevelingen.")
+        }
         appendLine()
         appendLine("BEGELEIDE LUISTERROUTE")
         if (completedRoute.isNotEmpty() && completedRoute.size <= 4 &&

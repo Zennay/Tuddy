@@ -873,7 +873,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     value = passageNotes[passage].orEmpty(),
                                     onValueChange = { value ->
                                         if (!guidedActive) {
-                                            val bounded = value.take(240)
+                                            val end = value.offsetByCodePoints(
+                                                0, minOf(240, value.codePointCount(0, value.length))
+                                            )
+                                            val bounded = value.substring(0, end)
                                                 .replace('\r', ' ').replace('\n', ' ')
                                             passageNotes = if (bounded.isBlank())
                                                 passageNotes - passage
@@ -884,7 +887,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     enabled = !guidedActive,
                                     label = { Text("Mijn eigen volgende oefenstap (optioneel)") },
                                     supportingText = {
-                                        Text("${passageNotes[passage].orEmpty().length}/240 · " +
+                                        val note = passageNotes[passage].orEmpty()
+                                        Text("${note.codePointCount(0, note.length)}/240 · " +
                                             "alleen deze tijdelijke audiosessie")
                                     },
                                     maxLines = 3
