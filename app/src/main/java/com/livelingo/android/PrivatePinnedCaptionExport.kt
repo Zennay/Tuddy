@@ -27,6 +27,7 @@ internal data class PendingPinnedCaptionExport(
     val selection: List<PinnedCaptionRow>,
     val format: PinnedCaptionFormat,
     val scope: PinnedCaptionScope,
+    val languagePair: Pair<String, String>?,
     val subtitleOptions: SubtitleDraftOptions,
     val bytes: ByteArray
 )
@@ -56,9 +57,14 @@ internal object PrivatePinnedCaptionExport {
         rows: List<PinnedCaptionRow>,
         format: PinnedCaptionFormat,
         options: SubtitleDraftOptions,
-        scope: PinnedCaptionScope
+        scope: PinnedCaptionScope,
+        languagePair: Pair<String, String>? = null
     ): List<PinnedCaptionRow> {
-        val selected = select(rows, scope)
+        val scoped = select(rows, scope)
+        val selected = if (languagePair == null) scoped else scoped.filter {
+            it.caption.sourceCode == languagePair.first &&
+                it.caption.targetCode == languagePair.second
+        }
         if (format != PinnedCaptionFormat.SRT &&
             format != PinnedCaptionFormat.WEBVTT) return selected
         return selected.filter { row ->
@@ -81,12 +87,13 @@ internal object PrivatePinnedCaptionExport {
         selection: List<PinnedCaptionRow>,
         format: PinnedCaptionFormat,
         subtitleOptions: SubtitleDraftOptions,
-        scope: PinnedCaptionScope = PinnedCaptionScope.ALL
+        scope: PinnedCaptionScope = PinnedCaptionScope.ALL,
+        languagePair: Pair<String, String>? = null
     ): ByteArray? {
         if (selection.isEmpty() || selection.size > SessionCaptionPins.MAX_PINS ||
             selection.map { it.id }.distinct().size != selection.size
         ) return null
-        val rows = includedRows(selection, format, subtitleOptions, scope)
+        val rows = includedRows(selection, format, subtitleOptions, scope, languagePair)
             .map { it.caption }
         if (rows.isEmpty()) return null
         return when (format) {

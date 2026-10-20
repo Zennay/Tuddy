@@ -202,6 +202,7 @@ private fun TuddyScreen(
     var pinnedExportNotice by remember { mutableStateOf("") }
     var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
     var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
+    var pinnedLanguagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
     var pinnedExportShowAll by remember { mutableStateOf(false) }
     var pinnedExactPreviewOpen by remember { mutableStateOf(false) }
     var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
@@ -1215,7 +1216,8 @@ private fun TuddyScreen(
         ) {
             val currentSelection = currentPinnedSelection()
             val currentBytes = PrivatePinnedCaptionExport.snapshot(
-                currentSelection, pending.format, pending.subtitleOptions, pending.scope
+                currentSelection, pending.format, pending.subtitleOptions, pending.scope,
+                pending.languagePair
             )
             if (pending.generation != generation || listening ||
                 currentSelection != pending.selection || currentBytes == null ||
@@ -3007,17 +3009,19 @@ private fun TuddyScreen(
         if (pinnedExportOpen && !pinnedExactPreviewOpen) {
             val selection = currentPinnedSelection()
             val included = remember(selection, pinnedExportScope,
-                pinnedExportFormat, pinnedSubtitleOptions
+                pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair
             ) {
                 PrivatePinnedCaptionExport.includedRows(
-                    selection, pinnedExportFormat, pinnedSubtitleOptions, pinnedExportScope
+                    selection, pinnedExportFormat, pinnedSubtitleOptions,
+                    pinnedExportScope, pinnedLanguagePair
                 )
             }
             val computedPreview = remember(selection, pinnedExportScope,
-                pinnedExportFormat, pinnedSubtitleOptions
+                pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair
             ) {
                 PrivatePinnedCaptionExport.snapshot(
-                    selection, pinnedExportFormat, pinnedSubtitleOptions, pinnedExportScope
+                    selection, pinnedExportFormat, pinnedSubtitleOptions,
+                    pinnedExportScope, pinnedLanguagePair
                 )
             }
             AlertDialog(
@@ -3043,6 +3047,28 @@ private fun TuddyScreen(
                             }) {
                                 Text((if (pinnedExportFormat == format) "● " else "○ ") +
                                     format.title)
+                            }
+                        }
+                        HorizontalDivider()
+                        Text("Welke taalrichting wil je bewaren?",
+                            style = MaterialTheme.typography.titleSmall)
+                        TextButton(onClick = {
+                            pinnedLanguagePair = null
+                            pinnedExportNotice = ""
+                        }) {
+                            Text((if (pinnedLanguagePair == null) "● " else "○ ") +
+                                "Alle taalrichtingen")
+                        }
+                        val languagePairs = selection.map {
+                            it.caption.sourceCode to it.caption.targetCode
+                        }.distinct()
+                        languagePairs.forEach { pair ->
+                            TextButton(onClick = {
+                                pinnedLanguagePair = pair
+                                pinnedExportNotice = ""
+                            }) {
+                                Text((if (pinnedLanguagePair == pair) "● " else "○ ") +
+                                    pair.first + " → " + pair.second)
                             }
                         }
                         HorizontalDivider()
@@ -3143,15 +3169,17 @@ private fun TuddyScreen(
                             val format = pinnedExportFormat
                             val options = pinnedSubtitleOptions
                             val scope = pinnedExportScope
+                            val languagePair = pinnedLanguagePair
                             val bytes = PrivatePinnedCaptionExport.snapshot(
-                                selection, format, options, scope
+                                selection, format, options, scope, languagePair
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
                                     "Controleer voltooide vertalingen en tijdcodes."
                             } else {
                                 pendingPinnedExport = PendingPinnedCaptionExport(
-                                    generation, selection, format, scope, options, bytes
+                                    generation, selection, format, scope,
+                                    languagePair, options, bytes
                                 )
                                 exportStatus = ""
                                 pinnedExportOpen = false
@@ -3176,7 +3204,7 @@ private fun TuddyScreen(
         if (pinnedExportOpen && pinnedExactPreviewOpen) {
             val exactBytes = PrivatePinnedCaptionExport.snapshot(
                 currentPinnedSelection(), pinnedExportFormat,
-                pinnedSubtitleOptions, pinnedExportScope
+                pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair
             )
             val previewLines = remember(exactBytes?.contentHashCode(),
                 exactBytes?.size

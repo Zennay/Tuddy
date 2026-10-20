@@ -6,6 +6,13 @@ markeren. Open onder het gesprek **★ gemarkeerd**, bekijk welke uitspraken
 meegaan en kies **Exporteer selectie…**. De export is niet beschikbaar
 zolang de microfoon actief is.
 
+Kies eerst de **taalrichting**: alle richtingen van dit gesprek of
+precies één zichtbaar bron- en doeltaalpaar. Dit is een zuiver
+lokaal selectiefilter: het verandert noch de sessie noch het
+bewaarde markeringenoverzicht. Verander je de taalrichting tijdens
+het externe bestandskiezen, dan wordt geen oud document alsnog
+weggeschreven.
+
 Selecteer ook bewust **welke inhoud** je mee wilt nemen: alle
 gemarkeerde uitspraken, alleen reeds afgeronde lokale regels, of
 uitsluitend regels met een werkelijk voltooide vertaling. De teller
