@@ -60,8 +60,10 @@ onder **★ gemarkeerd**. Via **Exporteer N gekozen…** kies je bewust
 voor TXT, een opnieuw importeerbaar privé-JSON-archief, afdrukbaar HTML,
 een ruw SRT/WebVTT-ondertitelconcept met instelbare tijden of UTF-8
 TSV-/CSV-leerkaarten met uitsluitend voltooide, ongeverifieerde lokale
-modelvertalingen. Bij TSV kies je bron naar vertaling, omgekeerd of
-beide richtingen; gelijke paren worden ontdubbeld.
+modelvertalingen. Bij TSV of CSV kies je bron naar vertaling, omgekeerd of
+beide richtingen; gelijke paren worden ontdubbeld. Voor gemengde
+taalrichtingen kun je optioneel `[taalcode]` bij elke kaartzijde
+zetten; de exacte labels zijn vóór opslag zichtbaar.
 Kies expliciet één taalrichting of alle richtingen, en tussen alle
 gemarkeerde regels, alleen afgeronde regels en werkelijk vertaalde
 regels; bekijk vóór het opslaan aantallen, bestandsgrootte en de
