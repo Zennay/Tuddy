@@ -7,6 +7,8 @@ import java.util.Locale
  * durations. These are NOT speech timestamps, word alignment, or translations.
  * Only used after deliberate manual input; no audio, clipboard, or I/O.
  */
+internal enum class PlainSubtitleSplitMode { LINES, SENTENCES }
+
 internal object PrivatePlainTextSubtitleDraft {
     private const val MAX_BYTES = 262_144
     private const val MAX_CUES = 500
@@ -24,14 +26,22 @@ internal object PrivatePlainTextSubtitleDraft {
     fun preview(
         raw: String,
         startMillis: Long,
-        durationMillis: Long
+        durationMillis: Long,
+        splitMode: PlainSubtitleSplitMode = PlainSubtitleSplitMode.LINES
     ): List<PrivateSubtitleCue>? {
         if (startMillis !in startOptions || durationMillis !in durationOptions) return null
         val bytes = raw.toByteArray(Charsets.UTF_8)
         if (bytes.isEmpty() || bytes.size > MAX_BYTES ||
             bytes.toString(Charsets.UTF_8) != raw) return null
-        val lines = raw.removePrefix("\uFEFF").replace("\r\n", "\n").replace('\r', '\n')
-            .lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val normalized = raw.removePrefix("\uFEFF").replace("\r\n", "\n").replace('\r', '\n')
+        // Never classify natural sentences as recognized speech: this merely
+        // suggests cut points at punctuation followed by whitespace.
+        val lines = when (splitMode) {
+            PlainSubtitleSplitMode.LINES -> normalized.lines()
+            PlainSubtitleSplitMode.SENTENCES -> normalized.trim()
+                .replace(Regex("""[ \t\n]+"""), " ")
+                .split(Regex("""(?<=[.!?。！？؟])\s+"""))
+        }.map { it.trim() }.filter { it.isNotEmpty() }
         if (lines.isEmpty() || lines.size > MAX_CUES ||
             lines.first().startsWith("WEBVTT", ignoreCase = true) ||
             lines.any { line ->
