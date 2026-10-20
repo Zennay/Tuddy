@@ -90,7 +90,8 @@ internal fun SessionCaptionStudyDialog(
     captions: List<FocusCaptionLine>,
     onDismiss: () -> Unit,
     initialCaptionId: Long? = null,
-    originLabel: String = "dit gesprek"
+    originLabel: String = "dit gesprek",
+    manualStudyAnswers: Set<Long> = emptySet()
 ) {
     val allFinished = remember(captions) {
         captions.asSequence()
@@ -218,7 +219,11 @@ internal fun SessionCaptionStudyDialog(
                         ))
                     if (round.revealed) {
                         HorizontalDivider()
-                        Text("Modelvertaling · ${answerCode.uppercase()} · niet geverifieerd",
+                        Text(
+                            (if (current.id in manualStudyAnswers)
+                                "Mijn handmatig gecorrigeerde studieantwoord"
+                            else "Lokale modelvertaling") +
+                                " · ${answerCode.uppercase()} · niet geverifieerd",
                             style = MaterialTheme.typography.labelLarge)
                         Text(answer, modifier = Modifier.fillMaxWidth(),
                             style = MaterialTheme.typography.titleLarge.copy(
