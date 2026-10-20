@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: leerkaartbestand uitsluitend uit handmatig gecorrigeerde antwoorden
+
+Selecteer bij de TSV-export **Alleen mijn handmatig gecorrigeerde
+antwoorden** om alle overige modelvertalingen buiten het bestand te
+houden. De selectie, kaartenaantallen en ruwe preview volgen het filter;
+zonder eigen correcties is er geen export. Eigen antwoorden zijn niet
+extern gecontroleerd.
+[Gebruik](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 ## Nieuw: corrigeer een modelvertaling alleen voor je eigen studie
 
 Bij **★ gemarkeerd** kun je op **✎ Corrigeer alleen studieantwoord**
