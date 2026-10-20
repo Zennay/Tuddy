@@ -39,6 +39,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -202,6 +203,7 @@ private fun TuddyScreen(
     var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
     var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
     var pinnedExportShowAll by remember { mutableStateOf(false) }
+    var pinnedExactPreviewOpen by remember { mutableStateOf(false) }
     var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
     var pendingPinnedExport by remember { mutableStateOf<PendingPinnedCaptionExport?>(null) }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
@@ -3002,10 +3004,14 @@ private fun TuddyScreen(
                 }
             )
         }
-        if (pinnedExportOpen) {
+        if (pinnedExportOpen && !pinnedExactPreviewOpen) {
             val selection = currentPinnedSelection()
-            val included = remember(selection, pinnedExportScope) {
-                PrivatePinnedCaptionExport.select(selection, pinnedExportScope)
+            val included = remember(selection, pinnedExportScope,
+                pinnedExportFormat, pinnedSubtitleOptions
+            ) {
+                PrivatePinnedCaptionExport.includedRows(
+                    selection, pinnedExportFormat, pinnedSubtitleOptions, pinnedExportScope
+                )
             }
             val computedPreview = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions
@@ -3114,6 +3120,11 @@ private fun TuddyScreen(
                                 }
                             }
                         }
+                        OutlinedButton(
+                            enabled = computedPreview != null,
+                            onClick = { pinnedExactPreviewOpen = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Bekijk exacte bestandsinhoud…") }
                         if (pinnedExportNotice.isNotBlank()) {
                             Text(pinnedExportNotice, color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall)
@@ -3158,6 +3169,52 @@ private fun TuddyScreen(
                 dismissButton = {
                     TextButton(onClick = { pinnedExportOpen = false }) {
                         Text("Annuleren")
+                    }
+                }
+            )
+        }
+        if (pinnedExportOpen && pinnedExactPreviewOpen) {
+            val exactBytes = PrivatePinnedCaptionExport.snapshot(
+                currentPinnedSelection(), pinnedExportFormat,
+                pinnedSubtitleOptions, pinnedExportScope
+            )
+            val previewLines = remember(exactBytes?.contentHashCode(),
+                exactBytes?.size
+            ) {
+                exactBytes?.toString(Charsets.UTF_8)?.lineSequence()?.toList()
+                    ?: emptyList()
+            }
+            AlertDialog(
+                onDismissRequest = { pinnedExactPreviewOpen = false },
+                title = { Text("Exact te bewaren document · alleen lezen") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Dit is de ruwe inhoud van het gekozen bestand, " +
+                                "inclusief JSON/HTML-opmaak indien gekozen. " +
+                                "Niets is nog opgeslagen of gedeeld.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (exactBytes == null) {
+                            Text("Selectie gewijzigd of ongeldig; kies opnieuw.",
+                                color = MaterialTheme.colorScheme.error)
+                        } else {
+                            Text("${exactBytes.size} bytes · volledig lokaal",
+                                style = MaterialTheme.typography.labelSmall)
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)
+                            ) {
+                                items(previewLines) { line ->
+                                    Text(line, fontFamily = FontFamily.Monospace,
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { pinnedExactPreviewOpen = false }) {
+                        Text("Terug naar exportkeuze")
                     }
                 }
             )

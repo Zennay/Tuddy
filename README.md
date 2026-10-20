@@ -8,7 +8,10 @@ TXT, een opnieuw importeerbaar privé-JSON-archief, een afdrukbaar HTML-
 gesprek of een ruw SRT/WebVTT-ondertitelconcept met instelbare tijden.
 Kies expliciet tussen alle gemarkeerde regels, alleen afgeronde regels
 en werkelijk vertaalde regels; bekijk vóór het opslaan aantallen,
-bestandsgrootte en de beoogde inhoud.
+bestandsgrootte en de beoogde inhoud. Bekijk desgewenst de
+exacte ruwe bestandsinhoud in een lokaal, scrollbaar leesvenster.
+SRT/WebVTT telt alleen zinnen die werkelijk in dat ondertitelconcept
+terechtkomen.
 Alle niet-gemarkeerde regels blijven buiten het bestand. De app
 controleert bij terugkeer uit de Android-bestandskiezer of markeringen
 en zinnen nog identiek zijn en schrijft anders niet. Er is geen

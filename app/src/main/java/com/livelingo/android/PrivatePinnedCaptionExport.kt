@@ -48,6 +48,29 @@ internal object PrivatePinnedCaptionExport {
         }
     }
 
+    /**
+     * Actual output rows: SRT/VTT always omit unfinished translations,
+     * and translation-only mode also omits source-only completed rows.
+     */
+    fun includedRows(
+        rows: List<PinnedCaptionRow>,
+        format: PinnedCaptionFormat,
+        options: SubtitleDraftOptions,
+        scope: PinnedCaptionScope
+    ): List<PinnedCaptionRow> {
+        val selected = select(rows, scope)
+        if (format != PinnedCaptionFormat.SRT &&
+            format != PinnedCaptionFormat.WEBVTT) return selected
+        return selected.filter { row ->
+            val complete = row.caption.status == "Lokaal" ||
+                row.caption.status == "Lokaal vertaald"
+            complete && (options.mode != SubtitleDraftMode.TRANSLATION_ONLY ||
+                (row.caption.status == "Lokaal vertaald" &&
+                    row.caption.translated.isNotBlank()))
+        }
+    }
+
+    // Short textual summary shown before choosing the file destination.
     fun preview(text: String): String = text.asSequence().filter {
         it >= ' ' && it != '\u007f' &&
             it !in '\u202a'..'\u202e' &&
@@ -63,7 +86,8 @@ internal object PrivatePinnedCaptionExport {
         if (selection.isEmpty() || selection.size > SessionCaptionPins.MAX_PINS ||
             selection.map { it.id }.distinct().size != selection.size
         ) return null
-        val rows = select(selection, scope).map { it.caption }
+        val rows = includedRows(selection, format, subtitleOptions, scope)
+            .map { it.caption }
         if (rows.isEmpty()) return null
         return when (format) {
             PinnedCaptionFormat.TXT -> PrivateTranscriptExport.snapshot(rows)

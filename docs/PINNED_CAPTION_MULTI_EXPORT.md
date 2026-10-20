@@ -31,13 +31,25 @@ Selecteer daarna precies één uitvoerformaat:
 
 Controleer eerst de lijst gemarkeerde regels, het bron-/vertaalfilter
 en het formaat. Het bevestigingsscherm toont ook de berekende
-bestandsgrootte en een inhoudsvoorbeeld van de meegenomen regels;
-je kunt alle regels inzien voordat je bewaart. Daarna verschijnt
+bestandsgrootte en een korte inhoudssamenvatting van de meegenomen
+regels. Via **Bekijk exacte bestandsinhoud…** open je afzonderlijk
+de volledige, alleen-lezen tekst van het daadwerkelijk te bewaren
+TXT-, JSON-, HTML-, SRT- of WebVTT-document. Dit gebeurt uitsluitend
+in het tijdelijke appgeheugen; je keert daarna terug naar de keuzes.
+Een groot document wordt per regel geladen zodat je ook bij veel
+ondertitels kunt scrollen. JSON- en HTML-bestanden tonen bewust de
+exacte technische tekst, niet een verzonnen gerenderde preview. Daarna verschijnt
 de waarschuwing. Pas met **Kies opslag…** wordt de Android
 bestandskiezer geopend. Tuddy controleert na terugkeer of dezelfde
 zinnen, taalrichtingen, vertaalstatus en markeringen nog actief zijn.
 Een gewijzigde selectie, een gewist gesprek of een gestarte microfoon
 breekt de overdracht af; maak dan een nieuwe keuze.
+
+Bij SRT/WebVTT neemt Tuddy uitsluitend afgeronde lokale regels mee.
+Met de handmatige keuze **Vertaling** worden zinnen zonder voltooide
+vertaling vooraf uit de teller en het inhoudsoverzicht verwijderd;
+de getoonde aantallen komen daardoor overeen met de uit te voeren
+ondertitelregels.
 
 De maximumgrenzen en invoerbeperkingen van elk bestaand formaat
 blijven gelden. Sommige keuzes, bijvoorbeeld vertaling-alleen zonder
