@@ -61,6 +61,35 @@ zelf gewijzigde selectie die tijdens de externe Android-bestandskiezer
 verandert, blokkeert de oorspronkelijke opslag via de bestaande
 snapshot-hercontrole. De bediening blijft scrollbaar op smalle telefoons.
 
+## Mijn eigen studieantwoord corrigeren zonder gespreksbron te veranderen
+
+Wanneer een gemarkeerde regel echt lokaal vertaald is, verschijnt bij
+die zin de actie **✎ Corrigeer alleen studieantwoord**. Je ziet zowel
+de oorspronkelijke uitspraak als de huidige **ongeverifieerde
+modelvertaling**. Schrijf maximaal 400 geldige Unicode-tekens aan
+één zelfgekozen betekenis en bevestig afzonderlijk met **Gebruik in
+mijn oefenkaarten**. Een ongeldige of lege waarde houdt het
+bewerkvenster open. Je kunt je eigen versie later aanpassen of met
+**Gebruik weer modelvertaling** terugzetten.
+
+De verbetering is bewust beperkt tot de huidige privésessie:
+directe geselecteerde oefenkaarten en expliciet geëxporteerde
+**TSV-leerkaarten** gebruiken het persoonlijk gecorrigeerde antwoord.
+De voor-/achterkantpreview en de ruwe TSV-bestandspreview laten de
+daadwerkelijk gekozen tekst zien. TXT, JSON, HTML en SRT/WebVTT
+blijven uitsluitend de originele lokale transcript-/modeldata gebruiken,
+zonder te suggereren dat het gesprek achteraf is gewijzigd.
+
+Tuddy koppelt iedere correctie aan de exacte bronzin, modelvertaling
+en taalrichting waarvoor die geschreven is. Wijzigt één daarvan,
+dan past Tuddy geen oude correctie stilzwijgend toe. Zowel een
+wijziging van correcties tijdens de Android-bestandskiezer als een
+wijziging van selectie of gesprek maakt een eerdere export ongeldig.
+Alle correcties blijven uitsluitend in RAM en verdwijnen bij **Wis
+gesprek** of afsluiten. Een eigen uitleg is **niet onafhankelijk
+geverifieerd**, geen automatisch verbeterde vertaling en geen
+duurzaam leerprofiel.
+
 Selecteer daarna precies één uitvoerformaat:
 
 - **TXT**: leesbare originele regels, taalpaar, tijdstip en alleen werkelijk
