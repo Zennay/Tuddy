@@ -49,8 +49,10 @@ exacte technische tekst, niet een verzonnen gerenderde preview. Daarna verschijn
 de waarschuwing. Pas met **Kies opslag…** wordt de Android
 bestandskiezer geopend. Tuddy controleert na terugkeer of dezelfde
 zinnen, taalrichtingen, vertaalstatus en markeringen nog actief zijn.
-Een gewijzigde selectie, een gewist gesprek of een gestarte microfoon
-breekt de overdracht af; maak dan een nieuwe keuze.
+Een gewijzigde selectie, een nieuw taalpaar, ander formaat of
+een gewijzigd bron-/vertaalfilter, een gewist gesprek of een gestarte
+microfoon breekt de overdracht af; maak dan een nieuwe keuze.
+Bij annuleren wordt ook de tijdelijke ruwe preview gesloten.
 
 Bij SRT/WebVTT neemt Tuddy uitsluitend afgeronde lokale regels mee.
 Met de handmatige keuze **Vertaling** worden zinnen zonder voltooide

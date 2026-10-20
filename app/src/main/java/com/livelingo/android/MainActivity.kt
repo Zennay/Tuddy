@@ -1220,6 +1220,10 @@ private fun TuddyScreen(
                 pending.languagePair
             )
             if (pending.generation != generation || listening ||
+                pending.format != pinnedExportFormat ||
+                pending.scope != pinnedExportScope ||
+                pending.languagePair != pinnedLanguagePair ||
+                pending.subtitleOptions != pinnedSubtitleOptions ||
                 currentSelection != pending.selection || currentBytes == null ||
                 !currentBytes.contentEquals(pending.bytes)
             ) {
@@ -2999,6 +3003,7 @@ private fun TuddyScreen(
                         onClick = {
                             pinsNotice = ""
                             pinnedExportNotice = ""
+                            pinnedExactPreviewOpen = false
                             pinnedExportOpen = true
                             pinsOpen = false
                         }
@@ -3025,7 +3030,10 @@ private fun TuddyScreen(
                 )
             }
             AlertDialog(
-                onDismissRequest = { pinnedExportOpen = false },
+                onDismissRequest = {
+                    pinnedExportOpen = false
+                    pinnedExactPreviewOpen = false
+                },
                 title = { Text("Alleen gemarkeerde regels bewaren") },
                 text = {
                     Column(
@@ -3195,7 +3203,10 @@ private fun TuddyScreen(
                     ) { Text("Kies opslag…") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { pinnedExportOpen = false }) {
+                    TextButton(onClick = {
+                        pinnedExportOpen = false
+                        pinnedExactPreviewOpen = false
+                    }) {
                         Text("Annuleren")
                     }
                 }
