@@ -13,12 +13,20 @@ internal enum class PinnedCaptionFormat(
     WEBVTT("Ondertitelconcept · WebVTT", "text/vtt", "Tuddy-selectie-concept.vtt")
 }
 
+/** A visible, explicit content scope: never silently drop unfinished rows. */
+internal enum class PinnedCaptionScope(val title: String) {
+    ALL("Alle gemarkeerde regels"),
+    COMPLETED("Alleen afgeronde regels"),
+    TRANSLATED("Alleen voltooide vertalingen")
+}
+
 internal data class PinnedCaptionRow(val id: Long, val caption: TranscriptExportRow)
 
 internal data class PendingPinnedCaptionExport(
     val generation: Int,
     val selection: List<PinnedCaptionRow>,
     val format: PinnedCaptionFormat,
+    val scope: PinnedCaptionScope,
     val subtitleOptions: SubtitleDraftOptions,
     val bytes: ByteArray
 )
@@ -28,15 +36,35 @@ internal data class PendingPinnedCaptionExport(
  * synthesize translations or claim accurate audio/video timing.
  */
 internal object PrivatePinnedCaptionExport {
+    fun select(
+        rows: List<PinnedCaptionRow>, scope: PinnedCaptionScope
+    ): List<PinnedCaptionRow> = when (scope) {
+        PinnedCaptionScope.ALL -> rows
+        PinnedCaptionScope.COMPLETED -> rows.filter {
+            it.caption.status == "Lokaal" || it.caption.status == "Lokaal vertaald"
+        }
+        PinnedCaptionScope.TRANSLATED -> rows.filter {
+            it.caption.status == "Lokaal vertaald" && it.caption.translated.isNotBlank()
+        }
+    }
+
+    fun preview(text: String): String = text.asSequence().filter {
+        it >= ' ' && it != '\u007f' &&
+            it !in '\u202a'..'\u202e' &&
+            it !in '\u2066'..'\u2069'
+    }.take(140).joinToString("").trim()
+
     fun snapshot(
         selection: List<PinnedCaptionRow>,
         format: PinnedCaptionFormat,
-        subtitleOptions: SubtitleDraftOptions
+        subtitleOptions: SubtitleDraftOptions,
+        scope: PinnedCaptionScope = PinnedCaptionScope.ALL
     ): ByteArray? {
         if (selection.isEmpty() || selection.size > SessionCaptionPins.MAX_PINS ||
             selection.map { it.id }.distinct().size != selection.size
         ) return null
-        val rows = selection.map { it.caption }
+        val rows = select(selection, scope).map { it.caption }
+        if (rows.isEmpty()) return null
         return when (format) {
             PinnedCaptionFormat.TXT -> PrivateTranscriptExport.snapshot(rows)
             PinnedCaptionFormat.JSON -> PrivateTranscriptJsonExport.snapshot(rows)

@@ -6,6 +6,9 @@ Markeer maximaal 80 regels in je tijdelijke live gesprek en bekijk ze
 onder **★ gemarkeerd**. Via **Exporteer selectie…** kies je bewust voor
 TXT, een opnieuw importeerbaar privé-JSON-archief, een afdrukbaar HTML-
 gesprek of een ruw SRT/WebVTT-ondertitelconcept met instelbare tijden.
+Kies expliciet tussen alle gemarkeerde regels, alleen afgeronde regels
+en werkelijk vertaalde regels; bekijk vóór het opslaan aantallen,
+bestandsgrootte en de beoogde inhoud.
 Alle niet-gemarkeerde regels blijven buiten het bestand. De app
 controleert bij terugkeer uit de Android-bestandskiezer of markeringen
 en zinnen nog identiek zijn en schrijft anders niet. Er is geen

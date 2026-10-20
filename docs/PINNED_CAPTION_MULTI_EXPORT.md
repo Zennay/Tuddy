@@ -6,6 +6,14 @@ markeren. Open onder het gesprek **★ gemarkeerd**, bekijk welke uitspraken
 meegaan en kies **Exporteer selectie…**. De export is niet beschikbaar
 zolang de microfoon actief is.
 
+Selecteer ook bewust **welke inhoud** je mee wilt nemen: alle
+gemarkeerde uitspraken, alleen reeds afgeronde lokale regels, of
+uitsluitend regels met een werkelijk voltooide vertaling. De teller
+laat vooraf zien hoeveel van je markeringen worden meegenomen; een
+lege keuze wordt geweigerd. Niet-afgeronde vertalingen krijgen
+nergens een verzonnen vertaalresultaat. Dit filter verandert de
+tijdelijke markeringen of het echte gesprek niet.
+
 Selecteer daarna precies één uitvoerformaat:
 
 - **TXT**: leesbare originele regels, taalpaar, tijdstip en alleen werkelijk
@@ -21,7 +29,10 @@ Selecteer daarna precies één uitvoerformaat:
   geen gemeten start-/eindtijden. Controleer en corrigeer ze in een
   video- of ondertiteleditor. Er wordt geen audio opgenomen of uitgeknipt.
 
-Controleer eerst de lijst gemarkeerde regels en daarna het formaat en
+Controleer eerst de lijst gemarkeerde regels, het bron-/vertaalfilter
+en het formaat. Het bevestigingsscherm toont ook de berekende
+bestandsgrootte en een inhoudsvoorbeeld van de meegenomen regels;
+je kunt alle regels inzien voordat je bewaart. Daarna verschijnt
 de waarschuwing. Pas met **Kies opslag…** wordt de Android
 bestandskiezer geopend. Tuddy controleert na terugkeer of dezelfde
 zinnen, taalrichtingen, vertaalstatus en markeringen nog actief zijn.

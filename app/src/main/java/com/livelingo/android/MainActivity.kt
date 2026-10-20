@@ -200,6 +200,8 @@ private fun TuddyScreen(
     var pinnedExportOpen by remember { mutableStateOf(false) }
     var pinnedExportNotice by remember { mutableStateOf("") }
     var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
+    var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
+    var pinnedExportShowAll by remember { mutableStateOf(false) }
     var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
     var pendingPinnedExport by remember { mutableStateOf<PendingPinnedCaptionExport?>(null) }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
@@ -1211,7 +1213,7 @@ private fun TuddyScreen(
         ) {
             val currentSelection = currentPinnedSelection()
             val currentBytes = PrivatePinnedCaptionExport.snapshot(
-                currentSelection, pending.format, pending.subtitleOptions
+                currentSelection, pending.format, pending.subtitleOptions, pending.scope
             )
             if (pending.generation != generation || listening ||
                 currentSelection != pending.selection || currentBytes == null ||
@@ -3002,6 +3004,16 @@ private fun TuddyScreen(
         }
         if (pinnedExportOpen) {
             val selection = currentPinnedSelection()
+            val included = remember(selection, pinnedExportScope) {
+                PrivatePinnedCaptionExport.select(selection, pinnedExportScope)
+            }
+            val computedPreview = remember(selection, pinnedExportScope,
+                pinnedExportFormat, pinnedSubtitleOptions
+            ) {
+                PrivatePinnedCaptionExport.snapshot(
+                    selection, pinnedExportFormat, pinnedSubtitleOptions, pinnedExportScope
+                )
+            }
             AlertDialog(
                 onDismissRequest = { pinnedExportOpen = false },
                 title = { Text("Alleen gemarkeerde regels bewaren") },
@@ -3027,6 +3039,24 @@ private fun TuddyScreen(
                                     format.title)
                             }
                         }
+                        HorizontalDivider()
+                        Text("Welke gemarkeerde regels wil je meenemen?",
+                            style = MaterialTheme.typography.titleSmall)
+                        PinnedCaptionScope.entries.forEach { scope ->
+                            TextButton(onClick = {
+                                pinnedExportScope = scope
+                                pinnedExportNotice = ""
+                            }) {
+                                Text((if (pinnedExportScope == scope) "● " else "○ ") +
+                                    scope.title)
+                            }
+                        }
+                        Text(
+                            "${included.size} van ${selection.size} gemarkeerde regels " +
+                                "komen in de export. Een niet-voltooide vertaling wordt " +
+                                "nooit als afgerond voorgesteld.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         if (pinnedExportFormat == PinnedCaptionFormat.SRT ||
                             pinnedExportFormat == PinnedCaptionFormat.WEBVTT
                         ) {
@@ -3048,6 +3078,42 @@ private fun TuddyScreen(
                                 }
                             )
                         }
+                        HorizontalDivider()
+                        Text("Controleer de inhoud van de export",
+                            style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            if (computedPreview == null) "Geen geldig document met deze keuzes."
+                            else "Berekende bestandsgrootte: ${computedPreview.size} bytes.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (included.isNotEmpty()) {
+                            val visible = if (pinnedExportShowAll) included else included.take(5)
+                            visible.forEachIndexed { index, record ->
+                                Text(
+                                    "${index + 1}. ${record.caption.sourceCode} → " +
+                                        "${record.caption.targetCode} · ${record.caption.status}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    PrivatePinnedCaptionExport.preview(record.caption.original),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                if (record.caption.status == "Lokaal vertaald") {
+                                    Text("↳ " + PrivatePinnedCaptionExport.preview(
+                                        record.caption.translated),
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            if (included.size > 5) {
+                                TextButton(onClick = {
+                                    pinnedExportShowAll = !pinnedExportShowAll
+                                }) {
+                                    Text(if (pinnedExportShowAll) "Toon minder"
+                                    else "Bekijk alle ${included.size} regels")
+                                }
+                            }
+                        }
                         if (pinnedExportNotice.isNotBlank()) {
                             Text(pinnedExportNotice, color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall)
@@ -3065,15 +3131,16 @@ private fun TuddyScreen(
                         onClick = {
                             val format = pinnedExportFormat
                             val options = pinnedSubtitleOptions
+                            val scope = pinnedExportScope
                             val bytes = PrivatePinnedCaptionExport.snapshot(
-                                selection, format, options
+                                selection, format, options, scope
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
                                     "Controleer voltooide vertalingen en tijdcodes."
                             } else {
                                 pendingPinnedExport = PendingPinnedCaptionExport(
-                                    generation, selection, format, options, bytes
+                                    generation, selection, format, scope, options, bytes
                                 )
                                 exportStatus = ""
                                 pinnedExportOpen = false
