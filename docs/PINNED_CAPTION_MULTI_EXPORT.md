@@ -30,6 +30,28 @@ en verdwijnen zodra je sluit. De knop is uitgeschakeld tijdens microfoon-
 opname of wanneer er geen bruikbare tweetalige markeringen zijn.
 Dit verandert je markeringen, eigen archief of woordenschat niet.
 
+## Alleen mijn gekozen markeringen gebruiken
+
+In **★ gemarkeerd** kun je nu maximaal 80 tijdelijke markeringen
+doorzoeken op bron, vertaling en taalcode. Filter op **Alle**, **Alleen
+afgeronde** of **Alleen voltooide vertalingen** en toon de nieuwste
+regels eerst. Vink per zin aan of die mee mag in je volgende oefenronde
+of export; dat is iets anders dan de ster verwijderen. Met **Kies
+zichtbare** en **Deselecteer zichtbare** kun je de huidige zoekresultaten
+samen selecteren, zonder eerder gekozen niet-zichtbare regels te verliezen.
+**Kies alle markeringen** herstelt de oorspronkelijke volledige selectie.
+Zoek- en filterkeuzes veranderen de oefen-/exportselectie niet automatisch.
+
+**Verwijder alleen deze ster** haalt één regel uit je tijdelijke
+markeringen, zonder de andere regels te verliezen. **Wis markeringen**
+blijft een aparte bewuste actie. De teller en beide knoppen voor oefenen
+en exporteren gebruiken uitsluitend de gekozen regels; bij een lege
+keuze blijven ze uitgeschakeld. De keuze wordt bij het opnieuw openen
+van de gemarkeerd-lijst naar alle beschikbare sterren gereset. Een
+zelf gewijzigde selectie die tijdens de externe Android-bestandskiezer
+verandert, blokkeert de oorspronkelijke opslag via de bestaande
+snapshot-hercontrole. De bediening blijft scrollbaar op smalle telefoons.
+
 Selecteer daarna precies één uitvoerformaat:
 
 - **TXT**: leesbare originele regels, taalpaar, tijdstip en alleen werkelijk
