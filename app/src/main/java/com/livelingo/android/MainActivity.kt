@@ -199,6 +199,7 @@ private fun TuddyScreen(
     var pinsOpen by remember { mutableStateOf(false) }
     var pinsNotice by remember { mutableStateOf("") }
     var pinnedExportOpen by remember { mutableStateOf(false) }
+    var pinnedPracticeOpen by remember { mutableStateOf(false) }
     var pinnedExportNotice by remember { mutableStateOf("") }
     var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
     var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
@@ -2011,6 +2012,19 @@ private fun TuddyScreen(
                 }
             )
         }
+        if (pinnedPracticeOpen) {
+            SessionCaptionStudyDialog(
+                captions = lines.filter { it.id in captionPins }.map { line ->
+                    FocusCaptionLine(
+                        line.id, line.original, line.translated, line.status,
+                        line.sourceCode, line.targetCode,
+                        manuallyAssignedSpeakers[line.id], line.personalMeaning
+                    )
+                },
+                onDismiss = { pinnedPracticeOpen = false },
+                originLabel = "alleen gemarkeerde zinnen"
+            )
+        }
         if (sessionCaptionStudyOpen) {
             SessionCaptionStudyDialog(
                 captions = lines.map { line ->
@@ -2932,6 +2946,12 @@ private fun TuddyScreen(
         }
         if (pinsOpen) {
             val pinnedLines = lines.filter { it.id in captionPins }
+            val studyReadyPins = pinnedLines.count {
+                it.status == "Lokaal vertaald" &&
+                    it.original.isNotBlank() && it.translated.isNotBlank() &&
+                    it.original != it.translated &&
+                    it.original.length <= 400 && it.translated.length <= 400
+            }
             AlertDialog(
                 onDismissRequest = { pinsOpen = false },
                 title = { Text("Gemarkeerde gespreksregels") },
@@ -2989,6 +3009,21 @@ private fun TuddyScreen(
                             Text(pinsNotice, style = MaterialTheme.typography.bodySmall)
                         }
                         if (pinnedLines.isNotEmpty()) {
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = studyReadyPins > 0 && !listening,
+                                onClick = {
+                                    captionSpeaker.stop()
+                                    pinsOpen = false
+                                    pinnedPracticeOpen = true
+                                }
+                            ) {
+                                Text("Oefen ${studyReadyPins} gemarkeerde vertaalparen")
+                            }
+                            Text("Tijdelijk oefenen met omkeerbare kaarten, onthullen en " +
+                                "zelfbeoordeling. Alleen werkelijk afgeronde vertalingen; " +
+                                "sluiten wist de oefenronde.",
+                                style = MaterialTheme.typography.bodySmall)
                             TextButton(onClick = {
                                 captionPins = emptySet()
                                 pinsNotice = "Alle markeringen van dit gesprek zijn gewist."
