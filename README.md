@@ -1,5 +1,20 @@
 # Tuddy 🎙️
 
+## Nieuw: exporteer alleen gemarkeerde gesprekszinnen in vijf formaten
+
+Markeer maximaal 80 regels in je tijdelijke live gesprek en bekijk ze
+onder **★ gemarkeerd**. Via **Exporteer selectie…** kies je bewust voor
+TXT, een opnieuw importeerbaar privé-JSON-archief, een afdrukbaar HTML-
+gesprek of een ruw SRT/WebVTT-ondertitelconcept met instelbare tijden.
+Alle niet-gemarkeerde regels blijven buiten het bestand. De app
+controleert bij terugkeer uit de Android-bestandskiezer of markeringen
+en zinnen nog identiek zijn en schrijft anders niet. Er is geen
+automatische synchronisatie met audio, geen nieuwe spraak- of
+vertaalclaim en geen stilzwijgende opslag.
+[Bediening en privacy](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 ## Nieuw: bewaar zelf gekozen ondertitelzinnen als privé-oefenzin
 
 In de eigen SRT/VTT-audiospeler kun je een actieve Kurmanji-, Sorani-

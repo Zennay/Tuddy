@@ -1,6 +1,7 @@
 package com.livelingo.android
 
 import android.Manifest
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -196,6 +197,11 @@ private fun TuddyScreen(
     val manuallyAssignedSpeakers = remember { mutableStateMapOf<Long, String>() }
     var pinsOpen by remember { mutableStateOf(false) }
     var pinsNotice by remember { mutableStateOf("") }
+    var pinnedExportOpen by remember { mutableStateOf(false) }
+    var pinnedExportNotice by remember { mutableStateOf("") }
+    var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
+    var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
+    var pendingPinnedExport by remember { mutableStateOf<PendingPinnedCaptionExport?>(null) }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
     var pronunciationNotice by remember { mutableStateOf("") }
     val captionHaptics = remember(context) { CaptionHapticCues(context) }
@@ -456,6 +462,15 @@ private fun TuddyScreen(
             TranscriptExportRow(line.original, line.translated, line.status,
                 line.sourceCode, line.targetCode, line.recordedAtMillis)
         }, onlyFinished)
+
+    fun currentPinnedSelection(): List<PinnedCaptionRow> = lines
+        .filter { it.id in captionPins }
+        .map { line ->
+            PinnedCaptionRow(line.id, TranscriptExportRow(
+                line.original, line.translated, line.status,
+                line.sourceCode, line.targetCode, line.recordedAtMillis
+            ))
+        }
 
     fun captureSubtitleDraft(): ByteArray? =
         PrivateSubtitleDraftExport.snapshot(lines.map { line ->
@@ -1070,6 +1085,7 @@ private fun TuddyScreen(
         pendingCaptionShare = null
         pendingSpeakerExport = null
         pendingTranscriptExport = null
+        pendingPinnedExport = null
         pendingArchiveExcerpt = null
         exportStatus = ""
         sourceOpen = false
@@ -1179,6 +1195,45 @@ private fun TuddyScreen(
                 exportStatus = "JSON-gesprek opgeslagen op de door jou gekozen locatie."
             } else {
                 error = "JSON-gesprek niet opgeslagen. Kies een andere locatie en probeer opnieuw."
+            }
+        }
+    }
+
+    // A pinned selection is rechecked after the external picker returns; a
+    // changed pin, edited sentence or new session invalidates the handoff.
+    val savePinnedCaptionFile = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val pending = pendingPinnedExport
+        pendingPinnedExport = null
+        if (result.resultCode == Activity.RESULT_OK &&
+            result.data?.data != null && pending != null
+        ) {
+            val currentSelection = currentPinnedSelection()
+            val currentBytes = PrivatePinnedCaptionExport.snapshot(
+                currentSelection, pending.format, pending.subtitleOptions
+            )
+            if (pending.generation != generation || listening ||
+                currentSelection != pending.selection || currentBytes == null ||
+                !currentBytes.contentEquals(pending.bytes)
+            ) {
+                exportStatus = "De gemarkeerde regels zijn gewijzigd. Kies opnieuw om te bewaren."
+            } else {
+                val uri = result.data?.data
+                val saved = runCatching {
+                    if (uri == null) false else
+                        context.contentResolver.openOutputStream(uri, "w")?.use {
+                            it.write(pending.bytes)
+                            it.flush()
+                            true
+                        } ?: false
+                }.getOrDefault(false)
+                if (saved) {
+                    exportStatus = "Alleen de geselecteerde regels zijn bewust bewaard als " +
+                        pending.format.title + ". Controleer externe opslag en inhoud."
+                } else {
+                    error = "Gemarkeerde regels niet opgeslagen. Kies een andere opslaglocatie."
+                }
             }
         }
     }
@@ -1579,6 +1634,7 @@ private fun TuddyScreen(
                 archiveStudyOpen = false
                 archiveReaderOpen = false
                 archiveSearchQuery = ""
+                pinnedExportOpen = false
                 pendingArchiveExcerpt = null
                 archiveExcerptNotice = ""
                 pendingCaptionShare = null
@@ -1634,6 +1690,8 @@ private fun TuddyScreen(
             draftFromExternalShare = false
             manualText = ""
             pendingSpeakerExport = null
+            pendingPinnedExport = null
+            pinnedExportOpen = false
             editingCaptionId = null
             captionCorrectionDraft = ""
             pendingSingleCaptionDelete = null
@@ -2933,23 +2991,107 @@ private fun TuddyScreen(
                     TextButton(
                         enabled = pinnedLines.isNotEmpty() && !listening,
                         onClick = {
-                            val snapshot = PrivateTranscriptExport.snapshot(
-                                pinnedLines.map { line ->
-                                    TranscriptExportRow(
-                                        line.original, line.translated, line.status,
-                                        line.sourceCode, line.targetCode, line.recordedAtMillis
-                                    )
-                                }
-                            )
-                            if (snapshot == null) {
-                                pinsNotice = "Selectie kan niet veilig worden geëxporteerd."
-                            } else {
-                                pendingTranscriptExport = generation to snapshot
-                                pinsOpen = false
-                                saveTranscript.launch("Tuddy-gemarkeerde-zinnen.txt")
+                            pinsNotice = ""
+                            pinnedExportNotice = ""
+                            pinnedExportOpen = true
+                            pinsOpen = false
+                        }
+                    ) { Text("Exporteer selectie…") }
+                }
+            )
+        }
+        if (pinnedExportOpen) {
+            val selection = currentPinnedSelection()
+            AlertDialog(
+                onDismissRequest = { pinnedExportOpen = false },
+                title = { Text("Alleen gemarkeerde regels bewaren") },
+                text = {
+                    Column(
+                        modifier = Modifier.heightIn(max = 470.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            "${selection.size} gekozen regels uit maximaal ${SessionCaptionPins.MAX_PINS}. " +
+                                "Alle andere zinnen blijven buiten het bestand. " +
+                                "Controleer hieronder het formaat. De gekozen Android-provider " +
+                                "kan deze gevoelige tekst opslaan, delen of synchroniseren.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        PinnedCaptionFormat.entries.forEach { format ->
+                            TextButton(onClick = {
+                                pinnedExportFormat = format
+                                pinnedExportNotice = ""
+                            }) {
+                                Text((if (pinnedExportFormat == format) "● " else "○ ") +
+                                    format.title)
                             }
                         }
-                    ) { Text("Bewaar selectie…") }
+                        if (pinnedExportFormat == PinnedCaptionFormat.SRT ||
+                            pinnedExportFormat == PinnedCaptionFormat.WEBVTT
+                        ) {
+                            Text(
+                                "Geschatte ondertiteltijden: geen audio-opname, " +
+                                    "geen automatische synchronisatie. Corrigeer eerst in je editor.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            SubtitleDraftControls(
+                                options = pinnedSubtitleOptions.copy(
+                                    format = if (pinnedExportFormat == PinnedCaptionFormat.SRT)
+                                        SubtitleDraftFormat.SRT else SubtitleDraftFormat.WEBVTT
+                                ),
+                                onChange = {
+                                    pinnedSubtitleOptions = it
+                                    pinnedExportFormat = if (it.format == SubtitleDraftFormat.SRT)
+                                        PinnedCaptionFormat.SRT else PinnedCaptionFormat.WEBVTT
+                                    pinnedExportNotice = ""
+                                }
+                            )
+                        }
+                        if (pinnedExportNotice.isNotBlank()) {
+                            Text(pinnedExportNotice, color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(
+                            "Er wordt pas geschreven nadat je zelf op bewaren drukt " +
+                                "en een bestand kiest. Een gewijzigde selectie wordt geweigerd.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !listening && selection.isNotEmpty(),
+                        onClick = {
+                            val format = pinnedExportFormat
+                            val options = pinnedSubtitleOptions
+                            val bytes = PrivatePinnedCaptionExport.snapshot(
+                                selection, format, options
+                            )
+                            if (bytes == null) {
+                                pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
+                                    "Controleer voltooide vertalingen en tijdcodes."
+                            } else {
+                                pendingPinnedExport = PendingPinnedCaptionExport(
+                                    generation, selection, format, options, bytes
+                                )
+                                exportStatus = ""
+                                pinnedExportOpen = false
+                                savePinnedCaptionFile.launch(
+                                    Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                        addCategory(Intent.CATEGORY_OPENABLE)
+                                        type = format.mimeType
+                                        putExtra(Intent.EXTRA_TITLE, format.fileName)
+                                    }
+                                )
+                            }
+                        }
+                    ) { Text("Kies opslag…") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pinnedExportOpen = false }) {
+                        Text("Annuleren")
+                    }
                 }
             )
         }
@@ -3226,6 +3368,8 @@ private fun TuddyScreen(
                     OutlinedButton(onClick = {
                         generation++
                         pendingTranscriptExport = null
+                        pendingPinnedExport = null
+                        pinnedExportOpen = false
                         exportStatus = ""
                         previewArchiveRows = null
                         archiveSearchQuery = ""
@@ -3251,6 +3395,7 @@ private fun TuddyScreen(
                         manuallyAssignedSpeakers.clear()
                         captionPins = emptySet()
                         pinsOpen = false
+                        pinnedExportOpen = false
                         pinsNotice = ""
                         historySearchQuery = ""
                         historySearchOpen = false
