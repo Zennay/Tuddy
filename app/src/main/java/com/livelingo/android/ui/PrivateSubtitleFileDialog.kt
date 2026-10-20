@@ -99,6 +99,8 @@ internal fun PrivateSubtitleFileDialog(
     var batchFind by remember { mutableStateOf("") }
     var batchWith by remember { mutableStateOf("") }
     var batchMatchCase by remember { mutableStateOf(false) }
+    var batchFirstRow by remember { mutableStateOf("1") }
+    var batchLastRow by remember { mutableStateOf("") }
     var insertOpen by remember { mutableStateOf(false) }
     var insertStart by remember { mutableStateOf("") }
     var insertEnd by remember { mutableStateOf("") }
@@ -872,16 +874,39 @@ internal fun PrivateSubtitleFileDialog(
         )
     }
     if (batchOpen) {
-        val proposed = PrivateSubtitleBatchReplace.preview(
-            draft, batchFind, batchWith, batchMatchCase)
+        val scopeFrom = batchFirstRow.toIntOrNull()
+        val scopeTo = if (batchLastRow.isBlank()) draft.size
+            else batchLastRow.toIntOrNull()
+        val proposed = if (scopeFrom != null && scopeTo != null)
+            PrivateSubtitleBatchReplace.preview(
+                draft, batchFind, batchWith, batchMatchCase, scopeFrom, scopeTo)
+        else null
+        val changes = proposed?.updated?.withIndex()?.filter { (i, cue) ->
+            cue.text != draft[i].text
+        }.orEmpty()
         AlertDialog(
             onDismissRequest = { batchOpen = false },
             title = { Text("Zoek en vervang · tijdelijk") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Letterlijke tekst in alle ondertitelregels; tijdcodes " +
-                        "blijven ongewijzigd. Bekijk het aantal vóór je toepast.",
+                    Text("Letterlijke tekst alleen in het gekozen regelbereik; tijdcodes " +
+                        "blijven ongewijzigd. Bekijk de gewijzigde regels vóór je toepast.",
                         style = MaterialTheme.typography.bodySmall)
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = batchFirstRow,
+                            onValueChange = { batchFirstRow =
+                                it.filter { c -> c in '0'..'9' }.take(4) },
+                            label = { Text("Van regel") },
+                            singleLine = true, modifier = Modifier.weight(1f))
+                        OutlinedTextField(
+                            value = batchLastRow,
+                            onValueChange = { batchLastRow =
+                                it.filter { c -> c in '0'..'9' }.take(4) },
+                            label = { Text("Tot (leeg = alle)") },
+                            singleLine = true, modifier = Modifier.weight(1f))
+                    }
                     OutlinedTextField(
                         value = batchFind,
                         onValueChange = { batchFind = it.take(100) },
@@ -903,8 +928,21 @@ internal fun PrivateSubtitleFileDialog(
                             "Geen geldige wijziging; controleer zoekterm, " +
                                 "regelgrenzen en documentlimieten."
                         else "Voorbeeld: ${proposed.replacements} vervangingen " +
-                            "in ${proposed.changedCues} regels.",
+                            "in ${proposed.changedCues} regels binnen " +
+                            "${scopeFrom}–${scopeTo}.",
+
                         style = MaterialTheme.typography.bodyMedium)
+                    changes.take(5).forEach { (index, cue) ->
+                        Text("Regel ${index + 1}:\n" +
+                            "Voor: ${draft[index].text.take(160)}\n" +
+                            "Na: ${cue.text.take(160)}",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (changes.size > 5) {
+                        Text("Daarnaast nog ${changes.size - 5} gewijzigde regels; " +
+                            "alle wijzigingen blijven herstelbaar.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                     Text("De bron blijft ongewijzigd. Alleen via Bewaar kopie… " +
                         "kan je later een nieuw SRT/VTT-bestand maken.",
                         style = MaterialTheme.typography.bodySmall)
@@ -912,8 +950,14 @@ internal fun PrivateSubtitleFileDialog(
             },
             confirmButton = {
                 TextButton(enabled = proposed != null, onClick = {
-                    val confirmed = PrivateSubtitleBatchReplace.preview(
-                        draft, batchFind, batchWith, batchMatchCase)
+                    val confirmedFrom = batchFirstRow.toIntOrNull()
+                    val confirmedTo = if (batchLastRow.isBlank()) draft.size
+                        else batchLastRow.toIntOrNull()
+                    val confirmed = if (confirmedFrom != null && confirmedTo != null)
+                        PrivateSubtitleBatchReplace.preview(
+                            draft, batchFind, batchWith, batchMatchCase,
+                            confirmedFrom, confirmedTo)
+                    else null
                     if (confirmed != null) {
                         applyChange(confirmed.updated)
                         shownIndex = -1
