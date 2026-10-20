@@ -210,7 +210,7 @@ private fun TuddyScreen(
     var pinnedNewestFirst by remember { mutableStateOf(false) }
     // These manually authored corrections apply ONLY to temporary study
     // cards. The source transcript, JSON, HTML and subtitles stay untouched.
-    val pinnedStudyEdits = remember { mutableStateMapOf<Long, String>() }
+    val pinnedStudyEdits = remember { mutableStateMapOf<Long, PinnedStudyCorrection>() }
     var pinnedStudyEditId by remember { mutableStateOf<Long?>(null) }
     var pinnedStudyDraft by remember { mutableStateOf("") }
     var pinnedStudyEditError by remember { mutableStateOf("") }
@@ -2038,9 +2038,11 @@ private fun TuddyScreen(
                 }.map { line ->
                     FocusCaptionLine(
                         line.id, line.original,
-                        if (line.status == "Lokaal vertaald")
-                            pinnedStudyEdits[line.id] ?: line.translated
-                        else line.translated,
+                        pinnedStudyEdits[line.id]
+                            ?.takeIf { it.appliesTo(TranscriptExportRow(
+                                line.original, line.translated, line.status,
+                                line.sourceCode, line.targetCode, line.recordedAtMillis
+                            )) }?.answer ?: line.translated,
                         line.status,
                         line.sourceCode, line.targetCode,
                         manuallyAssignedSpeakers[line.id], line.personalMeaning
@@ -2048,7 +2050,12 @@ private fun TuddyScreen(
                 },
                 onDismiss = { pinnedPracticeOpen = false },
                 originLabel = "alleen gemarkeerde zinnen",
-                manualStudyAnswers = pinnedStudyEdits.keys.toSet()
+                manualStudyAnswers = lines.filter { line ->
+                    pinnedStudyEdits[line.id]?.appliesTo(TranscriptExportRow(
+                        line.original, line.translated, line.status,
+                        line.sourceCode, line.targetCode, line.recordedAtMillis
+                    )) == true
+                }.map { it.id }.toSet()
             )
         }
         if (sessionCaptionStudyOpen) {
