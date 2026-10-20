@@ -21,6 +21,15 @@ lege keuze wordt geweigerd. Niet-afgeronde vertalingen krijgen
 nergens een verzonnen vertaalresultaat. Dit filter verandert de
 tijdelijke markeringen of het echte gesprek niet.
 
+Wil je meteen oefenen zonder iets te bewaren? Open **★ gemarkeerd** en
+kies **Oefen ... gemarkeerde vertaalparen**. Alleen echt voltooide
+tweetalige zinnen komen in de bestaande tijdelijke oefendialoog.
+Kies de richting, onthul antwoorden, beoordeel jezelf en herhaal moeilijke
+kaartjes. De oefeningen blijven volledig in RAM, zijn niet gevalideerd
+en verdwijnen zodra je sluit. De knop is uitgeschakeld tijdens microfoon-
+opname of wanneer er geen bruikbare tweetalige markeringen zijn.
+Dit verandert je markeringen, eigen archief of woordenschat niet.
+
 Selecteer daarna precies één uitvoerformaat:
 
 - **TXT**: leesbare originele regels, taalpaar, tijdstip en alleen werkelijk
