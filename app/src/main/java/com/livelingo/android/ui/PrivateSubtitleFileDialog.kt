@@ -878,6 +878,12 @@ internal fun PrivateSubtitleFileDialog(
         )
     }
     if (batchOpen) {
+        // A changed search, translation line, or selected range always starts
+        // review at the first actual changed cue, not an old preview page.
+        LaunchedEffect(draft, batchFind, batchWith, batchMatchCase,
+            batchField, batchFirstRow, batchLastRow) {
+            batchReviewPage = 0
+        }
         val scopeFrom = batchFirstRow.toIntOrNull()
         val scopeTo = if (batchLastRow.isBlank()) draft.size
             else batchLastRow.toIntOrNull()
