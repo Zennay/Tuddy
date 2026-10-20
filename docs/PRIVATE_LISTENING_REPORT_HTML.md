@@ -55,3 +55,19 @@ automatische spraak- of taalniveaumeting.
 
 Ook de bevestiging na het bewaren van een oefenfragment toont nu
 weer de correcte ondertitel-/passagenaam en het aantal fragmenten.
+
+
+## Mijn volgende luisterronde in het verslag
+
+Het tijdelijke overzicht, de expliciete HTML-export en de TXT-notitie
+tonen onder **Mijn volgende luisterronde** eerst zelf als **Nog oefenen**
+gemarkeerde passages en daarna passages zonder eigen beoordeling.
+Dit is uitsluitend een herordening van de eigen keuzes, geen
+automatische herkenning, uitspraakscore of bewezen begrip. Bij
+verwijderen of herbeoordelen wordt de lijst direct opnieuw berekend.
+Als alles positief door de gebruiker is beoordeeld, wordt niet
+beweerd dat iets geleerd is.
+
+Een eigen oefennotitie heeft maximaal 240 Unicode-tekens: ook
+emoji tellen als één zichtbaar teken en worden niet halverwege
+afgekapt. Bij bewuste export wordt de inhoud opnieuw gecontroleerd.

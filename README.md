@@ -14,6 +14,9 @@ automatisch met audio gecontroleerd.
 De begeleide A–B-route heeft nu ook een aparte keuze **Nog niet
 beoordeeld** naast alle fragmenten en de zelf als lastig gemarkeerde
 fragmenten; een lege selectie kan niet worden afgespeeld.
+Het privé-overzicht geeft ook een eigen vervolgrondje met eerst de
+door jou als lastig beoordeelde en daarna nog onbeoordeelde fragmenten.
+Oefennotities bewaren Unicode-tekens zonder emoji halverwege af te kappen.
 [Bediening en privacy](docs/PRIVATE_LISTENING_REPORT_HTML.md).
 
 ---
