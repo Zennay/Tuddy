@@ -223,6 +223,7 @@ private fun TuddyScreen(
     var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
     var pinnedStudyDirection by remember { mutableStateOf(PinnedStudyDirection.SOURCE_TO_TARGET) }
     var pinnedOnlyPersonalStudy by remember { mutableStateOf(false) }
+    var pinnedStudyLanguageTags by remember { mutableStateOf(false) }
     var pinnedLanguagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
     var pinnedExportShowAll by remember { mutableStateOf(false) }
     var pinnedExactPreviewOpen by remember { mutableStateOf(false) }
@@ -1242,7 +1243,8 @@ private fun TuddyScreen(
             val currentBytes = PrivatePinnedCaptionExport.snapshot(
                 currentSelection, pending.format, pending.subtitleOptions, pending.scope,
                 pending.languagePair, pending.studyDirection,
-                pinnedStudyEdits.toMap(), pending.onlyPersonallyCorrected
+                pinnedStudyEdits.toMap(), pending.onlyPersonallyCorrected,
+                pending.showLanguageTags
             )
             if (pending.generation != generation || listening ||
                 pending.format != pinnedExportFormat ||
@@ -1251,6 +1253,7 @@ private fun TuddyScreen(
                 pending.studyDirection != pinnedStudyDirection ||
                 pending.studyEdits != pinnedStudyEdits.toMap() ||
                 pending.onlyPersonallyCorrected != pinnedOnlyPersonalStudy ||
+                pending.showLanguageTags != pinnedStudyLanguageTags ||
                 pending.subtitleOptions != pinnedSubtitleOptions ||
                 currentSelection != pending.selection || currentBytes == null ||
                 !currentBytes.contentEquals(pending.bytes)
@@ -3424,7 +3427,8 @@ private fun TuddyScreen(
             val selection = currentPinnedSelection()
             val included = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
-                pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy
+                pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
+                pinnedStudyLanguageTags
             ) {
                 PrivatePinnedCaptionExport.includedRows(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
@@ -3435,12 +3439,13 @@ private fun TuddyScreen(
             val computedPreview = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
-                pinnedOnlyPersonalStudy
+                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags
             ) {
                 PrivatePinnedCaptionExport.snapshot(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
                     pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection,
-                    pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy
+                    pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
+                    pinnedStudyLanguageTags
                 )
             }
             AlertDialog(
@@ -3494,6 +3499,17 @@ private fun TuddyScreen(
                                     }
                                 )
                                 Text("Alleen mijn handmatig gecorrigeerde antwoorden",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = pinnedStudyLanguageTags,
+                                    onCheckedChange = {
+                                        pinnedStudyLanguageTags = it
+                                        pinnedExportNotice = ""
+                                    }
+                                )
+                                Text("Toon taalcode bij elke kaartzijde",
                                     style = MaterialTheme.typography.bodySmall)
                             }
                             Text("Zelf corrigeren is geen onafhankelijke verificatie. " +
@@ -3631,10 +3647,12 @@ private fun TuddyScreen(
                                         "✓ Zelf geschreven studieantwoord"
                                         else "⚠ Ongeverifieerde modelvertaling",
                                         style = MaterialTheme.typography.labelSmall)
-                                    val source = PrivatePinnedCaptionExport.preview(
-                                        record.caption.original)
-                                    val meaning = PrivatePinnedCaptionExport.preview(
-                                        record.caption.translated)
+                                    val source = (if (pinnedStudyLanguageTags)
+                                        "[${record.caption.sourceCode}] " else "") +
+                                        PrivatePinnedCaptionExport.preview(record.caption.original)
+                                    val meaning = (if (pinnedStudyLanguageTags)
+                                        "[${record.caption.targetCode}] " else "") +
+                                        PrivatePinnedCaptionExport.preview(record.caption.translated)
                                     val reverse = pinnedStudyDirection ==
                                         PinnedStudyDirection.TARGET_TO_SOURCE
                                     Text("Voorzijde: " + (if (reverse) meaning else source),
@@ -3693,7 +3711,7 @@ private fun TuddyScreen(
                             val bytes = PrivatePinnedCaptionExport.snapshot(
                                 selection, format, options, scope, languagePair,
                                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
-                                pinnedOnlyPersonalStudy
+                                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
@@ -3703,7 +3721,7 @@ private fun TuddyScreen(
                                     generation, selection, format, scope,
                                     languagePair, pinnedStudyDirection,
                                     pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
-                                    options, bytes
+                                    pinnedStudyLanguageTags, options, bytes
                                 )
                                 exportStatus = ""
                                 pinnedExportOpen = false
@@ -3733,7 +3751,7 @@ private fun TuddyScreen(
                 currentPinnedSelection(), pinnedExportFormat,
                 pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
-                pinnedOnlyPersonalStudy
+                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags
             )
             val previewLines = remember(exactBytes?.contentHashCode(),
                 exactBytes?.size
