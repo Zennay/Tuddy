@@ -53,7 +53,7 @@ internal object PrivatePlainTextSubtitleDraft {
             if (first.length > 800 || second.length > 800)
                 return count.copy(message = "Regel ${i + 1} is langer dan 800 tekens.")
             if (listOf(first, second).any { value ->
-                    "-->" in value || value.any(Char::isISOControl)
+                    "-->" in value || value.any { ch -> ch.isISOControl() }
                 }) return count.copy(message = "Regel ${i + 1} heeft " +
                 "ongeldige controletekens of een tijdcodepijl.")
         }
