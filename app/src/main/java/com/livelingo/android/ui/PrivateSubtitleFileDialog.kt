@@ -96,6 +96,7 @@ internal fun PrivateSubtitleFileDialog(
     var editSourceLine by remember { mutableStateOf("") }
     var editMeaningLine by remember { mutableStateOf("") }
     var editAsPairedLines by remember { mutableStateOf(false) }
+    var editError by remember { mutableStateOf("") }
     var requestSave by remember { mutableStateOf<SubtitleDraftFormat?>(null) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
@@ -477,6 +478,7 @@ internal fun PrivateSubtitleFileDialog(
                         canMerge = found[shownIndex].first < draft.lastIndex,
                         canDelete = draft.size > 1,
                         onCorrectText = {
+                            editError = ""
                             editIndex = found[shownIndex].first
                             editValue = current.text
                             val lines = current.text.lines()
@@ -1124,7 +1126,9 @@ internal fun PrivateSubtitleFileDialog(
         AlertDialog(onDismissRequest = { editIndex = null },
             title = { Text("Handmatige tekstcorrectie") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.heightIn(max = 530.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("De tijdcode blijft gelijk. Tuddy controleert of vertaalt " +
                         "de nieuwe tekst niet automatisch.",
                         style = MaterialTheme.typography.bodySmall)
@@ -1161,6 +1165,10 @@ internal fun PrivateSubtitleFileDialog(
                             textStyle = MaterialTheme.typography.bodyLarge.copy(
                                 textDirection = TextDirection.ContentOrRtl))
                     }
+                    if (editError.isNotBlank()) {
+                        Text(editError, color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             },
             confirmButton = {
@@ -1169,13 +1177,16 @@ internal fun PrivateSubtitleFileDialog(
                         editSourceLine + "\n" + editMeaningLine else editValue
                     val next = PrivateSubtitleDraftEditor.revise(draft, position, updatedText)
                     if (next == null) {
-                        notice = "Ongeldige tekst. Maximaal acht regels, zonder controlecodes."
+                        editError = "Ongeldige tekst: geen lege regels, " +
+                            "voor- of achterliggende spaties of controlecodes. " +
+                            "Maximaal 800 tekens per regel; corrigeer je invoer."
                     } else {
                         applyChange(next)
                         notice = "Tekst aangepast in tijdelijk concept."
                         shownIndex = -1
+                        editError = ""
+                        editIndex = null
                     }
-                    editIndex = null
                 }) { Text("Gebruik correctie") }
             },
             dismissButton = {
