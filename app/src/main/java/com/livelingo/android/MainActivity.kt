@@ -60,6 +60,7 @@ import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.SessionMeaningIndexDialog
 import com.livelingo.android.ui.SessionMeaningRow
 import com.livelingo.android.ui.PrivateSubtitleFileDialog
+import com.livelingo.android.ui.SubtitlePasteDialog
 import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
@@ -317,6 +318,7 @@ private fun TuddyScreen(
     // Explicitly opened SRT/WebVTT file; separate from the active transcript.
     var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
     var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    var subtitlePasteOpen by remember { mutableStateOf(false) }
     // Second SRT/VTT picker: one explicit RAM-only document pair, never disk.
     var pendingSecondSubtitle by remember {
         mutableStateOf<Pair<Int, List<PrivateSubtitleCue>>?>(null)
@@ -1571,6 +1573,7 @@ private fun TuddyScreen(
                 manualText = ""
                 previewArchiveRows = null
                 subtitleFileCues = null
+                subtitlePasteOpen = false
                 importedSecondSubtitle = null
                 secondSubtitleError = null
                 subtitleWorksheetNotice = null
@@ -1614,6 +1617,7 @@ private fun TuddyScreen(
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             subtitleFileCues = null
+            subtitlePasteOpen = false
             pendingSecondSubtitle = null
             importedSecondSubtitle = null
             secondSubtitleError = null
@@ -1955,6 +1959,17 @@ private fun TuddyScreen(
                     sessionCaptionStudyStartId = null
                 },
                 initialCaptionId = sessionCaptionStudyStartId
+            )
+        }
+        if (subtitlePasteOpen) {
+            SubtitlePasteDialog(
+                title = "Eigen SRT/WebVTT-tekst plakken",
+                onDismiss = { subtitlePasteOpen = false },
+                onAccept = { imported ->
+                    subtitlePasteOpen = false
+                    subtitleFileCues = imported.toList()
+                    error = ""
+                }
             )
         }
         subtitleFileCues?.let { opened ->
@@ -3601,6 +3616,12 @@ private fun TuddyScreen(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !listening,
+                    onClick = { subtitlePasteOpen = true }
+                ) { Text("Plak eigen SRT/WebVTT-tekst en bekijk voorbeelden…") }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
