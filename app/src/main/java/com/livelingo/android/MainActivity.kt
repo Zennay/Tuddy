@@ -220,6 +220,7 @@ private fun TuddyScreen(
     var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
     var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
     var pinnedStudyDirection by remember { mutableStateOf(PinnedStudyDirection.SOURCE_TO_TARGET) }
+    var pinnedOnlyPersonalStudy by remember { mutableStateOf(false) }
     var pinnedLanguagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
     var pinnedExportShowAll by remember { mutableStateOf(false) }
     var pinnedExactPreviewOpen by remember { mutableStateOf(false) }
@@ -1237,7 +1238,7 @@ private fun TuddyScreen(
             val currentBytes = PrivatePinnedCaptionExport.snapshot(
                 currentSelection, pending.format, pending.subtitleOptions, pending.scope,
                 pending.languagePair, pending.studyDirection,
-                pinnedStudyEdits.toMap()
+                pinnedStudyEdits.toMap(), pending.onlyPersonallyCorrected
             )
             if (pending.generation != generation || listening ||
                 pending.format != pinnedExportFormat ||
@@ -1245,6 +1246,7 @@ private fun TuddyScreen(
                 pending.languagePair != pinnedLanguagePair ||
                 pending.studyDirection != pinnedStudyDirection ||
                 pending.studyEdits != pinnedStudyEdits.toMap() ||
+                pending.onlyPersonallyCorrected != pinnedOnlyPersonalStudy ||
                 pending.subtitleOptions != pinnedSubtitleOptions ||
                 currentSelection != pending.selection || currentBytes == null ||
                 !currentBytes.contentEquals(pending.bytes)
@@ -3379,22 +3381,23 @@ private fun TuddyScreen(
             val selection = currentPinnedSelection()
             val included = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
-                pinnedStudyEdits.toMap()
+                pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy
             ) {
                 PrivatePinnedCaptionExport.includedRows(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
                     pinnedExportScope, pinnedLanguagePair,
-                    pinnedStudyEdits.toMap()
+                    pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy
                 )
             }
             val computedPreview = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
-                pinnedStudyDirection, pinnedStudyEdits.toMap()
+                pinnedStudyDirection, pinnedStudyEdits.toMap(),
+                pinnedOnlyPersonalStudy
             ) {
                 PrivatePinnedCaptionExport.snapshot(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
                     pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection,
-                    pinnedStudyEdits.toMap()
+                    pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy
                 )
             }
             AlertDialog(
@@ -3438,6 +3441,20 @@ private fun TuddyScreen(
                                         direction.title)
                                 }
                             }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = pinnedOnlyPersonalStudy,
+                                    onCheckedChange = {
+                                        pinnedOnlyPersonalStudy = it
+                                        pinnedExportNotice = ""
+                                    }
+                                )
+                                Text("Alleen mijn handmatig gecorrigeerde antwoorden",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text("Zelf corrigeren is geen onafhankelijke verificatie. " +
+                                "De oorspronkelijke modelvertalingen blijven ongewijzigd.",
+                                style = MaterialTheme.typography.bodySmall)
                             Text(
                                 "Alleen daadwerkelijk voltooide lokale vertalingen komen in " +
                                     "de kaarten. Geen onvoltooide betekenissen, automatische " +
@@ -3601,7 +3618,8 @@ private fun TuddyScreen(
                             val languagePair = pinnedLanguagePair
                             val bytes = PrivatePinnedCaptionExport.snapshot(
                                 selection, format, options, scope, languagePair,
-                                pinnedStudyDirection, pinnedStudyEdits.toMap()
+                                pinnedStudyDirection, pinnedStudyEdits.toMap(),
+                                pinnedOnlyPersonalStudy
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
@@ -3610,7 +3628,8 @@ private fun TuddyScreen(
                                 pendingPinnedExport = PendingPinnedCaptionExport(
                                     generation, selection, format, scope,
                                     languagePair, pinnedStudyDirection,
-                                    pinnedStudyEdits.toMap(), options, bytes
+                                    pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
+                                    options, bytes
                                 )
                                 exportStatus = ""
                                 pinnedExportOpen = false
@@ -3639,7 +3658,8 @@ private fun TuddyScreen(
             val exactBytes = PrivatePinnedCaptionExport.snapshot(
                 currentPinnedSelection(), pinnedExportFormat,
                 pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair,
-                pinnedStudyDirection, pinnedStudyEdits.toMap()
+                pinnedStudyDirection, pinnedStudyEdits.toMap(),
+                pinnedOnlyPersonalStudy
             )
             val previewLines = remember(exactBytes?.contentHashCode(),
                 exactBytes?.size
