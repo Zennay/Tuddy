@@ -92,7 +92,7 @@ duurzaam leerprofiel.
 
 ## Alleen persoonlijk gecorrigeerde studiekaarten exporteren
 
-Kies bij het **TSV**-formaat desgewenst **Alleen mijn handmatig
+Kies bij het **TSV of CSV**-formaat desgewenst **Alleen mijn handmatig
 gecorrigeerde antwoorden**. Dan gaan uitsluitend de expliciet door
 jou bewerkte vertaalparen uit de gekozen markeringen mee. De
 weergave van aantallen, effectieve voor-/achterkant en de volledige
@@ -110,7 +110,7 @@ Selecteer daarna precies één uitvoerformaat:
 
 - **TXT**: leesbare originele regels, taalpaar, tijdstip en alleen werkelijk
   voltooide vertalingen.
-- **TSV-leerkaarten**: importeer daadwerkelijk voltooide lokale modelvertaalparen
+- **TSV-/CSV-leerkaarten**: importeer daadwerkelijk voltooide lokale modelvertaalparen
   in een kaartprogramma dat twee UTF-8-tabgescheiden velden ondersteunt
   (voorzijde en achterzijde). Kies **Bronzin → lokale modelvertaling**,
   **Lokale modelvertaling → bronzin** of **beide richtingen** (twee kaarten per
@@ -150,7 +150,7 @@ en het formaat. Het bevestigingsscherm toont ook de berekende
 bestandsgrootte en een korte inhoudssamenvatting van de meegenomen
 regels. Via **Bekijk exacte bestandsinhoud…** open je afzonderlijk
 de volledige, alleen-lezen tekst van het daadwerkelijk te bewaren
-TXT-, TSV-, JSON-, HTML-, SRT- of WebVTT-document. Dit gebeurt uitsluitend
+TXT-, TSV-, CSV-, JSON-, HTML-, SRT- of WebVTT-document. Dit gebeurt uitsluitend
 in het tijdelijke appgeheugen; je keert daarna terug naar de keuzes.
 Een groot document wordt per regel geladen zodat je ook bij veel
 ondertitels kunt scrollen. JSON- en HTML-bestanden tonen bewust de
