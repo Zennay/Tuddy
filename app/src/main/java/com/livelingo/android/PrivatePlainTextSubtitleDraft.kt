@@ -7,7 +7,7 @@ import java.util.Locale
  * chosen synthetic durations. These are NOT speech timestamps, word alignment, or translations.
  * Only used after deliberate manual input; no audio, clipboard, or I/O.
  */
-internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS }
+internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS, TIMED_PAIRED_COLUMNS }
 
 internal object PrivatePlainTextSubtitleDraft {
     private const val MAX_BYTES = 262_144
@@ -34,6 +34,36 @@ internal object PrivatePlainTextSubtitleDraft {
         if (bytes.isEmpty() || bytes.size > MAX_BYTES ||
             bytes.toString(Charsets.UTF_8) != raw) return null
         val normalized = raw.removePrefix("\uFEFF").replace("\r\n", "\n").replace('\r', '\n')
+        if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS) {
+            // Four manually supplied columns: start, end, source, own meaning.
+            // Unlike the estimated routes, timestamps are copied exactly.
+            val rawRows = normalized.lines().filter { it.isNotBlank() }
+            if (rawRows.isEmpty() || rawRows.size > MAX_CUES) return null
+            val cues = rawRows.map { row ->
+                val columns = row.split('\t')
+                if (columns.size != 4) return null
+                val begin = PrivateSubtitleTimelineNavigation.timestamp(columns[0])
+                    ?: return null
+                val end = PrivateSubtitleTimelineNavigation.timestamp(columns[1])
+                    ?: return null
+                if (begin < 0L || end > MAX_TIME || begin >= end) return null
+                val source = columns[2].trim()
+                val meaning = columns[3].trim()
+                if (source.isEmpty() || meaning.isEmpty() ||
+                    source.length > 800 || meaning.length > 800 ||
+                    listOf(source, meaning).any { value ->
+                        "-->" in value || value.any { ch ->
+                            ch == '\u0000' || ch.isISOControl()
+                        }
+                    }) return null
+                PrivateSubtitleCue(begin, end, label(begin), label(end),
+                    source + "\n" + meaning)
+            }
+            if (PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.SRT) == null ||
+                PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.WEBVTT) == null)
+                return null
+            return cues
+        }
         // Never classify natural sentences as recognized speech: this merely
         // suggests cut points at punctuation followed by whitespace.
         val rows = when (splitMode) {
@@ -43,6 +73,7 @@ internal object PrivatePlainTextSubtitleDraft {
                 .replace(Regex("""[ \t\n]+"""), " ")
                 .split(Regex("""(?<=[.!?。！？؟])\s+"""))
                 .map { it.trim() }.filter { it.isNotEmpty() }
+            PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS -> return null // handled above
             PlainSubtitleSplitMode.PAIRED_COLUMNS -> normalized.lines()
                 .map { it.trim() }.filter { it.isNotEmpty() }.map { row ->
                     val columns = row.split('\t')
