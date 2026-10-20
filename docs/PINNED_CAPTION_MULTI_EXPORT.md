@@ -37,7 +37,9 @@ Selecteer daarna precies één uitvoerformaat:
   het aantal unieke tweetalige paren, het effectieve aantal kaartjes
   (bij beide richtingen dubbel) en een leesbare voor-/achterkant-preview.
   De exacte uitvoer is vóór opslaan in de ruwe bestandspreview te bekijken.
-  Regeleinden en tabs in eigen teksten worden spaties; mogelijke
+  Emoji en andere geldige Unicode-tekens blijven behouden; ongeldige
+  losse UTF-16-surrogaten worden geweigerd in plaats van ongemerkt
+  vervormd. Regeleinden en tabs in eigen teksten worden spaties; mogelijke
   spreadsheetformules krijgen een leidende apostrof en HTML-speciale
   tekens worden als entiteit geschreven. Een studietool kan die tekens
   anders tonen afhankelijk van diens importinstellingen; kies twee
