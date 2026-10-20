@@ -33,6 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -43,6 +46,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleAudioAlignment
 import com.livelingo.android.PrivateSubtitleClip
+import com.livelingo.android.PrivateCueWordProgress
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.TextTarget
 import kotlinx.coroutines.delay
@@ -86,6 +90,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var playbackSpeed by remember { mutableStateOf(1f) }
     // Playback-only calibration. A positive offset shows subtitles later than source timecodes.
     var subtitleOffsetMs by remember { mutableLongStateOf(0L) }
+    // Optional rough reading aid, not measured speech/word alignment.
+    var estimatedWordFollow by remember { mutableStateOf(false) }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var rangeStartIndex by remember { mutableIntStateOf(-1) }
     var rangeEndIndex by remember { mutableIntStateOf(-1) }
@@ -166,6 +172,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         bookmarkEndMs = -1L
         bookmarkRepeating = false
         subtitleOffsetMs = 0L
+        estimatedWordFollow = false
         cuePickerOpen = false
         confirmApplyOpen = false
         confirmClipOpen = false
@@ -1165,6 +1172,24 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             " · in audio ${clock(cueStart(active!!))}"
                     else "Geen ondertitel actief op deze audiopositie.",
                         style = MaterialTheme.typography.labelLarge)
+                    OutlinedButton(
+                        enabled = active != null && active.text.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { estimatedWordFollow = !estimatedWordFollow }
+                    ) {
+                        Text(if (estimatedWordFollow)
+                            "◉ Geschatte woordvolger aan · tik om uit te zetten"
+                        else "○ Geschatte woordvolger proberen")
+                    }
+                    if (estimatedWordFollow) {
+                        Text(
+                            "LET OP · alleen gelijkmatig verdeeld over de bestaande " +
+                                "SRT/VTT-tijdcode, niet echt herkende of uitgelijnde " +
+                                "spraakwoorden. Zet uit om op woordkaarten te tikken.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     Text("Woordkaarten bij je eigen SRT/VTT: kies zelf de teksttaal. " +
                         "Onbekende talen krijgen geen verzonnen vertaling of woordtiming.",
                         style = MaterialTheme.typography.labelSmall)
@@ -1200,6 +1225,29 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         if (active == null) {
                             Text("Gebruik Vorige/Volgende om naar een ondertitel te springen.",
                                 style = MaterialTheme.typography.headlineMedium)
+                        } else if (estimatedWordFollow) {
+                            // This is a visual approximation from user-supplied
+                            // cue duration, never Android speech-word timestamps.
+                            val range = PrivateCueWordProgress.estimatedSpan(
+                                active.text, cueStart(active), cueEnd(active), displayTimeMs
+                            )
+                            val primary = MaterialTheme.colorScheme.primary
+                            val highlighted = remember(active.text, range, primary) {
+                                buildAnnotatedString {
+                                    append(active.text)
+                                    if (range != null) addStyle(
+                                        SpanStyle(
+                                            background = primary.copy(alpha = 0.28f),
+                                            fontWeight = FontWeight.Bold
+                                        ), range.first, range.last + 1
+                                    )
+                                }
+                            }
+                            Text(
+                                highlighted,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    textDirection = TextDirection.ContentOrRtl)
+                            )
                         } else {
                             OfflineWordText(
                                 text = active.text,
@@ -1212,7 +1260,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             )
                         }
                     }
-                    Text("Tik op een woord voor de bestaande lokale woordkaart. " +
+                    Text((if (estimatedWordFollow)
+                        "Zet de geschatte woordvolger uit om woordkaarten te openen. "
+                    else "Tik op een woord voor de bestaande lokale woordkaart. ") +
                         "Je eigen betekenis wordt uitsluitend na afzonderlijk Bewaar " +
                         "opgeslagen in Mijn eigen woorden; het audiobestand blijft ongewijzigd.",
                         style = MaterialTheme.typography.labelSmall)

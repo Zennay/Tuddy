@@ -1,5 +1,19 @@
 # Tuddy 🎙️
 
+## Nieuw: optionele geschatte woordvolger bij eigen audio
+
+In **▶ Eigen audio met tijdcodes afspelen…** kun je nu bewust
+**Geschatte woordvolger proberen** aanzetten. Tuddy markeert dan
+tijdelijk een woord per actieve SRT/VTT-regel volgens een **gelijke
+verdeling van de door jou aangeleverde regeltijd**. Dit is géén
+gemeten woorduitlijning, echte transcriptie of automatische
+spraakherkenning. De modus is standaard uit, wordt bij audio
+wisselen/afsluiten gewist en kan op ieder moment weer uit om de
+bestaande aanklikbare woordkaarten te gebruiken.
+[Werking en beperkingen](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
 ## Nieuw: bewaar zelf gekozen ondertitelzinnen als privé-oefenzin
 
 In de eigen SRT/VTT-audiospeler kun je een actieve Kurmanji-, Sorani-
