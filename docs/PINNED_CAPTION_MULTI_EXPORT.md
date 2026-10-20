@@ -124,6 +124,12 @@ Selecteer daarna precies één uitvoerformaat:
   verschillende taalparen worden niet samengevoegd. Het scherm toont
   het aantal unieke tweetalige paren, het effectieve aantal kaartjes
   (bij beide richtingen dubbel) en een leesbare voor-/achterkant-preview.
+  Met **Toon taalcode bij elke kaartzijde** wordt ieder veld optioneel
+  voorafgegaan door bijvoorbeeld `[nl]` of `[en]`, ook als je de
+  vraag- en antwoordrichting omdraait. De taalcode wordt uit het
+  oorspronkelijke taalpaar gehaald, niet automatisch gedetecteerd.
+  De bestandsinhoud en ruwe preview tonen exact dezelfde labels.
+  Onbruikbare of onveilige taalcodes worden voor deze optie geweigerd.
   De exacte uitvoer is vóór opslaan in de ruwe bestandspreview te bekijken.
   Emoji en andere geldige Unicode-tekens blijven behouden; ongeldige
   losse UTF-16-surrogaten worden geweigerd in plaats van ongemerkt
