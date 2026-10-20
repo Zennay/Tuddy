@@ -8,6 +8,7 @@ internal enum class PinnedCaptionFormat(
 ) {
     TXT("Gesprek · TXT", "text/plain", "Tuddy-selectie.txt"),
     TSV("Leerkaarten · TSV", "text/tab-separated-values", "Tuddy-eigen-leerkaarten.tsv"),
+    CSV("Leerkaarten · CSV", "text/csv", "Tuddy-eigen-leerkaarten.csv"),
     JSON("Archief · JSON", "application/json", "Tuddy-selectie.json"),
     HTML("Afdrukbaar · HTML", "text/html", "Tuddy-selectie.html"),
     SRT("Ondertitelconcept · SRT", "application/x-subrip", "Tuddy-selectie-concept.srt"),
@@ -118,7 +119,8 @@ internal object PrivatePinnedCaptionExport {
             it.caption.sourceCode == languagePair.first &&
                 it.caption.targetCode == languagePair.second
         }
-        if (format == PinnedCaptionFormat.TSV) {
+        if (format == PinnedCaptionFormat.TSV ||
+            format == PinnedCaptionFormat.CSV) {
             return selected.filter { row ->
                 row.caption.status == "Lokaal vertaald" &&
                     row.caption.translated.isNotBlank() &&
@@ -172,6 +174,7 @@ internal object PrivatePinnedCaptionExport {
         return when (format) {
             PinnedCaptionFormat.TXT -> PrivateTranscriptExport.snapshot(rows)
             PinnedCaptionFormat.TSV -> PrivatePinnedCaptionStudyTsv.snapshot(rows, studyDirection)
+            PinnedCaptionFormat.CSV -> PrivatePinnedCaptionStudyCsv.snapshot(rows, studyDirection)
             PinnedCaptionFormat.JSON -> PrivateTranscriptJsonExport.snapshot(rows)
             PinnedCaptionFormat.HTML -> PrivatePrintableConversation.snapshot(rows, onlyFinished = false)
             PinnedCaptionFormat.SRT ->
@@ -256,5 +259,34 @@ internal object PrivatePinnedCaptionStudyTsv {
             if (out.length > MAX_BYTES) return null
         }
         return out.toString().toByteArray(Charsets.UTF_8).takeIf { it.size <= MAX_BYTES }
+    }
+}
+
+/**
+ * CSV companion to the explicitly chosen private TSV study cards.
+ * Derive from the exact same bounded two-column UTF-8 TSV snapshot so there
+ * is no mismatch in selected cards, unverified translations or formula safety.
+ * RFC 4180 style comma separator, double-quoted cells and CRLF line endings.
+ * No network calls, additional permissions or hidden persistence.
+ */
+internal object PrivatePinnedCaptionStudyCsv {
+    private const val MAX_BYTES = 262_144
+
+    fun snapshot(rows: List<TranscriptExportRow>, direction: PinnedStudyDirection): ByteArray? {
+        val source = PrivatePinnedCaptionStudyTsv.snapshot(rows, direction)
+            ?.toString(Charsets.UTF_8) ?: return null
+        val csv = StringBuilder()
+        for (line in source.lineSequence()) {
+            if (line.isEmpty()) continue
+            val fields = line.split('\t')
+            if (fields.size != 2) return null
+            csv.append('"').append(fields[0].replace("\"", "\"\"")).append('"')
+                .append(',').append('"').append(fields[1].replace("\"", "\"\""))
+                .append('"').append("\r\n")
+            if (csv.length > MAX_BYTES) return null
+        }
+        if (csv.isEmpty()) return null
+        return csv.toString().toByteArray(Charsets.UTF_8)
+            .takeIf { it.size <= MAX_BYTES }
     }
 }
