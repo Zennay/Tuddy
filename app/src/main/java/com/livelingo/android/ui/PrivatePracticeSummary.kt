@@ -15,7 +15,8 @@ internal fun privatePracticeSummary(
     ratings: Map<Pair<Long, Long>, String>,
     completedRoute: List<Pair<Long, Long>>,
     completedRounds: Int,
-    guidedActive: Boolean
+    guidedActive: Boolean,
+    forExport: Boolean = false
 ): String {
     fun clock(millis: Long): String {
         val seconds = millis.coerceAtLeast(0L) / 1000L
@@ -80,8 +81,14 @@ internal fun privatePracticeSummary(
             if (guidedActive) appendLine("Er loopt een route; deze telt nog niet als voltooid.")
         }
         appendLine()
+        if (forExport) {
+            appendLine("Dit verslag is alleen na mijn expliciete bestandskeuze bewaard.")
+            appendLine("De gekozen Android-provider kan het bestand bewaren of synchroniseren.")
+            appendLine("Geen audio, audio-URI, automatische uitspraakanalyse of betrouwbare woordtiming.")
+        } else {
         appendLine("Deze tekst wordt uitsluitend in dit tijdelijke scherm getoond.")
         appendLine("Selecteren/kopiëren kan via Android. Daarna kan jouw klembord-app de tekst verwerken.")
         appendLine("Tuddy bewaart niets automatisch en verzendt geen audiodata.")
+        }
     }
 }

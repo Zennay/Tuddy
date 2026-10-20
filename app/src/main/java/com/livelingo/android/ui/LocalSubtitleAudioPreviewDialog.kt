@@ -5,6 +5,8 @@ import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.net.Uri
 import android.os.SystemClock
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.rememberScrollState
@@ -116,6 +118,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var completedGuidedRoute by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
     var completedGuidedRounds by remember { mutableIntStateOf(0) }
     var practiceReportOpen by remember { mutableStateOf(false) }
+    // An immutable user-approved document lives only while the Android
+    // destination chooser is open; never retain the audio URI or audio bytes.
+    var pendingPracticeHtml by remember { mutableStateOf<Pair<String, ByteArray>?>(null) }
     // Human judgement only: no speech recognition or pronunciation scoring.
     var passageRatings by remember {
         mutableStateOf<Map<Pair<Long, Long>, String>>(emptyMap())
@@ -136,6 +141,40 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var phraseDraftApproved by remember { mutableStateOf(false) }
     var phraseDraftNotice by remember { mutableStateOf("") }
 
+    fun exportablePracticeSummary(): String = privatePracticeSummary(
+        cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
+        completedGuidedRoute, completedGuidedRounds, guidedActive,
+        forExport = true
+    )
+
+    val savePracticeHtml = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri ->
+        val pending = pendingPracticeHtml
+        pendingPracticeHtml = null
+        if (uri != null && pending != null) {
+            val updatedSummary = exportablePracticeSummary()
+            val updatedBytes = PrivatePrintablePracticeSummary.snapshot(updatedSummary)
+            if (!prepared || savedPracticePassages.isEmpty() ||
+                updatedSummary != pending.first || updatedBytes == null ||
+                !updatedBytes.contentEquals(pending.second)
+            ) {
+                notice = "Mijn luisteroefening is gewijzigd. Bekijk en bewaar opnieuw."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use {
+                        it.write(pending.second)
+                        it.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                notice = if (saved)
+                    "Alleen het privé luisteroverzicht als HTML opgeslagen. Controleer je bestandsprovider."
+                else "Luisteroverzicht niet opgeslagen. Kies een andere opslaglocatie."
+            }
+        }
+    }
+
     fun closeAudio() {
         val old = player
         player = null
@@ -155,6 +194,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         completedGuidedRoute = emptyList()
         completedGuidedRounds = 0
         practiceReportOpen = false
+        pendingPracticeHtml = null
         guidedActive = false
         guidedQueue = emptyList()
         guidedIndex = 0
@@ -1369,6 +1409,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         "Selecteer alleen zelf tekst als je die via Android wilt kopiëren; " +
                         "je klembord- of toetsenbord-app kan een kopie dan lezen.",
                         style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Je kunt ook bewust een zelfstandig, afdrukbaar HTML-verslag " +
+                            "opslaan. Externe Android-opslag kan het synchroniseren; " +
+                            "er gaan geen audio-opnamen of audiobestandsnamen mee.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     SelectionContainer {
                         Text(
                             practiceSummaryText,
@@ -1384,6 +1430,23 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 TextButton(onClick = { practiceReportOpen = false }) {
                     Text("Sluit zonder opslaan")
                 }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                    onClick = {
+                        // Full overview was shown before this explicit opt-in.
+                        val report = exportablePracticeSummary()
+                        val html = PrivatePrintablePracticeSummary.snapshot(report)
+                        if (html == null) {
+                            notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
+                        } else {
+                            pendingPracticeHtml = report to html
+                            practiceReportOpen = false
+                            savePracticeHtml.launch("Tuddy-mijn-luisteroefening.html")
+                        }
+                    }
+                ) { Text("Bewaar zelf HTML…") }
             }
         )
     }
