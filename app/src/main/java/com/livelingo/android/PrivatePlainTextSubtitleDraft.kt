@@ -7,7 +7,7 @@ import java.util.Locale
  * chosen synthetic durations. These are NOT speech timestamps, word alignment, or translations.
  * Only used after deliberate manual input; no audio, clipboard, or I/O.
  */
-internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS, TIMED_PAIRED_COLUMNS }
+internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS, TIMED_PAIRED_COLUMNS, PAIRED_TEXTBOXES }
 
 internal object PrivatePlainTextSubtitleDraft {
     private const val MAX_BYTES = 262_144
@@ -27,13 +27,47 @@ internal object PrivatePlainTextSubtitleDraft {
         raw: String,
         startMillis: Long,
         durationMillis: Long,
-        splitMode: PlainSubtitleSplitMode = PlainSubtitleSplitMode.LINES
+        splitMode: PlainSubtitleSplitMode = PlainSubtitleSplitMode.LINES,
+        secondaryRaw: String = ""
     ): List<PrivateSubtitleCue>? {
         if (startMillis !in startOptions || durationMillis !in durationOptions) return null
         val bytes = raw.toByteArray(Charsets.UTF_8)
-        if (bytes.isEmpty() || bytes.size > MAX_BYTES ||
-            bytes.toString(Charsets.UTF_8) != raw) return null
+        val secondaryBytes = secondaryRaw.toByteArray(Charsets.UTF_8)
+        if (bytes.isEmpty() || bytes.size + secondaryBytes.size > MAX_BYTES ||
+            bytes.toString(Charsets.UTF_8) != raw ||
+            secondaryBytes.toString(Charsets.UTF_8) != secondaryRaw) return null
         val normalized = raw.removePrefix("\uFEFF").replace("\r\n", "\n").replace('\r', '\n')
+        if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) {
+            // The user provides two separate lists. They must have identical
+            // row counts; never silently drop blanks and shift translations.
+            fun lines(text: String): List<String> = text
+                .removePrefix("\uFEFF").replace("\r\n", "\n").replace('\r', '\n')
+                .trimEnd('\n').split('\n')
+            val originals = lines(raw)
+            val meanings = lines(secondaryRaw)
+            if (originals.isEmpty() || originals.size > MAX_CUES ||
+                originals.size != meanings.size) return null
+            val cues = originals.indices.map { index ->
+                val source = originals[index].trim()
+                val meaning = meanings[index].trim()
+                if (source.isEmpty() || meaning.isEmpty() ||
+                    source.length > 800 || meaning.length > 800 ||
+                    listOf(source, meaning).any { value ->
+                        "-->" in value || value.any { ch ->
+                            ch.isISOControl() || ch == '\uFFFD'
+                        }
+                    }) return null
+                val begin = startMillis + index.toLong() * durationMillis
+                val end = begin + durationMillis
+                if (end > MAX_TIME || end <= begin) return null
+                PrivateSubtitleCue(begin, end, label(begin), label(end),
+                    source + "\n" + meaning)
+            }
+            if (PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.SRT) == null ||
+                PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.WEBVTT) == null)
+                return null
+            return cues
+        }
         if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS) {
             // Four manually supplied columns: start, end, source, own meaning.
             // Unlike the estimated routes, timestamps are copied exactly.
@@ -74,6 +108,7 @@ internal object PrivatePlainTextSubtitleDraft {
                 .split(Regex("""(?<=[.!?。！？؟])\s+"""))
                 .map { it.trim() }.filter { it.isNotEmpty() }
             PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS -> return null // handled above
+            PlainSubtitleSplitMode.PAIRED_TEXTBOXES -> return null // handled above
             PlainSubtitleSplitMode.PAIRED_COLUMNS -> normalized.lines()
                 .map { it.trim() }.filter { it.isNotEmpty() }.map { row ->
                     val columns = row.split('\t')
