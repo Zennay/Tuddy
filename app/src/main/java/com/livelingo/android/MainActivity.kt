@@ -201,6 +201,8 @@ private fun TuddyScreen(
     // Null means every pinned caption is selected; a non-null set is an
     // explicit temporary selection for export or in-app practice.
     var pinnedChosenIds by remember { mutableStateOf<Set<Long>?>(null) }
+    // Single-step recovery of a mistakenly removed star or all temporary stars.
+    var pinnedRemovedUndo by remember { mutableStateOf(emptySet<Long>()) }
     var pinnedSearchTerm by remember { mutableStateOf("") }
     var pinnedManageScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
     var pinnedNewestFirst by remember { mutableStateOf(false) }
@@ -3112,9 +3114,10 @@ private fun TuddyScreen(
                                         }
                                     }) { Text("Ga naar uitspraak") }
                                     TextButton(onClick = {
+                                        pinnedRemovedUndo = setOf(line.id)
                                         captionPins = captionPins - line.id
                                         pinnedChosenIds = pinnedChosenIds?.minus(line.id)
-                                        pinsNotice = "Ster van deze uitspraak verwijderd."
+                                        pinsNotice = "Ster verwijderd. Herstel hieronder indien nodig."
                                     }) { Text("Verwijder alleen deze ster") }
                                     HorizontalDivider()
                                 }
@@ -3138,9 +3141,11 @@ private fun TuddyScreen(
                                         style = MaterialTheme.typography.bodySmall
                                     )
                                     TextButton(onClick = {
+                                        pinnedRemovedUndo = captionPins
                                         captionPins = emptySet()
                                         pinnedChosenIds = null
-                                        pinsNotice = "Alle markeringen van dit gesprek zijn gewist."
+                                        pinsNotice = "Alle sterren gewist. Herstel de laatste " +
+                                            "verwijdering hieronder zolang dit scherm open is."
                                     }) { Text("Wis markeringen") }
                                 }
                             }
@@ -3148,6 +3153,24 @@ private fun TuddyScreen(
                         if (pinsNotice.isNotBlank()) {
                             item(key = "notice") {
                                 Text(pinsNotice, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        if (pinnedRemovedUndo.isNotEmpty()) {
+                            item(key = "undo_removed") {
+                                val availableIds = lines.map { it.id }.toSet()
+                                val restore = pinnedRemovedUndo.intersect(availableIds)
+                                val withinLimit = (captionPins + restore).size <=
+                                    SessionCaptionPins.MAX_PINS
+                                TextButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = restore.isNotEmpty() && withinLimit,
+                                    onClick = {
+                                        captionPins = captionPins + restore
+                                        pinnedChosenIds = null
+                                        pinnedRemovedUndo = emptySet()
+                                        pinsNotice = "${restore.size} ster(ren) hersteld."
+                                    }
+                                ) { Text("↶ Herstel ${restore.size} laatst verwijderde ster(ren)") }
                             }
                         }
                     }
@@ -3772,6 +3795,7 @@ private fun TuddyScreen(
                         manuallyAssignedSpeakers.clear()
                         captionPins = emptySet()
                         pinnedChosenIds = null
+                        pinnedRemovedUndo = emptySet()
                         pinnedSearchTerm = ""
                         pinsOpen = false
                         pinnedExportOpen = false
@@ -4753,6 +4777,7 @@ private fun TuddyScreen(
                         enabled = captionPins.isNotEmpty(),
                         onClick = {
                             pinnedChosenIds = null
+                            pinnedRemovedUndo = emptySet()
                             pinnedSearchTerm = ""
                             pinnedManageScope = PinnedCaptionScope.ALL
                             pinnedNewestFirst = false
