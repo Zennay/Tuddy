@@ -104,6 +104,22 @@ internal fun SubtitlePasteDialog(
                         }) { Text((if (splitMode == PlainSubtitleSplitMode.SENTENCES) "✓ " else "") +
                             "Per zin (schatting)") }
                     }
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        splitMode = PlainSubtitleSplitMode.PAIRED_COLUMNS
+                        page = 0
+                    }) {
+                        Text((if (splitMode == PlainSubtitleSplitMode.PAIRED_COLUMNS) "✓ " else "") +
+                            "Twee handmatige tekstkolommen (tab gescheiden)")
+                    }
+                    if (splitMode == PlainSubtitleSplitMode.PAIRED_COLUMNS) {
+                        Text(
+                            "Plak per regel precies twee niet-lege velden gescheiden door " +
+                                "een tab (bijvoorbeeld vanuit een spreadsheet): " +
+                                "bronzin [TAB] eigen betekenis. Beide teksten verschijnen " +
+                                "onder elkaar, zonder automatische vertaling of taalcontrole.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.foundation.layout.Box {
                             OutlinedButton(onClick = { startMenu = true }) {
@@ -161,7 +177,11 @@ internal fun SubtitlePasteDialog(
                             inputTooLarge = true
                         }
                     },
-                    label = { Text(if (plainLines) "Eigen tekst of zinnen" else "SRT/WebVTT-brontekst") },
+                    label = { Text(when {
+                        !plainLines -> "SRT/WebVTT-brontekst"
+                        splitMode == PlainSubtitleSplitMode.PAIRED_COLUMNS -> "Brontaal [TAB] handmatige betekenis"
+                        else -> "Eigen tekst of zinnen"
+                    }) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 5,
                     maxLines = 12
@@ -174,8 +194,9 @@ internal fun SubtitlePasteDialog(
                 if (parsed == null) {
                     Text(
                         if (plainLines)
-                            "Geen geldig zinnenconcept: 1–500 niet-lege regels, " +
-                                "maximaal 800 tekens per regel en 256 KiB uitvoer."
+                            "Geen geldig tekstconcept: 1–500 regels, " +
+                                "maximaal 800 tekens per tekstregel. Twee kolommen " +
+                                "vereisen precies één tab en beide waarden per regel."
                         else "Geen volledig geldig SRT/WebVTT-document: " +
                             "controleer tijdcodes en maximaal 500 regels.",
                         color = MaterialTheme.colorScheme.error,
