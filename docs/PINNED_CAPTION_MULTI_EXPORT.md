@@ -24,8 +24,11 @@ tijdelijke markeringen of het echte gesprek niet.
 Wil je meteen oefenen zonder iets te bewaren? Open **★ gemarkeerd** en
 kies **Oefen ... gemarkeerde vertaalparen**. Alleen echt voltooide
 tweetalige zinnen komen in de bestaande tijdelijke oefendialoog.
-Kies de richting, onthul antwoorden, beoordeel jezelf en herhaal moeilijke
-kaartjes. De oefeningen blijven volledig in RAM, zijn niet gevalideerd
+Zet desgewenst **Oefen alleen mijn handmatig gecorrigeerde antwoorden** aan
+om modelantwoorden zonder eigen correctie ook binnen de oefenronde uit
+te sluiten. Als er geen geschikte eigen antwoorden zijn, kan die
+ronde niet gestart worden. Kies de richting, onthul antwoorden,
+beoordeel jezelf en herhaal moeilijke kaartjes. De oefeningen blijven volledig in RAM, zijn niet gevalideerd
 en verdwijnen zodra je sluit. De knop is uitgeschakeld tijdens microfoon-
 opname of wanneer er geen bruikbare tweetalige markeringen zijn.
 Dit verandert je markeringen, eigen archief of woordenschat niet.
