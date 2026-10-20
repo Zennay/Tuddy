@@ -98,7 +98,8 @@ internal fun SessionCaptionStudyDialog(
             .filter { it.status == "Lokaal vertaald" &&
                 it.original.isNotBlank() && it.translated.isNotBlank() &&
                 it.original != it.translated &&
-                it.original.length <= 400 && it.translated.length <= 400
+                it.original.codePointCount(0, it.original.length) <= 400 &&
+                it.translated.codePointCount(0, it.translated.length) <= 400
             }
             .distinctBy { it.id }
             .toList().takeLast(80)
