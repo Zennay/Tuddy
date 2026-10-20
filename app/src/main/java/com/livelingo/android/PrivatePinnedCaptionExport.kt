@@ -7,6 +7,7 @@ internal enum class PinnedCaptionFormat(
     val fileName: String
 ) {
     TXT("Gesprek · TXT", "text/plain", "Tuddy-selectie.txt"),
+    TSV("Leerkaarten · TSV", "text/tab-separated-values", "Tuddy-eigen-leerkaarten.tsv"),
     JSON("Archief · JSON", "application/json", "Tuddy-selectie.json"),
     HTML("Afdrukbaar · HTML", "text/html", "Tuddy-selectie.html"),
     SRT("Ondertitelconcept · SRT", "application/x-subrip", "Tuddy-selectie-concept.srt"),
@@ -20,6 +21,12 @@ internal enum class PinnedCaptionScope(val title: String) {
     TRANSLATED("Alleen voltooide vertalingen")
 }
 
+internal enum class PinnedStudyDirection(val title: String) {
+    SOURCE_TO_TARGET("Bronzin → eigen betekenis"),
+    TARGET_TO_SOURCE("Eigen betekenis → bronzin"),
+    BOTH("Beide richtingen · twee kaarten per zin")
+}
+
 internal data class PinnedCaptionRow(val id: Long, val caption: TranscriptExportRow)
 
 internal data class PendingPinnedCaptionExport(
@@ -28,6 +35,7 @@ internal data class PendingPinnedCaptionExport(
     val format: PinnedCaptionFormat,
     val scope: PinnedCaptionScope,
     val languagePair: Pair<String, String>?,
+    val studyDirection: PinnedStudyDirection,
     val subtitleOptions: SubtitleDraftOptions,
     val bytes: ByteArray
 )
@@ -65,6 +73,9 @@ internal object PrivatePinnedCaptionExport {
             it.caption.sourceCode == languagePair.first &&
                 it.caption.targetCode == languagePair.second
         }
+        if (format == PinnedCaptionFormat.TSV) return selected.filter {
+            it.caption.status == "Lokaal vertaald" && it.caption.translated.isNotBlank()
+        }
         if (format != PinnedCaptionFormat.SRT &&
             format != PinnedCaptionFormat.WEBVTT) return selected
         return selected.filter { row ->
@@ -88,7 +99,8 @@ internal object PrivatePinnedCaptionExport {
         format: PinnedCaptionFormat,
         subtitleOptions: SubtitleDraftOptions,
         scope: PinnedCaptionScope = PinnedCaptionScope.ALL,
-        languagePair: Pair<String, String>? = null
+        languagePair: Pair<String, String>? = null,
+        studyDirection: PinnedStudyDirection = PinnedStudyDirection.SOURCE_TO_TARGET
     ): ByteArray? {
         if (selection.isEmpty() || selection.size > SessionCaptionPins.MAX_PINS ||
             selection.map { it.id }.distinct().size != selection.size
@@ -98,6 +110,7 @@ internal object PrivatePinnedCaptionExport {
         if (rows.isEmpty()) return null
         return when (format) {
             PinnedCaptionFormat.TXT -> PrivateTranscriptExport.snapshot(rows)
+            PinnedCaptionFormat.TSV -> PrivatePinnedCaptionStudyTsv.snapshot(rows, studyDirection)
             PinnedCaptionFormat.JSON -> PrivateTranscriptJsonExport.snapshot(rows)
             PinnedCaptionFormat.HTML -> PrivatePrintableConversation.snapshot(rows, onlyFinished = false)
             PinnedCaptionFormat.SRT ->
@@ -107,5 +120,56 @@ internal object PrivatePinnedCaptionExport {
                 PrivateSubtitleDraftExport.snapshot(rows,
                     subtitleOptions.copy(format = SubtitleDraftFormat.WEBVTT))
         }
+    }
+}
+
+/**
+ * Explicitly exported two-column study cards, suitable for manual import in
+ * programs that accept UTF-8 tab-separated front/back fields. Only genuinely
+ * completed translations enter the file; cards are not a verified dictionary.
+ * No local persistence, clipboard or network access.
+ */
+internal object PrivatePinnedCaptionStudyTsv {
+    private const val MAX_BYTES = 262_144
+
+    private fun field(text: String): String {
+        // Each card must remain exactly one physical TSV line.
+        val flattened = text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
+            .map { char ->
+                if (char.isISOControl() || char in '\u202a'..'\u202e' ||
+                    char in '\u2066'..'\u2069' ||
+                    char == '\u2028' || char == '\u2029') ' ' else char
+            }.joinToString("").trim()
+        // Spreadsheet viewers must never execute imported user text as a formula.
+        val neutral = if (flattened.startsWith("=") || flattened.startsWith("+") ||
+            flattened.startsWith("-") || flattened.startsWith("@")) "'$flattened" else flattened
+        return neutral.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    }
+
+    fun snapshot(rows: List<TranscriptExportRow>, direction: PinnedStudyDirection): ByteArray? {
+        if (rows.isEmpty() || rows.size > SessionCaptionPins.MAX_PINS) return null
+        if (rows.any { it.status != "Lokaal vertaald" || it.translated.isBlank() ||
+                it.original.isBlank() || it.original.length > 4096 ||
+                it.translated.length > 4096 ||
+                it.original.any { ch -> Character.isSurrogate(ch) || ch == '\u0000' } ||
+                it.translated.any { ch -> Character.isSurrogate(ch) || ch == '\u0000' }
+        }) return null
+        // Inherit existing constraints on code fields, timestamps, unsafe controls
+        // and entire source row validity before offering an editable export.
+        if (PrivateTranscriptJsonExport.snapshot(rows) == null) return null
+        val out = StringBuilder()
+        for (row in rows) {
+            val source = field(row.original)
+            val meaning = field(row.translated)
+            if (source.isBlank() || meaning.isBlank()) return null
+            if (direction != PinnedStudyDirection.TARGET_TO_SOURCE) {
+                out.append(source).append('\t').append(meaning).append('\n')
+            }
+            if (direction != PinnedStudyDirection.SOURCE_TO_TARGET) {
+                out.append(meaning).append('\t').append(source).append('\n')
+            }
+            if (out.length > MAX_BYTES) return null
+        }
+        return out.toString().toByteArray(Charsets.UTF_8).takeIf { it.size <= MAX_BYTES }
     }
 }
