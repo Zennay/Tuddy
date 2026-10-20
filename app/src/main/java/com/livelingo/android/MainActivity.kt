@@ -3285,7 +3285,7 @@ private fun TuddyScreen(
                         }
                         if (pinnedExportFormat == PinnedCaptionFormat.TSV) {
                             HorizontalDivider()
-                            Text("Kies hoe je zelfgeschreven tweetalige leerkaarten wilt oefenen",
+                            Text("Kies hoe je de tweetalige modelvertalingen wilt oefenen",
                                 style = MaterialTheme.typography.titleSmall)
                             PinnedStudyDirection.entries.forEach { direction ->
                                 TextButton(onClick = {
@@ -3354,7 +3354,7 @@ private fun TuddyScreen(
                                 (if (pinnedStudyDirection == PinnedStudyDirection.BOTH) 2 else 1)
                             Text(
                                 "$cards studiekaarten met twee tekstkolommen; " +
-                                    "eigen vertalingen zijn niet onafhankelijk gecontroleerd. " +
+                                    "lokale modelvertalingen zijn niet onafhankelijk gecontroleerd. " +
                                     "Open het exportbestand alleen in vertrouwde apps.",
                                 style = MaterialTheme.typography.bodySmall
                             )
