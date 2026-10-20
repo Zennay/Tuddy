@@ -161,10 +161,18 @@ internal object PrivatePinnedCaptionStudyTsv {
                     char in '\u2066'..'\u2069' ||
                     char == '\u2028' || char == '\u2029') ' ' else char
             }.joinToString("").trim()
-        // Spreadsheet viewers must never execute imported user text as a formula.
-        val neutral = if (flattened.startsWith("=") || flattened.startsWith("+") ||
-            flattened.startsWith("-") || flattened.startsWith("@")) "'$flattened" else flattened
-        return neutral.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        // TSV is literal data, not HTML: leave &, <, > and emoji unchanged.
+        // Prefix spreadsheet formula triggers with an apostrophe, even when
+        // preceded by common invisible formatting characters. Importers may
+        // choose whether to display the leading apostrophe.
+        val formulaCandidate = flattened.dropWhile {
+            it == '\uFEFF' || it == '\u200B' || it == '\u2060'
+        }
+        return if (formulaCandidate.startsWith("=") ||
+            formulaCandidate.startsWith("+") ||
+            formulaCandidate.startsWith("-") ||
+            formulaCandidate.startsWith("@")
+        ) "'$flattened" else flattened
     }
 
     fun snapshot(rows: List<TranscriptExportRow>, direction: PinnedStudyDirection): ByteArray? {
