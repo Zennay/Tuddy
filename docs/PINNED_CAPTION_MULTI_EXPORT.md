@@ -111,7 +111,7 @@ Selecteer daarna precies één uitvoerformaat:
 - **TXT**: leesbare originele regels, taalpaar, tijdstip en alleen werkelijk
   voltooide vertalingen.
 - **TSV-/CSV-leerkaarten**: importeer daadwerkelijk voltooide lokale modelvertaalparen
-  in een kaartprogramma dat twee UTF-8-tabgescheiden velden ondersteunt
+  in een kaartprogramma dat UTF-8-tekst met twee velden ondersteunt
   (voorzijde en achterzijde). Kies **Bronzin → lokale modelvertaling**,
   **Lokale modelvertaling → bronzin** of **beide richtingen** (twee kaarten per
   geldig paar). Status "Lokaal" zonder eigenlijke vertaling telt niet mee.
@@ -127,10 +127,13 @@ Selecteer daarna precies één uitvoerformaat:
   vervormd. Regeleinden en tabs in eigen teksten worden spaties;
   mogelijke spreadsheetformules krijgen een leidende apostrof, ook na
   onzichtbare opmaakkarakters. De werkelijke tekst (inclusief & en <)
-  blijft platte TSV-data en wordt niet als HTML-geëscaped. Een studietool
-  kan de apostrof anders tonen afhankelijk van diens importinstellingen;
-  kies UTF-8 met twee tabgescheiden tekstkolommen en inspecteer het
-  resultaat. Geen automatische kwaliteits-
+  blijft platte UTF-8-data en wordt niet als HTML-geëscaped.
+  Kies TSV met tabs als kolomscheiding, of CSV met komma's,
+  dubbelgequote cellen, verdubbelde dubbele aanhalingstekens
+  en CRLF-regelafsluitingen. Beide bestanden bevatten precies
+  twee tekstkolommen zonder kopregel. De gekozen import-app kan
+  de formulebeschermende apostrof anders tonen; inspecteer daarom
+  het resultaat. Geen automatische kwaliteits-
   of taalcontrole. Het zijn modelantwoorden, niet jouw zelfgeschreven
   of door moedertaalsprekers geverifieerde betekenissen. Je leerkaarten blijven ook zonder verdere
   toestemming *niet* als app-privé studiekaarten opgeslagen.
