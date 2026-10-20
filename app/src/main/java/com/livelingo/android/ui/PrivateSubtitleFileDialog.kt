@@ -93,6 +93,9 @@ internal fun PrivateSubtitleFileDialog(
     var splitFirst by remember { mutableStateOf("") }
     var splitSecond by remember { mutableStateOf("") }
     var editValue by remember { mutableStateOf("") }
+    var editSourceLine by remember { mutableStateOf("") }
+    var editMeaningLine by remember { mutableStateOf("") }
+    var editAsPairedLines by remember { mutableStateOf(false) }
     var requestSave by remember { mutableStateOf<SubtitleDraftFormat?>(null) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
@@ -476,6 +479,10 @@ internal fun PrivateSubtitleFileDialog(
                         onCorrectText = {
                             editIndex = found[shownIndex].first
                             editValue = current.text
+                            val lines = current.text.lines()
+                            editAsPairedLines = lines.size == 2
+                            editSourceLine = lines.first()
+                            editMeaningLine = lines.getOrNull(1).orEmpty()
                         },
                         onExactTime = { exactTimeIndex = found[shownIndex].first },
                         onStartEarlier = { nudgeSelected(-500L, 0L) },
@@ -1121,17 +1128,46 @@ internal fun PrivateSubtitleFileDialog(
                     Text("De tijdcode blijft gelijk. Tuddy controleert of vertaalt " +
                         "de nieuwe tekst niet automatisch.",
                         style = MaterialTheme.typography.bodySmall)
-                    OutlinedTextField(value = editValue,
-                        onValueChange = { if (it.length <= 2400) editValue = it },
-                        label = { Text("Ondertiteltekst") },
-                        modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(
-                            textDirection = TextDirection.ContentOrRtl))
+                    if (editAsPairedLines) {
+                        Text("Deze kaart heeft precies twee tekstregels. Je kunt " +
+                            "beide handmatig en apart aanpassen. Tuddy bepaalt niet " +
+                            "of de eerste regel daadwerkelijk een brontaal is.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(value = editSourceLine,
+                            onValueChange = {
+                                if (it.length <= 800 && '\n' !in it && '\r' !in it)
+                                    editSourceLine = it
+                            },
+                            label = { Text("Eerste tekstregel (eigen bron)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2, maxLines = 4,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = TextDirection.ContentOrRtl))
+                        OutlinedTextField(value = editMeaningLine,
+                            onValueChange = {
+                                if (it.length <= 800 && '\n' !in it && '\r' !in it)
+                                    editMeaningLine = it
+                            },
+                            label = { Text("Tweede tekstregel (eigen betekenis)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2, maxLines = 4,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = TextDirection.ContentOrRtl))
+                    } else {
+                        OutlinedTextField(value = editValue,
+                            onValueChange = { if (it.length <= 2400) editValue = it },
+                            label = { Text("Ondertiteltekst") },
+                            modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = TextDirection.ContentOrRtl))
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val next = PrivateSubtitleDraftEditor.revise(draft, position, editValue)
+                    val updatedText = if (editAsPairedLines)
+                        editSourceLine + "\n" + editMeaningLine else editValue
+                    val next = PrivateSubtitleDraftEditor.revise(draft, position, updatedText)
                     if (next == null) {
                         notice = "Ongeldige tekst. Maximaal acht regels, zonder controlecodes."
                     } else {
