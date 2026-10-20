@@ -47,15 +47,29 @@ internal fun SubtitlePasteDialog(
     var startMenu by remember { mutableStateOf(false) }
     var inputTooLarge by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
+    var firstRow by remember { mutableStateOf("1") }
+    var lastRow by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
     val parsed = remember(raw, plainLines, startMs, durationMs, splitMode) {
         if (plainLines) PrivatePlainTextSubtitleDraft.preview(raw, startMs, durationMs, splitMode)
         else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
     }
-    val filtered = remember(parsed, search) {
-        parsed?.withIndex()?.filter {
-            it.value.text.contains(search.trim().take(120), ignoreCase = true)
-        }.orEmpty()
+    // Explicit 1-based row selection, never quietly clamped after editing.
+    // A blank end means all rows through the end of the parsed source.
+    val selectedRange = remember(parsed, firstRow, lastRow) {
+        val start = firstRow.toIntOrNull()
+        val end = if (lastRow.isBlank()) parsed?.size else lastRow.toIntOrNull()
+        if (parsed == null || start == null || end == null ||
+            start !in 1..parsed.size || end !in start..parsed.size) null
+        else start..end
+    }
+    val filtered = remember(parsed, selectedRange, search) {
+        val scope = selectedRange
+        if (scope == null) emptyList()
+        else parsed.orEmpty().withIndex().filter { row ->
+            row.index + 1 in scope &&
+                row.value.text.contains(search.trim().take(120), ignoreCase = true)
+        }
     }
     val pageSize = 15
     val countPages = maxOf(1, (filtered.size + pageSize - 1) / pageSize)
@@ -204,11 +218,45 @@ internal fun SubtitlePasteDialog(
                     )
                 } else {
                     Text(
-                        "${parsed.size} regels in het tijdelijke concept. " +
+                        "${parsed.size} regels in de oorspronkelijke invoer. " +
                             (if (plainLines) "Tijdcodes zijn volledig geschat." else
                                 "Tijdcodes komen uit de geplakte bron."),
                         style = MaterialTheme.typography.titleSmall
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = firstRow,
+                            onValueChange = {
+                                firstRow = it.filter(Char::isDigit).take(4)
+                                page = 0
+                            },
+                            label = { Text("Van regel") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = lastRow,
+                            onValueChange = {
+                                lastRow = it.filter(Char::isDigit).take(4)
+                                page = 0
+                            },
+                            label = { Text("Tot (leeg = alle)") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                    }
+                    if (selectedRange == null) {
+                        Text("Kies een geldig bereik tussen 1 en ${parsed.size}; " +
+                            "er wordt niets overgeslagen zonder jouw keuze.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        Text(
+                            "Alleen ${selectedRange.count()} gekozen regels worden geopend. " +
+                                "Zoeken verandert de selectie niet.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     OutlinedTextField(
                         value = search,
                         onValueChange = {
@@ -251,15 +299,22 @@ internal fun SubtitlePasteDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = parsed != null && !inputTooLarge, onClick = {
+            TextButton(enabled = parsed != null && selectedRange != null &&
+                !inputTooLarge, onClick = {
                 if (inputTooLarge) return@TextButton
-                // Fresh full parse with current settings at consent, never a
-                // filtered preview or previously cached snapshot.
+                // Fresh full parse, row range and exact selected cue snapshot
+                // at consent, independent of the search query and page.
                 val confirmed = if (plainLines)
                     PrivatePlainTextSubtitleDraft.preview(raw, startMs, durationMs, splitMode)
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
-                if (confirmed != null) onAccept(confirmed.toList())
-            }) { Text("Open tijdelijk concept") }
+                val start = firstRow.toIntOrNull() ?: return@TextButton
+                val end = if (lastRow.isBlank()) confirmed?.size
+                    else lastRow.toIntOrNull()
+                if (confirmed == null || end == null ||
+                    start !in 1..confirmed.size || end !in start..confirmed.size)
+                    return@TextButton
+                onAccept(confirmed.subList(start - 1, end).toList())
+            }) { Text("Open gekozen regels") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Annuleren") }
