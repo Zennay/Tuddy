@@ -65,10 +65,10 @@ Selecteer daarna precies één uitvoerformaat:
 
 - **TXT**: leesbare originele regels, taalpaar, tijdstip en alleen werkelijk
   voltooide vertalingen.
-- **TSV-leerkaarten**: importeer je daadwerkelijk lokaal voltooide vertaalparen
+- **TSV-leerkaarten**: importeer daadwerkelijk voltooide lokale modelvertaalparen
   in een kaartprogramma dat twee UTF-8-tabgescheiden velden ondersteunt
-  (voorzijde en achterzijde). Kies **Bronzin → eigen betekenis**,
-  **Eigen betekenis → bronzin** of **beide richtingen** (twee kaarten per
+  (voorzijde en achterzijde). Kies **Bronzin → lokale modelvertaling**,
+  **Lokale modelvertaling → bronzin** of **beide richtingen** (twee kaarten per
   geldig paar). Status "Lokaal" zonder eigenlijke vertaling telt niet mee.
   Lege of nog niet vertaalde regels worden vooraf uit de teller gehaald
   en komen nooit als verzonnen achterkant in het bestand. Identieke
@@ -86,7 +86,8 @@ Selecteer daarna precies één uitvoerformaat:
   kan de apostrof anders tonen afhankelijk van diens importinstellingen;
   kies UTF-8 met twee tabgescheiden tekstkolommen en inspecteer het
   resultaat. Geen automatische kwaliteits-
-  of taalcontrole. Je leerkaarten blijven ook zonder verdere
+  of taalcontrole. Het zijn modelantwoorden, niet jouw zelfgeschreven
+  of door moedertaalsprekers geverifieerde betekenissen. Je leerkaarten blijven ook zonder verdere
   toestemming *niet* als app-privé studiekaarten opgeslagen.
 - **JSON**: dezelfde beperkte selectie in Tuddy's bestaande
   privéarchief-formaat, opnieuw te openen in de read-only archieflezer.
