@@ -1014,6 +1014,7 @@ private fun TuddyScreen(
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             val removed = lines.removeAt(0)
                             captionPins = captionPins - removed.id
+                            pinnedStudyEdits.remove(removed.id)
                             manuallyAssignedSpeakers.remove(removed.id)
                             if (editingCaptionId == removed.id) {
                                 editingCaptionId = null
@@ -1153,6 +1154,7 @@ private fun TuddyScreen(
             val removed = lines.removeAt(0)
             manuallyAssignedSpeakers.remove(removed.id)
             captionPins = captionPins - removed.id
+                            pinnedStudyEdits.remove(removed.id)
             if (editingCaptionId == removed.id) {
                 editingCaptionId = null
                 pendingCaptionLanguageChange = null
@@ -3793,6 +3795,7 @@ private fun TuddyScreen(
                             pendingCaptionShare = null
                             exportStatus = ""
                             captionPins = captionPins - id
+                            pinnedStudyEdits.remove(id)
                             manuallyAssignedSpeakers.remove(id)
                             if (editingCaptionId == id) {
                                 editingCaptionId = null
@@ -4660,6 +4663,7 @@ private fun TuddyScreen(
                                 val removed = lines.removeAt(0)
                                 manuallyAssignedSpeakers.remove(removed.id)
                                 captionPins = captionPins - removed.id
+                            pinnedStudyEdits.remove(removed.id)
                                 if (editingCaptionId == removed.id) {
                                     editingCaptionId = null
                                     captionCorrectionDraft = ""
