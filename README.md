@@ -5,7 +5,8 @@
 In **▶ Eigen audio met tijdcodes afspelen…** kun je nu bewust
 **Geschatte woordvolger proberen** aanzetten. Tuddy markeert dan
 tijdelijk een woord per actieve SRT/VTT-regel volgens een **gelijke
-verdeling van de door jou aangeleverde regeltijd**. Dit is géén
+verdeling van de door jou aangeleverde regeltijd**. Met vorige/huidige/
+volgende woordstappen spring je handmatig naar geschatte audiomomenten. Dit is géén
 gemeten woorduitlijning, echte transcriptie of automatische
 spraakherkenning. De modus is standaard uit, wordt bij audio
 wisselen/afsluiten gewist en kan op ieder moment weer uit om de

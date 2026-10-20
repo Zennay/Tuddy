@@ -549,6 +549,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
         displayTimeMs >= cueStart(it) && displayTimeMs < cueEnd(it)
     } else -1
     val active = cues.getOrNull(activeIndex)
+    val estimatedCueWord = if (estimatedWordFollow && active != null) {
+        PrivateCueWordProgress.estimate(
+            active.text, cueStart(active), cueEnd(active), displayTimeMs
+        )
+    } else null
     val nextIndex = cues.indexOfFirst {
         val start = cueStart(it)
         start > positionMs + 250L && start in 0L until durationMs
@@ -1190,6 +1195,44 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
+                    if (estimatedWordFollow && estimatedCueWord != null && active != null) {
+                        Text(
+                            "Geschat woord ${estimatedCueWord.index + 1} van ${estimatedCueWord.count}",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = estimatedCueWord.index > 0,
+                                onClick = {
+                                    PrivateCueWordProgress.estimatedWordStart(
+                                        active.text, cueStart(active), cueEnd(active),
+                                        estimatedCueWord.index - 1
+                                    )?.let(::seekTo)
+                                }
+                            ) { Text("◀ Vorig woord") }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = { seekTo(estimatedCueWord.estimatedStartMs) }
+                            ) { Text("↻ Woord") }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = estimatedCueWord.index + 1 < estimatedCueWord.count,
+                                onClick = {
+                                    PrivateCueWordProgress.estimatedWordStart(
+                                        active.text, cueStart(active), cueEnd(active),
+                                        estimatedCueWord.index + 1
+                                    )?.let(::seekTo)
+                                }
+                            ) { Text("Volgend ▶") }
+                        }
+                        Text("De woordstappen springen naar geschatte momenten; " +
+                            "ze volgen geen gemeten uitspraak of audioanalyse.",
+                            style = MaterialTheme.typography.labelSmall)
+                    }
                     Text("Woordkaarten bij je eigen SRT/VTT: kies zelf de teksttaal. " +
                         "Onbekende talen krijgen geen verzonnen vertaling of woordtiming.",
                         style = MaterialTheme.typography.labelSmall)
@@ -1228,9 +1271,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         } else if (estimatedWordFollow) {
                             // This is a visual approximation from user-supplied
                             // cue duration, never Android speech-word timestamps.
-                            val range = PrivateCueWordProgress.estimatedSpan(
-                                active.text, cueStart(active), cueEnd(active), displayTimeMs
-                            )
+                            val range = estimatedCueWord?.span
                             val primary = MaterialTheme.colorScheme.primary
                             val highlighted = remember(active.text, range, primary) {
                                 buildAnnotatedString {
