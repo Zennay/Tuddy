@@ -4,8 +4,11 @@ Kopieer je eigen SRT/WebVTT-tekst naar de tijdelijke ondertiteleditor
 zonder eerst een bestand te maken. Of kies **Gewone zinnen** om eigen
 tekst per regel of volgens geschatte leestekengrenzen om te zetten naar
 losse ondertitelkaarten met **zelf gekozen, niet aan audio gekoppelde**
-tijden. Zoek en blader door de volledige preview en bevestig pas daarna.
-Een tweede geplakt spoor kan via de bestaande tijdmodi worden gecombineerd
+tijden. Je kunt ook **twee zelfgeschreven tekstkolommen** (bron + eigen
+betekenis, gescheiden door een tab) per ondertitelkaart combineren. Bekijk
+het volledige bronmateriaal, filter op tekst en kies desgewenst een exact
+bereik bronregels voordat je alleen die regels opent. Een tweede geplakt
+spoor kan via de bestaande tijdmodi worden gecombineerd
 met behoud van Undo/Redo. Niets leest automatisch het klembord, vertaalt,
 synchroniseert of slaat zonder aparte toestemming op.
 
