@@ -222,7 +222,7 @@ internal object PrivatePinnedCaptionStudyTsv {
         // preceded by common invisible formatting characters. Importers may
         // choose whether to display the leading apostrophe.
         val formulaCandidate = flattened.dropWhile {
-            it == '\uFEFF' || it == '\u200B' || it == '\u2060'
+            it.isWhitespace() || Character.getType(it) == Character.FORMAT.toInt()
         }
         return if (formulaCandidate.startsWith("=") ||
             formulaCandidate.startsWith("+") ||
