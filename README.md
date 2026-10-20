@@ -4,9 +4,9 @@
 
 Onder **★ gemarkeerd** kun je zoeken, op voltooiing én exact
 bron-/doeltaalpaar filteren, nieuwste eerst tonen en per zin
-de oefen-/exportselectie aanvinken. Selecteer of
-deselecteer alleen zichtbare zoekresultaten zonder andere sterren te
-verliezen. Verwijder desgewenst één losse ster. Oefenen en bestandskeuze
+de oefen-/exportselectie aanvinken. Kies uitsluitend de zichtbare zoekresultaten, voeg zichtbare regels toe of
+deselecteer ze zonder andere sterren te verliezen. Verwijder desgewenst
+een losse ster en herstel de laatste verwijderactie zolang het scherm open is. Oefenen en bestandskeuze
 werken alleen met de expliciet gekozen subset. Er wordt niets
 automatisch geüpload of opgeslagen.
 [Bediening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
@@ -15,9 +15,10 @@ automatisch geüpload of opgeslagen.
 
 ## Nieuw: oefen gemarkeerde tweetalige zinnen zonder export
 
-Open **★ gemarkeerd** en kies **Oefen ... gemarkeerde vertaalparen**.
+Open **★ gemarkeerd** en kies **Oefen ... gekozen vertaalparen**.
 De bestaande lokale oefenkaartjes gebruiken alleen je geselecteerde,
-daadwerkelijk afgeronde vertalingen. Draai de vraag/antwoordrichting
+daadwerkelijk afgeronde lokale modelvertalingen, die niet onafhankelijk
+op inhoud gecontroleerd zijn. Draai de vraag/antwoordrichting
 om, onthul pas na het nadenken, beoordeel jezelf en oefen moeilijke
 kaarten nogmaals. Alles verdwijnt bij sluiten; er wordt niets
 toegevoegd aan je vaste studieprofiel.
@@ -28,9 +29,12 @@ toegevoegd aan je vaste studieprofiel.
 ## Nieuw: exporteer gemarkeerde gesprekszinnen in zes formaten
 
 Markeer maximaal 80 regels in je tijdelijke live gesprek en bekijk ze
-onder **★ gemarkeerd**. Via **Exporteer selectie…** kies je bewust voor
-TXT, een opnieuw importeerbaar privé-JSON-archief, een afdrukbaar HTML-
-gesprek of een ruw SRT/WebVTT-ondertitelconcept met instelbare tijden.
+onder **★ gemarkeerd**. Via **Exporteer N gekozen…** kies je bewust
+voor TXT, een opnieuw importeerbaar privé-JSON-archief, afdrukbaar HTML,
+een ruw SRT/WebVTT-ondertitelconcept met instelbare tijden of UTF-8
+TSV-leerkaarten met uitsluitend voltooide, ongeverifieerde lokale
+modelvertalingen. Bij TSV kies je bron naar vertaling, omgekeerd of
+beide richtingen; gelijke paren worden ontdubbeld.
 Kies expliciet één taalrichting of alle richtingen, en tussen alle
 gemarkeerde regels, alleen afgeronde regels en werkelijk vertaalde
 regels; bekijk vóór het opslaan aantallen, bestandsgrootte en de
@@ -38,7 +42,7 @@ beoogde inhoud. Bekijk desgewenst de
 exacte ruwe bestandsinhoud in een lokaal, scrollbaar leesvenster.
 SRT/WebVTT telt alleen zinnen die werkelijk in dat ondertitelconcept
 terechtkomen.
-Alle niet-gemarkeerde regels blijven buiten het bestand. De app
+Alle niet-gemarkeerde én niet-geselecteerde regels blijven buiten het bestand. De app
 controleert bij terugkeer uit de Android-bestandskiezer of markeringen
 en zinnen nog identiek zijn en schrijft anders niet. Er is geen
 automatische synchronisatie met audio, geen nieuwe spraak- of
