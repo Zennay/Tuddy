@@ -133,7 +133,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var passageNotes by remember {
         mutableStateOf<Map<Pair<Long, Long>, String>>(emptyMap())
     }
-    var guidedNeedsOnly by remember { mutableStateOf(false) }
+    var guidedScope by remember { mutableStateOf(PrivatePracticeRouteScope.ALL) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
     var confirmApplyOpen by remember { mutableStateOf(false) }
@@ -235,7 +235,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         guidedPasses = 0
         passageRatings = emptyMap()
         passageNotes = emptyMap()
-        guidedNeedsOnly = false
+        guidedScope = PrivatePracticeRouteScope.ALL
         bookmarkToolsOpen = false
         bookmarkStartMs = -1L
         bookmarkEndMs = -1L
@@ -364,8 +364,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         audioBookmarks = (audioBookmarks + missing).distinct().sorted()
         savedPracticePassages = savedPracticePassages + bounds
         bookmarkToolsOpen = true
-        notice = "$"+"{label} toegevoegd als oefenfragment " +
-            "($"+"{savedPracticePassages.size}/4). Start de begeleide route zelf."
+        notice = label + " toegevoegd als oefenfragment " +
+            "(" + savedPracticePassages.size + "/4). Start de begeleide route zelf."
     }
 
     fun saveCueForPractice(index: Int) {
@@ -791,7 +791,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 if (fromCue >= 0 && toCue >= fromCue) {
                                     val summary = if (fromCue == toCue)
                                         "Ondertitel: " + cues[fromCue].text.take(120)
-                                    else "Ondertitelregels $"+"{fromCue + 1}–$"+"{toCue + 1}: " +
+                                    else "Ondertitelregels " + (fromCue + 1) + "–" +
+                                        (toCue + 1) + ": " +
                                         cues[fromCue].text.take(55) + " … " +
                                         cues[toCue].text.take(55)
                                     Text(summary,
@@ -913,27 +914,33 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         val needsPractice = savedPracticePassages.filter {
                             passageRatings[it] == "repeat"
                         }
+                        val unratedCount = savedPracticePassages.count {
+                            passageRatings[it] !in listOf("repeat", "okay", "easy")
+                        }
                         Text("Zelf beoordeeld: " +
                             "${needsPractice.size} nog oefenen · " +
                             "${savedPracticePassages.count { passageRatings[it] == "okay" }} gaat goed · " +
-                            "${savedPracticePassages.count { passageRatings[it] == "easy" }} makkelijk.",
+                            "${savedPracticePassages.count { passageRatings[it] == "easy" }} makkelijk · " +
+                            unratedCount + " nog niet beoordeeld.",
                             style = MaterialTheme.typography.bodySmall)
-                        Row(modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PrivatePracticeRouteScope.entries.forEach { scope ->
+                            val candidateCount = privatePracticeRouteCandidates(
+                                savedPracticePassages, passageRatings, scope
+                            ).size
                             TextButton(
-                                modifier = Modifier.weight(1f),
-                                enabled = !guidedActive,
-                                onClick = { guidedNeedsOnly = false }
-                            ) { Text((if (!guidedNeedsOnly) "✓ " else "") + "Alle fragmenten") }
-                            TextButton(
-                                modifier = Modifier.weight(1f),
-                                enabled = !guidedActive && needsPractice.isNotEmpty(),
-                                onClick = { guidedNeedsOnly = true }
-                            ) { Text((if (guidedNeedsOnly) "✓ " else "") +
-                                "Alleen nog oefenen") }
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !guidedActive && candidateCount > 0,
+                                onClick = { guidedScope = scope }
+                            ) {
+                                Text((if (guidedScope == scope) "✓ " else "○ ") +
+                                    scope.title + " (" + candidateCount + ")")
+                            }
                         }
-                        val practiceCandidates =
-                            if (guidedNeedsOnly) needsPractice else savedPracticePassages
+                        val practiceCandidates = privatePracticeRouteCandidates(
+                            savedPracticePassages, passageRatings, guidedScope
+                        )
+                        Text("Voor deze route gekozen: " + practiceCandidates.size + " fragmenten.",
+                            style = MaterialTheme.typography.labelMedium)
                         Text("Speel mijn opgeslagen fragmenten in gekozen volgorde " +
                             "achter elkaar af. Begin bewust met Afspelen als audio gepauzeerd is. " +
                             "Bij voltooiing pauzeert de speler vanzelf; Android-background blijft pauzeren.",

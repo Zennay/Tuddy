@@ -11,6 +11,9 @@ HTML-bestand óf als eenvoudige UTF-8 TXT-notitie bewaren. Tuddy neemt geen audi
 bij terugkeer uit de bestandskiezer dat het overzicht niet gewijzigd is.
 De opslagprovider kan de tekst zelf synchroniseren; tijdcodes zijn niet
 automatisch met audio gecontroleerd.
+De begeleide A–B-route heeft nu ook een aparte keuze **Nog niet
+beoordeeld** naast alle fragmenten en de zelf als lastig gemarkeerde
+fragmenten; een lege selectie kan niet worden afgespeeld.
 [Bediening en privacy](docs/PRIVATE_LISTENING_REPORT_HTML.md).
 
 ---

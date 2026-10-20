@@ -40,3 +40,18 @@ spraakherkenning, vertaling, uitspraakbeoordeling of geverifieerde
 audiouitlijning. Het externe opslagplatform dat jij kiest kan het
 rapport elders bewaren of synchroniseren. Bewaar dus geen gevoelige
 ondertiteltekst zonder toestemming van betrokkenen.
+
+
+## Gerichte oefenroute zonder automatische beoordeling
+
+In **Begeleide A–B-oefenroute** kun je nu kiezen tussen
+**Alle fragmenten**, **Nog oefenen** (uitsluitend zelf als zodanig
+beoordeeld) en **Nog niet beoordeeld**. De lijst toont vooraf hoeveel
+eigen fragmenten daarvoor beschikbaar zijn. Een lege keuze kan niet
+als route worden gestart. Je kunt tijdens de route niet ineens een
+andere selectie aanzetten. Alle tijdvakken en herhalingen blijven
+afhankelijk van je eigen SRT/VTT en gekozen audio; er is geen
+automatische spraak- of taalniveaumeting.
+
+Ook de bevestiging na het bewaren van een oefenfragment toont nu
+weer de correcte ondertitel-/passagenaam en het aantal fragmenten.
