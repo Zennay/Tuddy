@@ -3010,7 +3010,8 @@ private fun TuddyScreen(
                 it.status == "Lokaal vertaald" &&
                     it.original.isNotBlank() && answer.isNotBlank() &&
                     it.original != answer &&
-                    it.original.length <= 400 && answer.length <= 400
+                    it.original.codePointCount(0, it.original.length) <= 400 &&
+                    answer.codePointCount(0, answer.length) <= 400
             }
             AlertDialog(
                 onDismissRequest = { pinsOpen = false },
@@ -3187,7 +3188,8 @@ private fun TuddyScreen(
                                                 Text("Modelantwoord: niet onafhankelijk geverifieerd.",
                                                     style = MaterialTheme.typography.bodySmall)
                                             }
-                                            TextButton(onClick = {
+                                            TextButton(enabled = !listening, onClick = {
+                                                captionSpeaker.stop()
                                                 pinnedStudyEditId = line.id
                                                 pinnedStudyDraft = authored?.answer
                                                     ?: line.translated
