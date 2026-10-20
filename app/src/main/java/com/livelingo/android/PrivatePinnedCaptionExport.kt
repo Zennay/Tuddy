@@ -52,6 +52,7 @@ internal data class PendingPinnedCaptionExport(
     val languagePair: Pair<String, String>?,
     val studyDirection: PinnedStudyDirection,
     val studyEdits: Map<Long, PinnedStudyCorrection>,
+    val onlyPersonallyCorrected: Boolean,
     val subtitleOptions: SubtitleDraftOptions,
     val bytes: ByteArray
 )
@@ -109,7 +110,8 @@ internal object PrivatePinnedCaptionExport {
         options: SubtitleDraftOptions,
         scope: PinnedCaptionScope,
         languagePair: Pair<String, String>? = null,
-        studyEdits: Map<Long, PinnedStudyCorrection> = emptyMap()
+        studyEdits: Map<Long, PinnedStudyCorrection> = emptyMap(),
+        onlyPersonallyCorrected: Boolean = false
     ): List<PinnedCaptionRow> {
         val scoped = select(rows, scope)
         val selected = if (languagePair == null) scoped else scoped.filter {
@@ -117,8 +119,11 @@ internal object PrivatePinnedCaptionExport {
                 it.caption.targetCode == languagePair.second
         }
         if (format == PinnedCaptionFormat.TSV) {
-            return selected.filter {
-                it.caption.status == "Lokaal vertaald" && it.caption.translated.isNotBlank()
+            return selected.filter { row ->
+                row.caption.status == "Lokaal vertaald" &&
+                    row.caption.translated.isNotBlank() &&
+                    (!onlyPersonallyCorrected ||
+                        studyEdits[row.id]?.appliesTo(row.caption) == true)
             }.map { row ->
                 val edit = studyEdits[row.id]
                 if (edit == null || !edit.appliesTo(row.caption)) row
@@ -155,13 +160,14 @@ internal object PrivatePinnedCaptionExport {
         scope: PinnedCaptionScope = PinnedCaptionScope.ALL,
         languagePair: Pair<String, String>? = null,
         studyDirection: PinnedStudyDirection = PinnedStudyDirection.SOURCE_TO_TARGET,
-        studyEdits: Map<Long, PinnedStudyCorrection> = emptyMap()
+        studyEdits: Map<Long, PinnedStudyCorrection> = emptyMap(),
+        onlyPersonallyCorrected: Boolean = false
     ): ByteArray? {
         if (selection.isEmpty() || selection.size > SessionCaptionPins.MAX_PINS ||
             selection.map { it.id }.distinct().size != selection.size
         ) return null
         val rows = includedRows(selection, format, subtitleOptions, scope,
-            languagePair, studyEdits).map { it.caption }
+            languagePair, studyEdits, onlyPersonallyCorrected).map { it.caption }
         if (rows.isEmpty()) return null
         return when (format) {
             PinnedCaptionFormat.TXT -> PrivateTranscriptExport.snapshot(rows)
