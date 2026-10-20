@@ -1,3 +1,16 @@
+## Nieuw: SRT/WebVTT en gewone tekst handmatig plakken
+
+Kopieer je eigen SRT/WebVTT-tekst naar de tijdelijke ondertiteleditor
+zonder eerst een bestand te maken. Of kies **Gewone zinnen** om eigen
+tekst per regel of volgens geschatte leestekengrenzen om te zetten naar
+losse ondertitelkaarten met **zelf gekozen, niet aan audio gekoppelde**
+tijden. Zoek en blader door de volledige preview en bevestig pas daarna.
+Een tweede geplakt spoor kan via de bestaande tijdmodi worden gecombineerd
+met behoud van Undo/Redo. Niets leest automatisch het klembord, vertaalt,
+synchroniseert of slaat zonder aparte toestemming op.
+
+[Handleiding en privacygrenzen](docs/MANUAL_SUBTITLE_PASTE.md).
+
 # Tuddy 🎙️
 
 ## Nieuw: bewaar zelf gekozen ondertitelzinnen als privé-oefenzin
