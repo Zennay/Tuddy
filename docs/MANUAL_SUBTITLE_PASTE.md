@@ -59,6 +59,14 @@ Deze eigen tijdcodes zijn **niet bewezen** aan een audio- of videobestand gesync
 - Bevestig met **Open gekozen regels**. De app leest de volledige actuele bron opnieuw, controleert opnieuw de gekozen grenzen en neemt precies dat bereik over in de tijdelijke editor, ook als een zoekfilter actief is.
 - De niet-geselecteerde regels blijven buiten het tijdelijke concept. Deze handeling verwijdert of verandert niets in het bronbestand; een export blijft een aparte keuze via Android.
 
+## Bron en eigen betekenis los bewerken na import
+
+- In de bestaande ondertiteleditor open je een kaart en kies je **Handmatige tekstcorrectie**.
+- Als die kaart uit precies twee tekstregels bestaat, toont Tuddy **twee aparte bewerkvelden**: de eerste tekstregel en de tweede zelfgeschreven betekenis. Bij een enkele of langere kaart blijft het gewone tekstveld beschikbaar. De app herkent of vertaalt hierbij geen talen.
+- De twee velden blijven onafhankelijk wijzigbaar, elk maximaal 800 tekens. Bestaande tijden veranderen niet en opslaan van de nieuwe tekst blijft expliciet.
+- Een ongeldige correctie sluit het venster **niet**: de ingevoerde tekst blijft zichtbaar en er verschijnt een concrete foutmelding. Corrigeer die tekst of annuleer zelf.
+- Een geldige correctie wordt als één wijziging in de tijdelijke kopie toegepast en is via **Terug/Opnieuw** herstelbaar. Het geopende originele bestand blijft intact.
+
 ## Gerichte tekstcorrecties na import
 
 In de tijdelijke ondertiteleditor open je **Zoek en vervang** (via het documentmenu) als een herhaalde schrijf- of vertaalkwestie in veel cues voorkomt.
