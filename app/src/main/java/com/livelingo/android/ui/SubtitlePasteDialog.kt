@@ -125,6 +125,24 @@ internal fun SubtitlePasteDialog(
                         Text((if (splitMode == PlainSubtitleSplitMode.PAIRED_COLUMNS) "✓ " else "") +
                             "Twee handmatige tekstkolommen (tab gescheiden)")
                     }
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        splitMode = PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
+                        page = 0
+                    }) {
+                        Text((if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS)
+                            "✓ " else "") +
+                            "Vier kolommen: begin · einde · bron · betekenis")
+                    }
+                    if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS) {
+                        Text(
+                            "Plak vier tabgescheiden velden per regel: " +
+                                "begin [TAB] einde [TAB] eigen bronzin [TAB] eigen betekenis. " +
+                                "Tijden bijvoorbeeld 00:00:12.500 of 01:23,456, met " +
+                                "einde later dan begin. Bestaande tijden worden overgenomen, " +
+                                "niet uit audio berekend.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     if (splitMode == PlainSubtitleSplitMode.PAIRED_COLUMNS) {
                         Text(
                             "Plak per regel precies twee niet-lege velden gescheiden door " +
@@ -134,6 +152,7 @@ internal fun SubtitlePasteDialog(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
+                    if (splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.foundation.layout.Box {
                             OutlinedButton(onClick = { startMenu = true }) {
@@ -172,6 +191,7 @@ internal fun SubtitlePasteDialog(
                             }
                         }
                     }
+                    }
                 } else {
                     Text(
                         "Voorzie iedere cue van begin- en eindtijd (volledig SRT/VTT). " +
@@ -194,6 +214,8 @@ internal fun SubtitlePasteDialog(
                     label = { Text(when {
                         !plainLines -> "SRT/WebVTT-brontekst"
                         splitMode == PlainSubtitleSplitMode.PAIRED_COLUMNS -> "Brontaal [TAB] handmatige betekenis"
+                        splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS ->
+                            "Begin [TAB] einde [TAB] bron [TAB] betekenis"
                         else -> "Eigen tekst of zinnen"
                     }) },
                     modifier = Modifier.fillMaxWidth(),
@@ -208,9 +230,10 @@ internal fun SubtitlePasteDialog(
                 if (parsed == null) {
                     Text(
                         if (plainLines)
-                            "Geen geldig tekstconcept: 1–500 regels, " +
-                                "maximaal 800 tekens per tekstregel. Twee kolommen " +
-                                "vereisen precies één tab en beide waarden per regel."
+                            "Geen geldig tekstconcept: 1–500 cues, maximaal 800 " +
+                                "tekens per kolom. Twee kolommen: bron + eigen betekenis; " +
+                                "vier kolommen: begin/einde/bron/betekenis. " +
+                                "Alle velden moeten expliciet geldig zijn."
                         else "Geen volledig geldig SRT/WebVTT-document: " +
                             "controleer tijdcodes en maximaal 500 regels.",
                         color = MaterialTheme.colorScheme.error,
@@ -219,8 +242,10 @@ internal fun SubtitlePasteDialog(
                 } else {
                     Text(
                         "${parsed.size} regels in de oorspronkelijke invoer. " +
-                            (if (plainLines) "Tijdcodes zijn volledig geschat." else
-                                "Tijdcodes komen uit de geplakte bron."),
+                            (if (plainLines &&
+                                splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS)
+                                "Tijdcodes zijn volledig geschat."
+                             else "Tijdcodes komen uit de zelf geplakte bron."),
                         style = MaterialTheme.typography.titleSmall
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
