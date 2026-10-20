@@ -202,6 +202,7 @@ private fun TuddyScreen(
     var pinnedExportNotice by remember { mutableStateOf("") }
     var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
     var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
+    var pinnedStudyDirection by remember { mutableStateOf(PinnedStudyDirection.SOURCE_TO_TARGET) }
     var pinnedLanguagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
     var pinnedExportShowAll by remember { mutableStateOf(false) }
     var pinnedExactPreviewOpen by remember { mutableStateOf(false) }
@@ -1217,12 +1218,13 @@ private fun TuddyScreen(
             val currentSelection = currentPinnedSelection()
             val currentBytes = PrivatePinnedCaptionExport.snapshot(
                 currentSelection, pending.format, pending.subtitleOptions, pending.scope,
-                pending.languagePair
+                pending.languagePair, pending.studyDirection
             )
             if (pending.generation != generation || listening ||
                 pending.format != pinnedExportFormat ||
                 pending.scope != pinnedExportScope ||
                 pending.languagePair != pinnedLanguagePair ||
+                pending.studyDirection != pinnedStudyDirection ||
                 pending.subtitleOptions != pinnedSubtitleOptions ||
                 currentSelection != pending.selection || currentBytes == null ||
                 !currentBytes.contentEquals(pending.bytes)
@@ -3022,11 +3024,12 @@ private fun TuddyScreen(
                 )
             }
             val computedPreview = remember(selection, pinnedExportScope,
-                pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair
+                pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
+                pinnedStudyDirection
             ) {
                 PrivatePinnedCaptionExport.snapshot(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
-                    pinnedExportScope, pinnedLanguagePair
+                    pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection
                 )
             }
             AlertDialog(
@@ -3056,6 +3059,27 @@ private fun TuddyScreen(
                                 Text((if (pinnedExportFormat == format) "● " else "○ ") +
                                     format.title)
                             }
+                        }
+                        if (pinnedExportFormat == PinnedCaptionFormat.TSV) {
+                            HorizontalDivider()
+                            Text("Kies hoe je zelfgeschreven tweetalige leerkaarten wilt oefenen",
+                                style = MaterialTheme.typography.titleSmall)
+                            PinnedStudyDirection.entries.forEach { direction ->
+                                TextButton(onClick = {
+                                    pinnedStudyDirection = direction
+                                    pinnedExportNotice = ""
+                                }) {
+                                    Text((if (pinnedStudyDirection == direction) "● " else "○ ") +
+                                        direction.title)
+                                }
+                            }
+                            Text(
+                                "Alleen daadwerkelijk voltooide lokale vertalingen komen in " +
+                                    "de kaarten. Geen onvoltooide betekenissen, automatische " +
+                                    "kwaliteitscontrole of leerprofiel. Handmatig importeren " +
+                                    "als UTF-8 TSV met twee velden (voor- en achterkant).",
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                         HorizontalDivider()
                         Text("Welke taalrichting wil je bewaren?",
@@ -3097,6 +3121,16 @@ private fun TuddyScreen(
                                 "nooit als afgerond voorgesteld.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        if (pinnedExportFormat == PinnedCaptionFormat.TSV) {
+                            val cards = included.size *
+                                (if (pinnedStudyDirection == PinnedStudyDirection.BOTH) 2 else 1)
+                            Text(
+                                "$cards studiekaarten met twee tekstkolommen; " +
+                                    "eigen vertalingen zijn niet onafhankelijk gecontroleerd. " +
+                                    "Open het exportbestand alleen in vertrouwde apps.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                         if (pinnedExportFormat == PinnedCaptionFormat.SRT ||
                             pinnedExportFormat == PinnedCaptionFormat.WEBVTT
                         ) {
@@ -3179,7 +3213,8 @@ private fun TuddyScreen(
                             val scope = pinnedExportScope
                             val languagePair = pinnedLanguagePair
                             val bytes = PrivatePinnedCaptionExport.snapshot(
-                                selection, format, options, scope, languagePair
+                                selection, format, options, scope, languagePair,
+                                pinnedStudyDirection
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
@@ -3187,7 +3222,7 @@ private fun TuddyScreen(
                             } else {
                                 pendingPinnedExport = PendingPinnedCaptionExport(
                                     generation, selection, format, scope,
-                                    languagePair, options, bytes
+                                    languagePair, pinnedStudyDirection, options, bytes
                                 )
                                 exportStatus = ""
                                 pinnedExportOpen = false
@@ -3215,7 +3250,8 @@ private fun TuddyScreen(
         if (pinnedExportOpen && pinnedExactPreviewOpen) {
             val exactBytes = PrivatePinnedCaptionExport.snapshot(
                 currentPinnedSelection(), pinnedExportFormat,
-                pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair
+                pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair,
+                pinnedStudyDirection
             )
             val previewLines = remember(exactBytes?.contentHashCode(),
                 exactBytes?.size
