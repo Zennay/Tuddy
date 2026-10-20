@@ -3529,11 +3529,22 @@ private fun TuddyScreen(
                             val cards = included.size *
                                 (if (pinnedStudyDirection == PinnedStudyDirection.BOTH) 2 else 1)
                             Text(
-                                "$cards studiekaarten met twee tekstkolommen; " +
-                                    "lokale modelvertalingen zijn niet onafhankelijk gecontroleerd. " +
-                                    "Open het exportbestand alleen in vertrouwde apps.",
+                                "$cards studiekaarten met twee tekstkolommen. " +
+                                    (if (pinnedOnlyPersonalStudy)
+                                        "Alleen handmatig gecorrigeerde antwoorden; " +
+                                            "nog steeds niet onafhankelijk geverifieerd."
+                                    else "Overige lokale modelvertalingen zijn " +
+                                        "niet onafhankelijk gecontroleerd.") +
+                                    " Open het exportbestand alleen in vertrouwde apps.",
                                 style = MaterialTheme.typography.bodySmall
                             )
+                            if (pinnedOnlyPersonalStudy && included.isEmpty()) {
+                                Text("Er zijn geen geschikte persoonlijke correcties " +
+                                    "in deze selectie. Keer terug naar ★ gemarkeerd " +
+                                    "om je studieantwoorden te verbeteren.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
                         }
                         if (pinnedExportFormat == PinnedCaptionFormat.SRT ||
                             pinnedExportFormat == PinnedCaptionFormat.WEBVTT
@@ -3574,6 +3585,16 @@ private fun TuddyScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 if (pinnedExportFormat == PinnedCaptionFormat.TSV) {
+                                    val originalRow = selection.firstOrNull {
+                                        it.id == record.id
+                                    }?.caption
+                                    val manuallyEdited = originalRow?.let {
+                                        pinnedStudyEdits[record.id]?.appliesTo(it)
+                                    } == true
+                                    Text(if (manuallyEdited)
+                                        "✓ Zelf geschreven studieantwoord"
+                                        else "⚠ Ongeverifieerde modelvertaling",
+                                        style = MaterialTheme.typography.labelSmall)
                                     val source = PrivatePinnedCaptionExport.preview(
                                         record.caption.original)
                                     val meaning = PrivatePinnedCaptionExport.preview(
