@@ -208,6 +208,12 @@ private fun TuddyScreen(
     var pinnedManagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
     var pinnedPairMenuOpen by remember { mutableStateOf(false) }
     var pinnedNewestFirst by remember { mutableStateOf(false) }
+    // These manually authored corrections apply ONLY to temporary study
+    // cards. The source transcript, JSON, HTML and subtitles stay untouched.
+    val pinnedStudyEdits = remember { mutableStateMapOf<Long, String>() }
+    var pinnedStudyEditId by remember { mutableStateOf<Long?>(null) }
+    var pinnedStudyDraft by remember { mutableStateOf("") }
+    var pinnedStudyEditError by remember { mutableStateOf("") }
     var pinnedExportOpen by remember { mutableStateOf(false) }
     var pinnedPracticeOpen by remember { mutableStateOf(false) }
     var pinnedExportNotice by remember { mutableStateOf("") }
@@ -1230,13 +1236,15 @@ private fun TuddyScreen(
             val currentSelection = currentPinnedSelection()
             val currentBytes = PrivatePinnedCaptionExport.snapshot(
                 currentSelection, pending.format, pending.subtitleOptions, pending.scope,
-                pending.languagePair, pending.studyDirection
+                pending.languagePair, pending.studyDirection,
+                pinnedStudyEdits.toMap()
             )
             if (pending.generation != generation || listening ||
                 pending.format != pinnedExportFormat ||
                 pending.scope != pinnedExportScope ||
                 pending.languagePair != pinnedLanguagePair ||
                 pending.studyDirection != pinnedStudyDirection ||
+                pending.studyEdits != pinnedStudyEdits.toMap() ||
                 pending.subtitleOptions != pinnedSubtitleOptions ||
                 currentSelection != pending.selection || currentBytes == null ||
                 !currentBytes.contentEquals(pending.bytes)
@@ -2029,13 +2037,18 @@ private fun TuddyScreen(
                     (pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty())
                 }.map { line ->
                     FocusCaptionLine(
-                        line.id, line.original, line.translated, line.status,
+                        line.id, line.original,
+                        if (line.status == "Lokaal vertaald")
+                            pinnedStudyEdits[line.id] ?: line.translated
+                        else line.translated,
+                        line.status,
                         line.sourceCode, line.targetCode,
                         manuallyAssignedSpeakers[line.id], line.personalMeaning
                     )
                 },
                 onDismiss = { pinnedPracticeOpen = false },
-                originLabel = "alleen gemarkeerde zinnen"
+                originLabel = "alleen gemarkeerde zinnen",
+                manualStudyAnswers = pinnedStudyEdits.keys.toSet()
             )
         }
         if (sessionCaptionStudyOpen) {
@@ -3239,20 +3252,23 @@ private fun TuddyScreen(
         if (pinnedExportOpen && !pinnedExactPreviewOpen) {
             val selection = currentPinnedSelection()
             val included = remember(selection, pinnedExportScope,
-                pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair
+                pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
+                pinnedStudyEdits.toMap()
             ) {
                 PrivatePinnedCaptionExport.includedRows(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
-                    pinnedExportScope, pinnedLanguagePair
+                    pinnedExportScope, pinnedLanguagePair,
+                    pinnedStudyEdits.toMap()
                 )
             }
             val computedPreview = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
-                pinnedStudyDirection
+                pinnedStudyDirection, pinnedStudyEdits.toMap()
             ) {
                 PrivatePinnedCaptionExport.snapshot(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
-                    pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection
+                    pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection,
+                    pinnedStudyEdits.toMap()
                 )
             }
             AlertDialog(
@@ -3459,7 +3475,7 @@ private fun TuddyScreen(
                             val languagePair = pinnedLanguagePair
                             val bytes = PrivatePinnedCaptionExport.snapshot(
                                 selection, format, options, scope, languagePair,
-                                pinnedStudyDirection
+                                pinnedStudyDirection, pinnedStudyEdits.toMap()
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
@@ -3467,7 +3483,8 @@ private fun TuddyScreen(
                             } else {
                                 pendingPinnedExport = PendingPinnedCaptionExport(
                                     generation, selection, format, scope,
-                                    languagePair, pinnedStudyDirection, options, bytes
+                                    languagePair, pinnedStudyDirection,
+                                    pinnedStudyEdits.toMap(), options, bytes
                                 )
                                 exportStatus = ""
                                 pinnedExportOpen = false
@@ -3496,7 +3513,7 @@ private fun TuddyScreen(
             val exactBytes = PrivatePinnedCaptionExport.snapshot(
                 currentPinnedSelection(), pinnedExportFormat,
                 pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair,
-                pinnedStudyDirection
+                pinnedStudyDirection, pinnedStudyEdits.toMap()
             )
             val previewLines = remember(exactBytes?.contentHashCode(),
                 exactBytes?.size
@@ -3840,6 +3857,8 @@ private fun TuddyScreen(
                         captionPins = emptySet()
                         pinnedChosenIds = null
                         pinnedRemovedUndo = emptySet()
+                        pinnedStudyEdits.clear()
+                        pinnedStudyEditId = null
                         pinnedSearchTerm = ""
                         pinsOpen = false
                         pinnedExportOpen = false
