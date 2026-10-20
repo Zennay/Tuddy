@@ -54,7 +54,7 @@ internal object PrivatePlainTextSubtitleDraft {
                     val second = columns[1].trim()
                     if (first.isEmpty() || second.isEmpty() ||
                         first.length > 800 || second.length > 800) return null
-                    "$" + "{first}\n" + "$" + "{second}"
+                    first + "\n" + second
                 }
         }
         if (rows.isEmpty() || rows.size > MAX_CUES ||
