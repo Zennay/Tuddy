@@ -90,6 +90,22 @@ gesprek** of afsluiten. Een eigen uitleg is **niet onafhankelijk
 geverifieerd**, geen automatisch verbeterde vertaling en geen
 duurzaam leerprofiel.
 
+## Alleen persoonlijk gecorrigeerde studiekaarten exporteren
+
+Kies bij het **TSV**-formaat desgewenst **Alleen mijn handmatig
+gecorrigeerde antwoorden**. Dan gaan uitsluitend de expliciet door
+jou bewerkte vertaalparen uit de gekozen markeringen mee. De
+weergave van aantallen, effectieve voor-/achterkant en de volledige
+ruwe bestandsinhoud volgen precies dit filter. Zijn er geen bruikbare
+persoonlijk gecorrigeerde regels, dan wordt het bestand geweigerd:
+er worden nooit ongemerkt ongecorrigeerde modelantwoorden aangevuld.
+
+Deze keuze verandert de transcriptgegevens, de bron-SRT/VTT en het
+privé-JSON-archief niet. Een eigen correctie is nadrukkelijk nog steeds
+geen door onafhankelijke moedertaalsprekers gecontroleerde vertaling.
+Bij wijzigingen tijdens de Android-bestandskeuze wordt de eerdere
+snapshot opnieuw afgewezen.
+
 Selecteer daarna precies één uitvoerformaat:
 
 - **TXT**: leesbare originele regels, taalpaar, tijdstip en alleen werkelijk
