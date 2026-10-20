@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PrivateSubtitleBatchReplace
+import com.livelingo.android.SubtitleReplaceField
 import com.livelingo.android.PrivateSubtitleLineWrap
 import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateSubtitleCue
@@ -99,6 +100,7 @@ internal fun PrivateSubtitleFileDialog(
     var batchFind by remember { mutableStateOf("") }
     var batchWith by remember { mutableStateOf("") }
     var batchMatchCase by remember { mutableStateOf(false) }
+    var batchField by remember { mutableStateOf(SubtitleReplaceField.ALL_TEXT) }
     var batchFirstRow by remember { mutableStateOf("1") }
     var batchLastRow by remember { mutableStateOf("") }
     var insertOpen by remember { mutableStateOf(false) }
@@ -879,7 +881,8 @@ internal fun PrivateSubtitleFileDialog(
             else batchLastRow.toIntOrNull()
         val proposed = if (scopeFrom != null && scopeTo != null)
             PrivateSubtitleBatchReplace.preview(
-                draft, batchFind, batchWith, batchMatchCase, scopeFrom, scopeTo)
+                draft, batchFind, batchWith, batchMatchCase, scopeFrom, scopeTo,
+                batchField)
         else null
         val changes = proposed?.updated?.withIndex()?.filter { (i, cue) ->
             cue.text != draft[i].text
@@ -888,10 +891,25 @@ internal fun PrivateSubtitleFileDialog(
             onDismissRequest = { batchOpen = false },
             title = { Text("Zoek en vervang · tijdelijk") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Letterlijke tekst alleen in het gekozen regelbereik; tijdcodes " +
-                        "blijven ongewijzigd. Bekijk de gewijzigde regels vóór je toepast.",
+                Column(modifier = Modifier.heightIn(max = 530.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Letterlijke tekst binnen het gekozen regelbereik. " +
+                        "Kies ook welk tekstdeel wordt aangepast; tijden blijven gelijk.",
                         style = MaterialTheme.typography.bodySmall)
+                    Text("Tekstdeel:", style = MaterialTheme.typography.labelMedium)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        listOf(
+                            SubtitleReplaceField.ALL_TEXT to "Alle tekstregels",
+                            SubtitleReplaceField.FIRST_LINE to "Alleen eerste regel (bron)",
+                            SubtitleReplaceField.SECOND_LINE to "Alleen tweede regel (eigen betekenis)"
+                        ).forEach { (option, label) ->
+                            OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                onClick = { batchField = option }) {
+                                Text((if (batchField == option) "✓ " else "") + label)
+                            }
+                        }
+                    }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
@@ -956,7 +974,7 @@ internal fun PrivateSubtitleFileDialog(
                     val confirmed = if (confirmedFrom != null && confirmedTo != null)
                         PrivateSubtitleBatchReplace.preview(
                             draft, batchFind, batchWith, batchMatchCase,
-                            confirmedFrom, confirmedTo)
+                            confirmedFrom, confirmedTo, batchField)
                     else null
                     if (confirmed != null) {
                         applyChange(confirmed.updated)
