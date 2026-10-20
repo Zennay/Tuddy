@@ -39,6 +39,7 @@ internal fun SubtitlePasteDialog(
     onAccept: (List<PrivateSubtitleCue>) -> Unit
 ) {
     var raw by remember { mutableStateOf("") }
+    var ownMeaning by remember { mutableStateOf("") }
     var plainLines by remember { mutableStateOf(false) }
     var splitMode by remember { mutableStateOf(PlainSubtitleSplitMode.LINES) }
     var startMs by remember { mutableStateOf(0L) }
@@ -50,8 +51,11 @@ internal fun SubtitlePasteDialog(
     var firstRow by remember { mutableStateOf("1") }
     var lastRow by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
-    val parsed = remember(raw, plainLines, startMs, durationMs, splitMode) {
-        if (plainLines) PrivatePlainTextSubtitleDraft.preview(raw, startMs, durationMs, splitMode)
+    val parsed = remember(raw, ownMeaning, plainLines, startMs, durationMs, splitMode) {
+        if (plainLines) PrivatePlainTextSubtitleDraft.preview(
+            raw, startMs, durationMs, splitMode,
+            if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) ownMeaning else ""
+        )
         else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
     }
     // Explicit 1-based row selection, never quietly clamped after editing.
@@ -119,6 +123,13 @@ internal fun SubtitlePasteDialog(
                             "Geschatte zinsscheiding") }
                     }
                     OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        splitMode = PlainSubtitleSplitMode.PAIRED_TEXTBOXES
+                        page = 0
+                    }) {
+                        Text((if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES)
+                            "✓ " else "") + "Twee losse tekstvakken: bron en eigen betekenis")
+                    }
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         splitMode = PlainSubtitleSplitMode.PAIRED_COLUMNS
                         page = 0
                     }) {
@@ -132,6 +143,15 @@ internal fun SubtitlePasteDialog(
                         Text((if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS)
                             "✓ " else "") +
                             "Vier kolommen: begin · einde · bron · betekenis")
+                    }
+                    if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) {
+                        Text(
+                            "Plak originele zinnen in het eerste vak en je eigen " +
+                                "betekenissen in het tweede. Elke positie hoort bij elkaar. " +
+                                "Beide vakken moeten precies evenveel regels hebben; " +
+                                "lege regels worden niet stilzwijgend overgeslagen.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS) {
                         Text(
@@ -205,7 +225,10 @@ internal fun SubtitlePasteDialog(
                     value = raw,
                     onValueChange = { candidate ->
                         val candidateBytes = candidate.toByteArray(Charsets.UTF_8)
-                        if (candidateBytes.size <= PrivateSubtitleFileReader.MAX_BYTES) {
+                        val totalBytes = candidateBytes.size + (if (plainLines &&
+                            splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES)
+                            ownMeaning.toByteArray(Charsets.UTF_8).size else 0)
+                        if (totalBytes <= PrivateSubtitleFileReader.MAX_BYTES) {
                             raw = candidate
                             inputTooLarge = false
                             page = 0
@@ -215,6 +238,8 @@ internal fun SubtitlePasteDialog(
                     },
                     label = { Text(when {
                         !plainLines -> "SRT/WebVTT-brontekst"
+                        splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES ->
+                            "Jouw originele zinnen (één per regel)"
                         splitMode == PlainSubtitleSplitMode.PAIRED_COLUMNS -> "Brontaal [TAB] handmatige betekenis"
                         splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS ->
                             "Begin [TAB] einde [TAB] bron [TAB] betekenis"
@@ -224,6 +249,27 @@ internal fun SubtitlePasteDialog(
                     minLines = 5,
                     maxLines = 12
                 )
+                if (plainLines && splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) {
+                    OutlinedTextField(
+                        value = ownMeaning,
+                        onValueChange = { candidate ->
+                            val combined = raw.toByteArray(Charsets.UTF_8).size +
+                                candidate.toByteArray(Charsets.UTF_8).size
+                            if (combined <= PrivateSubtitleFileReader.MAX_BYTES) {
+                                ownMeaning = candidate
+                                inputTooLarge = false
+                                page = 0
+                            } else inputTooLarge = true
+                        },
+                        label = { Text("Jouw eigen betekenissen (één per bronregel)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 5,
+                        maxLines = 12
+                    )
+                    Text("Bron: ${raw.lines().size} regels · eigen betekenis: " +
+                        "${ownMeaning.lines().size} regels (inclusief lege regels).",
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 if (inputTooLarge) {
                     Text("Invoer geweigerd: meer dan 256 KiB. Verklein de bron.",
                         color = MaterialTheme.colorScheme.error,
@@ -332,7 +378,10 @@ internal fun SubtitlePasteDialog(
                 // Fresh full parse, row range and exact selected cue snapshot
                 // at consent, independent of the search query and page.
                 val confirmed = if (plainLines)
-                    PrivatePlainTextSubtitleDraft.preview(raw, startMs, durationMs, splitMode)
+                    PrivatePlainTextSubtitleDraft.preview(
+                        raw, startMs, durationMs, splitMode,
+                        if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) ownMeaning else ""
+                    )
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
                 val start = firstRow.toIntOrNull() ?: return@TextButton
                 val end = if (lastRow.isBlank()) confirmed?.size
