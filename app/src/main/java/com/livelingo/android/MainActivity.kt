@@ -3002,10 +3002,15 @@ private fun TuddyScreen(
             }.let { if (pinnedNewestFirst) it.reversed() else it }
             val visiblePinIds = filteredPins.map { it.id }.toSet()
             val studyReadyPins = chosenPins.count {
+                val row = TranscriptExportRow(it.original, it.translated, it.status,
+                    it.sourceCode, it.targetCode, it.recordedAtMillis)
+                val answer = pinnedStudyEdits[it.id]?.takeIf { edit ->
+                    edit.appliesTo(row)
+                }?.answer ?: it.translated
                 it.status == "Lokaal vertaald" &&
-                    it.original.isNotBlank() && it.translated.isNotBlank() &&
-                    it.original != it.translated &&
-                    it.original.length <= 400 && it.translated.length <= 400
+                    it.original.isNotBlank() && answer.isNotBlank() &&
+                    it.original != answer &&
+                    it.original.length <= 400 && answer.length <= 400
             }
             AlertDialog(
                 onDismissRequest = { pinsOpen = false },
@@ -3163,6 +3168,42 @@ private fun TuddyScreen(
                                                     MaterialTheme.typography.bodyLarge.fontSize *
                                                         captionSize.scale
                                             ))
+                                        if (line.status == "Lokaal vertaald" &&
+                                            line.translated.isNotBlank()) {
+                                            val originalRow = TranscriptExportRow(
+                                                line.original, line.translated, line.status,
+                                                line.sourceCode, line.targetCode,
+                                                line.recordedAtMillis
+                                            )
+                                            val authored = pinnedStudyEdits[line.id]?.takeIf {
+                                                it.appliesTo(originalRow)
+                                            }
+                                            if (authored != null) {
+                                                Text("Mijn gecorrigeerde studieantwoord:",
+                                                    style = MaterialTheme.typography.labelMedium)
+                                                Text(authored.answer,
+                                                    style = MaterialTheme.typography.bodyLarge)
+                                            } else {
+                                                Text("Modelantwoord: niet onafhankelijk geverifieerd.",
+                                                    style = MaterialTheme.typography.bodySmall)
+                                            }
+                                            TextButton(onClick = {
+                                                pinnedStudyEditId = line.id
+                                                pinnedStudyDraft = authored?.answer
+                                                    ?: line.translated
+                                                pinnedStudyEditError = ""
+                                                pinsOpen = false
+                                            }) { Text(if (authored == null)
+                                                "✎ Corrigeer alleen studieantwoord"
+                                                else "✎ Bewerk mijn studieantwoord") }
+                                            if (authored != null) {
+                                                TextButton(onClick = {
+                                                    pinnedStudyEdits.remove(line.id)
+                                                    pinsNotice =
+                                                        "Eigen studiecorrectie hersteld naar model."
+                                                }) { Text("Gebruik weer modelvertaling") }
+                                            }
+                                        }
                                     } else {
                                         Text("[Vertaling niet voltooid]",
                                             style = MaterialTheme.typography.bodySmall)
@@ -3255,6 +3296,82 @@ private fun TuddyScreen(
                     ) { Text("Exporteer ${chosenPins.size} gekozen…") }
                 }
             )
+        }
+        if (pinnedStudyEditId != null) {
+            val editId = pinnedStudyEditId
+            val editLine = lines.firstOrNull { it.id == editId && it.id in captionPins }
+            if (editLine == null || editLine.status != "Lokaal vertaald" ||
+                editLine.translated.isBlank()) {
+                LaunchedEffect(editId) {
+                    pinnedStudyEditId = null
+                    pinnedStudyEditError = ""
+                }
+            } else {
+                AlertDialog(
+                    onDismissRequest = {
+                        pinnedStudyEditId = null
+                        pinnedStudyEditError = ""
+                        pinsOpen = true
+                    },
+                    title = { Text("Eigen studieantwoord · alleen voor oefenkaarten") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Originele zin: " + editLine.original,
+                                style = MaterialTheme.typography.bodyMedium)
+                            Text("Modelvertaling: " + editLine.translated,
+                                style = MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(
+                                value = pinnedStudyDraft,
+                                onValueChange = {
+                                    pinnedStudyDraft = it.take(850)
+                                    pinnedStudyEditError = ""
+                                },
+                                label = { Text("Mijn eigen betekenis · max. 400 tekens") },
+                                minLines = 2,
+                                maxLines = 5,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text("Dit is jouw eigen notitie, geen gecontroleerde vertaling. " +
+                                "Wijzigt nooit de herkende tekst, modelvertaling, " +
+                                "privé-JSON/HTML of ondertitels. Alleen in RAM.",
+                                style = MaterialTheme.typography.bodySmall)
+                            if (pinnedStudyEditError.isNotBlank()) {
+                                Text(pinnedStudyEditError,
+                                    color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val answer = pinnedStudyDraft.trim()
+                            if (!PrivatePinnedCaptionExport.validStudyEdit(answer)) {
+                                pinnedStudyEditError =
+                                    "Vul één veilige tekstregel in (maximaal 400 Unicode-tekens)."
+                            } else {
+                                if (answer == editLine.translated) {
+                                    pinnedStudyEdits.remove(editLine.id)
+                                } else {
+                                    pinnedStudyEdits[editLine.id] = PinnedStudyCorrection(
+                                        editLine.original, editLine.translated,
+                                        editLine.sourceCode, editLine.targetCode, answer
+                                    )
+                                }
+                                pinnedStudyEditId = null
+                                pinnedStudyEditError = ""
+                                pinsNotice = "Studieantwoord aangepast, bron ongewijzigd."
+                                pinsOpen = true
+                            }
+                        }) { Text("Gebruik in mijn oefenkaarten") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            pinnedStudyEditId = null
+                            pinnedStudyEditError = ""
+                            pinsOpen = true
+                        }) { Text("Annuleren") }
+                    }
+                )
+            }
         }
         if (pinnedExportOpen && !pinnedExactPreviewOpen) {
             val selection = currentPinnedSelection()
