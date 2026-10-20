@@ -2,8 +2,9 @@
 
 ## Nieuw: bepaal welke gemarkeerde regels je oefent of bewaart
 
-Onder **★ gemarkeerd** kun je zoeken, op voltooiing filteren, nieuwste
-eerst tonen en per zin de oefen-/exportselectie aanvinken. Selecteer of
+Onder **★ gemarkeerd** kun je zoeken, op voltooiing én exact
+bron-/doeltaalpaar filteren, nieuwste eerst tonen en per zin
+de oefen-/exportselectie aanvinken. Selecteer of
 deselecteer alleen zichtbare zoekresultaten zonder andere sterren te
 verliezen. Verwijder desgewenst één losse ster. Oefenen en bestandskeuze
 werken alleen met de expliciet gekozen subset. Er wordt niets
