@@ -114,6 +114,7 @@ internal fun PrivateSubtitleFileDialog(
     var twoAnchorOpen by remember { mutableStateOf(false) }
     var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
     var pendingImport by remember { mutableStateOf<PendingSubtitleImport?>(null) }
+    var pasteSecondOpen by remember { mutableStateOf(false) }
     var importMode by remember { mutableStateOf(SubtitleCombineMode.APPEND_AFTER_LAST) }
     var secondTrackOffsetMs by remember { mutableStateOf(0L) }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
@@ -368,6 +369,11 @@ internal fun PrivateSubtitleFileDialog(
                         onChooseSecondFile(draft.toList())
                     }
                 ) { Text("＋ Tweede SRT/VTT-document toevoegen…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = draft.size < 500,
+                    onClick = { pasteSecondOpen = true }
+                ) { Text("＋ Tweede ondertitelspoor zelf plakken…") }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     OutlinedButton(onClick = { requestSave = SubtitleDraftFormat.SRT }) {
@@ -554,6 +560,19 @@ internal fun PrivateSubtitleFileDialog(
         )
     }
 
+    if (pasteSecondOpen) {
+        SubtitlePasteDialog(
+            title = "Tweede SRT/VTT-spoor zelf plakken",
+            onDismiss = { pasteSecondOpen = false },
+            onAccept = { imported ->
+                pendingImport = PendingSubtitleImport(draft.toList(), imported.toList())
+                importMode = SubtitleCombineMode.APPEND_AFTER_LAST
+                secondTrackOffsetMs = 0L
+                notice = ""
+                pasteSecondOpen = false
+            }
+        )
+    }
     val stagedImport = pendingImport
     if (stagedImport != null) {
         val stillCurrent = draft == stagedImport.existing
@@ -563,12 +582,12 @@ internal fun PrivateSubtitleFileDialog(
             ) else null
         AlertDialog(
             onDismissRequest = { pendingImport = null },
-            title = { Text("Tweede ondertitelbestand toevoegen") },
+            title = { Text("Tweede ondertitelspoor toevoegen") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(
-                        "Tweede bestand: ${stagedImport.imported.size} ondertitelregels. " +
+                        "Tweede spoor: ${stagedImport.imported.size} ondertitelregels. " +
                             "Huidig concept: ${draft.size} regels. Alleen tijdelijk in " +
                             "het geheugen; niets overschrijft je originele bestanden.",
                         style = MaterialTheme.typography.bodyMedium
