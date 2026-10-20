@@ -129,6 +129,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var passageRatings by remember {
         mutableStateOf<Map<Pair<Long, Long>, String>>(emptyMap())
     }
+    // User-written next-step notes, bounded and only for the current audio session.
+    var passageNotes by remember {
+        mutableStateOf<Map<Pair<Long, Long>, String>>(emptyMap())
+    }
     var guidedNeedsOnly by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("Kies zelf audio bij deze ondertitels.") }
     var cuePickerOpen by remember { mutableStateOf(false) }
@@ -148,7 +152,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     fun exportablePracticeSummary(): String = privatePracticeSummary(
         cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
         completedGuidedRoute, completedGuidedRounds, guidedActive,
-        forExport = true
+        forExport = true, notes = passageNotes
     )
 
     val savePracticeReport = rememberLauncherForActivityResult(
@@ -230,6 +234,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         guidedIndex = 0
         guidedPasses = 0
         passageRatings = emptyMap()
+        passageNotes = emptyMap()
         guidedNeedsOnly = false
         bookmarkToolsOpen = false
         bookmarkStartMs = -1L
@@ -584,11 +589,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
 
     val practiceSummaryText = remember(
         cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
-        completedGuidedRoute, completedGuidedRounds, guidedActive
+        passageNotes, completedGuidedRoute, completedGuidedRounds, guidedActive
     ) {
         privatePracticeSummary(
             cues, subtitleOffsetMs, savedPracticePassages, passageRatings,
-            completedGuidedRoute, completedGuidedRounds, guidedActive
+            completedGuidedRoute, completedGuidedRounds, guidedActive,
+            notes = passageNotes
         )
     }
 
@@ -739,6 +745,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         passageRatings = passageRatings.filterKeys {
                                             it.first != mark && it.second != mark
                                         }
+                                        passageNotes = passageNotes.filterKeys {
+                                            it.first != mark && it.second != mark
+                                        }
                                         if (bookmarkStartMs == mark || bookmarkEndMs == mark) {
                                             bookmarkStartMs = -1L
                                             bookmarkEndMs = -1L
@@ -836,6 +845,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                                     i != index
                                                 }
                                             passageRatings = passageRatings - passage
+                                            passageNotes = passageNotes - passage
                                             if (bookmarkRepeating &&
                                                 bookmarkStartMs == passage.first &&
                                                 bookmarkEndMs == passage.second) {
@@ -846,6 +856,26 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         }, modifier = Modifier.weight(1f)
                                     ) { Text("Wis") }
                                 }
+                                OutlinedTextField(
+                                    value = passageNotes[passage].orEmpty(),
+                                    onValueChange = { value ->
+                                        if (!guidedActive) {
+                                            val bounded = value.take(240)
+                                                .replace('\r', ' ').replace('\n', ' ')
+                                            passageNotes = if (bounded.isBlank())
+                                                passageNotes - passage
+                                            else passageNotes + (passage to bounded)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !guidedActive,
+                                    label = { Text("Mijn eigen volgende oefenstap (optioneel)") },
+                                    supportingText = {
+                                        Text("${passageNotes[passage].orEmpty().length}/240 · " +
+                                            "alleen deze tijdelijke audiosessie")
+                                    },
+                                    maxLines = 3
+                                )
                                 Text("Mijn eigen luisterinschatting, geen automatisch taalniveau",
                                     style = MaterialTheme.typography.labelSmall)
                                 Row(modifier = Modifier.fillMaxWidth(),

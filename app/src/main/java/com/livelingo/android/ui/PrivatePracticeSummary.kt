@@ -16,7 +16,8 @@ internal fun privatePracticeSummary(
     completedRoute: List<Pair<Long, Long>>,
     completedRounds: Int,
     guidedActive: Boolean,
-    forExport: Boolean = false
+    forExport: Boolean = false,
+    notes: Map<Pair<Long, Long>, String> = emptyMap()
 ): String {
     fun clock(millis: Long): String {
         val seconds = millis.coerceAtLeast(0L) / 1000L
@@ -67,6 +68,14 @@ internal fun privatePracticeSummary(
                 else -> "Nog niet zelf beoordeeld"
             }
             appendLine("   Mijn eigen inschatting: " + assessment)
+            val note = notes[span].orEmpty().take(240).asSequence()
+                .filter { it >= ' ' && it != '\u007f' &&
+                    it !in '\u202a'..'\u202e' &&
+                    it !in '\u2066'..'\u2069'
+                }.joinToString("").trim()
+            if (note.isNotBlank()) {
+                appendLine("   Mijn eigen volgende oefenstap: " + note)
+            }
         }
         if (bounded.isEmpty()) appendLine("Nog geen oefenkaartjes.")
         appendLine()
@@ -86,9 +95,9 @@ internal fun privatePracticeSummary(
             appendLine("De gekozen Android-provider kan het bestand bewaren of synchroniseren.")
             appendLine("Geen audio, audio-URI, automatische uitspraakanalyse of betrouwbare woordtiming.")
         } else {
-        appendLine("Deze tekst wordt uitsluitend in dit tijdelijke scherm getoond.")
-        appendLine("Selecteren/kopiëren kan via Android. Daarna kan jouw klembord-app de tekst verwerken.")
-        appendLine("Tuddy bewaart niets automatisch en verzendt geen audiodata.")
+            appendLine("Deze tekst wordt uitsluitend in dit tijdelijke scherm getoond.")
+            appendLine("Selecteren/kopiëren kan via Android. Daarna kan jouw klembord-app de tekst verwerken.")
+            appendLine("Tuddy bewaart niets automatisch en verzendt geen audiodata.")
         }
     }
 }
