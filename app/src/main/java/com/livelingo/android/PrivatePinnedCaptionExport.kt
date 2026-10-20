@@ -54,6 +54,7 @@ internal data class PendingPinnedCaptionExport(
     val studyDirection: PinnedStudyDirection,
     val studyEdits: Map<Long, PinnedStudyCorrection>,
     val onlyPersonallyCorrected: Boolean,
+    val showLanguageTags: Boolean,
     val subtitleOptions: SubtitleDraftOptions,
     val bytes: ByteArray
 )
@@ -163,7 +164,8 @@ internal object PrivatePinnedCaptionExport {
         languagePair: Pair<String, String>? = null,
         studyDirection: PinnedStudyDirection = PinnedStudyDirection.SOURCE_TO_TARGET,
         studyEdits: Map<Long, PinnedStudyCorrection> = emptyMap(),
-        onlyPersonallyCorrected: Boolean = false
+        onlyPersonallyCorrected: Boolean = false,
+        showLanguageTags: Boolean = false
     ): ByteArray? {
         if (selection.isEmpty() || selection.size > SessionCaptionPins.MAX_PINS ||
             selection.map { it.id }.distinct().size != selection.size
@@ -173,8 +175,10 @@ internal object PrivatePinnedCaptionExport {
         if (rows.isEmpty()) return null
         return when (format) {
             PinnedCaptionFormat.TXT -> PrivateTranscriptExport.snapshot(rows)
-            PinnedCaptionFormat.TSV -> PrivatePinnedCaptionStudyTsv.snapshot(rows, studyDirection)
-            PinnedCaptionFormat.CSV -> PrivatePinnedCaptionStudyCsv.snapshot(rows, studyDirection)
+            PinnedCaptionFormat.TSV ->
+                PrivatePinnedCaptionStudyTsv.snapshot(rows, studyDirection, showLanguageTags)
+            PinnedCaptionFormat.CSV ->
+                PrivatePinnedCaptionStudyCsv.snapshot(rows, studyDirection, showLanguageTags)
             PinnedCaptionFormat.JSON -> PrivateTranscriptJsonExport.snapshot(rows)
             PinnedCaptionFormat.HTML -> PrivatePrintableConversation.snapshot(rows, onlyFinished = false)
             PinnedCaptionFormat.SRT ->
@@ -234,8 +238,17 @@ internal object PrivatePinnedCaptionStudyTsv {
         ) "'$flattened" else flattened
     }
 
-    fun snapshot(rows: List<TranscriptExportRow>, direction: PinnedStudyDirection): ByteArray? {
+    fun snapshot(rows: List<TranscriptExportRow>,
+                 direction: PinnedStudyDirection,
+                 showLanguageTags: Boolean = false): ByteArray? {
         if (rows.isEmpty() || rows.size > SessionCaptionPins.MAX_PINS) return null
+        if (showLanguageTags && rows.any { row ->
+                listOf(row.sourceCode, row.targetCode).any { code ->
+                    code.isBlank() || code.length > 16 ||
+                        code.any { ch -> !ch.isLetterOrDigit() &&
+                            ch != '-' && ch != '_' }
+                }
+            }) return null
         if (rows.any { it.status != "Lokaal vertaald" || it.translated.isBlank() ||
                 it.original.isBlank() || it.original.length > 4096 ||
                 it.translated.length > 4096 ||
@@ -250,11 +263,15 @@ internal object PrivatePinnedCaptionStudyTsv {
             val source = field(row.original)
             val meaning = field(row.translated)
             if (source.isBlank() || meaning.isBlank()) return null
+            val front = if (showLanguageTags)
+                "[${row.sourceCode}] $source" else source
+            val back = if (showLanguageTags)
+                "[${row.targetCode}] $meaning" else meaning
             if (direction != PinnedStudyDirection.TARGET_TO_SOURCE) {
-                out.append(source).append('\t').append(meaning).append('\n')
+                out.append(front).append('\t').append(back).append('\n')
             }
             if (direction != PinnedStudyDirection.SOURCE_TO_TARGET) {
-                out.append(meaning).append('\t').append(source).append('\n')
+                out.append(back).append('\t').append(front).append('\n')
             }
             if (out.length > MAX_BYTES) return null
         }
@@ -272,8 +289,10 @@ internal object PrivatePinnedCaptionStudyTsv {
 internal object PrivatePinnedCaptionStudyCsv {
     private const val MAX_BYTES = 262_144
 
-    fun snapshot(rows: List<TranscriptExportRow>, direction: PinnedStudyDirection): ByteArray? {
-        val source = PrivatePinnedCaptionStudyTsv.snapshot(rows, direction)
+    fun snapshot(rows: List<TranscriptExportRow>,
+                 direction: PinnedStudyDirection,
+                 showLanguageTags: Boolean = false): ByteArray? {
+        val source = PrivatePinnedCaptionStudyTsv.snapshot(rows, direction, showLanguageTags)
             ?.toString(Charsets.UTF_8) ?: return null
         val csv = StringBuilder()
         for (line in source.lineSequence()) {
