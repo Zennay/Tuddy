@@ -1,5 +1,17 @@
 # Tuddy 🎙️
 
+## Nieuw: oefen gemarkeerde tweetalige zinnen zonder export
+
+Open **★ gemarkeerd** en kies **Oefen ... gemarkeerde vertaalparen**.
+De bestaande lokale oefenkaartjes gebruiken alleen je geselecteerde,
+daadwerkelijk afgeronde vertalingen. Draai de vraag/antwoordrichting
+om, onthul pas na het nadenken, beoordeel jezelf en oefen moeilijke
+kaarten nogmaals. Alles verdwijnt bij sluiten; er wordt niets
+toegevoegd aan je vaste studieprofiel.
+[Privacy en bediening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 ## Nieuw: exporteer gemarkeerde gesprekszinnen in zes formaten
 
 Markeer maximaal 80 regels in je tijdelijke live gesprek en bekijk ze
