@@ -31,8 +31,12 @@ Selecteer daarna precies één uitvoerformaat:
   **Eigen betekenis → bronzin** of **beide richtingen** (twee kaarten per
   geldig paar). Status "Lokaal" zonder eigenlijke vertaling telt niet mee.
   Lege of nog niet vertaalde regels worden vooraf uit de teller gehaald
-  en komen nooit als verzonnen achterkant in het bestand. De exacte
-  uitvoer is vóór opslaan in de ruwe bestandspreview te bekijken.
+  en komen nooit als verzonnen achterkant in het bestand. Identieke
+  bron/vertaling-combinaties binnen hetzelfde taalpaar tellen eenmaal;
+  verschillende taalparen worden niet samengevoegd. Het scherm toont
+  het aantal unieke tweetalige paren, het effectieve aantal kaartjes
+  (bij beide richtingen dubbel) en een leesbare voor-/achterkant-preview.
+  De exacte uitvoer is vóór opslaan in de ruwe bestandspreview te bekijken.
   Regeleinden en tabs in eigen teksten worden spaties; mogelijke
   spreadsheetformules krijgen een leidende apostrof en HTML-speciale
   tekens worden als entiteit geschreven. Een studietool kan die tekens
