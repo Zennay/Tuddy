@@ -70,11 +70,13 @@ Selecteer daarna precies één uitvoerformaat:
   De exacte uitvoer is vóór opslaan in de ruwe bestandspreview te bekijken.
   Emoji en andere geldige Unicode-tekens blijven behouden; ongeldige
   losse UTF-16-surrogaten worden geweigerd in plaats van ongemerkt
-  vervormd. Regeleinden en tabs in eigen teksten worden spaties; mogelijke
-  spreadsheetformules krijgen een leidende apostrof en HTML-speciale
-  tekens worden als entiteit geschreven. Een studietool kan die tekens
-  anders tonen afhankelijk van diens importinstellingen; kies twee
-  kolommen en inspecteer het resultaat. Geen automatische kwaliteits-
+  vervormd. Regeleinden en tabs in eigen teksten worden spaties;
+  mogelijke spreadsheetformules krijgen een leidende apostrof, ook na
+  onzichtbare opmaakkarakters. De werkelijke tekst (inclusief & en <)
+  blijft platte TSV-data en wordt niet als HTML-geëscaped. Een studietool
+  kan de apostrof anders tonen afhankelijk van diens importinstellingen;
+  kies UTF-8 met twee tabgescheiden tekstkolommen en inspecteer het
+  resultaat. Geen automatische kwaliteits-
   of taalcontrole. Je leerkaarten blijven ook zonder verdere
   toestemming *niet* als app-privé studiekaarten opgeslagen.
 - **JSON**: dezelfde beperkte selectie in Tuddy's bestaande
