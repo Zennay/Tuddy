@@ -106,17 +106,17 @@ internal fun SubtitlePasteDialog(
                             "tijden volgen GEEN opgenomen audio.",
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                             splitMode = PlainSubtitleSplitMode.LINES
                             page = 0
                         }) { Text((if (splitMode == PlainSubtitleSplitMode.LINES) "✓ " else "") +
-                            "Per regel") }
-                        OutlinedButton(onClick = {
+                            "Per eigen regel") }
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                             splitMode = PlainSubtitleSplitMode.SENTENCES
                             page = 0
                         }) { Text((if (splitMode == PlainSubtitleSplitMode.SENTENCES) "✓ " else "") +
-                            "Per zin (schatting)") }
+                            "Geschatte zinsscheiding") }
                     }
                     OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         splitMode = PlainSubtitleSplitMode.PAIRED_COLUMNS
@@ -153,44 +153,46 @@ internal fun SubtitlePasteDialog(
                         )
                     }
                     if (splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.foundation.layout.Box {
-                            OutlinedButton(onClick = { startMenu = true }) {
-                                Text("Begin: ${startMs / 1000}s ▾")
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            androidx.compose.foundation.layout.Box {
+                                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                    onClick = { startMenu = true }) {
+                                    Text("Schatting begint na ${startMs / 1000} seconden ▾")
+                                }
+                                DropdownMenu(expanded = startMenu,
+                                    onDismissRequest = { startMenu = false }) {
+                                    PrivatePlainTextSubtitleDraft.startOptions.forEach { value ->
+                                        DropdownMenuItem(
+                                            text = { Text("${value / 1000} seconden") },
+                                            onClick = {
+                                                startMs = value
+                                                startMenu = false
+                                                page = 0
+                                            }
+                                        )
+                                    }
+                                }
                             }
-                            DropdownMenu(expanded = startMenu,
-                                onDismissRequest = { startMenu = false }) {
-                                PrivatePlainTextSubtitleDraft.startOptions.forEach { value ->
-                                    DropdownMenuItem(
-                                        text = { Text("${value / 1000} seconden") },
-                                        onClick = {
-                                            startMs = value
-                                            startMenu = false
-                                            page = 0
-                                        }
-                                    )
+                            androidx.compose.foundation.layout.Box {
+                                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                    onClick = { durationMenu = true }) {
+                                    Text("Geschatte duur per kaart: ${durationMs / 1000.0}s ▾")
+                                }
+                                DropdownMenu(expanded = durationMenu,
+                                    onDismissRequest = { durationMenu = false }) {
+                                    PrivatePlainTextSubtitleDraft.durationOptions.forEach { value ->
+                                        DropdownMenuItem(
+                                            text = { Text("${value / 1000.0} seconden") },
+                                            onClick = {
+                                                durationMs = value
+                                                durationMenu = false
+                                                page = 0
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
-                        androidx.compose.foundation.layout.Box {
-                            OutlinedButton(onClick = { durationMenu = true }) {
-                                Text("Per zin: ${durationMs / 1000.0}s ▾")
-                            }
-                            DropdownMenu(expanded = durationMenu,
-                                onDismissRequest = { durationMenu = false }) {
-                                PrivatePlainTextSubtitleDraft.durationOptions.forEach { value ->
-                                    DropdownMenuItem(
-                                        text = { Text("${value / 1000.0} seconden") },
-                                        onClick = {
-                                            durationMs = value
-                                            durationMenu = false
-                                            page = 0
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
                     }
                 } else {
                     Text(
