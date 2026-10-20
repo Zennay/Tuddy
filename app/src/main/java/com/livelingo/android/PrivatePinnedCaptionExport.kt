@@ -22,8 +22,8 @@ internal enum class PinnedCaptionScope(val title: String) {
 }
 
 internal enum class PinnedStudyDirection(val title: String) {
-    SOURCE_TO_TARGET("Bronzin → eigen betekenis"),
-    TARGET_TO_SOURCE("Eigen betekenis → bronzin"),
+    SOURCE_TO_TARGET("Bronzin → lokale modelvertaling"),
+    TARGET_TO_SOURCE("Lokale modelvertaling → bronzin"),
     BOTH("Beide richtingen · twee kaarten per zin")
 }
 
@@ -131,7 +131,7 @@ internal object PrivatePinnedCaptionExport {
 /**
  * Explicitly exported two-column study cards, suitable for manual import in
  * programs that accept UTF-8 tab-separated front/back fields. Only genuinely
- * completed translations enter the file; cards are not a verified dictionary.
+ * completed on-device model translations enter the file; cards are not a verified dictionary.
  * No local persistence, clipboard or network access.
  */
 internal object PrivatePinnedCaptionStudyTsv {
