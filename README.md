@@ -1,3 +1,43 @@
+## Nieuw: zelf invullen of zonder antwoordbronnen delen (luisterwerkblad)
+
+In **Mijn privé luisteroverzicht → Bewaar luisterwerkblad…** kun je nu
+kiezen tussen **Zelfstudie · bronregels zelf onthullen** en
+**Leerlingenblad · zonder bronregels of privébeoordeling**. De keuze werkt
+naast **Alle / Nog oefenen / Nog niet beoordeeld** en verandert je
+bestaande audioroute niet. Er wordt geen audio meegestuurd.
+
+Het zelfstandige offline HTML-luisterwerkblad heeft per geselecteerd
+A–B-fragment een **antwoordveld**, een handmatige keuze **Nog oefenen /
+Ging goed / Makkelijk** en **Wis mijn antwoord en inschatting**.
+Het browserantwoord en de zelfbeoordeling zijn tijdelijk; Tuddy bewaart
+deze niet en controleert geen uitspraak of betekenis. Bij printen
+verschijnen schrijflijnen en lege zelfbeoordelingsvakjes, geen ingevulde
+browserformulieren. De browser kan eventueel zelf eerder getypte velden
+herstellen. Het bestand bevat geen JavaScript of netwerkbronnen.
+
+De **zelfstudieversie** onthult eigen SRT/VTT-bronregels pas via een
+bewuste uitklapactie. Het complete bronregelblad is op het scherm
+aanvankelijk verborgen en wordt pas getoond na **Open compleet
+bronregelblad**; bij afdrukken staat het op een aparte pagina.
+De **leerlingenversie** bevat géén eigen bronregelteks­ten, verborgen
+bronsleutel, privébeoordelingen, eigen oefennotities of selectiefiltertitel
+in de HTML. Alleen gekozen audiotijdvakken, lege invulvelden en lege
+beoordelingsopties komen mee; een gekozen tijdvak of aantal fragmenten
+kan nog persoonlijke context zijn, dus controleer zelf wat je deelt.
+De Android-bestandskiezer suggereert bij de leerlingenversie de naam
+`Tuddy-luister-leerlingenblad-zonder-bronregels.html`.
+
+Het eigen luisteroverzicht is nu ook verticaal scrollbaar op kleine
+Android-schermen. Tijdens een bewuste opslag vergelijkt Tuddy
+**alle actuele exportbytes en zowel selectie als doelgroep** met de
+vooraf goedgekeurde inhoud. Zijn die veranderd, dan wordt de oude
+export geweigerd. Een door de gebruiker gekozen bestandsprovider kan
+een bestand wel synchroniseren. Dit is uitsluitend handmatige
+SRT/VTT-bronstudie met eigen A–B-tijdkeuze, geen geverifieerde
+audio-uitlijning of transcriptie.
+
+---
+
 ## Nieuw: exact geselecteerde privé-luister-CSV zonder verborgen regels
 
 De selectie **Alle / Nog oefenen / Nog niet beoordeeld** geldt nu ook
