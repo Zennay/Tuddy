@@ -78,6 +78,7 @@ import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
+import com.livelingo.android.ui.LanguageSupportDialog
 import com.livelingo.android.ui.TwoWayTypedConversationDialog
 import com.livelingo.android.ui.TypedConversationLine
 import com.livelingo.android.ui.CaptionLanguageCorrectionDialog
@@ -581,6 +582,7 @@ private fun TuddyScreen(
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
+    var languageSupportOpen by remember { mutableStateOf(false) }
     // Secondary export/history actions are collapsed on compact screens.
     var conversationToolsOpen by remember { mutableStateOf(false) }
     var directionNotice by remember { mutableStateOf("") }
@@ -2255,6 +2257,12 @@ private fun TuddyScreen(
     }
 
     MaterialTheme(colorScheme = colors) {
+        if (languageSupportOpen) {
+            LanguageSupportDialog(
+                spokenCandidates = spoken.map { it.label + " (" + it.speechCode + ")" },
+                onDismiss = { languageSupportOpen = false }
+            )
+        }
         if (offlineReadinessOpen) {
             OfflineReadinessDialog(
                 spokenLabel = source.label,
@@ -5541,6 +5549,12 @@ private fun TuddyScreen(
                             }
                         }
                     }
+                }
+                OutlinedButton(
+                    onClick = { languageSupportOpen = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Bekijk alle taalondersteuning")
                 }
                 if (source.speechCode == "ar-SY" || source.speechCode == "ar-PS") {
                     Text("Dit is alleen een regionale Android-spraakkandidaat; " +
