@@ -167,6 +167,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
             val updatedBytes = when (pending.format) {
                 PrivatePracticeReportFormat.HTML ->
                     PrivatePrintablePracticeSummary.snapshot(updatedSummary)
+                PrivatePracticeReportFormat.WORKSHEET_HTML ->
+                    PrivateListeningWorksheet.snapshot(
+                        cues, subtitleOffsetMs, savedPracticePassages,
+                        passageRatings, passageNotes
+                    )
                 PrivatePracticeReportFormat.TXT ->
                     PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
                 PrivatePracticeReportFormat.CSV ->
@@ -200,6 +205,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val report = exportablePracticeSummary()
         val payload = when (format) {
             PrivatePracticeReportFormat.HTML -> PrivatePrintablePracticeSummary.snapshot(report)
+            PrivatePracticeReportFormat.WORKSHEET_HTML ->
+                PrivateListeningWorksheet.snapshot(
+                    cues, subtitleOffsetMs, savedPracticePassages,
+                    passageRatings, passageNotes
+                )
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
             PrivatePracticeReportFormat.CSV ->
                 PrivatePrintablePracticeSummary.snapshotCsv(
@@ -1497,11 +1507,20 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         "je klembord- of toetsenbord-app kan een kopie dan lezen.",
                         style = MaterialTheme.typography.bodySmall)
                     Text(
-                        "Je kunt het overzicht als afdrukbare HTML, TXT-notitie of " +
-                            "CSV met je eigen fragmentbeoordelingen opslaan. Externe Android-opslag kan synchroniseren; " +
-                            "er gaan geen audio-opnamen of audiobestandsnamen mee.",
+                        "Je kunt een afdrukbare HTML-rapportage, een zelfstandig " +
+                            "luisterwerkblad, een TXT-notitie of CSV met eigen beoordelingen " +
+                            "bewaren. Op het luisterwerkblad blijven de bronregels tijdens " +
+                            "het oefenen ingeklapt en staan ze op een eigen afdrukpagina. " +
+                            "Externe Android-opslag kan synchroniseren; audio of audiobestandsnamen " +
+                            "gaan niet mee.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    TextButton(
+                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        onClick = {
+                            choosePracticeReport(PrivatePracticeReportFormat.WORKSHEET_HTML)
+                        }
+                    ) { Text("Bewaar luisterwerkblad · vragen en aparte bronregels…") }
                     TextButton(
                         enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.TXT) }
