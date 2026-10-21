@@ -1,3 +1,13 @@
+## Gedeelde SRT/WebVTT-tekst direct in Tuddy bekijken
+
+Je kunt nu in een andere Android-app bewust **Delen → Tuddy** kiezen bij een compleet SRT- of WebVTT-document dat daadwerkelijk als **platte tekst** wordt gedeeld. Tuddy controleert dit bericht volledig met dezelfde strikte UTF-8-/cue-/tijdcodeparser als de eigen documentimport (maximaal 256 KiB, 500 cues) en opent het vervolgens als **tijdelijk concept in de bestaande ondertiteleditor**. Dit is geen automatische overname: bekijk de cues, eventuele correcties en tijdcodes en tik zelf op de bestaande bevestiging. Sluiten gooit alleen dit RAM-concept weg.
+
+Tuddy leest hierbij **nooit** gedeelde bijlagen, streams, HTML, bestanden via een URI of externe links. Een ongeldige of te grote SRT/VTT wordt niet als ondertitel geïmporteerd. Gewone korte gedeelde tekst blijft via de bestaande typtekstfunctie beschikbaar. Als er al een andere ondertiteleditor open is, wordt die niet overschreven: sluit deze eerst en deel opnieuw. Het delen vraagt geen microfoontoestemming en start geen automatische speech- of tekstmodelactie. Alleen wanneer je later zelf expliciet Androids opslagkiezer gebruikt, worden exportbytes geschreven; de gekozen provider kan externe synchronisatie aanbieden.
+
+Deze route vervangt **niet** de bestaande **Open SRT/WebVTT…**-bestandskiezer. Voor een SRT/VTT-bestand dat een andere app niet als volledige platte tekst deelt, blijft die expliciete Android-bestandskeuze de aangewezen manier.
+
+---
+
 # SRT/WebVTT, LRC, eigen tekst en documenten importeren
 
 Tuddy laat je handmatig een volledig SRT- of WebVTT-document plakken, zonder dat de app zelf je Android-klembord uitleest.

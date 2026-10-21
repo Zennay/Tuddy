@@ -66,6 +66,7 @@ import com.livelingo.android.ui.SessionMeaningRow
 import com.livelingo.android.ui.PrivateSubtitleFileDialog
 import com.livelingo.android.ui.SubtitlePasteDialog
 import com.livelingo.android.ui.SubtitlePasteFileContent
+import com.livelingo.android.ui.SubtitlePasteFormat
 import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
@@ -1998,7 +1999,35 @@ private fun TuddyScreen(
     LaunchedEffect(incomingExternalText) {
         val shared = incomingExternalText
         if (shared != null) {
-            if (shared.draft == null) {
+            if (shared.subtitleDraft != null) {
+                // A validated sharesheet subtitle is ONLY a draft for the
+                // existing explicit preview / acceptance UI. Never replace
+                // another open subtitle editor or silently mutate a session.
+                if (subtitleFileCues != null || subtitlePasteOpen ||
+                    pendingManualSubtitleDocument != null) {
+                    error = "Er is al een ondertitelconcept open. Sluit dat eerst en deel opnieuw."
+                } else {
+                    stop()
+                    quickTypedOpen = false
+                    twoWayTypedOpen = false
+                    sharedTextToTwoWay = null
+                    draftFromExternalShare = false
+                    manualText = ""
+                    readyFirstPasteDocument = SubtitlePasteFileContent(
+                        text = shared.subtitleDraft,
+                        format = SubtitlePasteFormat(
+                            plainLines = false,
+                            lrcMode = false,
+                            splitMode = PlainSubtitleSplitMode.LINES
+                        ),
+                        notice = "Gedeelde SRT/WebVTT is alleen een tijdelijk voorstel. " +
+                            "Controleer inhoud en tijdcodes en bevestig apart; " +
+                            "er wordt niets automatisch opgeslagen of vertaald."
+                    )
+                    subtitlePasteOpen = true
+                    error = ""
+                }
+            } else if (shared.draft == null) {
                 error = shared.notice ?: "Deze gedeelde inhoud is geen ondersteunde platte tekst."
                 quickTypedOpen = false
                 twoWayTypedOpen = false // forget private typed draft on background
