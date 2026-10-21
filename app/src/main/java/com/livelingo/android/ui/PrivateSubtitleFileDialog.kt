@@ -156,6 +156,8 @@ internal fun PrivateSubtitleFileDialog(
     var secondTrackCustomOffset by remember { mutableStateOf("") }
     var primaryAnchorRow by remember { mutableStateOf("1") }
     var secondaryAnchorRow by remember { mutableStateOf("1") }
+    var primaryAnchorPage by remember { mutableIntStateOf(0) }
+    var secondaryAnchorPage by remember { mutableIntStateOf(0) }
     var anchorSelectionNeedsApply by remember { mutableStateOf(false) }
     var secondTrackPreviewPage by remember { mutableIntStateOf(0) }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
@@ -176,6 +178,8 @@ internal fun PrivateSubtitleFileDialog(
                 secondTrackCustomOffset = ""
                 primaryAnchorRow = "1"
                 secondaryAnchorRow = "1"
+                primaryAnchorPage = 0
+                secondaryAnchorPage = 0
                 anchorSelectionNeedsApply = false
                 secondTrackPreviewPage = 0
                 notice = ""
@@ -695,6 +699,8 @@ internal fun PrivateSubtitleFileDialog(
                 secondTrackCustomOffset = ""
                 primaryAnchorRow = "1"
                 secondaryAnchorRow = "1"
+                primaryAnchorPage = 0
+                secondaryAnchorPage = 0
                 anchorSelectionNeedsApply = false
                 secondTrackPreviewPage = 0
                 notice = ""
@@ -821,6 +827,52 @@ internal fun PrivateSubtitleFileDialog(
                                     secondTrackPreviewPage = 0
                                 }, modifier = Modifier.weight(1f),
                                 label = { Text("Regel tweede spoor") }, singleLine = true)
+                        }
+
+                        Text("Of blader rechtstreeks door elk eigen spoor en " +
+                            "tik op een regel om die als anker aan te wijzen. " +
+                            "De volledige gekozen tekst verschijnt hieronder; " +
+                            "alleen een korte regelhint staat in de bladerlijst.",
+                            style = MaterialTheme.typography.bodySmall)
+                        listOf(
+                            Triple("Eerste spoor", draft, true),
+                            Triple("Tweede spoor", stagedImport.imported, false)
+                        ).forEach { (label, sourceCues, isPrimary) ->
+                            val lastPage = maxOf(0, (sourceCues.size - 1) / 3)
+                            val selectedPage = if (isPrimary) primaryAnchorPage
+                                else secondaryAnchorPage
+                            val shownSourcePage = selectedPage.coerceIn(0, lastPage)
+                            Text("$label · bronregels, pagina " +
+                                "${shownSourcePage + 1}/${lastPage + 1}",
+                                style = MaterialTheme.typography.titleSmall)
+                            sourceCues.withIndex().drop(shownSourcePage * 3).take(3)
+                                .forEach { item ->
+                                    val number = item.index + 1
+                                    OutlinedButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            if (isPrimary) primaryAnchorRow = number.toString()
+                                            else secondaryAnchorRow = number.toString()
+                                            anchorSelectionNeedsApply = true
+                                            secondTrackCustomOffset = ""
+                                            secondTrackPreviewPage = 0
+                                        }
+                                    ) {
+                                        Text("Kies regel $number · ${item.value.startLabel} · " +
+                                            item.value.text.replace('\n', ' ').take(85))
+                                    }
+                                }
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween) {
+                                TextButton(enabled = shownSourcePage > 0, onClick = {
+                                    if (isPrimary) primaryAnchorPage = shownSourcePage - 1
+                                    else secondaryAnchorPage = shownSourcePage - 1
+                                }) { Text("← Vorige $label") }
+                                TextButton(enabled = shownSourcePage < lastPage, onClick = {
+                                    if (isPrimary) primaryAnchorPage = shownSourcePage + 1
+                                    else secondaryAnchorPage = shownSourcePage + 1
+                                }) { Text("Volgende →") }
+                            }
                         }
                         val anchorPreview = PrivateSubtitleTrackAnchorOffset.preview(
                             draft, stagedImport.imported,
