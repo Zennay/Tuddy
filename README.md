@@ -1,3 +1,7 @@
+## Nieuw: lokale TTML-kopie bewaren
+
+Je kunt nu in de tijdelijke ondertiteleditor na een volledige preview een **nieuwe TTML-kopie** opslaan. De bewaarde tekst en begin-/eindtijden moeten exact door Tuddy's beperkte parser teruggelezen kunnen worden; anders wordt de uitvoer geweigerd. Android vraagt altijd eerst een opslaglocatie. [Beperkingen en voorbeeld](docs/TTML_DFXP_SUBTITLE_IMPORT.md).
+
 ## Nieuw: TTML/DFXP-ondertitels lokaal openen
 
 Tuddy kan nu TTML/DFXP-tekstondertitels met expliciete `<p begin/end>`-tijden uit de Android-bestandenkiezer of een bewust gedeelde tekst/URI verwerken. De tijdelijke preview bevat alleen leesbare tekst, `<span>` en `<br/>`, en kan via de bestaande editor als nieuwe SRT/VTT-kopie worden bewaard. Externe XML-entiteiten, relatieve timing, scripts en andere media worden geweigerd. Geen cloudvertaling of bronwijziging. [Handleiding en beperkingen](docs/TTML_DFXP_SUBTITLE_IMPORT.md).

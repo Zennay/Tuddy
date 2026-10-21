@@ -31,3 +31,7 @@ Tuddy accepteert een bewust gekozen, geldige UTF-8 **TTML/DFXP**-tekstondertitel
 ```
 
 De twee cues krijgen uitsluitend de zelf aangeleverde timestamps; TTML-import bewijst geen spraakherkenning, audio-uitlijning, installatie van offline modellen of fysieke device-acceptatie.
+
+## Bewust nieuw TTML-bestand bewaren
+
+In de privé-ondertiteleditor is ook **Bewaar exacte tijdvakken als TTML…** beschikbaar. Na een volledige, apart bevestigde paginapreview vraagt Android waar de nieuwe `.ttml`-kopie moet komen. De auteurstijden worden in milliseconden bewaard; `<`, `>` en `&` worden XML-veilig escaped, echte tekstregelovergangen als `<br/>`. Als het nieuwe bestand niet opnieuw kan worden gelezen zonder verlies van tekst of tijdcodes, wordt bewaren geheel geweigerd. Na terugkomst uit Android wordt de bevestigde bytekopie nogmaals tegen het bewaarde concept gecontroleerd. Er is geen automatische overschrijving, netwerksynchronisatie door Tuddy of opname van audio.
