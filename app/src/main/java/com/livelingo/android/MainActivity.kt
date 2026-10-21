@@ -618,6 +618,7 @@ private fun TuddyScreen(
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
+    var offlineReportPickerOpen by remember { mutableStateOf(false) }
     // Return to the explicit startcheck only after the user opened Android speech settings.
     var pendingSpeechSettingsReturnTag by remember { mutableStateOf<String?>(null) }
     var languageSupportOpen by remember { mutableStateOf(false) }
@@ -2309,7 +2310,7 @@ private fun TuddyScreen(
                 installedTextModels = null
             }
             if (event == Lifecycle.Event.ON_STOP) {
-                offlineReadinessOpen = false
+                if (!offlineReportPickerOpen) offlineReadinessOpen = false
                 starterPhraseboardOpen = false
                 quickPhrasePickerOpen = false
                 flashcardsOpen = false
@@ -2607,6 +2608,8 @@ private fun TuddyScreen(
                 },
                 onCopyDiagnostics = { copyOfflineReadinessReport() },
                 onReportSnapshot = { offlineReadinessReportSnapshot() },
+                onReportPickerStarted = { offlineReportPickerOpen = true },
+                onReportPickerFinished = { offlineReportPickerOpen = false },
                 onCheckText = { checkTextPair() },
                 onPrepareText = { prepareOfflinePair() },
                 onEditLanguages = {
