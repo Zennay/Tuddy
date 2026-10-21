@@ -2028,15 +2028,20 @@ private fun TuddyScreen(
                     readyFirstPasteDocument = SubtitlePasteFileContent(
                         text = shared.subtitleDraft,
                         format = SubtitlePasteFormat(
-                            plainLines = false,
+                            plainLines = shared.subtitleTimedSheetMode != null,
                             lrcMode = shared.subtitleIsLrc,
-                            splitMode = PlainSubtitleSplitMode.LINES
+                            splitMode = shared.subtitleTimedSheetMode
+                                ?: PlainSubtitleSplitMode.LINES
                         ),
-                        notice = (if (shared.subtitleIsLrc)
-                            "Gedeelde LRC-lyrics hebben alleen zelf opgegeven begintijden; " +
-                                "eindtijden blijven geschat. "
-                            else "Gedeelde SRT/WebVTT is alleen een tijdelijk voorstel. ") +
-                            "Controleer inhoud en tijdcodes en bevestig apart; " +
+                        notice = (when {
+                            shared.subtitleIsLrc ->
+                                "Gedeelde LRC-lyrics hebben alleen zelf opgegeven begintijden; " +
+                                    "eindtijden blijven geschat. "
+                            shared.subtitleTimedSheetMode != null ->
+                                "Gedeelde CSV/TSV heeft expliciete begin- en eindtijden; " +
+                                    "een tweede tekstkolom is geen geverifieerde vertaling. "
+                            else -> "Gedeelde SRT/WebVTT is alleen een tijdelijk voorstel. "
+                        }) + "Controleer inhoud en tijdcodes en bevestig apart; " +
                             "er wordt niets automatisch opgeslagen of vertaald."
                     )
                     subtitlePasteOpen = true

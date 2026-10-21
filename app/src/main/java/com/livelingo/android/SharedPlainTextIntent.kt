@@ -11,9 +11,10 @@ import android.content.Intent
 internal data class IncomingSharedText(
     val draft: String?,
     val notice: String?,
-    // Validated SRT/VTT/LRC from a deliberate Android text share. Preview only.
+    // Validated SRT/VTT/LRC/timed CSV/TSV from user-shared text; preview only.
     val subtitleDraft: String? = null,
-    val subtitleIsLrc: Boolean = false
+    val subtitleIsLrc: Boolean = false,
+    val subtitleTimedSheetMode: PlainSubtitleSplitMode? = null
 )
 
 internal object SharedPlainTextIntent {
@@ -69,6 +70,23 @@ internal object SharedPlainTextIntent {
                 if (candidate.contains('[') &&
                     PrivateLrcSubtitleDraft.preview(candidate) != null)
                     return IncomingSharedText(null, null, candidate, subtitleIsLrc = true)
+                // A user may share the exact three-/four-column timed sheet
+                // that Tuddy can export. Preserve the original text and
+                // explicitly selected input mode; do not treat it as a
+                // sentence to translate or invent subtitle timestamps.
+                val timed = PrivateTimedSubtitleSheet.readAuthored(candidate)
+                if (timed != null) {
+                    val paired = timed.first().text.contains('\n')
+                    val mode = if ('\t' in candidate) {
+                        if (paired) PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
+                        else PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS
+                    } else {
+                        if (paired) PlainSubtitleSplitMode.TIMED_PAIRED_CSV
+                        else PlainSubtitleSplitMode.TIMED_TEXT_CSV
+                    }
+                    return IncomingSharedText(null, null, candidate,
+                        subtitleTimedSheetMode = mode)
+                }
             }
         }
         val clean = supplied?.let(OfflineTypedCaptionPolicy::normalize)
