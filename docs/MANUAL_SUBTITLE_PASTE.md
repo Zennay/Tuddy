@@ -555,6 +555,32 @@ schrijft nog niets naar je bronbestand. Een nieuw bestand bewaren
 vraagt later afzonderlijk om jouw Android-bestandsprovider. Er zijn
 geen nieuwe permissies, accounts of netwerkverzoeken.
 
+## Bronregels uit een gekozen tijdvenster
+
+In **Kies zelf bronregels om te bewaren…** en **Alleen gekozen
+bronregels in tijd verschuiven…** kun je naast regelnummers ook een
+**Vanaf**- en **Tot**-tijd invullen, in `mm:ss`,
+`mm:ss.fff` of `hh:mm:ss.fff` (een komma is ook toegestaan).
+Bijvoorbeeld vanaf `01:15` tot `02:10`.
+
+Kies daarna bewust **Neem overlappende cues uit tijdvenster** of
+**Selecteer cues die tijdvenster overlappen**. Een ondertitel wordt
+geselecteerd als zijn bestaande begin vóór het einde van het
+venster ligt **én** zijn einde na het begin van het venster ligt.
+Zo worden ook lange captions met een begin vóór het venster
+meegenomen wanneer zij nog gedeeltelijk binnen het venster vallen.
+Dit kiest **de volledige cue**: eigen tekst en tijdcodes worden
+niet ingekort of herschreven, en er wordt geen audio gelezen.
+
+Een ongeldig, leeg of omgekeerd venster en een venster zonder
+overlappende cues activeren de selectieknop niet. Het resultaat
+wordt bewust omgezet naar exact dezelfde strikt begrensde
+originele 1-based bronregelreeksen als bij handmatige invoer.
+Na het selecteren blijft de bestaande volledige bron-/export-
+preview of vóór/na-tijdcodepreview verplicht, evenals de
+separate expliciete bevestiging. Taalmodel, vertaling,
+netwerktoegang en extra toestemmingen zijn niet vereist.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
