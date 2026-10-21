@@ -1189,6 +1189,36 @@ private fun TuddyScreen(
         next(0)
     }
 
+    // Explicit, read-only evidence handoff; never includes audio or captions.
+    fun copySpeechCatalogReport(): Boolean = runCatching {
+        if (!speechCatalogOpen || speechCatalogBusy || speechCatalogReceipts.isEmpty()) {
+            return@runCatching false
+        }
+        val snapshot = buildString {
+            appendLine("Tuddy on-device speech catalog")
+            appendLine("Source SHA: ${BuildConfig.TUDDY_SOURCE_SHA}")
+            appendLine("Build run: ${BuildConfig.TUDDY_BUILD_RUN_ID}")
+            appendLine("Android API: ${Build.VERSION.SDK_INT}")
+            appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine("On-device recognition service present: $offlineAvailable")
+            appendLine("Manually checked: ${speechCatalogScanned} of ${spoken.size}")
+            spoken.forEach { option ->
+                val receipt = speechCatalogReceipts[option.speechCode]
+                appendLine("${option.label} [${option.speechCode}]: " +
+                    (receipt?.stage?.name ?: "UNCHECKED"))
+            }
+            appendLine("Speech transcript or audio: not included")
+            appendLine("Device-reported only; not an airplane-mode acceptance record.")
+        }
+        val board = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Tuddy speech packs (no transcripts)", snapshot)
+        clip.description.extras = PersistableBundle().apply {
+            putBoolean("android.content.extra.IS_SENSITIVE", true)
+        }
+        board.setPrimaryClip(clip)
+        true
+    }.getOrDefault(false)
+
     fun selectBrowserSpeechSource(tag: String) {
         val nextSource = spoken.firstOrNull { it.speechCode == tag } ?: return
         closeSpeechCatalog()
@@ -2456,6 +2486,7 @@ private fun TuddyScreen(
                     speechCatalogController.cancel()
                     speechCatalogBusy = false
                 },
+                onCopyCatalog = { copySpeechCatalogReport() },
                 onSelect = { tag -> selectBrowserSpeechSource(tag) },
                 onDismiss = { closeSpeechCatalog() }
             )
