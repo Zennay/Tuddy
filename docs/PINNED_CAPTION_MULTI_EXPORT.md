@@ -50,7 +50,12 @@ HTML-document begint met alle **vragen en schrijflijnen**; de
 **antwoorden** staan in een afzonderlijk afdrukgedeelte met pagina-einde.
 Zo kun je de vragen uitdelen zonder de antwoorden op de eerste pagina.
 Het bestand heeft geen JavaScript, externe bronnen, gekoppelde
-audiobestanden of netwerkaanvragen. De app bewaart geen nieuwe
+audiobestanden of netwerkaanvragen.
+In tegenstelling tot het spreadsheetveilige TSV-/CSV-formaat toont het
+HTML-blad een eigen zin die met `=`, `+`, `-` of `@` begint **zonder**
+de extra formulebeschermende apostrof; het is HTML-tekst, geen
+spreadsheetcel. Tekst wordt HTML-geëscapet en ieder antwoord
+blijft leesbaar in zijn eigen tekstrichting (ook Sorani/Pasjtoe). De app bewaart geen nieuwe
 studieresultaten en wijzigt de oorspronkelijke transcriptie niet.
 
 De export is een volledig zelfstandige, maximaal 256 KiB grote
