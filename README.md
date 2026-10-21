@@ -1,3 +1,18 @@
+## Nieuw · eigen Unicode-woordgrenzen blijven intact in invulhints
+
+De meerrondige, tweetalige HTML-aanvuloefening herkent nu ook
+niet-afbreekbare spaties en expliciete zero-width-spaties (U+200B)
+als **door de schrijver zelf gekozen woordgrenzen**. Spaties en
+scheidingstekens blijven intact in de opgaven; een tekst zonder
+zulke grenzen wordt niet kunstmatig in woorden opgesplitst.
+De Android-hintpreview en zelfstandige offline HTML gebruiken
+dezelfde tokenisering. Zonder netwerk, audio-uitlijning of
+automatische taalbeoordeling.
+
+[Uitleg bij de invuloefening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 ## RTL-richting en schermlezers in tweetalige HTML-oefenkaarten
 
 Wanneer je taalcodes zoals `[ar]`, `[ps]` of `[ckb]` toont, houdt
