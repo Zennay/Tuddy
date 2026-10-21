@@ -1,3 +1,22 @@
+## Unicode-woordgrenzen in offline invuloefeningen
+
+Invulhints volgen nu de **daadwerkelijk door de schrijver aangebrachte**
+woordgrenzen: gewone spaties, non-breaking spaces (NBSP), narrow NBSP,
+overige Unicode-witruimte en expliciete zero-width spaces (U+200B).
+De export bewaart de eigen scheidingstekens tussen de zichtbare en
+afgedekte woorden, ook bij meerdere oefenrondes. Daardoor ontstaan
+minder onbedoelde hele-zinsgaten in internationale ondertitelteksten.
+Bij ongesegmenteerde tekst zonder zulke grenzen blijft het hele
+woord/de hele regel één afgedekt token; Tuddy verzint geen
+taalkundige segmentatie, woordtijden of automatische vertaling.
+
+De HTML-generator en de daadwerkelijke Android-voorbeeldhint gebruiken
+dezelfde gedeelde functie. De bestaande drie moeilijkheden, drie
+rondes, antwoordvrije leerlingenbestanden, toestemming na de Android-
+bestandskiezer en lokale/offline beperkingen blijven gehandhaafd.
+
+---
+
 ## RTL-tekst en schermlezers in tweetalige HTML-oefenkaarten
 
 Bij de HTML-aanvuloefening kunnen taalcodes zoals `[ar]`, `[ps]` en
