@@ -1,3 +1,25 @@
+## Nieuw · eigen woordtijdankers terugplakken zonder audioanalyse
+
+De optionele **geschatte woordvolger** kan maximaal 16 expliciet door
+jou gemarkeerde tijdankers van één ondertitel als selecteerbare tekst
+tonen, zoals `2=00:00:12.250;5=00:00:13.900`. Bewaar of kopieer
+die tekst zelf en plak hem later in de invoer onder
+**Handmatige woordankers** bij de **juiste** actieve cue.
+Tuddy valideert de hele set tegen de huidige tekst en tijdgrenzen,
+toont de exacte voorgestelde waarden en vervangt pas na
+**Bevestig en vervang ankers van deze ondertitel** de tijdelijke
+waarden. Een foutieve/te lange reeks kan nooit deels worden toegepast.
+
+Dit is handmatige, terug te plakken tekst, geen gemeten woordtiming,
+automatische opslag, audioherkenning of cloudfunctie. De bestaande
+woordherhaling, springen en highlighting gebruiken de nieuwe
+handmatige ankers na jouw bevestiging. Klembordapps kunnen tekst
+zelf synchroniseren.
+
+[Handleiding geschatte woordvolger](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
 ## Verbeterd: woordstappen respecteren expliciete zero-width-spaties
 
 De geschatte woordvolger gebruikt nu ook bestaande `U+200B`-scheidingstekens
