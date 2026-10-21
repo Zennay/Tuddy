@@ -718,6 +718,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
             wholeSeconds / 3600L, (wholeSeconds / 60L) % 60L, wholeSeconds % 60L)
     }
 
+    // Manual anchors are millisecond-specific; never round away the number
+    // that was actually captured when inspecting or editing a word boundary.
+    fun anchorClock(millis: Long): String =
+        clock(millis) + "." + (millis % 1000L).toString().padStart(3, '0')
+
     Dialog(
         onDismissRequest = {
             closeAudio()
@@ -1473,6 +1478,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             label = { Text("Origineel woordnummer voor tijdanker") },
                             singleLine = true
                         )
+                        TextButton(onClick = {
+                            manualWordNumber = (estimatedCueWord.index + 1).toString()
+                        }, enabled = estimatedCueWord.index > 0) {
+                            Text("Vul huidig geschat woordnummer in (alleen invoer)")
+                        }
                         val desiredMark = manualWordNumber.toIntOrNull()?.minus(1)
                         val markedTimes = if (desiredMark != null &&
                             activeIndex >= 0 && prepared && dragPositionMs < 0L &&
@@ -1492,7 +1502,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     wordTimingMarks = wordTimingMarks +
                                         (activeIndex to markedTimes)
                                     notice = "Woordanker ${desiredMark!! + 1} vastgelegd op " +
-                                        "${clock(positionMs)} (handmatig, niet gemeten)."
+                                        "${anchorClock(positionMs)} (handmatig, niet gemeten)."
                                 }
                             }
                         ) { Text("Markeer dit woord op huidige audiotijd") }
@@ -1511,7 +1521,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 activeWordMarks.toSortedMap().forEach { (word, atMs) ->
                                     Row(modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Text("Woord ${word + 1}: ${clock(atMs)}",
+                                        Text("Woord ${word + 1}: ${anchorClock(atMs)}",
                                             modifier = Modifier.weight(1f),
                                             style = MaterialTheme.typography.bodySmall)
                                         TextButton(onClick = {
