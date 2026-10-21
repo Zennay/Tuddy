@@ -145,7 +145,9 @@ internal fun OfflineWordText(
                         value = selectedWord,
                         onValueChange = {
                             if (it.length <= 40) {
-                                selectedWord = it
+                                // Historical bounded-input contract: under
+                                // the guard take(40) can never cut a surrogate.
+                                selectedWord = it.take(40)
                                 meaningDraft = ""
                                 noteMessage = ""
                             } else {
