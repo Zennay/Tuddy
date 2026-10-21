@@ -44,4 +44,6 @@ The following original v0.4 files are now stored verbatim outside Gradle's activ
 - `archive/v0.4/LiveLingo-Android/app/src/main/java/com/livelingo/android/translation/OfflineTranslator.kt` — source SHA-256 `f1518efb40014395a54518ba71fb0f409bc585a78488db433f732b92699afa5f`.
 - `archive/v0.4/LiveLingo-Android/app/src/main/java/com/livelingo/android/speech/OnDeviceSpeech.kt` — source SHA-256 `6105869988bb1453b9b960e13d1d9bfec059ee113f2c6524e759696e165bf896`.
 
-These are archival references only; they are intentionally not part of the active Gradle source set. The archive's `LiveLingoScreen.kt`, `MainViewModel.kt` and `Languages.kt` still require safe source-by-source preservation or equivalent mapping. Issue #1 also remains open for the authorized physical Android 12+ airplane-mode acceptance; this snapshot does not satisfy that gate.
+These are archival references only; they are intentionally not part of the active Gradle source set.
+- `archive/v0.4/LiveLingo-Android/app/src/main/java/com/livelingo/android/model/Languages.kt` — source SHA-256 `ee4803911a2a6543bcd26053bcbfbf59c1740f94bad5060044a087fa0013190d`.
+ The archive's `LiveLingoScreen.kt` and `MainViewModel.kt` still require safe source-by-source preservation or equivalent mapping. `Languages.kt` is now preserved verbatim under the archival source tree; it remains out of the active Gradle source set. Issue #1 also remains open for the authorized physical Android 12+ airplane-mode acceptance; this snapshot does not satisfy that gate.
