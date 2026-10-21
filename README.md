@@ -1,5 +1,12 @@
 ## Nieuw: lokale tweetalige aanvuloefening met volledig antwoordblad
 
+Kies nu voor **Licht**, **Normaal** of **Uitdaging** om respectievelijk
+ongeveer één derde, de helft of twee derde van de antwoordwoorden
+zelf in te vullen. De keuze is in de native Android-preview te bekijken,
+verschijnt op het oefenblad en wordt opnieuw gecontroleerd bij de
+Android-bestandskiezer. Er worden nooit woorden uit het echte gesprek
+verwijderd; de antwoorden blijven apart beschikbaar.
+
 Maak bij **★ gemarkeerd → Exporteer selectie…** een **Aanvuloefening · HTML**
 uit je eigen selectie van afgeronde tweetalige zinnen. Iedere kaart toont
 de bronzin en een antwoord waarvan om de andere spatiegescheiden term
