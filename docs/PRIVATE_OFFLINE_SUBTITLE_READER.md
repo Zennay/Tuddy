@@ -92,6 +92,30 @@ als tweede spoor verwerken of met aparte bevestiging als SRT/VTT
 bewaren. Uit SBV blijven geen oorspronkelijke YouTube-metadata
 of audio-identiteit als geverifieerd bewijs bestaan.
 
+## SBV zonder bestanden plakken, delen en exporteren
+
+De handmatige knop **Plak of importeer ondertiteltekst…** kan nu ook
+complete `H:MM:SS.mmm,H:MM:SS.mmm` SBV-blokken lokaal lezen.
+In de Android-deelactie **Delen → Tuddy** wordt alleen letterlijk
+geselecteerde `text/plain`-SBV-inhoud met geldige timestamps aan de
+private preview doorgegeven. Een onvolledige of ongeldige SBV krijgt
+geen automatische opname, spraakherkenning of tijdschatting.
+Ook wanneer in de handmatige editor een SBV-document via **Kies document…**
+wordt geopend, wordt de invoermodus pas voorgesteld nadat de hele
+bestandsinhoud met de strikte SBV-parser is gecontroleerd.
+De originele bron blijft onaangeroerd.
+
+Na handmatig bewerken verschijnt **Bewaar exacte tijdvakken als YouTube SBV…**.
+Die route toont eerst de exacte UTF-8-bestandsinhoud in pagina's en
+vereist vervolgens afzonderlijk een Android-opslaglocatie. Het exportformaat
+bewaart per cue **start, einde en letterlijke tekst**, zonder koptekst
+of veronderstelde audio-/video-identiteit. De nieuwe export wordt vóór
+opslaan opnieuw als SBV geparsed en byte-voor-byte gecontroleerd tegen
+de bevestigde preview. Cues met ongeldige regels, tijdcodes of
+lege tussenregels worden volledig geweigerd; SRT/VTT blijven mogelijk.
+De Android-provider kan extern synchroniseren, maar Tuddy doet dit
+niet zelf. Het originele bestand wordt niet overschreven.
+
 ## Veiligheid en privacy
 
 Dit is uitsluitend het bewust gekozen document, nooit de actuele
