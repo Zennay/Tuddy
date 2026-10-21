@@ -1679,6 +1679,7 @@ private fun TuddyScreen(
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
             pendingSubtitleDraft = null
+            pendingTimedSubtitleSheet = null
             editedSubtitleSaveNotice = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
@@ -3301,6 +3302,7 @@ private fun TuddyScreen(
                     ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
                     OutlinedButton(onClick = {
                         generation++
+                        pendingTimedSubtitleSheet = null
                         pendingTranscriptExport = null
                         exportStatus = ""
                         previewArchiveRows = null
