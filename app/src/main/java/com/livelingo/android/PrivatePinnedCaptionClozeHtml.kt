@@ -52,11 +52,16 @@ internal object PrivatePinnedCaptionClozeHtml {
         val question: String,
         val answer: String,
         val hint: String,
+        val questionLanguageCode: String,
+        val answerLanguageCode: String,
+        val hintLanguageCode: String,
         val roundIndex: Int
     )
     private const val MAX_BYTES = 262_144
     private val LANGUAGE_TAG_PREFIX =
         Regex("""^\[([A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)\]\s""")
+    private val LANGUAGE_TAG_CODE =
+        Regex("""^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$""")
     private val RTL_BASE_LANGUAGES =
         setOf("ar", "ckb", "dv", "fa", "he", "ps", "sd", "ug", "ur", "yi")
     private val RTL_SCRIPTS = setOf("arab", "hebr", "syrc", "thaa")
@@ -66,8 +71,9 @@ internal object PrivatePinnedCaptionClozeHtml {
      * string incorrectly makes Arabic-script content LTR. Honor a BCP-47
      * language/script tag when present; otherwise let the actual text decide.
      */
-    private fun htmlDirection(value: String): String {
-        val tag = LANGUAGE_TAG_PREFIX.find(value)?.groupValues?.get(1) ?: return "auto"
+    private fun htmlDirection(value: String, languageCode: String? = null): String {
+        val tag = languageCode?.takeIf { LANGUAGE_TAG_CODE.matches(it) }
+            ?: LANGUAGE_TAG_PREFIX.find(value)?.groupValues?.get(1) ?: return "auto"
         val subtags = tag.split('-')
         val script = subtags.firstOrNull {
             it.length == 4 && it.all { ch -> ch.isLetter() }
@@ -75,6 +81,24 @@ internal object PrivatePinnedCaptionClozeHtml {
         if (script != null) return if (script in RTL_SCRIPTS) "rtl" else "ltr"
         return if (subtags.first().lowercase(Locale.ROOT) in RTL_BASE_LANGUAGES)
             "rtl" else "ltr"
+    }
+
+    private fun htmlLanguageAttribute(languageCode: String?): String {
+        if (languageCode == null || !LANGUAGE_TAG_CODE.matches(languageCode)) return ""
+        return " lang=\"" + escape(languageCode) + "\""
+    }
+
+    /** Keep visible language labels LTR and let assistive technology read the actual phrase in its language. */
+    private fun htmlBidiText(
+        value: String, languageCode: String, showLanguageTags: Boolean
+    ): String {
+        val prefix = if (showLanguageTags) LANGUAGE_TAG_PREFIX.find(value) else null
+        val text = if (prefix == null) value else value.substring(prefix.value.length)
+        val label = if (prefix == null) "" else
+            "<span class=\"language-tag\" dir=\"ltr\" lang=\"en\">[" +
+                escape(prefix.groupValues[1]) + "]</span> "
+        return label + "<bdi dir=\"" + htmlDirection(value, languageCode) + "\"" +
+            htmlLanguageAttribute(languageCode) + ">" + escape(text) + "</bdi>"
     }
 
     /** Shared exact visual order for the HTML generator and native preview. */
@@ -221,11 +245,13 @@ internal object PrivatePinnedCaptionClozeHtml {
                 if (direction != PinnedStudyDirection.TARGET_TO_SOURCE)
                     roundCards.add(PracticeCard(front, back, previewHint(target,
                         if (showLanguageTags) row.targetCode else null,
-                        difficulty, hintMode, round), round))
+                        difficulty, hintMode, round), row.sourceCode, row.targetCode,
+                        row.targetCode, round))
                 if (direction != PinnedStudyDirection.SOURCE_TO_TARGET)
                     roundCards.add(PracticeCard(back, front, previewHint(source,
                         if (showLanguageTags) row.sourceCode else null,
-                        difficulty, hintMode, round), round))
+                        difficulty, hintMode, round), row.targetCode, row.sourceCode,
+                        row.sourceCode, round))
             }
             // The same exact card index order powers the Android consent preview.
             cards.addAll(orderedCardIndices(roundCards.size, round, cardOrder).map {
@@ -248,6 +274,7 @@ internal object PrivatePinnedCaptionClozeHtml {
                 ".card{border:1px solid #8c98a8;padding:15px;margin:14px 0;" +
                 "break-inside:avoid;page-break-inside:avoid}" +
                 ".phrase,.hint{unicode-bidi:plaintext;overflow-wrap:anywhere}" +
+                ".language-tag{font-size:.85em;color:#526173;white-space:nowrap}" +
                 ".hint{background:#f2f5f8;padding:10px;border-radius:6px}" +
                 ".work{display:block;font-weight:600;margin:12px 0 4px}" +
                 "textarea{display:block;box-sizing:border-box;width:100%;min-height:84px;" +
@@ -317,7 +344,10 @@ internal object PrivatePinnedCaptionClozeHtml {
             out.append("</nav>")
         }
         cards.forEachIndexed { index, card ->
-            val (question, answer, hint, roundIndex) = card
+            val question = card.question
+            val answer = card.answer
+            val hint = card.hint
+            val roundIndex = card.roundIndex
             if (index == 0 || cards[index - 1].roundIndex != roundIndex) {
                 out.append("<h2 class=\"roundheading")
                 if (index != 0) out.append(" newpage")
@@ -326,10 +356,12 @@ internal object PrivatePinnedCaptionClozeHtml {
             }
             out.append("<article class=\"card\"><b>Ronde ").append(roundIndex + 1)
                 .append(" · kaart ").append(index % cardsPerRound + 1)
-                .append("</b><p class=\"phrase\"><bdi dir=\"").append(htmlDirection(question)).append("\">")
-                .append(escape(question)).append("</bdi></p>")
-                .append("<p class=\"hint\"><bdi dir=\"").append(htmlDirection(hint)).append("\">")
-                .append(escape(hint)).append("</bdi></p>")
+                .append("</b><p class=\"phrase\">")
+                .append(htmlBidiText(question, card.questionLanguageCode, showLanguageTags))
+                .append("</p>")
+                .append("<p class=\"hint\">")
+                .append(htmlBidiText(hint, card.hintLanguageCode, showLanguageTags))
+                .append("</p>")
                 .append("<form autocomplete=\"off\"><label class=\"work\" for=\"typed-").append(index + 1)
                 .append("\">Mijn eigen antwoord (alleen tijdelijk in de browser)</label>")
                 .append("<textarea id=\"typed-").append(index + 1)
@@ -355,8 +387,9 @@ internal object PrivatePinnedCaptionClozeHtml {
             out.append("</div>")
             if (audience == PinnedClozeAudience.SELF_STUDY) {
                 out.append("<details><summary>Bekijk volledig antwoord</summary>")
-                    .append("<p class=\"phrase\"><bdi dir=\"").append(htmlDirection(answer)).append("\">")
-                    .append(escape(answer)).append("</bdi></p></details>")
+                    .append("<p class=\"phrase\">")
+                    .append(htmlBidiText(answer, card.answerLanguageCode, showLanguageTags))
+                    .append("</p></details>")
             }
             out.append("</article>")
             if (out.length > MAX_BYTES) return null
@@ -377,8 +410,9 @@ internal object PrivatePinnedCaptionClozeHtml {
                 val answer = card.answer
                 out.append("<p class=\"phrase\"><b>Ronde ").append(card.roundIndex + 1)
                     .append(" · kaart ").append(index % cardsPerRound + 1)
-                    .append(".</b> <bdi dir=\"").append(htmlDirection(answer)).append("\">").append(escape(answer))
-                    .append("</bdi></p>")
+                    .append(".</b> ")
+                    .append(htmlBidiText(answer, card.answerLanguageCode, showLanguageTags))
+                    .append("</p>")
                 if (out.length > MAX_BYTES) return null
             }
             out.append("</section>")
