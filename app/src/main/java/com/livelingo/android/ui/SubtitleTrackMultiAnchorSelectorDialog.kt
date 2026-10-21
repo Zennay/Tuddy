@@ -44,6 +44,7 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
         ))
     }
     var primaryInput by remember(primary, secondary) { mutableStateOf("") }
+    var editingIndex by remember(primary, secondary) { mutableStateOf<Int?>(null) }
     var secondaryInput by remember(primary, secondary) { mutableStateOf("") }
 
     val firstRow = primaryInput.toIntOrNull()
@@ -52,7 +53,11 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
         firstRow in 1..primary.size && secondRow in 1..secondary.size
     ) PrivateSubtitleMultiAnchor(firstRow, secondRow) else null
     val candidateAnchors = candidate?.let { pair ->
-        (anchors + pair).sortedBy { it.primaryRow }
+        (if (editingIndex != null && editingIndex in anchors.indices) {
+            anchors.mapIndexed { index, saved ->
+                if (index == editingIndex) pair else saved
+            }
+        } else anchors + pair).sortedBy { it.primaryRow }
     }
     val additionalPreview = if (candidateAnchors != null &&
         candidateAnchors.size <= PrivateSubtitleTrackMultiAnchorAlignment.MAX_ANCHORS
@@ -94,16 +99,27 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
                             style = MaterialTheme.typography.bodySmall)
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                editingIndex = index
+                                primaryInput = pair.primaryRow.toString()
+                                secondaryInput = pair.secondaryRow.toString()
+                            }
+                        ) { Text("Wijzig beide oorspronkelijke rijen van anker ${index + 1}") }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
                             enabled = anchors.size > 2,
-                            onClick = { anchors = anchors.filterIndexed {
-                                i, _ -> i != index
-                            } }
+                            onClick = {
+                                anchors = anchors.filterIndexed { i, _ -> i != index }
+                                editingIndex = null
+                                primaryInput = ""
+                                secondaryInput = ""
+                            }
                         ) { Text("Verwijder alleen anker ${index + 1}") }
                     }
                 }
-                Text("Voeg desgewenst een extra overeenkomst tussen " +
-                    "bestaande ankers toe. Dit overschrijft de eerdere " +
-                    "keuze niet en vereist stijgende originele bronvolgorde.",
+                Text("Voeg een extra overeenkomst tussen bestaande " +
+                    "ankers toe, of tik bij een bestaand anker op Wijzig. " +
+                    "Alles vereist stijgende originele bronvolgorde.",
                     style = MaterialTheme.typography.bodySmall)
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -155,11 +171,16 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
                                 primary, secondary, candidateAnchors) != null
                         ) {
                             anchors = candidateAnchors
+                            editingIndex = null
                             primaryInput = ""
                             secondaryInput = ""
                         }
                     }
-                ) { Text("Voeg dit bronankerpaar bewust toe") }
+                ) {
+                    Text(if (editingIndex != null)
+                        "Vervang alleen dit anker na controle"
+                    else "Voeg dit bronankerpaar bewust toe")
+                }
 
                 if (preview == null) {
                     Text("Tijdlijn ongeldig. Elk anker moet in beide bronnen " +
