@@ -620,7 +620,10 @@ internal fun SubtitlePasteDialog(
                     }) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 5,
-                    maxLines = 12
+                    maxLines = 12,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        textDirection = PrivateTextDirection.forContent(raw)
+                    )
                 )
                 if (plainLines && splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) {
                     OutlinedTextField(
@@ -637,7 +640,10 @@ internal fun SubtitlePasteDialog(
                         label = { Text("Jouw eigen betekenissen (één per bronregel)") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 5,
-                        maxLines = 12
+                        maxLines = 12,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            textDirection = PrivateTextDirection.forContent(ownMeaning)
+                        )
                     )
                     val inspection = pairedInspection
                     if (inspection != null) {

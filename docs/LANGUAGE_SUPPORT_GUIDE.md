@@ -41,3 +41,7 @@ De taalondersteuningdialoog toont nu externe modelkaarten voor drie ASR-kandidat
 ## Scriptrichting bij eigen Sorani- en Pasjtoe-zinnen
 
 De privé-zinnenlijst en de import-/verwijderpreview tonen eigen Sorani (`ckb`) en Pasjtoe (`ps`) tekst van rechts naar links. Het invoerveld, de oefenpoging en de betekenis die de gebruiker in Nederlands of Engels zelf schrijft blijven respectievelijk gericht op de geselecteerde taal en links-naar-rechts. Deze opmaak verandert geen tekst, translitereert niets en controleert geen spelling of vertaling.
+
+## Automatische tekstrichting voor gemengde schriften
+
+De algemene ondertitel-plakbewerker kiest nu de schrijfrichting op basis van het eerste Unicode-teken met een sterke links- of rechtsrichting, niet op basis van de telefooninstelling. Dat geldt voor de brontekst en de zelfgeschreven betekenis; het grote live-ondertitelkaartje gebruikt dezelfde regel met de herkende taalcode alleen als terugval voor tekst zonder richtingsinformatie. Tekst wordt niet herschreven of getranslitereerd.
