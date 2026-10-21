@@ -53,21 +53,21 @@ internal class LocalTranslatorPool {
             entry.translator.translate(text)
                 .addOnSuccessListener { output ->
                     try {
-                        if (!closed && !entry.closeWhenIdle) onResult(Result.success(output))
+                        if (!closed) onResult(Result.success(output))
                     } finally {
                         release(entry)
                     }
                 }
                 .addOnFailureListener { error ->
                     try {
-                        if (!closed && !entry.closeWhenIdle) onResult(Result.failure(error))
+                        if (!closed) onResult(Result.failure(error))
                     } finally {
                         release(entry)
                     }
                 }
         } catch (error: Exception) {
             release(entry)
-            if (!closed && !entry.closeWhenIdle) onResult(Result.failure(error))
+            if (!closed) onResult(Result.failure(error))
         }
         evictIdle(protect = key)
     }
@@ -98,14 +98,19 @@ internal class LocalTranslatorPool {
         }
     }
 
-    fun close() {
-        if (closed) return
-        closed = true
-        val activeEntries = entries.values.toList()
+    /** Clear clients after model inventory changes without abandoning live callbacks. */
+    fun invalidate() {
+        val staleEntries = entries.values.toList()
         entries.clear()
-        activeEntries.forEach { entry ->
+        staleEntries.forEach { entry ->
             if (entry.inFlight == 0) runCatching { entry.translator.close() }
             else entry.closeWhenIdle = true
         }
+    }
+
+    fun close() {
+        if (closed) return
+        closed = true
+        invalidate()
     }
 }
