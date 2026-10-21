@@ -1,3 +1,17 @@
+## Nieuw: tweetalige vouwkaartjes op één afdrukzijde
+
+Uit bewust gemarkeerde voltooide vertaalparen kun je naast TSV/CSV
+en het interactieve HTML-oefenblad nu **Vouwkaartjes · HTML** kiezen.
+In het privé-bestand staan vraag en betekenis naast elkaar:
+éénzijdig afdrukken, langs de buitenrand knippen en de rechter
+betekenis achter de linker vraag vouwen. Beide taalrichtingen,
+eigen correcties, taalcodekeuze, ontdubbelen en rechts-naar-links-tekst
+werken via de bestaande selectie; geen scripts, accounts, audio,
+cloud of automatische export.
+[Handleiding](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 # Tuddy 🎙️
 
 ## Nieuw: afdrukbaar privé-oefenblad uit eigen tweetalige zinnen
