@@ -164,6 +164,48 @@ internal class PrivatePhraseTopics(context: Context) {
         } catch (_: Exception) { null }
     }
 
+
+    /** Snapshot the user's actual notes when opening the restore preview. */
+    @Synchronized
+    fun notesSnapshot(): List<PersonalPhrase>? = deck.entries()?.toList()
+
+    /**
+     * Show every local note affected by a user-chosen topic backup, not just
+     * counts or opaque hashes. This is transient in-app preview only.
+     */
+    @Synchronized
+    fun previewAssignments(candidate: PrivatePhraseTopicBackup): List<Pair<PersonalPhrase, String>>? {
+        val stored = deck.entries() ?: return null
+        val indexed = stored.associateBy { PrivatePhraseShortcuts.fingerprint(it) }
+        if (indexed.size != stored.size) return null
+        if (candidate.assignments.any { (hash, topic) ->
+                hash !in indexed || topic !in candidate.names
+            }) return null
+        return candidate.assignments.map { (hash, topic) ->
+            indexed.getValue(hash) to topic
+        }.sortedWith(compareBy({ it.second }, { it.first.language }, { it.first.phrase }))
+    }
+
+    /**
+     * Reject a stale restore if either existing topic assignments or any
+     * user-authored note changed since the complete preview was displayed.
+     * This never overwrites a newer local topic edit behind the user's back.
+     */
+    @Synchronized
+    fun replaceImportedIfUnchanged(
+        candidate: PrivatePhraseTopicBackup,
+        expectedTopics: ByteArray?,
+        expectedNotes: List<PersonalPhrase>
+    ): Boolean {
+        val currentTopics = exportSnapshot()
+        if (currentTopics == null && expectedTopics != null ||
+            currentTopics != null && expectedTopics == null) return false
+        if (currentTopics != null && expectedTopics != null &&
+            !currentTopics.contentEquals(expectedTopics)) return false
+        if (deck.entries() != expectedNotes) return false
+        return replaceImported(candidate)
+    }
+
     /** Replace only after the UI shows counts and a separate confirmation. */
     @Synchronized
     fun replaceImported(candidate: PrivatePhraseTopicBackup): Boolean {
