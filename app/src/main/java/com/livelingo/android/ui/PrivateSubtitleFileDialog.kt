@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PrivateSubtitleBatchReplace
+import com.livelingo.android.PrivateSubtitleBulkRemoval
+import com.livelingo.android.PrivateSubtitleRowSelection
 import com.livelingo.android.SubtitleReplaceField
 import com.livelingo.android.PrivateSubtitleLineWrap
 import com.livelingo.android.PrivateSubtitleClip
@@ -110,6 +112,9 @@ internal fun PrivateSubtitleFileDialog(
     var requestLrcSave by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
+    var removeOpen by remember { mutableStateOf(false) }
+    var removeRows by remember { mutableStateOf("") }
+    var removeReviewPage by remember { mutableIntStateOf(0) }
     var wrapOpen by remember { mutableStateOf(false) }
     var wrapWidth by remember { mutableIntStateOf(42) }
     var batchFind by remember { mutableStateOf("") }
@@ -359,6 +364,15 @@ internal fun PrivateSubtitleFileDialog(
                         excerptOpen = true
                     }
                 ) { Text("↳ Bewaar alleen gevonden regels als SRT/VTT…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = draft.size > 1,
+                    onClick = {
+                        removeRows = ""
+                        removeReviewPage = 0
+                        removeOpen = true
+                    }
+                ) { Text("✂ Meerdere eigen ondertitelregels verwijderen…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { retimingOpen = true }
@@ -918,6 +932,101 @@ internal fun PrivateSubtitleFileDialog(
             },
             dismissButton = {
                 TextButton(onClick = { wrapOpen = false }) { Text("Annuleren") }
+            }
+        )
+    }
+    if (removeOpen) {
+        // Original 1-based draft rows, never the filtered list's positions.
+        LaunchedEffect(draft, removeRows) { removeReviewPage = 0 }
+        val proposed = PrivateSubtitleBulkRemoval.preview(draft, removeRows)
+        val removed = proposed?.removedRows.orEmpty()
+        val countPages = maxOf(1, (removed.size + 4) / 5)
+        val safePage = removeReviewPage.coerceIn(0, countPages - 1)
+        AlertDialog(
+            onDismissRequest = { removeOpen = false },
+            title = { Text("Regels verwijderen · alleen concept") },
+            text = {
+                Column(
+                    modifier = Modifier.heightIn(max = 530.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Geef originele regelnummers op, bijvoorbeeld 2-4,7,12. " +
+                        "De zoekbalk boven dit venster verandert de nummers niet. " +
+                        "Overlappende reeksen of de hele tekst wissen worden geweigerd.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = removeRows,
+                        onValueChange = { removeRows = it.take(2000) },
+                        label = { Text("Verwijder bronregels: 2-4,7,12") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true)
+                    val foundExpression = if (query.isNotBlank() && found.isNotEmpty())
+                        PrivateSubtitleRowSelection.formatSourceRows(
+                            found.map { it.first + 1 }, draft.size)
+                    else null
+                    if (foundExpression != null) {
+                        OutlinedButton(
+                            onClick = { removeRows = foundExpression },
+                            modifier = Modifier.fillMaxWidth()) {
+                            Text("Neem ${found.size} gevonden regels als verwijderselectie")
+                        }
+                    }
+                    if (proposed == null) {
+                        Text("Geen geldige verwijdering. Controleer regelnummers " +
+                            "(1–${draft.size}), dubbelen en behoud minstens één regel.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        Text("Voorbeeld: ${removed.size} regels verdwijnen, " +
+                            "${proposed.remaining.size} blijven met bestaande " +
+                            "tijden en tekst behouden.",
+                            style = MaterialTheme.typography.titleSmall)
+                        Text("Te verwijderen: pagina ${safePage + 1}/$countPages. " +
+                            "Ieder getoond nummer verwijst naar de originele " +
+                            "regel vóór deze actie.",
+                            style = MaterialTheme.typography.bodySmall)
+                        removed.drop(safePage * 5).take(5).forEach { originalRow ->
+                            val cue = draft[originalRow - 1]
+                            Text("Regel $originalRow · ${cue.startLabel} → ${cue.endLabel}\n" +
+                                cue.text, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(enabled = safePage > 0,
+                                onClick = { removeReviewPage = safePage - 1 }) {
+                                Text("← Vorige")
+                            }
+                            TextButton(enabled = safePage < countPages - 1,
+                                onClick = { removeReviewPage = safePage + 1 }) {
+                                Text("Volgende →")
+                            }
+                        }
+                    }
+                    Text("Alleen je tijdelijke kopie verandert, als één " +
+                        "herstelbare Terug/Opnieuw-stap. Opslaan gebeurt " +
+                        "apart na je bewuste Android-bestandskeuze.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = proposed != null, onClick = {
+                    val confirmed = PrivateSubtitleBulkRemoval.preview(draft, removeRows)
+                    if (confirmed == null || proposed == null ||
+                        confirmed.removedRows != proposed.removedRows ||
+                        confirmed.remaining != proposed.remaining) {
+                        notice = "Concept of selectie gewijzigd: open de preview opnieuw."
+                    } else {
+                        applyChange(confirmed.remaining)
+                        shownIndex = -1
+                        notice = "${confirmed.removedRows.size} regels verwijderd " +
+                            "uit tijdelijke kopie; Terug maakt dit ongedaan."
+                    }
+                    removeOpen = false
+                }) { Text("Verwijder gekozen regels tijdelijk") }
+            },
+            dismissButton = {
+                TextButton(onClick = { removeOpen = false }) { Text("Annuleren") }
             }
         )
     }
