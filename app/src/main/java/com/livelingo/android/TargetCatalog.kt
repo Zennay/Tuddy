@@ -57,42 +57,24 @@ object TargetCatalog {
     }.sortedWith(compareBy<TextTarget> { preferred.indexOf(it.code).let { idx -> if (idx < 0) 100 else idx } }
         .thenBy { it.title })
 
-    private val dutchLocale = Locale.forLanguageTag("nl")
-
-    /**
-     * Normalize accents and Unicode combining marks so users can type either
-     * the native spelling (e.g. Français) or a plain keyboard spelling (Francais).
-     */
-    private fun normalizeSearch(value: String): String =
-        Normalizer.normalize(value.lowercase(Locale.ROOT), Normalizer.Form.NFD)
-            .replace(Regex("\\p{M}+"), "")
-            .replace('_', '-')
-            .trim()
-            .replace(Regex("\\s+"), " ")
-
-    /**
-     * Search the code, native/English label, Dutch localized language name,
-     * and aliases. Locale tags are normalized to the actual ML Kit codes for
-     * Norwegian Bokmål and Filipino, while model availability stays unchanged.
-     */
     fun search(query: String): List<TextTarget> {
-        val term = normalizeSearch(query)
-        if (term.isEmpty()) return targets
-        return targets.filter { target ->
-            val tag = when (target.code) {
+        if (LanguageSearch.normalize(query).isEmpty()) return targets
+        return targets.filter { item ->
+            val tag = when (item.code) {
                 "no" -> "nb"
                 "tl" -> "fil"
-                else -> target.code
+                else -> item.code
             }
             val locale = Locale.forLanguageTag(tag)
-            listOf(
-                target.code,
-                target.title,
-                locale.getDisplayLanguage(dutchLocale),
+            val candidates = listOf(
+                item.code,
+                item.title,
+                locale.getDisplayLanguage(Locale.forLanguageTag("nl")),
                 locale.getDisplayLanguage(Locale.ENGLISH),
                 locale.getDisplayLanguage(locale),
-                aliases[target.code].orEmpty()
-            ).any { normalizeSearch(it).contains(term) }
+                aliases[item.code].orEmpty()
+            )
+            LanguageSearch.matches(query, candidates)
         }
     }
 }
