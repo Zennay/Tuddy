@@ -45,6 +45,9 @@ internal fun SubtitlePasteDialog(
     var splitMode by remember { mutableStateOf(PlainSubtitleSplitMode.LINES) }
     var startMs by remember { mutableStateOf(0L) }
     var durationMs by remember { mutableStateOf(3_500L) }
+    var manualTiming by remember { mutableStateOf(false) }
+    var startSecondsInput by remember { mutableStateOf("0") }
+    var durationSecondsInput by remember { mutableStateOf("3,5") }
     var durationMenu by remember { mutableStateOf(false) }
     var startMenu by remember { mutableStateOf(false) }
     var inputTooLarge by remember { mutableStateOf(false) }
@@ -77,12 +80,30 @@ internal fun SubtitlePasteDialog(
             PrivatePlainTextSubtitleDraft.inspectPaired(raw, ownMeaning)
         else null
     }
-    val parsed = remember(raw, ownMeaning, plainLines, startMs, durationMs, splitMode) {
-        if (plainLines) PrivatePlainTextSubtitleDraft.preview(
-            raw, startMs, durationMs, splitMode,
-            if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) ownMeaning else ""
-        )
-        else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
+    val estimatedMode = plainLines && splitMode !in setOf(
+        PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS,
+        PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS,
+        PlainSubtitleSplitMode.TIMED_TEXT_CSV,
+        PlainSubtitleSplitMode.TIMED_PAIRED_CSV
+    )
+    val chosenStartMs = if (estimatedMode && manualTiming)
+        PrivatePlainTextSubtitleDraft.manualSecondsMillis(
+            startSecondsInput, 0L, PrivatePlainTextSubtitleDraft.MAX_USER_START_MS
+        ) else startMs
+    val chosenDurationMs = if (estimatedMode && manualTiming)
+        PrivatePlainTextSubtitleDraft.manualSecondsMillis(
+            durationSecondsInput,
+            PrivatePlainTextSubtitleDraft.MIN_USER_DURATION_MS,
+            PrivatePlainTextSubtitleDraft.MAX_USER_DURATION_MS
+        ) else durationMs
+    val parsed = remember(raw, ownMeaning, plainLines, chosenStartMs, chosenDurationMs, splitMode) {
+        if (plainLines && chosenStartMs != null && chosenDurationMs != null)
+            PrivatePlainTextSubtitleDraft.preview(
+                raw, chosenStartMs, chosenDurationMs, splitMode,
+                if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) ownMeaning else ""
+            )
+        else if (!plainLines) PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
+        else null
     }
     // Explicit 1-based row selection, never quietly clamped after editing.
     // A blank end means all rows through the end of the parsed source.
@@ -269,6 +290,38 @@ internal fun SubtitlePasteDialog(
                             PlainSubtitleSplitMode.TIMED_TEXT_CSV,
                             PlainSubtitleSplitMode.TIMED_PAIRED_CSV
                         )) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { manualTiming = !manualTiming; page = 0 }
+                        ) {
+                            Text(if (manualTiming) "✓ Aangepaste tijden (in seconden)" else
+                                "Aangepaste begin- en duurinstelling…")
+                        }
+                        if (manualTiming) {
+                            OutlinedTextField(
+                                value = startSecondsInput,
+                                onValueChange = { startSecondsInput = it.take(12); page = 0 },
+                                label = { Text("Eerste cue begint na (0–21600 seconden)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = durationSecondsInput,
+                                onValueChange = { durationSecondsInput = it.take(12); page = 0 },
+                                label = { Text("Duur per kaart (0,5–30 seconden)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (chosenStartMs == null || chosenDurationMs == null) {
+                                Text(
+                                    "Vul geldige getallen in, eventueel met komma of punt " +
+                                        "en maximaal drie decimalen. De tijden zijn " +
+                                        "uitsluitend handmatige schattingen.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        } else {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             androidx.compose.foundation.layout.Box {
                                 OutlinedButton(modifier = Modifier.fillMaxWidth(),
@@ -308,6 +361,7 @@ internal fun SubtitlePasteDialog(
                                     }
                                 }
                             }
+                        }
                         }
                     }
                 } else {
@@ -562,7 +616,8 @@ internal fun SubtitlePasteDialog(
                 // at consent, independent of the search query and page.
                 val confirmed = if (plainLines)
                     PrivatePlainTextSubtitleDraft.preview(
-                        raw, startMs, durationMs, splitMode,
+                        raw, chosenStartMs ?: return@TextButton,
+                        chosenDurationMs ?: return@TextButton, splitMode,
                         if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) ownMeaning else ""
                     )
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
