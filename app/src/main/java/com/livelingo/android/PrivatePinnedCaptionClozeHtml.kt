@@ -398,9 +398,10 @@ internal object PrivatePinnedCaptionClozeHtml {
                 .append("\">Mijn eigen antwoord (alleen tijdelijk in de browser)</label>")
                 .append("<textarea id=\"typed-").append(index + 1)
                 .append("\" rows=\"").append(answerSpace.browserRows)
-                .append("\" dir=\"auto\" spellcheck=\"false\" " +
-                    "autocomplete=\"off\" autocorrect=\"off\" " +
-                    "aria-label=\"Mijn eigen antwoord voor kaart ").append(index + 1)
+                .append("\" dir=\"").append(htmlDirection(answer, card.answerLanguageCode))
+                .append("\"").append(htmlLanguageAttribute(card.answerLanguageCode))
+                .append(" spellcheck=\"false\" autocomplete=\"off\" " +
+                    "autocorrect=\"off\" aria-label=\"Mijn eigen antwoord voor kaart ").append(index + 1)
                 .append("\"></textarea>")
                 .append("<fieldset class=\"grade\"><legend>Zelf beoordelen " +
                     "(tijdelijk, zonder score)</legend>")
@@ -412,7 +413,10 @@ internal object PrivatePinnedCaptionClozeHtml {
                     "Wis mijn antwoord en beoordeling</button></form>")
                 .append("<p class=\"printgrade\">Zelf beoordelen: &#9633; " +
                     "Nog oefenen &nbsp; &#9633; Ik wist het</p>")
-            out.append("<div class=\"write\" aria-hidden=\"true\">")
+            out.append("<div class=\"write\" aria-hidden=\"true\" dir=\"")
+                .append(htmlDirection(answer, card.answerLanguageCode))
+                .append("\"").append(htmlLanguageAttribute(card.answerLanguageCode))
+                .append(">")
             repeat(answerSpace.printLines) {
                 out.append("<div class=\"writeline\"></div>")
             }

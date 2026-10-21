@@ -34,6 +34,8 @@ antwoorden en het volledige antwoordblad, óók als de zichtbare taalcodes zijn
 uitgeschakeld. Zonder geldige taalcode blijft de richting automatisch
 afhankelijk van de tekst. Inhoud en correctheidsstatus van de vertaling wijzigen niet.
 
+Bij een oefenkaart volgt ook het **antwoordtekstvak** nu de echte antwoordtaal: een Pasjtoe/Arabische/Kurdisch-Soranische reactie begint direct rechts-naar-links en krijgt het juiste HTML-`lang`-attribuut. Een Latijns antwoord begint links-naar-rechts. De schrijflijnen in de afdrukversie gebruiken dezelfde richting. De tekstinhoud, de optionele antwoorden en de privacy-instellingen blijven ongewijzigd.
+
 ---
 
 ## Nieuw: afwisselende kaartvolgorde met identieke antwoordnummering

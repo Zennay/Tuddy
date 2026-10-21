@@ -11,7 +11,7 @@ invulpositie verschuift daardoor niet. De Android-hintpreview en
 zelfstandige offline HTML gebruiken dezelfde tokenisering.
 Zonder netwerk, audio-uitlijning of automatische taalbeoordeling.
 
-[Uitleg bij de invuloefening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+Ook de getypte en afgedrukte **antwoordruimte** volgt voortaan de expliciet gekozen LTR/RTL-antwoordtaal, met HTML-`lang` voor schermlezers. [Uitleg bij de invuloefening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
 
 ---
 
