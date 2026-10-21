@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     if: ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Zennay'))
-    runs-on: [self-hosted, portfolio-pool, vps]
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned v4
@@ -35,7 +35,7 @@ jobs:
           java-version: '17'
       # GitHub-hosted Ubuntu runners ship the Android command-line SDK. The old
       # setup-android action requests the removed 'tools' SDK package and fails.
-      - name: Resolve installed Android SDK on self-hosted runner
+      - name: Resolve installed Android SDK on hosted runner
         shell: bash
         run: |
           set -euo pipefail
@@ -81,7 +81,7 @@ jobs:
   # intentionally continues validating GitHub's proposed PR merge tree.
   source-head:
     if: (github.event_name == 'pull_request') && ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Zennay'))
-    runs-on: [self-hosted, portfolio-pool, vps]
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned v4
@@ -100,7 +100,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Resolve installed Android SDK on self-hosted runner
+      - name: Resolve installed Android SDK on hosted runner
         shell: bash
         run: |
           set -euo pipefail
