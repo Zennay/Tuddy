@@ -1,3 +1,9 @@
+## Nieuw · gedeelde ondertitels rechtstreeks als lokaal editorconcept
+
+Deel vanuit een Android-app een complete **SRT/WebVTT als platte tekst** met **Delen → Tuddy**. De app controleert het volledige bericht lokaal met de bestaande strikte ondertitelparser en opent het alleen ter **bewuste controle en bevestiging** in de ondertiteleditor. Ongeldige of te grote inhoud (maximaal 256 KiB / 500 cues) wordt geen ondertitelconcept. Een al geopend ondertitelconcept wordt niet stilzwijgend overschreven. Gewone gedeelde tekst blijft beschikbaar via de bestaande snelle typtekstfunctie. Geen bijlagen, HTML, URI-bestanden, automatische vertaling, opslag of netwerkfallback. [Volledige handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
+
 ## Nieuw: een SRT/VTT-ondertitel exact op tijd splitsen
 
 In de tijdelijke editor kun je nu een cue in twee tekstregels splitsen en
