@@ -21,6 +21,28 @@ snapshots bij voor het volledige editorconcept en de gekozen
 exportbytes; originele files en live gesprek worden niet gewijzigd.
 [Privacy en details](docs/MANUAL_SUBTITLE_PASTE.md).
 
+## Nieuw: zelf tweetalige ondertitelregels vastzetten
+
+Tuddy kan twee door jou gekozen SRT/VTT-regels nu ook **bewust
+aan elkaar koppelen zonder voldoende tijdsoverlap**. Kies de
+oorspronkelijke regel uit elk spoor, controleer de volledige eigen
+teksten en tijdcodes, en bevestig. De bestaande documentbrede
+tijdmatcher koppelt de overige regels opnieuw, maar kan die
+handmatige combinatie niet overschrijven. Maximaal 32
+chronologisch consistente één-op-één-paren; dubbele of
+tegenstrijdige rijnummers, conflicterende uitgesloten cues en
+niet-exporteerbare resultaten worden geweigerd.
+
+Losse bronregels zijn met één knop over te nemen in de handmatige
+koppelvelden. Ook een automatisch voorgesteld paar kun je bewust
+vastzetten. Alle handmatige keuzes zijn per paar te herstellen;
+de complete bron-, paar- en resultaatpreview, Undo/Redo, RAM-
+privacy en expliciete aparte Android-bestandsopslag blijven gelden.
+**Geen automatische taalherkenning, spraakvertaling of echte
+audio-uitlijning.** Een handmatig gecombineerd paar gebruikt
+de **eerste spoor-tijdcodes**.
+[Uitleg en stappen](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: controleer en corrigeer handmatig ondertitelkoppelingen
 
 Bij het tijdelijk combineren van **twee eigen SRT/VTT-sporen**
