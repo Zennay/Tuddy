@@ -29,6 +29,18 @@ translation accuracy, runtime performance, offline microphone support,
 dialect coverage, or availability of any current transcript. Real Android
 12+ airplane-mode device checks remain a separate acceptance gate.
 
+## Source-language identification
+
+Tuddy reuses one bundled ML Kit language-identification client for the current
+screen session instead of creating and closing a client for every caption.
+Identification stays on device, does not download language packs, and does
+not change the installed translation-model inventory. Short text (under eight
+characters) falls back to the selected spoken source; detected codes are only
+used when they belong to the supported 59-language text catalog. The detector
+is closed when the screen is disposed, and callbacks from a disposed detector
+are ignored. This is advisory text-language identification—not speech
+recognition and not proof that a source/target translation pair is ready.
+
 ## Speech recognition: Android on-device packs
 
 Use **Controleer spraak** for a separate Android on-device language check.
