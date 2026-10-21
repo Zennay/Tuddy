@@ -29,7 +29,20 @@ internal object PrivateSubtitleImportDocument {
                     while (true) {
                         val read = input.read(chunk)
                         if (read < 0) break
-                        if (read == 0) continue
+                        if (read == 0) {
+                            // Some document providers make no progress on a
+                            // bulk read. Fall back to one byte instead of
+                            // spinning forever on a selected remote stream.
+                            val single = input.read()
+                            if (single < 0) break
+                            total++
+                            if (total > PrivateSubtitleFileReader.MAX_BYTES)
+                                return Result.Rejected(
+                                    "Document groter dan 256 KiB; het bestand is niet ingeladen."
+                                )
+                            output.write(single)
+                            continue
+                        }
                         total += read
                         if (total > PrivateSubtitleFileReader.MAX_BYTES)
                             return Result.Rejected(
