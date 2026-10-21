@@ -14,6 +14,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OfflineTextReceipt
@@ -44,13 +46,14 @@ internal fun OfflineReadinessDialog(
     onDownloadSpeech: () -> Unit,
     onCancelSpeech: () -> Unit,
     onOpenSpeechSettings: () -> Unit,
-    onCopyDiagnostics: () -> Unit,
+    onCopyDiagnostics: () -> Boolean,
     onCheckText: () -> Unit,
     onPrepareText: () -> Unit,
     onEditLanguages: () -> Unit,
     onOpenTyped: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val diagnosticsMessage = remember { mutableStateOf("") }
     val speechCurrent = speech.tag == speechTag
     val textCurrent = textModel.source == sourceTextCode &&
         textModel.target == targetTextCode
@@ -154,9 +157,16 @@ internal fun OfflineReadinessDialog(
                 OutlinedButton(onClick = onEditLanguages, modifier = Modifier.fillMaxWidth()) {
                     Text("Wijzig talen of bekijk details")
                 }
-                OutlinedButton(onClick = onCopyDiagnostics, modifier = Modifier.fillMaxWidth()) {
-                    Text("Kopieer diagnoserapport")
-                }
+                OutlinedButton(
+                    onClick = {
+                        diagnosticsMessage.value = if (onCopyDiagnostics())
+                            "Diagnoserapport gekopieerd. Het bevat geen transcript of audio."
+                        else "Kopiëren is niet gelukt."
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Kopieer diagnoserapport") }
+                if (diagnosticsMessage.value.isNotBlank())
+                    Text(diagnosticsMessage.value, style = MaterialTheme.typography.bodySmall)
                 Text("Het rapport bevat alleen apparaat-, taal- en modelstatus; geen transcript of audio.",
                     style = MaterialTheme.typography.bodySmall)
                 if (!isListening) {
