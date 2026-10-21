@@ -42,11 +42,14 @@ internal fun SubtitleScopedShiftDialog(
     }
     var rows by remember(draft) { mutableStateOf(initialFound.orEmpty()) }
     var offset by remember(draft) { mutableStateOf(500L) }
+    var customOffset by remember(draft) { mutableStateOf("") }
     var page by remember(draft) { mutableIntStateOf(0) }
     var windowStart by remember(draft) { mutableStateOf("") }
     var windowEnd by remember(draft) { mutableStateOf("") }
     var windowRanges by remember(draft) { mutableStateOf("") }
-    val preview = PrivateSubtitleScopedShift.preview(draft, rows, offset)
+    val activeOffset = if (customOffset.isBlank()) offset
+        else manualSubtitleOffsetMillis(customOffset)
+    val preview = activeOffset?.let { PrivateSubtitleScopedShift.preview(draft, rows, it) }
     val pageCount = maxOf(1, ((preview?.movedRows?.size ?: 0) + 4) / 5)
     val shown = page.coerceIn(0, pageCount - 1)
 
@@ -132,16 +135,32 @@ internal fun SubtitleScopedShiftDialog(
                         choices.forEach { ms ->
                             OutlinedButton(
                                 modifier = Modifier.weight(1f),
-                                onClick = { offset = ms; page = 0 }
+                                onClick = { offset = ms; customOffset = ""; page = 0 }
                             ) {
                                 val seconds = if (kotlin.math.abs(ms) == 500L)
                                     (if (ms < 0) "-0,5s" else "+0,5s")
                                 else (if (ms > 0) "+" else "") +
                                     "${ms / 1000}s"
-                                Text((if (offset == ms) "✓ " else "") + seconds)
+                                Text((if (customOffset.isBlank() && offset == ms) "✓ " else "") + seconds)
                             }
                         }
                     }
+                }
+                Text("Of stel zelf een exacte verschuiving in: positief is " +
+                    "later, negatief is eerder. Maximaal 600 seconden in " +
+                    "beide richtingen, met maximaal drie decimalen.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = customOffset,
+                    onValueChange = { customOffset = it.take(10); page = 0 },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Eigen seconden, bijv. -7,250") },
+                    singleLine = true)
+                if (customOffset.isNotBlank() && activeOffset == null) {
+                    Text("Gebruik -600 tot +600 seconden (niet nul), " +
+                        "met maximaal drie decimalen.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
                 }
                 if (preview == null) {
                     Text("Geen geldige wijziging: controleer bronregels, " +
@@ -181,7 +200,9 @@ internal fun SubtitleScopedShiftDialog(
         },
         confirmButton = {
             TextButton(enabled = preview != null, onClick = {
-                val confirmed = PrivateSubtitleScopedShift.preview(draft, rows, offset)
+                val confirmed = activeOffset?.let {
+                    PrivateSubtitleScopedShift.preview(draft, rows, it)
+                }
                 if (confirmed != null && preview != null &&
                     confirmed.movedRows == preview.movedRows &&
                     confirmed.updated == preview.updated) {
@@ -191,4 +212,16 @@ internal fun SubtitleScopedShiftDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } }
     )
+}
+
+/** Exact millisecond conversion without floating-point rounding or locale guesses. */
+private fun manualSubtitleOffsetMillis(raw: String): Long? {
+    val match = Regex("""^([+-]?)([0-9]{1,3})(?:[.,]([0-9]{1,3}))?$""")
+        .matchEntire(raw.trim()) ?: return null
+    val seconds = match.groupValues[2].toLongOrNull() ?: return null
+    val millis = match.groupValues[3].padEnd(3, '0')
+        .ifEmpty { "0" }.toLongOrNull() ?: return null
+    val absolute = seconds * 1_000L + millis
+    if (absolute !in 1L..600_000L) return null
+    return if (match.groupValues[1] == "-") -absolute else absolute
 }
