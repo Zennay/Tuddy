@@ -51,6 +51,7 @@ import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDocumentCombine
 import com.livelingo.android.PrivateSubtitleOffset
+import com.livelingo.android.PrivateSubtitleTrackAnchorOffset
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateLrcSubtitleExport
@@ -153,6 +154,8 @@ internal fun PrivateSubtitleFileDialog(
     var importMode by remember { mutableStateOf(SubtitleCombineMode.APPEND_AFTER_LAST) }
     var secondTrackOffsetMs by remember { mutableStateOf(0L) }
     var secondTrackCustomOffset by remember { mutableStateOf("") }
+    var primaryAnchorRow by remember { mutableStateOf("1") }
+    var secondaryAnchorRow by remember { mutableStateOf("1") }
     var secondTrackPreviewPage by remember { mutableIntStateOf(0) }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
     val found = draft.mapIndexed { idx, row -> idx to row }
@@ -170,6 +173,8 @@ internal fun PrivateSubtitleFileDialog(
                 importMode = SubtitleCombineMode.APPEND_AFTER_LAST
                 secondTrackOffsetMs = 0L
                 secondTrackCustomOffset = ""
+                primaryAnchorRow = "1"
+                secondaryAnchorRow = "1"
                 secondTrackPreviewPage = 0
                 notice = ""
             } else {
@@ -686,6 +691,8 @@ internal fun PrivateSubtitleFileDialog(
                 importMode = SubtitleCombineMode.APPEND_AFTER_LAST
                 secondTrackOffsetMs = 0L
                 secondTrackCustomOffset = ""
+                primaryAnchorRow = "1"
+                secondaryAnchorRow = "1"
                 secondTrackPreviewPage = 0
                 notice = ""
                 pasteSecondOpen = false
@@ -781,6 +788,52 @@ internal fun PrivateSubtitleFileDialog(
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall)
                         }
+                        Text("Anker twee zelf gekozen cue-begintijden: " +
+                            "geef het nummer van een bekende corresponderende " +
+                            "regel in elk spoor op. Dit bepaalt alleen een " +
+                            "relatieve verschuiving; de app herkent geen audio of taal.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedTextField(value = primaryAnchorRow,
+                                onValueChange = {
+                                    primaryAnchorRow = it.take(3)
+                                    secondTrackCustomOffset = ""
+                                    secondTrackPreviewPage = 0
+                                }, modifier = Modifier.weight(1f),
+                                label = { Text("Regel eerste spoor") }, singleLine = true)
+                            OutlinedTextField(value = secondaryAnchorRow,
+                                onValueChange = {
+                                    secondaryAnchorRow = it.take(3)
+                                    secondTrackCustomOffset = ""
+                                    secondTrackPreviewPage = 0
+                                }, modifier = Modifier.weight(1f),
+                                label = { Text("Regel tweede spoor") }, singleLine = true)
+                        }
+                        val anchorShift = PrivateSubtitleTrackAnchorOffset.fromRows(
+                            draft, stagedImport.imported,
+                            primaryAnchorRow, secondaryAnchorRow)
+                        if (anchorShift != null) {
+                            Text("Voorgestelde verschuiving op twee handmatig " +
+                                "gekozen startmomenten: " +
+                                PrivateSubtitleOffset.formatSeconds(anchorShift) +
+                                " seconden. Dit is geen bevestigde zinsovereenkomst.",
+                                style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Text("Kies bestaande rijnummers 1–${draft.size} en " +
+                                "1–${stagedImport.imported.size}. Hun startverschil " +
+                                "moet binnen ±600 seconden vallen.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                            enabled = anchorShift != null,
+                            onClick = {
+                                if (anchorShift != null) {
+                                    secondTrackCustomOffset =
+                                        PrivateSubtitleOffset.formatSeconds(anchorShift)
+                                    secondTrackPreviewPage = 0
+                                }
+                            }) { Text("Neem deze twee startmomenten als verschuiving") }
                         Text("Kies desgewenst de verschuiving van het tweede " +
                             "spoor; een negatieve tijd of tijd buiten de bestandsgrens " +
                             "wordt geweigerd.", style = MaterialTheme.typography.bodySmall)
