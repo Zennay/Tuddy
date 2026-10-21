@@ -1,5 +1,8 @@
 package com.livelingo.android.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,6 +32,7 @@ import com.livelingo.android.PlainSubtitleSplitMode
 import com.livelingo.android.PrivatePlainTextSubtitleDraft
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
+import com.livelingo.android.PrivateSubtitleImportDocument
 import com.livelingo.android.PrivateSubtitleRowSelection
 
 /**
@@ -58,6 +62,40 @@ internal fun SubtitlePasteDialog(
     var lastRow by remember { mutableStateOf("") }
     var explicitRows by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    var documentNotice by remember { mutableStateOf("") }
+    // Android grants only the selected document; never request persistent access.
+    // An external provider may access its own cloud before delivering the text.
+    val openDocument = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { selected ->
+        if (selected != null) {
+            when (val imported = PrivateSubtitleImportDocument.read(
+                context.contentResolver, selected
+            )) {
+                is PrivateSubtitleImportDocument.Result.Ready -> {
+                    // Replace, never append or silently combine with stale own-meaning
+                    // text. The full current file must pass the existing mode parser.
+                    raw = imported.text
+                    ownMeaning = ""
+                    firstRow = "1"
+                    lastRow = ""
+                    explicitRows = ""
+                    search = ""
+                    page = 0
+                    inputTooLarge = false
+                    documentNotice = "Document lokaal ingelezen (${imported.sizeBytes} bytes). " +
+                        "Controleer de gekozen invoermodus, alle regels en het voorbeeld. " +
+                        "Er is nog niets toegepast."
+                }
+                is PrivateSubtitleImportDocument.Result.Rejected -> {
+                    documentNotice = imported.reason + " De vorige invoer is behouden."
+                }
+            }
+        } else {
+            documentNotice = "Bestandskeuze geannuleerd; bestaande invoer behouden."
+        }
+    }
     val timedInspection = remember(raw, plainLines, splitMode) {
         if (plainLines && splitMode in setOf(
             PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS,
@@ -156,6 +194,27 @@ internal fun SubtitlePasteDialog(
                         "automatisch gelezen en er vindt geen vertaling plaats.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        documentNotice = ""
+                        openDocument.launch(arrayOf("*/*"))
+                    }
+                ) { Text("📂 Kies eigen UTF-8 SRT, VTT, CSV, TSV of TXT-document…") }
+                Text(
+                    "Selecteer eerst hieronder de bijpassende invoermodus. " +
+                        "Het gekozen document vervangt alleen het tekstvak en wordt " +
+                        "begrensd in RAM gelezen (maximaal 256 KiB). " +
+                        "Tuddy schrijft niets terug; je gekozen Android-provider " +
+                        "kan zelf online of gesynchroniseerd zijn.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (documentNotice.isNotBlank()) {
+                    Text(documentNotice, style = MaterialTheme.typography.bodySmall,
+                        color = if (documentNotice.startsWith("Document lokaal"))
+                            MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.error)
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = {
                         plainLines = false
@@ -384,6 +443,7 @@ internal fun SubtitlePasteDialog(
                             ownMeaning.toByteArray(Charsets.UTF_8).size else 0)
                         if (totalBytes <= PrivateSubtitleFileReader.MAX_BYTES) {
                             raw = candidate
+                            documentNotice = ""
                             inputTooLarge = false
                             page = 0
                         } else {
