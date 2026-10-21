@@ -32,11 +32,12 @@ teksten en overlaptijd. Ook het aantal ongekoppelde regels
 in **beide** sporen staat in de preview.
 
 Een voorgestelde inhoudelijk onjuiste koppeling kan de gebruiker
-**handmatig uitsluiten**. Zo'n regel uit het tweede spoor blijft
-altijd als een losse ondertitel bestaan, terwijl de overige
-koppelingen opnieuw worden gekozen. Afzonderlijk herstellen
-en alles herstellen kan zonder verlies van het originele
-bronbestand. De gewone volledige voor/na-preview,
+**handmatig uitsluiten**. Dat werkt per geselecteerd paar, per
+eigen bronregelnummers zoals `2-5,9` of na een bewuste selectie
+op **meerdere losse tijdvensters**. Zo'n regel uit het tweede spoor
+blijft altijd als een losse ondertitel bestaan, terwijl de overige
+koppelingen opnieuw worden gekozen. Afzonderlijk herstellen en
+alles herstellen kan zonder verlies van het originele bronbestand. De gewone volledige voor/na-preview,
 bestandsgrenzen, Undo/Redo en aparte Android SAF-save blijven
 van kracht. Er wordt geen spraak/audio geanalyseerd.
 [Zelf koppelingen nakijken](docs/MANUAL_SUBTITLE_PASTE.md).
