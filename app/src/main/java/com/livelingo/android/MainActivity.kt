@@ -596,6 +596,8 @@ private fun TuddyScreen(
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
+    // Only a user-opened Android speech-settings round trip may re-open startcheck.
+    var pendingSpeechSettingsReturnTag by remember { mutableStateOf<String?>(null) }
     var languageSupportOpen by remember { mutableStateOf(false) }
     // Secondary export/history actions are collapsed on compact screens.
     var conversationToolsOpen by remember { mutableStateOf(false) }
@@ -877,12 +879,15 @@ private fun TuddyScreen(
         val voiceInputSettings = Intent("android.settings.VOICE_INPUT_SETTINGS")
         val target = if (voiceInputSettings.resolveActivity(context.packageManager) != null)
             voiceInputSettings else Intent(Settings.ACTION_SETTINGS)
-        runCatching { context.startActivity(target) }
-            .onFailure {
-                speechPackReceipt = speechPackReceipt.copy(
-                    detail = "Android-spraakinstellingen konden niet worden geopend. Open ze handmatig via Instellingen."
-                )
-            }
+        runCatching {
+            context.startActivity(target)
+            pendingSpeechSettingsReturnTag = source.speechCode
+        }.onFailure {
+            pendingSpeechSettingsReturnTag = null
+            speechPackReceipt = speechPackReceipt.copy(
+                detail = "Android-spraakinstellingen konden niet worden geopend. Open ze handmatig via Instellingen."
+            )
+        }
     }
 
     // User-triggered, privacy-safe diagnostics; never include caption/audio content.
@@ -2116,6 +2121,19 @@ private fun TuddyScreen(
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                val requested = pendingSpeechSettingsReturnTag
+                if (requested != null) {
+                    pendingSpeechSettingsReturnTag = null
+                    if (requested == source.speechCode && !listening) {
+                        offlineReadinessOpen = true
+                        // Read-only refresh after returning from Android's own settings.
+                        // Never auto-start the microphone or request a model download.
+                        checkSpeechPackNow()
+                        checkTextPair()
+                    }
+                }
+            }
             if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) {
                 localTranslatorPool.invalidate()
@@ -2174,6 +2192,7 @@ private fun TuddyScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            pendingSpeechSettingsReturnTag = null
             generation++
             modelStorage.invalidate()
             starterPhraseboardOpen = false
