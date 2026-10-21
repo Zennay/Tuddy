@@ -1,0 +1,9 @@
+# Local personal phrase finder in the five-word starter screen
+
+Open the built-in **5 basisuitdrukkingen · zonder internet** board and choose **Zoek in maximaal 80 eigen offline zinnen…**. This is a distinct opt-in, entirely on-device lookup of phrases the user previously authored and saved in the private phrase deck, not an expansion of the five bundled translations.
+
+The finder searches both the original Kurmanji (`kmr`), Sorani (`ckb`) or Pashto (`ps`) sentence and the user's own Dutch or English meaning. Filter by source language and authored meaning language, including all languages. Exact queries appear first, then prefix matches and other substring matches; the original phrasing is displayed without paraphrasing. Tap a result to enter the existing full-screen user-authored phrase presenter, with navigation through the exact filtered result list. Sorani and Pashto cards use right-to-left text direction. **Mijn zinnen beheren…** opens the existing separate personal phrase editor/importer; no automatic transcript import or phrase persistence happens in the finder.
+
+If there are zero notes, a failed read, or no match, the UI says so explicitly, without AI/ML Kit/speech/network fallback or invented words. Queries stay in Compose memory; nothing is logged or sent to a cloud service. The stored note cap (80) and text validation remain unchanged. A medical/legal/urgent use warning stays visible. The original starter phrasebook still contains exactly five pre-bundled beginner entries, unchanged.
+
+This ships useful personally created offline word coverage while GitHub P1 [#2](https://github.com/Zennay/Tuddy/issues/2) remains open for full rights-cleared, native-speaker-reviewed Kurmanji/Sorani/Pashto offline ASR + free-form MT; [#1](https://github.com/Zennay/Tuddy/issues/1) still requires real authorized Android 12+ airplane-mode acceptance. This feature does not claim either.
