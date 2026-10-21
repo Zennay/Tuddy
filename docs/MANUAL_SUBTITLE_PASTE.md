@@ -382,6 +382,37 @@ In de tijdelijke ondertiteleditor open je **Zoek en vervang** (via het documentm
 
 Ook bij tweetalige kaarten bepaalt Tuddy **niet** welke taal de eerste of tweede regel werkelijk bevat; de volgorde blijft de verantwoordelijkheid van de gebruiker. Alle uitgaven blijven onder de bestaande 500-cue- en 256-KiB-limieten.
 
+## Meerdere eigen schrijfcorrecties als één handeling
+
+Open **Zoek en vervang** in het tijdelijke ondertitelconcept en kies
+**Meerdere tekstcorrecties in één keer**. Plak maximaal twaalf regels
+met telkens `zoekterm => vervangtekst`, bijvoorbeeld:
+
+```text
+goedemorge => goedemorgen
+goedemiddg => goedemiddag
+vertallng => vertaling
+```
+
+De afzonderlijke zoek- en vervangvelden worden vervangen door één
+meerregelig invoerveld. Regels worden **van boven naar beneden**
+uitgevoerd: de volgende regel werkt op het voorstel van de vorige.
+Elke opgegeven correctie moet werkelijk iets veranderen; anders is
+het gehele voorstel ongeldig. Maximaal 4.096 invoertekens, 100
+zoektekens en 200 vervangtekens per regel. Een lege vervanging is
+toegestaan zolang het hele ondertitelbestand geldig blijft.
+Windows-regeleinden en één afsluitende regeleinde zijn toegestaan.
+
+**Van/Tot**, expliciete oorspronkelijke bronregels of geselecteerde
+tijdvensters, **alleen eerste/tweede tekstregel**, hoofdlettergevoeligheid
+en **Alleen volledige woorden** gelden voor álle ingevoerde regels.
+De complete, bladerbare vóór/na-preview toont alle uiteindelijke
+gewijzigde bronteksten; een onveilige, niet-exporteerbare of
+niet-uitgevoerde deelcorrectie weigert het geheel. Bevestigen past
+de hele set als **één RAM-only Undo/Redo-actie** toe. Er worden
+geen oorspronkelijke Android-bestanden herschreven, timestamps
+verschoven, vertalingen verzonnen of netwerkverzoeken gemaakt.
+
 ## Zelfgeschreven LRC-begintijden weer exporteren
 
 Vanuit de tijdelijke ondertiteleditor kan je nu ook

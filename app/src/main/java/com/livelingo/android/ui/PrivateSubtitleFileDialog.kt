@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PrivateSubtitleBatchReplace
+import com.livelingo.android.PrivateSubtitleCorrectionScript
 import com.livelingo.android.PrivateSubtitleBulkRemoval
 import com.livelingo.android.PrivateSubtitleRowSelection
 import com.livelingo.android.PrivateSubtitleTimeWindowRows
@@ -136,6 +137,8 @@ internal fun PrivateSubtitleFileDialog(
     var batchWith by remember { mutableStateOf("") }
     var batchMatchCase by remember { mutableStateOf(false) }
     var batchWholeWords by remember { mutableStateOf(false) }
+    var batchUseScript by remember { mutableStateOf(false) }
+    var batchScript by remember { mutableStateOf("") }
     var batchField by remember { mutableStateOf(SubtitleReplaceField.ALL_TEXT) }
     var batchReviewPage by remember { mutableIntStateOf(0) }
     var batchFirstRow by remember { mutableStateOf("1") }
@@ -2196,20 +2199,24 @@ internal fun PrivateSubtitleFileDialog(
         // A changed search, translation line, or selected range always starts
         // review at the first actual changed cue, not an old preview page.
         LaunchedEffect(draft, batchFind, batchWith, batchMatchCase, batchWholeWords,
-            batchField, batchFirstRow, batchLastRow, batchExplicitRows) {
+            batchField, batchFirstRow, batchLastRow, batchExplicitRows, batchUseScript, batchScript) {
             batchReviewPage = 0
         }
         val scopeFrom = batchFirstRow.toIntOrNull()
         val scopeTo = if (batchLastRow.isBlank()) draft.size
             else batchLastRow.toIntOrNull()
         val explicitBatch = batchExplicitRows.isNotBlank()
-        val proposed = if (explicitBatch || (scopeFrom != null && scopeTo != null))
-            PrivateSubtitleBatchReplace.preview(
-                draft, batchFind, batchWith, batchMatchCase,
-                if (explicitBatch) 1 else scopeFrom!!,
-                if (explicitBatch) draft.size else scopeTo!!,
-                batchField, batchExplicitRows, batchWholeWords)
-        else null
+        val proposed = if (explicitBatch || (scopeFrom != null && scopeTo != null)) {
+            val first = if (explicitBatch) 1 else scopeFrom!!
+            val last = if (explicitBatch) draft.size else scopeTo!!
+            if (batchUseScript) PrivateSubtitleCorrectionScript.preview(
+                draft, batchScript, batchMatchCase, batchWholeWords,
+                first, last, batchField, batchExplicitRows
+            ) else PrivateSubtitleBatchReplace.preview(
+                draft, batchFind, batchWith, batchMatchCase, first, last,
+                batchField, batchExplicitRows, batchWholeWords
+            )
+        } else null
         val changes = proposed?.updated?.withIndex()?.filter { (i, cue) ->
             cue.text != draft[i].text
         }.orEmpty()
@@ -2318,16 +2325,36 @@ internal fun PrivateSubtitleFileDialog(
                                 batchReviewPage = 0
                             }
                         }) { Text("Neem alle tijdvensters als bronregelselectie") }
-                    OutlinedTextField(
-                        value = batchFind,
-                        onValueChange = { batchFind = it.take(100) },
-                        label = { Text("Zoek tekst · max. 100 tekens") },
-                        singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(
-                        value = batchWith,
-                        onValueChange = { batchWith = it.take(200) },
-                        label = { Text("Vervang door · leeg mag") },
-                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Checkbox(checked = batchUseScript,
+                            onCheckedChange = { batchUseScript = it })
+                        Text("Meerdere tekstcorrecties in één keer")
+                    }
+                    if (batchUseScript) {
+                        Text("Maximaal 12 regels: oude tekst => nieuwe tekst. " +
+                            "De regels worden in volgorde toegepast. " +
+                            "Elke regel moet resultaat hebben; bij een fout wordt " +
+                            "het hele voorstel geweigerd.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            value = batchScript,
+                            onValueChange = { batchScript = it.take(4097) },
+                            label = { Text("Correctieregels · één per regel") },
+                            minLines = 3, maxLines = 8,
+                            modifier = Modifier.fillMaxWidth())
+                    } else {
+                        OutlinedTextField(
+                            value = batchFind,
+                            onValueChange = { batchFind = it.take(100) },
+                            label = { Text("Zoek tekst · max. 100 tekens") },
+                            singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(
+                            value = batchWith,
+                            onValueChange = { batchWith = it.take(200) },
+                            label = { Text("Vervang door · leeg mag") },
+                            singleLine = true, modifier = Modifier.fillMaxWidth())
+                    }
                     Row(modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Checkbox(checked = batchMatchCase,
@@ -2387,13 +2414,17 @@ internal fun PrivateSubtitleFileDialog(
                         else batchLastRow.toIntOrNull()
                     val explicitConfirmed = batchExplicitRows.isNotBlank()
                     val confirmed = if (explicitConfirmed ||
-                        (confirmedFrom != null && confirmedTo != null))
-                        PrivateSubtitleBatchReplace.preview(
+                        (confirmedFrom != null && confirmedTo != null)) {
+                        val first = if (explicitConfirmed) 1 else confirmedFrom!!
+                        val last = if (explicitConfirmed) draft.size else confirmedTo!!
+                        if (batchUseScript) PrivateSubtitleCorrectionScript.preview(
+                            draft, batchScript, batchMatchCase, batchWholeWords,
+                            first, last, batchField, batchExplicitRows
+                        ) else PrivateSubtitleBatchReplace.preview(
                             draft, batchFind, batchWith, batchMatchCase,
-                            if (explicitConfirmed) 1 else confirmedFrom!!,
-                            if (explicitConfirmed) draft.size else confirmedTo!!,
-                            batchField, batchExplicitRows, batchWholeWords)
-                    else null
+                            first, last, batchField, batchExplicitRows, batchWholeWords
+                        )
+                    } else null
                     if (confirmed != null) {
                         applyChange(confirmed.updated)
                         shownIndex = -1

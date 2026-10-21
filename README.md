@@ -2008,6 +2008,13 @@ providerbron wordt niet overschreven. Onmogelijke tijden, gewijzigde
 chronologische cue-identiteit en niet als SRT én VTT exporteerbare
 uitkomsten worden volledig geweigerd. Er wordt geen audio gelezen,
 spraak herkend, automatisch vertaald of cloudfallback gestart.
+De lokale ondertiteleditor ondersteunt daarnaast tot **twaalf
+expliciete tekstcorrecties** in één tijdelijke handeling via
+`oude tekst => nieuwe tekst` per regel. De bestaande bronregelselectie,
+Unicode-woordgrenzen en volledige vóór/na-preview blijven actief;
+alle correcties slagen samen of worden samen geweigerd, met één
+Undo/Redo-stap en zonder automatische bestandsopslag.
+
 De lokale ondertiteleditor kan met **Zoek en vervang** nu ook **Alleen volledige woorden** kiezen. Dan blijven langere woorden intact: `kat` wordt bijvoorbeeld niet binnen `katten` veranderd. Ook Unicode-letters en gecombineerde accenten tellen mee. Controleer vóór overname de complete vóór/na-preview; niets wordt automatisch naar het originele bronbestand teruggeschreven.
 
 Zie [de LRC-/ondertitelhandleiding](docs/MANUAL_SUBTITLE_PASTE.md).
