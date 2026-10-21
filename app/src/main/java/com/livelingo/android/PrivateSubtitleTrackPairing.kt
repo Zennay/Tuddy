@@ -17,8 +17,8 @@ internal data class SubtitleTrackPairingPreview(
 )
 
 internal object PrivateSubtitleTrackPairing {
-    private val allowedOffsets = setOf(-10_000L, -5_000L, -2_000L, 0L,
-        2_000L, 5_000L, 10_000L)
+    // Offsets are explicitly authored by the user (up to ten minutes each way).
+    // Timing, pair counts, and BOTH export snapshots still gate the preview.
     private fun stamp(millis: Long): String = String.format(Locale.ROOT,
         "%02d:%02d:%02d,%03d", millis / 3_600_000L,
         millis / 60_000L % 60, millis / 1000L % 60, millis % 1000L)
@@ -28,7 +28,7 @@ internal object PrivateSubtitleTrackPairing {
         secondary: List<PrivateSubtitleCue>,
         secondTrackOffsetMs: Long = 0L
     ): SubtitleTrackPairingPreview? {
-        if (secondTrackOffsetMs !in allowedOffsets ||
+        if (!PrivateSubtitleOffset.isSupported(secondTrackOffsetMs) ||
             primary.isEmpty() || secondary.isEmpty() ||
             primary.size > 500 || secondary.size > 500 ||
             PrivateSubtitleDraftEditor.snapshot(primary, SubtitleDraftFormat.SRT) == null ||
