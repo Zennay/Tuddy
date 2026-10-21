@@ -68,7 +68,7 @@ jobs:
           git rev-parse HEAD > "$out/source-commit.txt"
           test "$(cat "$out/source-commit.txt")" = "$EXPECTED_SHA"
           cat "$out/app-debug.apk.sha256"
-          apk_sha="$(cut -d\x27 \x27 -f1 "$out/app-debug.apk.sha256")"
+          apk_sha="$(awk '{print $1}' "$out/app-debug.apk.sha256")"
           apk_bytes="$(stat -c%s "$out/app-debug.apk")"
           {
             echo "source_sha=$EXPECTED_SHA"
