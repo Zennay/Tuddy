@@ -38,11 +38,14 @@ internal object PrivateSubtitleTrackPairing {
     fun preview(
         primary: List<PrivateSubtitleCue>,
         secondary: List<PrivateSubtitleCue>,
-        secondTrackOffsetMs: Long = 0L
+        secondTrackOffsetMs: Long = 0L,
+        excludedSecondaryRows: Set<Int> = emptySet()
     ): SubtitleTrackPairingPreview? {
         if (!PrivateSubtitleOffset.isSupported(secondTrackOffsetMs) ||
             primary.isEmpty() || secondary.isEmpty() ||
             primary.size > 500 || secondary.size > 500 ||
+            excludedSecondaryRows.size > secondary.size ||
+            excludedSecondaryRows.any { it !in 1..secondary.size } ||
             PrivateSubtitleDraftEditor.snapshot(primary, SubtitleDraftFormat.SRT) == null ||
             PrivateSubtitleDraftEditor.snapshot(secondary, SubtitleDraftFormat.SRT) == null
         ) return null
@@ -106,7 +109,10 @@ internal object PrivateSubtitleTrackPairing {
                     totalOverlap = bestOverlaps[right]
                     move = 2
                 }
-                val overlap = pairOverlap(primary[i], adjusted[j])
+                // An explicitly excluded secondary source row stays visible
+                // as a standalone cue. Never reinterpret exclusion as deletion.
+                val overlap = if ((j + 1) in excludedSecondaryRows) 0L
+                    else pairOverlap(primary[i], adjusted[j])
                 if (overlap > 0L) {
                     val pairedCount = bestPairs[diagonal] + 1
                     val pairedOverlap = bestOverlaps[diagonal] + overlap
