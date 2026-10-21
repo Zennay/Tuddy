@@ -1,3 +1,23 @@
+## Nieuw: lokale tweetalige aanvuloefening met volledig antwoordblad
+
+Maak bij **★ gemarkeerd → Exporteer selectie…** een **Aanvuloefening · HTML**
+uit je eigen selectie van afgeronde tweetalige zinnen. Iedere kaart toont
+de bronzin en een antwoord waarvan om de andere spatiegescheiden term
+tijdelijk is vervangen door een invulstreep. Voor schriftsoorten zonder
+spaties wordt geen kunstmatige woordgrens verzonnen. Het volledige antwoord
+is in de browser pas na een tik zichtbaar; bij printen verschijnt het
+op een **afzonderlijke antwoordpagina**. Bekijk vóór opslaan in de app
+de werkelijke aanvulhints, kaartenteller en exacte bestandspreviews.
+
+De functie werkt in beide taalrichtingen, met eigen tekstcorrecties,
+optionele taalcodes en een limiet op geselecteerde kaarten. Alles
+blijft lokaal, scripts-/netwerkvrij en wordt pas na bewuste
+Android-bestandskeuze opgeslagen. Geen spraakopnames, permanente
+studieresultaten of claims over geverifieerde vertalingen.
+[Handleiding](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 ## Nieuw: tweetalige vouwkaartjes op één afdrukzijde
 
 Uit bewust gemarkeerde voltooide vertaalparen kun je naast TSV/CSV
