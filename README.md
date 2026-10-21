@@ -1,3 +1,16 @@
+## Nieuw: verschuif uitsluitend eigen gekozen tijdcodes
+
+Naast het verschuiven van de hele ondertiteltijdlijn ondersteunt
+de privé-editor nu **gerichte tijdcorrecties voor losse originele
+bronregels**, bijvoorbeeld `2-4,7,12`, met zes handmatige offsets.
+Voor iedere betrokken regel zie je de volledige oude/nieuwe
+tijdcodes en tekst in een doorbladerbaar voorbeeld. Teruglopende
+begintijden of overschreden exportlimieten worden geweigerd.
+Ongeselecteerde regels blijven exact ongewijzigd; correcties zijn
+in één Terug/Opnieuw-stap te herstellen. Geen automatische
+audio-uitlijning of bestandsopslag.
+[Uitleg](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: exporteer precieze ondertitelranges zonder te zoeken
 
 Selecteer in de tijdelijke ondertiteleditor nu zelf bronregels zoals
