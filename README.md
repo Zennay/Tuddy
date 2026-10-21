@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: exacte milliseconden op eigen A–B-luisterkaartjes
+
+Eigen gekozen audiofragmenten behouden nu ook in de HTML-, TXT- en
+CSV-export de volledige **uu:mm:ss.mmm**-precisie. De eerdere weergave
+op hele seconden maakte korte of dichtbije passages lastig van elkaar
+te onderscheiden. De wijziging wijzigt geen audio, ondertitelbestanden,
+opslagrechten of (niet-gevalideerde) bronuitlijning.
+[Uitleg](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 ## Nieuw: mijn A–B-luisterkaarten als CSV voor eigen overzichten
 
 Naast HTML en TXT heeft het tijdelijke privé-luisteroverzicht nu een
