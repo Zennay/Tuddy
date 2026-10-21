@@ -190,6 +190,9 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                         Text("Toon deze eigen zin groot")
                     }
                 }
+                OfflinePersonalTurnScriptExport(
+                    turns = turns.map { it.note to it.fromMeaning }
+                )
                 Text("Deze zinnen zijn niet onafhankelijk beoordeeld. " +
                     "Gebruik ze niet bij urgente, medische of juridische beslissingen.",
                     style = MaterialTheme.typography.bodySmall,
