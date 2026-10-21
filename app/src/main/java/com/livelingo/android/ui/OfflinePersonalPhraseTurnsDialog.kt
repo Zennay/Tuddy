@@ -52,6 +52,7 @@ internal fun OfflinePersonalPhraseTurnsDialog(
     var alternate by remember { mutableStateOf(true) }
     var turns by remember { mutableStateOf<List<LocalPersonalTurn>>(emptyList()) }
     var shown by remember { mutableStateOf<PersonalPhrase?>(null) }
+    var choosingSaved by remember { mutableStateOf(false) }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val normalized = draft.trim().lowercase(Locale.ROOT)
     val choices = if (normalized.isEmpty()) emptyList() else notes.orEmpty().filter { note ->
@@ -101,6 +102,33 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                 ) {
                     Text(if (fromMeaning) "Ik typ NL/EN → mijn eigen zin ⇄"
                         else "Ik typ eigen zin → mijn eigen NL/EN ⇄")
+                }
+                OutlinedButton(
+                    enabled = notes?.isNotEmpty() == true,
+                    onClick = { choosingSaved = !choosingSaved },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (choosingSaved) "Sluit mijn themakiezer"
+                        else "Kies een opgeslagen zin uit mijn thema’s of favorieten…")
+                }
+                if (choosingSaved && notes != null) {
+                    OfflinePhraseTurnTopicPicker(
+                        notes = notes,
+                        language = language,
+                        meaningLanguage = meaningLanguage,
+                        onPick = { note ->
+                            // Only the deliberately tapped original user-authored
+                            // pair may become an ephemeral conversation turn.
+                            if (note in notes && note.language == language &&
+                                note.meaningLanguage == meaningLanguage) {
+                                turns = (turns + LocalPersonalTurn(note, fromMeaning))
+                                    .takeLast(12)
+                                draft = ""
+                                choosingSaved = false
+                                if (alternate) fromMeaning = !fromMeaning
+                            }
+                        }
+                    )
                 }
                 OutlinedTextField(
                     value = draft,
