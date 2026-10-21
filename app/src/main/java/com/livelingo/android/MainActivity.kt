@@ -886,10 +886,8 @@ private fun TuddyScreen(
     }
 
     // User-triggered, privacy-safe diagnostics; never include caption/audio content.
-    fun copyOfflineReadinessReport() {
-        val appVersion = runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "unknown"
+    fun copyOfflineReadinessReport(): Boolean = runCatching {
+        val appVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
         val report = buildString {
             appendLine("Tuddy offline readiness report")
             appendLine("App version: $appVersion")
@@ -912,7 +910,8 @@ private fun TuddyScreen(
             putBoolean("android.content.extra.IS_SENSITIVE", true)
         }
         board.setPrimaryClip(clip)
-    }
+        true
+    }.getOrDefault(false)
 
     fun checkTextPair() {
         val from = source.translateCode
