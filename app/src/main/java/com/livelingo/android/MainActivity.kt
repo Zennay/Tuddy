@@ -3556,9 +3556,11 @@ private fun TuddyScreen(
                                     "Leerlingenblad: geen volledige vertaling of antwoorden, " +
                                         "ook niet verborgen in de HTML-broncode. Bewaar " +
                                         "voor jezelf zo nodig een aparte zelfstudieversie."
-                                else "Zelfstudie: complete antwoorden staan achter " +
-                                    "bewuste openklapkeuzes of in het afzonderlijke " +
-                                    "antwoordblad.", style = MaterialTheme.typography.bodySmall)
+                                else "Zelfstudie: antwoorden achter openklapkeuzes. " +
+                                    "Het antwoordblad is in de browser aanvankelijk verborgen " +
+                                    "en wordt bij afdrukken alleen toegevoegd als je daar " +
+                                    "eerst zelf het vakje 'Print ook het antwoordblad' aanvinkt.",
+                                    style = MaterialTheme.typography.bodySmall)
                                 HorizontalDivider()
                                 Text("Welke ronde(s) wil je oefenen?",
                                     style = MaterialTheme.typography.titleSmall)
@@ -3704,7 +3706,7 @@ private fun TuddyScreen(
                                                 "; " + pinnedClozePass.title +
                                                 ") met invulwoorden " +
                                                 (if (pinnedClozeAudience == PinnedClozeAudience.SELF_STUDY)
-                                                    "en apart antwoordblad. "
+                                                    "en optioneel afdrukbaar antwoordblad. "
                                                 else "zonder volledige antwoorden. ")
                                         else -> " met twee tekstkolommen. "
                                     }) +
