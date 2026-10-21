@@ -121,8 +121,12 @@ internal object PrivatePrintablePracticeSummary {
                     }
                 val preview = if (matched) {
                     val start = clean(cues[first].text, 90)
+                    val missing = last - first - 1
                     val end = if (first == last) "" else
-                        " … " + clean(cues[last].text, 90)
+                        if (missing == 0) " / " + clean(cues[last].text, 90)
+                        else " … [" + missing +
+                            " tussenliggende bronregels niet getoond] … " +
+                            clean(cues[last].text, 90)
                     start + end
                 } else "Alleen handmatig audiotijdvak; geen exacte brontekstmatch"
                 val rating = when (ratings[span]) {
