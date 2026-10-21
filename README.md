@@ -1,3 +1,12 @@
+## Nieuw: paginavoorbeeld voor grote eigen ondertitelbestanden
+
+De CSV/TSV- en LRC-exportdialoog toont niet meer alle 256 KiB ineens
+in één tekstcomponent. De exacte bestandstekst is nu per begrensd
+gedeelte volledig door te bladeren, met **Vorige** en **Volgende**.
+Het gekozen bestand bevat uiteraard alle regels; alleen de weergave
+is opgesplitst. Geen beperkingen versoepeld, geen automatische opslag
+of vertaling. [Uitleg](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Verbeterd: rechtstreeks SRT/VTT uit Android-bestandsproviders openen
 
 De bestaande **Open SRT/WebVTT…**-actie en **Tweede SRT/VTT-document
