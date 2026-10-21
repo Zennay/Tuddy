@@ -31,7 +31,40 @@ Als bronzin en eigen betekenis in twee losse tekstlijsten staan, hoef je geen ta
 
 De betekenis is uitsluitend door de gebruiker geschreven; deze route biedt geen automatische vertaling, ASR of audiotiming.
 
-## Handmatig tweetalige tekst uit twee kolommen
+### Bestaande transcript-tijdcodes gebruiken (drie tekstkolommen)
+
+Heb je zelf een transcript met begin- en eindtijden maar **geen** handmatig
+geschreven vertaling, gebruik dan in **Plak zelf tekst…** de optie
+**Gewone zinnen → Drie kolommen: begin · einde · eigen tekst**.
+
+Plak precies drie tabgescheiden velden per oorspronkelijke regel:
+
+```text
+00:00:03.000[TAB]00:00:06.500[TAB]Zelf geschreven bronzin
+00:00:06.500[TAB]00:00:09.200[TAB]Volgende eigen zin
+```
+
+Vervang `[TAB]` door een echt tabteken (bijvoorbeeld bij plakken vanuit
+een eigen spreadsheet). Het tijdformaat volgt de bestaande handmatige
+tijdparser, bijvoorbeeld `00:00:12.500` of `01:23,456`. Je ziet
+**direct het oorspronkelijke regelnummer** wanneer een regel leeg is,
+de begintijd of eindtijd ongeldig is, een tijdvak nul/negatieve lengte
+heeft, de beginmomenten teruglopen, het aantal kolommen niet klopt
+of de tekst ontbreekt/te lang is. Dezelfde specifieke feedback werkt
+nu ook voor de bestaande vierkoloms-import.
+
+Tuddy neemt bestaande begin- en eindtijden zonder schatting over,
+plaatst één door jou geschreven tekstregel per cue en biedt de bestaande
+volledige preview, zoekfunctie en expliciete selectie. Alleen na
+**Open gekozen regels** verschijnt het resultaat in de tijdelijke
+editor. Bij een selectie wordt de complete actuele bron opnieuw gelezen,
+zonder verborgen wijzigingen in de originele SRT/VTT of het gesprek.
+Er vindt geen echte audiouitlijning, ASR, vertaling, beoordeling of
+netwerkverwerking plaats. De maximaal 500 regels en 256 KiB
+bronbeperking, SRT/WebVTT-exportgrenzen en expliciete Android-bestandskeuze
+blijven behouden.
+
+# Handmatig tweetalige tekst uit twee kolommen
 
 1. Kies **Gewone zinnen** en vervolgens **Twee handmatige tekstkolommen (tab gescheiden)**.
 2. Plak per niet-lege regel twee velden uit bijvoorbeeld een eigen spreadsheet: `oorspronkelijke zin[TAB]zelfgeschreven betekenis`. Gebruik exact één tab om de kolommen te scheiden; twee lege/extra kolommen en lege tussenliggende spreadsheetrijen worden afgewezen in plaats van stilzwijgend overgeslagen.
