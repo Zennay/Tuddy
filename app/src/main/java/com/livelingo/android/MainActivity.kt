@@ -988,36 +988,20 @@ private fun TuddyScreen(
                 partialTranslation = text
                 return@Runnable
             }
-            val translator = try {
-                Translation.getClient(TranslatorOptions.Builder()
-                    .setSourceLanguage(sourceCode)
-                    .setTargetLanguage(targetCode)
-                    .build())
-            } catch (_: Exception) {
-                return@Runnable
-            }
             interimTranslationBusy = true
-            try {
-                // Do not call downloadModelIfNeeded: no per-word model traffic.
-                translator.translate(text)
-                    .addOnSuccessListener { translated ->
-                        if (InterimTranslationPolicy.mayPublish(
-                                revision, partialRevision, token, generation,
-                                voiceSessions.isCurrent(voiceToken), listening)) {
-                            partialTranslation = translated
-                        }
-                        translator.close()
-                        interimTranslationBusy = false
+            // The pool only calls translate() on an existing local model; this
+            // provisional path never requests or downloads a language pack.
+            localTranslatorPool.translate(sourceCode, targetCode, text) { result ->
+                try {
+                    val translated = result.getOrNull()
+                    if (translated != null && InterimTranslationPolicy.mayPublish(
+                            revision, partialRevision, token, generation,
+                            voiceSessions.isCurrent(voiceToken), listening)) {
+                        partialTranslation = translated
                     }
-                    .addOnFailureListener {
-                        // A missing local model leaves the preview untranslated.
-                        // Never display raw ML Kit error text or attempt cloud STT.
-                        translator.close()
-                        interimTranslationBusy = false
-                    }
-            } catch (_: Exception) {
-                translator.close()
-                interimTranslationBusy = false
+                } finally {
+                    interimTranslationBusy = false
+                }
             }
         }
         pendingInterim = task
