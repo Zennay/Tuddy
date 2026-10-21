@@ -25,7 +25,9 @@ internal data class SubtitleTrackPairingPreview(
     val pairedCount: Int,
     val unpairedSecondTrack: Int,
     val unpairedFirstTrack: Int,
-    val pairedLinks: List<SubtitleCuePairingLink>
+    val pairedLinks: List<SubtitleCuePairingLink>,
+    val unpairedPrimaryRows: List<Int>,
+    val unpairedSecondaryRows: List<Int>
 )
 
 internal object PrivateSubtitleTrackPairing {
@@ -180,12 +182,18 @@ internal object PrivateSubtitleTrackPairing {
         if (PrivateSubtitleDraftEditor.snapshot(rows, SubtitleDraftFormat.SRT) == null ||
             PrivateSubtitleDraftEditor.snapshot(rows, SubtitleDraftFormat.WEBVTT) == null
         ) return null
+        val linkedSecondaryRows = links.mapTo(HashSet<Int>()) {
+            it.secondarySourceRow
+        }
         return SubtitleTrackPairingPreview(
             cues = rows,
             pairedCount = paired,
             unpairedSecondTrack = leftovers.size,
             unpairedFirstTrack = n - paired,
-            pairedLinks = links.toList()
+            pairedLinks = links.toList(),
+            unpairedPrimaryRows = matched.indices.filter { matched[it] == null }
+                .map { it + 1 },
+            unpairedSecondaryRows = (1..m).filterNot { it in linkedSecondaryRows }
         )
     }
 }
