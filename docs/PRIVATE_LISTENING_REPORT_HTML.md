@@ -2,8 +2,12 @@
 
 Naast de bestaande compacte CSV kun je in **Mijn privé luisteroverzicht**
 de knop **Bekijk volledige bronregel-CSV vóór opslaan** gebruiken.
-Deze toont de werkelijk te bewaren CSV-rijen, met één aparte rij voor
-elke eigen SRT/VTT-ondertitelregel die **helemaal** binnen een bewust
+Deze toont de werkelijk te bewaren CSV-rijen in bladzijden van maximaal
+12 CSV-rijen met **Vorige/Volgende CSV-pagina**, zodat ook lange exports
+op kleine Android-schermen inspecteerbaar blijven. Navigeren
+verandert niets aan het volledige bestand. Elke passende cue heeft één
+aparte rij voor de eigen SRT/VTT-ondertitelregel die **helemaal**
+binnen een bewust
 gemarkeerd A–B-fragment valt. De bronregelnummers blijven 1-gebaseerd,
 met begin en einde op de eigen huidige milliseconde-tijdlijn. Elke rij
 vermeldt ook het gekozen luisterfragment, diens begin/eind, de eigen
