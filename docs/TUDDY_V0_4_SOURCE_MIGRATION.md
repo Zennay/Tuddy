@@ -4,6 +4,12 @@
 
 The historical v0.4 archive used a different source layout from the current app. The current repository has newer implementations of several behaviors, so a matching filename or equivalent feature is not proof that every historical source file was imported byte-for-byte. Keep [issue #1](https://github.com/Zennay/Tuddy/issues/1) open until the remaining source-migration scope and authorized physical-device evidence are resolved.
 
+## Source archive provenance
+
+- Library path: `/Projects/LiveLingo/LiveLingo-Android-v0.4-Kurdish-Pashto.zip`
+- Size: `42,472 bytes`
+- SHA-256: `e7721d41d4f7baf31850e3836d5655cfd3b20c2197752cc4a3ff1078fc57992c`
+
 ## Historical modules and current active equivalents
 
 | Historical v0.4 module | Current active implementation | Status / boundary |
