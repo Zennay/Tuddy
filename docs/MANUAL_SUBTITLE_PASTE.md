@@ -641,6 +641,27 @@ wordt niet alsnog opgeslagen. Een gekozen externe Android-provider
 kan zelf online synchroniseren. Undo-geschiedenis in de dialoog
 wordt niet als langdurige opslag bewaard.
 
+## Handmatige tijdcorrectie tot op de milliseconde
+
+In **Alleen gekozen bronregels in tijd verschuiven…** werken de zes
+vaste knoppen (±0,5, ±2 en ±5 seconden) nog steeds. Daarnaast kun je
+nu in **Eigen seconden** een zelfgekozen verschuiving opgeven, zoals
+`-7,250`, `+12.345` of `0,125`. Positief schuift later, negatief
+eerder. Een punt of komma is toegestaan, met maximaal drie decimalen;
+de berekening gebeurt **exact in milliseconden** en rondt niet via
+floating point af.
+
+Het bereik is **-600 tot +600 seconden**, exclusief nul.
+Een ongeldig getal schakelt de bevestiging uit in plaats van terug
+te vallen op een eerder gekozen preset. Een preset opnieuw kiezen
+wist de handmatige waarde bewust. De volledige gekozen bronregels
+worden vóór toepassing met oude en nieuwe tijden getoond; ieder
+ongewijzigd cue blijft intact. Een verschuiving die een tijd
+negatief maakt, een bronregel voorbij de volgende schuift of niet
+als volledige SRT én VTT exporteerbaar is, wordt geweigerd.
+De verandering blijft één Undo/Redo-stap in RAM; bestandsopslag
+vereist nog steeds apart expliciete toestemming.
+
 ## Tijdvensters ook voor verwijdering en tekstcorrecties
 
 Hetzelfde eigen **Vanaf/Tot**-tijdvenster kan nu vanuit de
