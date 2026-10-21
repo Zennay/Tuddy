@@ -109,6 +109,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         mutableStateOf<Map<Int, Map<Int, Long>>>(emptyMap())
     }
     var manualWordNumber by remember { mutableStateOf("") }
+    var wordAnchorListOpen by remember { mutableStateOf(false) }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var rangeStartIndex by remember { mutableIntStateOf(-1) }
     var rangeEndIndex by remember { mutableIntStateOf(-1) }
@@ -692,6 +693,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         wordRangeFrom = ""
         wordRangeTo = ""
         manualWordNumber = ""
+        wordAnchorListOpen = false
         if (!estimatedWordFollow) {
             wordJumpListOpen = false
             wordReplayBounds = null
@@ -1499,8 +1501,35 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 "Deze veranderen alleen visuele woordstappen en herhaalpunten.",
                                 style = MaterialTheme.typography.bodySmall)
                             TextButton(onClick = {
+                                wordAnchorListOpen = !wordAnchorListOpen
+                            }) {
+                                Text(if (wordAnchorListOpen)
+                                    "Verberg eigen woordtijdmarkeringen"
+                                else "Bekijk of bewerk eigen woordtijdmarkeringen")
+                            }
+                            if (wordAnchorListOpen) {
+                                activeWordMarks.toSortedMap().forEach { (word, atMs) ->
+                                    Row(modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text("Woord ${word + 1}: ${clock(atMs)}",
+                                            modifier = Modifier.weight(1f),
+                                            style = MaterialTheme.typography.bodySmall)
+                                        TextButton(onClick = {
+                                            manualWordNumber = (word + 1).toString()
+                                        }) { Text("Bewerk") }
+                                        TextButton(onClick = {
+                                            wordTimingMarks = wordTimingMarks +
+                                                (activeIndex to (activeWordMarks - word))
+                                            wordReplayBounds = null
+                                            notice = "Eigen tijdanker voor woord ${word + 1} gewist."
+                                        }) { Text("Wis") }
+                                    }
+                                }
+                            }
+                            TextButton(onClick = {
                                 wordTimingMarks = wordTimingMarks - activeIndex
                                 wordReplayBounds = null
+                                wordAnchorListOpen = false
                                 notice = "Eigen woordankers voor deze ondertitel gewist."
                             }) { Text("Herstel gelijkmatige woordschatting voor deze regel") }
                         }
