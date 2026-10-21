@@ -53,12 +53,20 @@ internal fun privatePracticeSummary(
 
     // Hide controls and bidi override codes rather than placing untrusted
     // subtitle content into a copyable, apparently authoritative summary.
-    fun excerpt(value: String): String = value.asSequence()
-        .filter { char ->
-            char.code >= 32 && char.code != 127 &&
-                char !in '\u202a'..'\u202e' &&
-                char !in '\u2066'..'\u2069'
-        }.take(90).joinToString("").trim()
+    fun excerpt(value: String, maxCodePoints: Int = 90): String {
+        // Trim at Unicode code-point boundaries so emoji, Sorani and Pashto
+        // never become broken UTF-16 in a private export.
+        val safe = value.codePoints().toArray().asSequence()
+            .filter { cp -> cp >= 32 && cp != 127 &&
+                !Character.isISOControl(cp) &&
+                cp !in 0x202A..0x202E && cp !in 0x2066..0x2069 &&
+                cp != 0x2028 && cp != 0x2029 && cp != 0xFEFF }
+            .take(maxCodePoints + 1).toList()
+        val clipped = safe.take(maxCodePoints).joinToString("") {
+            String(Character.toChars(it))
+        }.trim()
+        return clipped + if (safe.size > maxCodePoints) " … [ingekort]" else ""
+    }
 
     val bounded = passages.take(4)
     return buildString {
@@ -82,6 +90,20 @@ internal fun privatePracticeSummary(
                 appendLine("   Mijn ondertitelregels " + (first + 1) + "–" + (last + 1) + ": " +
                     excerpt(cues[first].text) +
                     if (first == last) "" else " … " + excerpt(cues[last].text))
+                // A quick first/last excerpt is not sufficient for studying
+                // a short passage with several user-authored subtitle lines.
+                // Show all when there are <= 8; otherwise show both ends and
+                // explicitly disclose the number of omitted intermediate lines.
+                val count = last - first + 1
+                val indices = if (count <= 8) (first..last).toList() else
+                    (first until first + 4).toList() + (last - 3..last).toList()
+                appendLine("   Mijn eigen ondertiteltekst per bronregel:")
+                indices.forEachIndexed { index, cueIndex ->
+                    if (count > 8 && index == 4) {
+                        appendLine("   … ${count - 8} tussenliggende regels niet getoond.")
+                    }
+                    appendLine("   ${cueIndex + 1}. " + excerpt(cues[cueIndex].text, 240))
+                }
             } else {
                 appendLine("   Alleen handmatig audiotijdvak; geen exacte brontekstmatch.")
             }
