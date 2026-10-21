@@ -401,6 +401,41 @@ geen bewijs van automatische vertaling of echte audiowoordtiming.
 
 Het uitlijnen gebeurt **uitsluitend op zelf aangewezen ondertitelbeginwaarden**, zonder audioanalyse, spraakherkenning, modelvertaling, woordtiming, toegangsuitbreiding of automatische bestandsopslag. De originele eerste en tweede documenten blijven intact.
 
+### Bewust koppelen met behoud van alle bronregels
+
+Bij **Combineer twee teksten bij overlappende tijdcodes** wordt nu de
+**volledige tijdvolgorde van beide bestanden** bekeken, niet alleen
+elk volgend cuepaar afzonderlijk. Tuddy zoekt onder de strikt
+toegestane koppelingen naar zo veel mogelijk één-op-één paren en
+kiest bij gelijk aantal de grootste gezamenlijke **werkelijke
+tijdsoverlap**. Elke koppeling respecteert de bronvolgorde in
+**beide** sporen. Een paar telt alleen mee wanneer ten minste
+**de helft van de kortste eigen cue-duur** overlapt. Dit helpt
+bij korte overlappende ondertitels waarvoor een lokale keuze
+een later overeenkomstig paar zou blokkeren.
+
+De samenvoegpreview toont hoeveel oorspronkelijke regels in
+**beide** sporen ongekoppeld blijven. Via **Controleer elke
+bronregel-koppeling** kun je voor alle voorgestelde paren in
+pagina's van vier de **oorspronkelijke rijnummers, volledige eigen
+teksten, starttijden en gedeelde milliseconden** bekijken.
+Ongekoppelde regels uit het tweede spoor blijven als
+**zelfstandige ondertitelregels** bestaan; ongekoppelde regels
+uit het eerste spoor blijven ongewijzigd. Zelfs **identieke
+authored tekst** in beide sporen wordt niet stilzwijgend
+weggegooid. De volledige samengevoegde kopie blijft apart
+doorbladerbaar in pagina's van vijf.
+
+De algoritmische koppeling kijkt **alleen** naar geschreven
+tijdstempels, niet naar de werkelijke betekenis van woorden,
+sprekerherkenning, audio of media. Inspecteer de bronparen
+zelf vóór bevestiging. Het model past niets automatisch toe.
+Bij definitieve toestemming worden de hele gewijzigde
+tijdlijn én de bronkoppelingen opnieuw vastgesteld en met
+de goedgekeurde preview vergeleken. De bestaande SRT/VTT-
+exportgrenzen, Undo/Redo en aparte Android SAF-save gelden
+ook hier.
+
 ### Tijdverloop corrigeren met twee handmatig gekozen ankerparen
 
 Als twee ondertitelsporen **aan het begin samenvallen maar verderop
