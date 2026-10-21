@@ -166,6 +166,8 @@ internal fun PrivateSubtitleFileDialog(
     var excludedReviewPage by remember { mutableIntStateOf(0) }
     var pairReviewOpen by remember { mutableStateOf(false) }
     var excludedSecondRows by remember { mutableStateOf(setOf<Int>()) }
+    var excludeRowExpression by remember { mutableStateOf("") }
+    var excludeWindowExpression by remember { mutableStateOf("") }
     var driftSelectorOpen by remember { mutableStateOf(false) }
     var selectedDrift by remember { mutableStateOf<PrivateSubtitleDriftSelection?>(null) }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
@@ -193,6 +195,8 @@ internal fun PrivateSubtitleFileDialog(
                 driftSelectorOpen = false
                 selectedDrift = null
                 excludedSecondRows = emptySet()
+                excludeRowExpression = ""
+                excludeWindowExpression = ""
                 excludedReviewPage = 0
                 pairReviewPage = 0
                 pairReviewOpen = false
@@ -720,6 +724,8 @@ internal fun PrivateSubtitleFileDialog(
                 driftSelectorOpen = false
                 selectedDrift = null
                 excludedSecondRows = emptySet()
+                excludeRowExpression = ""
+                excludeWindowExpression = ""
                 excludedReviewPage = 0
                 pairReviewPage = 0
                 pairReviewOpen = false
@@ -1014,6 +1020,63 @@ internal fun PrivateSubtitleFileDialog(
                             "Controleer tijdcodes zelf; er is geen audio-/video-uitlijning.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
+                        Text("Wil je meerdere originele regels uit spoor twee " +
+                            "uitsluiten van koppeling? Ze blijven allemaal " +
+                            "zichtbaar als eigen, losse ondertitels.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = excludeRowExpression,
+                            onValueChange = { excludeRowExpression = it.take(2000) },
+                            label = { Text("Bronregels tweede spoor, bv. 2-5,9,12-15") },
+                            singleLine = true)
+                        Text("Of typ maximaal 16 losse tijdvensters uit het " +
+                            "tweede spoor, bv. 00:10-00:20;01:30-01:45. " +
+                            "Een venster wordt alleen na jouw keuze omgezet.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = excludeWindowExpression,
+                            onValueChange = { excludeWindowExpression = it.take(512) },
+                            label = { Text("Tijdvensters tweede spoor") },
+                            singleLine = true)
+                        val windowSelection = PrivateSubtitleTimeWindowRows
+                            .expressionForWindows(
+                                stagedImport.imported, excludeWindowExpression)
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                            enabled = windowSelection != null,
+                            onClick = {
+                                if (windowSelection != null)
+                                    excludeRowExpression = windowSelection
+                            }) { Text("Neem volledige bronregels uit tijdvensters") }
+                        val bulkIndices = PrivateSubtitleRowSelection.parse(
+                            excludeRowExpression, stagedImport.imported.size)
+                        if (excludeRowExpression.isNotBlank()) {
+                            Text(
+                                if (bulkIndices == null)
+                                    "Geen geldige bronregelselectie. " +
+                                        "Gebruik 1–${stagedImport.imported.size} " +
+                                        "zonder dubbele of overlappende bereiken."
+                                else "${bulkIndices.size} oorspronkelijke bronregels " +
+                                    "klaar om bewust uit de koppeling uit te sluiten.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                            enabled = bulkIndices != null,
+                            onClick = {
+                                val selected = PrivateSubtitleRowSelection.parse(
+                                    excludeRowExpression, stagedImport.imported.size)
+                                if (selected != null && selected == bulkIndices) {
+                                    excludedSecondRows =
+                                        excludedSecondRows + selected.map { it + 1 }
+                                    excludeRowExpression = ""
+                                    excludedReviewPage = 0
+                                    pairReviewPage = 0
+                                    secondTrackPreviewPage = 0
+                                }
+                            }) { Text("Houd deze bronregels los, zonder tekstverlies") }
+                    }
                     if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES &&
                         excludedSecondRows.isNotEmpty()) {
                         val excludedSorted = excludedSecondRows.sorted()
