@@ -1365,6 +1365,20 @@ internal fun PrivateSubtitleFileDialog(
                                         "${cue.startLabel} → ${cue.endLabel}\n" +
                                         cue.text,
                                         style = MaterialTheme.typography.bodySmall)
+                                    OutlinedButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = if (track == 1)
+                                            manualPairs.none { it.primaryRow == row }
+                                            else manualPairs.none { it.secondaryRow == row } &&
+                                                row !in excludedSecondRows,
+                                        onClick = {
+                                            if (track == 1) manualFirstRow = row.toString()
+                                            else manualSecondRow = row.toString()
+                                        }
+                                    ) {
+                                        Text("Neem originele regel $row uit spoor $track " +
+                                            "over voor handmatig koppelen (nog niet toepassen)")
+                                    }
                                 }
                             }
                             Row(modifier = Modifier.fillMaxWidth(),
