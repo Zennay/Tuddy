@@ -37,3 +37,7 @@ De taalondersteuningdialoog toont nu externe modelkaarten voor drie ASR-kandidat
 - Een licentielabel van een modelkaart is geen onafhankelijke audit van de dataset, gewichten, tokenizer en alle upstreamcomponenten. Er is geen modeldownload of externe runtime in Tuddy toegevoegd.
 
 **Volgende productgate:** selecteer per dialect een model met controleerbare herkomst en geschikte licentie, maak een realistische gequantiseerde Android-pack, integreer echte lokale ASR én MT, en pas daarna native-speakerreview en geautoriseerde fysieke vliegtuigmodusacceptatie toe. Tot dat moment blijft de app de drie talen als preview-only markeren.
+
+## Scriptrichting bij eigen Sorani- en Pasjtoe-zinnen
+
+De privé-zinnenlijst en de import-/verwijderpreview tonen eigen Sorani (`ckb`) en Pasjtoe (`ps`) tekst van rechts naar links. Het invoerveld, de oefenpoging en de betekenis die de gebruiker in Nederlands of Engels zelf schrijft blijven respectievelijk gericht op de geselecteerde taal en links-naar-rechts. Deze opmaak verandert geen tekst, translitereert niets en controleert geen spelling of vertaling.
