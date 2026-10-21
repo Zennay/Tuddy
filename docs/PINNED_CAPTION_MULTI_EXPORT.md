@@ -1,3 +1,13 @@
+## 21 oktober — doorklikbare offline oefenkaarten en volledig gekoppeld antwoordblad
+
+Bij **Aanvuloefening · HTML** kun je op telefoon en laptop met **Vorige kaart** en **Volgende kaart** rechtstreeks tussen de kaarten en oefenrondes springen. De gekozen kaart krijgt een zichtbare focusrand; de koppelingen werken zonder JavaScript, netwerk of sessieopslag. Deze bediening verschijnt niet op papier.
+
+Het **zelfstudie-antwoordblad** toont nu naast het volledige antwoord ook de bijbehorende vraag, met hetzelfde ronde- en kaartnummer als op het vragenblad. Daardoor kun je bij omgekeerde vertaalrichting, gemengde taalparen en afwisselende kaartvolgorde duidelijk zien welk antwoord bij welke prompt hoort. Vanuit de browser kun je vanaf een antwoord terug naar zijn vraag. Bij afdrukken verschijnt de koppeling niet, maar staan vraag en antwoord bijeen in een blok dat zo mogelijk niet over twee pagina's wordt gesplitst. Het antwoordblad wordt nog steeds **alleen** afgedrukt als je de bestaande bewuste schakelaar aanvinkt.
+
+**Leerlingenblad · geen antwoorden in bestand** blijft ongewijzigd: er worden geen antwoorden toegevoegd, ook niet in verborgen HTML. De oorspronkelijke tekst, gecorrigeerde vertalingen, privacygrenzen en expliciete Android-bestandsopslag blijven intact. Meer context op het antwoordblad kan de bestaande 256-KiB-uitvoerlimiet raken; in dat geval weigert de export volledig in plaats van onvolledige uitvoer te schrijven.
+
+---
+
 ## Unicode-woordgrenzen in offline invuloefeningen
 
 Invulhints volgen nu de **daadwerkelijk door de schrijver aangebrachte**
