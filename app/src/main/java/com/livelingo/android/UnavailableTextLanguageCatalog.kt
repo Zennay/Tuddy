@@ -109,6 +109,16 @@ internal object UnavailableTextLanguageCatalog {
                     limitation = "Licentiecompatibiliteit is niet opgehelderd: de upstream " +
                         "facebook/nllb-200-3.3B-gewichten zijn niet-commercieel gelicentieerd. " +
                         "Niet vrijgeven of bundelen zonder rechtenbeoordeling."
+                ),
+                OfflineLanguageModelCandidate(
+                    category = "Tekstvertaling",
+                    title = "Meta M2M100 418M",
+                    url = "https://huggingface.co/facebook/m2m100_418M",
+                    declaredLicense = "MIT volgens modelkaart",
+                    footprint = "repository circa 3,88 GB",
+                    limitation = "De modelkaart bevat Pasjtoe (ps), Nederlands (nl) en Engels (en), " +
+                        "maar geen Koerdische taalcode. Niet geïntegreerd; er is geen gequantiseerd " +
+                        "Android-pakket of toestelprestatie aangetoond."
                 )
             )
         ),
