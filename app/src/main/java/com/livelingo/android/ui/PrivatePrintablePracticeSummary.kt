@@ -113,23 +113,29 @@ internal object PrivatePrintablePracticeSummary {
             append(row("Fragment", "Begin (eigen tijd)", "Einde (eigen tijd)",
                 "Mijn beoordeling", "Mijn volgende oefenstap", "Ondertitelvoorbeeld"))
             selected.forEachIndexed { index, span ->
-                val first = shiftedCues.indexOfFirst { it.first == span.first }
-                val last = shiftedCues.indexOfLast { it.second == span.second }
-                val matched = first >= 0 && last >= first &&
-                    shiftedCues.subList(first, last + 1).all {
-                        it.first >= span.first && it.second <= span.second &&
-                            it.second > it.first
+                // A–B markers are picked freely by the listener and rarely
+                // equal subtitle boundaries. Include whole cues that fall
+                // inside the span, exactly like the HTML worksheet does.
+                // Never infer audio alignment from partial cue overlap.
+                val matchingIndices = shiftedCues.indices.filter { cueIndex ->
+                    val cue = shiftedCues[cueIndex]
+                    cue.first >= span.first && cue.second <= span.second &&
+                        cue.second > cue.first
+                }
+                val preview = when (matchingIndices.size) {
+                    0 -> "Geen volledig passende ondertitelregel; alleen eigen audiotijdvak"
+                    1 -> "1 volledig passende bronregel: " +
+                        clean(cues[matchingIndices.single()].text, 90)
+                    else -> {
+                        val firstText = clean(cues[matchingIndices.first()].text, 90)
+                        val lastText = clean(cues[matchingIndices.last()].text, 90)
+                        val omitted = matchingIndices.size - 2
+                        matchingIndices.size.toString() + " volledig passende bronregels: " +
+                            firstText + (if (omitted == 0) " / " else
+                                " … [" + omitted + " middenregels niet getoond] … ") +
+                            lastText
                     }
-                val preview = if (matched) {
-                    val start = clean(cues[first].text, 90)
-                    val missing = last - first - 1
-                    val end = if (first == last) "" else
-                        if (missing == 0) " / " + clean(cues[last].text, 90)
-                        else " … [" + missing +
-                            " tussenliggende bronregels niet getoond] … " +
-                            clean(cues[last].text, 90)
-                    start + end
-                } else "Alleen handmatig audiotijdvak; geen exacte brontekstmatch"
+                }
                 val rating = when (ratings[span]) {
                     "repeat" -> "Nog oefenen"
                     "okay" -> "Gaat goed"
