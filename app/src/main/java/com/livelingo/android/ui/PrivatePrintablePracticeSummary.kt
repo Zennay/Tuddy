@@ -18,6 +18,7 @@ internal enum class PrivatePracticeReportFormat(
 internal data class PendingPrivatePracticeReport(
     val summary: String,
     val format: PrivatePracticeReportFormat,
+    val selectionScope: PrivatePracticeRouteScope,
     val bytes: ByteArray
 )
 
