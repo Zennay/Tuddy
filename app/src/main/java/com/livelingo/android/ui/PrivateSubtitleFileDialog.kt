@@ -565,6 +565,8 @@ internal fun PrivateSubtitleFileDialog(
         PrivateSubtitleExcerptDialog(
             selected = excerptCues,
             onSaveCopy = onSaveCopy,
+            onSaveTimedSheet = onSaveTimedSheet,
+            onSaveLrc = onSaveLrc,
             onDismiss = { excerptOpen = false }
         )
     }
