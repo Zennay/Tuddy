@@ -46,7 +46,16 @@ internal data class SubtitlePasteFileContent(
     val text: String,
     val format: SubtitlePasteFormat,
     val ownMeaning: String = "",
-    val notice: String = ""
+    val notice: String = "",
+    val startMs: Long = 0L,
+    val durationMs: Long = 3_500L,
+    val manualTiming: Boolean = false,
+    val startSeconds: String = "0",
+    val durationSeconds: String = "3,5",
+    val firstRow: String = "1",
+    val lastRow: String = "",
+    val explicitRows: String = "",
+    val search: String = ""
 )
 
 /**
@@ -74,18 +83,36 @@ internal fun SubtitlePasteDialog(
     var splitMode by remember(initialDocument) {
         mutableStateOf(initialDocument?.format?.splitMode ?: PlainSubtitleSplitMode.LINES)
     }
-    var startMs by remember { mutableStateOf(0L) }
-    var durationMs by remember { mutableStateOf(3_500L) }
-    var manualTiming by remember { mutableStateOf(false) }
-    var startSecondsInput by remember { mutableStateOf("0") }
-    var durationSecondsInput by remember { mutableStateOf("3,5") }
+    var startMs by remember(initialDocument) {
+        mutableStateOf(initialDocument?.startMs ?: 0L)
+    }
+    var durationMs by remember(initialDocument) {
+        mutableStateOf(initialDocument?.durationMs ?: 3_500L)
+    }
+    var manualTiming by remember(initialDocument) {
+        mutableStateOf(initialDocument?.manualTiming ?: false)
+    }
+    var startSecondsInput by remember(initialDocument) {
+        mutableStateOf(initialDocument?.startSeconds ?: "0")
+    }
+    var durationSecondsInput by remember(initialDocument) {
+        mutableStateOf(initialDocument?.durationSeconds ?: "3,5")
+    }
     var durationMenu by remember { mutableStateOf(false) }
     var startMenu by remember { mutableStateOf(false) }
     var inputTooLarge by remember { mutableStateOf(false) }
-    var search by remember { mutableStateOf("") }
-    var firstRow by remember { mutableStateOf("1") }
-    var lastRow by remember { mutableStateOf("") }
-    var explicitRows by remember { mutableStateOf("") }
+    var search by remember(initialDocument) {
+        mutableStateOf(initialDocument?.search.orEmpty())
+    }
+    var firstRow by remember(initialDocument) {
+        mutableStateOf(initialDocument?.firstRow ?: "1")
+    }
+    var lastRow by remember(initialDocument) {
+        mutableStateOf(initialDocument?.lastRow.orEmpty())
+    }
+    var explicitRows by remember(initialDocument) {
+        mutableStateOf(initialDocument?.explicitRows.orEmpty())
+    }
     var page by remember { mutableIntStateOf(0) }
     var documentNotice by remember(initialDocument) {
         mutableStateOf(initialDocument?.notice.orEmpty())
@@ -193,9 +220,18 @@ internal fun SubtitlePasteDialog(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         onChooseDocument(SubtitlePasteFileContent(
-                            raw,
-                            SubtitlePasteFormat(plainLines, lrcMode, splitMode),
-                            ownMeaning
+                            text = raw,
+                            format = SubtitlePasteFormat(plainLines, lrcMode, splitMode),
+                            ownMeaning = ownMeaning,
+                            startMs = startMs,
+                            durationMs = durationMs,
+                            manualTiming = manualTiming,
+                            startSeconds = startSecondsInput,
+                            durationSeconds = durationSecondsInput,
+                            firstRow = firstRow,
+                            lastRow = lastRow,
+                            explicitRows = explicitRows,
+                            search = search
                         ))
                     }
                 ) { Text("📂 Kies eigen UTF-8 SRT, VTT, LRC, CSV, TSV of TXT-document…") }

@@ -1548,8 +1548,13 @@ private fun TuddyScreen(
                     }
                     when (loaded) {
                         is PrivateSubtitleImportDocument.Result.Ready ->
-                            SubtitlePasteFileContent(
-                                loaded.text, pending.previous.format,
+                            pending.previous.copy(
+                                text = loaded.text,
+                                ownMeaning = "",
+                                firstRow = "1",
+                                lastRow = "",
+                                explicitRows = "",
+                                search = "",
                                 notice = "Document lokaal ingelezen (${loaded.sizeBytes} bytes). " +
                                     "Controleer eerst alle regels; niets is toegepast."
                             )
