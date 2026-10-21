@@ -165,6 +165,8 @@ internal fun PrivateSubtitleFileDialog(
     var pairReviewPage by remember { mutableIntStateOf(0) }
     var excludedReviewPage by remember { mutableIntStateOf(0) }
     var pairReviewOpen by remember { mutableStateOf(false) }
+    var pairReviewQuery by remember { mutableStateOf("") }
+    var pairReviewSecondaryRow by remember { mutableStateOf("") }
     var excludedSecondRows by remember { mutableStateOf(setOf<Int>()) }
     var excludeRowExpression by remember { mutableStateOf("") }
     var excludeWindowExpression by remember { mutableStateOf("") }
@@ -1135,14 +1137,54 @@ internal fun PrivateSubtitleFileDialog(
                                 "(${proposed.pairedLinks.size} paren)")
                         }
                         if (pairReviewOpen) {
-                            val pages = maxOf(1, (proposed.pairedLinks.size + 3) / 4)
+                            // A text or exact source-row filter is display-only.
+                            // Selection/exclusion still uses the original secondary row.
+                            val sourceRow = pairReviewSecondaryRow.toIntOrNull()
+                            val filteredLinks = proposed.pairedLinks.filter { link ->
+                                (pairReviewQuery.isBlank() ||
+                                    link.primaryText.contains(pairReviewQuery.trim(),
+                                        ignoreCase = true) ||
+                                    link.secondaryText.contains(pairReviewQuery.trim(),
+                                        ignoreCase = true)) &&
+                                    (pairReviewSecondaryRow.isBlank() ||
+                                        sourceRow == link.secondarySourceRow)
+                            }
+                            val pages = maxOf(1, (filteredLinks.size + 3) / 4)
                             val currentPairPage = pairReviewPage.coerceIn(0, pages - 1)
-                            Text("Gekoppelde originele bronregelnummers, pagina " +
+                            OutlinedTextField(
+                                modifier = Modifier.fillMaxWidth(),
+                                value = pairReviewQuery,
+                                onValueChange = {
+                                    pairReviewQuery = it.take(100)
+                                    pairReviewPage = 0
+                                },
+                                label = { Text("Zoek in beide eigen bronzinnen") },
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                modifier = Modifier.fillMaxWidth(),
+                                value = pairReviewSecondaryRow,
+                                onValueChange = {
+                                    pairReviewSecondaryRow =
+                                        it.filter { char -> char in '0'..'9' }.take(3)
+                                    pairReviewPage = 0
+                                },
+                                label = { Text("Alleen originele regelnummer spoor 2 (optioneel)") },
+                                singleLine = true
+                            )
+                            Text("${filteredLinks.size} van ${proposed.pairedLinks.size} " +
+                                "gekoppelde bronparen · pagina " +
                                 "${currentPairPage + 1}/$pages. Alleen " +
                                 "tijdsoverlap: dit bewijst geen overeenkomst " +
                                 "van taal of betekenis.",
                                 style = MaterialTheme.typography.bodySmall)
-                            proposed.pairedLinks.drop(currentPairPage * 4).take(4)
+                            if (filteredLinks.isEmpty()) {
+                                Text("Geen gekoppeld paar met deze invoer. " +
+                                    "Een ongekoppelde of uitgesloten bronregel " +
+                                    "verschijnt niet als paar; wijzig de filters.",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            filteredLinks.drop(currentPairPage * 4).take(4)
                                 .forEach { link ->
                                     val secondSourceStart = stagedImport.imported
                                         .getOrNull(link.secondarySourceRow - 1)?.startLabel
