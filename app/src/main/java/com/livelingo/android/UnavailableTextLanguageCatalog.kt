@@ -35,6 +35,17 @@ internal object UnavailableTextLanguageCatalog {
             "commercieel gebruik uit; dit is geen goedgekeurd Tuddy-downloadpakket."
     )
 
+    private val madladResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Tekstvertaling",
+        title = "Google MADLAD-400-3B-MT",
+        url = "https://huggingface.co/google/madlad400-3b-mt",
+        declaredLicense = "Apache-2.0 volgens modelkaart",
+        footprint = "3B-parameter model; genoemde gequantiseerde GGUF is circa 1,65 GB",
+        limitation = "Modelkaart noemt ckb, ps, ku, nl en en, maar niet dialectspecifiek kmr. " +
+            "Kwaliteit varieert per taal en is niet productiebeoordeeld. Niet geïntegreerd " +
+            "of op Android getest; zelfs de gequantiseerde variant is groot."
+    )
+
     val entries = listOf(
         UnavailableTextLanguage(
             "kmr", "Kurmancî · Kurmanji (Noord-Koerdisch)",
@@ -55,7 +66,7 @@ internal object UnavailableTextLanguageCatalog {
                         "dialectnauwkeurigheid, latency en geheugenbeslag zijn niet geverifieerd."
                 )
             ),
-            translationCandidates = listOf(nllbResearchCandidate)
+            translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
         UnavailableTextLanguage(
             "ckb", "سۆرانی · Sorani (Centraal-Koerdisch)",
@@ -76,7 +87,7 @@ internal object UnavailableTextLanguageCatalog {
                         "Sorani-variantdekking, latency en geheugenbeslag zijn niet geverifieerd."
                 )
             ),
-            translationCandidates = listOf(nllbResearchCandidate)
+            translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
         UnavailableTextLanguage(
             "ps", "پښتو · Pasjtoe / Pashto",
@@ -100,6 +111,7 @@ internal object UnavailableTextLanguageCatalog {
             ),
             translationCandidates = listOf(
                 nllbResearchCandidate,
+                madladResearchCandidate,
                 OfflineLanguageModelCandidate(
                     category = "Tekstvertaling",
                     title = "ZamAI Pashto ↔ English translator",
