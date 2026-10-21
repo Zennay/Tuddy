@@ -90,14 +90,16 @@ internal fun SessionCaptionStudyDialog(
     captions: List<FocusCaptionLine>,
     onDismiss: () -> Unit,
     initialCaptionId: Long? = null,
-    originLabel: String = "dit gesprek"
+    originLabel: String = "dit gesprek",
+    manualStudyAnswers: Set<Long> = emptySet()
 ) {
     val allFinished = remember(captions) {
         captions.asSequence()
             .filter { it.status == "Lokaal vertaald" &&
                 it.original.isNotBlank() && it.translated.isNotBlank() &&
                 it.original != it.translated &&
-                it.original.length <= 400 && it.translated.length <= 400
+                it.original.codePointCount(0, it.original.length) <= 400 &&
+                it.translated.codePointCount(0, it.translated.length) <= 400
             }
             .distinctBy { it.id }
             .toList().takeLast(80)
@@ -218,7 +220,11 @@ internal fun SessionCaptionStudyDialog(
                         ))
                     if (round.revealed) {
                         HorizontalDivider()
-                        Text("Modelvertaling · ${answerCode.uppercase()} · niet geverifieerd",
+                        Text(
+                            (if (current.id in manualStudyAnswers)
+                                "Mijn handmatig gecorrigeerde studieantwoord"
+                            else "Lokale modelvertaling") +
+                                " · ${answerCode.uppercase()} · niet geverifieerd",
                             style = MaterialTheme.typography.labelLarge)
                         Text(answer, modifier = Modifier.fillMaxWidth(),
                             style = MaterialTheme.typography.titleLarge.copy(
