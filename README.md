@@ -1,3 +1,14 @@
+## Nieuw: eigen tijdvenster rechtstreeks naar ondertitelselectie
+
+Bij zowel **selectieve export** als **gerichte tijdverschuiving**
+kun je nu een eigen vanaf/tot-tijdvenster invullen.
+Tuddy selecteert op een expliciete knop alle **volledige**
+ondertitelregels die dat tijdvenster overlappen en toont daarna
+de oorspronkelijke regelnummers. De bestaande strenge preview,
+tijd-/formaatlimieten, Terug/Opnieuw en Android-bestandskeuze
+blijven intact; er wordt geen spraak of audio onderzocht.
+[Werkwijze](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: verschuif uitsluitend eigen gekozen tijdcodes
 
 Naast het verschuiven van de hele ondertiteltijdlijn ondersteunt
