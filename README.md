@@ -21,6 +21,26 @@ snapshots bij voor het volledige editorconcept en de gekozen
 exportbytes; originele files en live gesprek worden niet gewijzigd.
 [Privacy en details](docs/MANUAL_SUBTITLE_PASTE.md).
 
+## Nieuw: controleer en corrigeer handmatig ondertitelkoppelingen
+
+Bij het tijdelijk combineren van **twee eigen SRT/VTT-sporen**
+kiest Tuddy nu over **de volledige tijdlijn** zo veel mogelijk
+chronologische één-op-één koppelingen op basis van werkelijke
+overlappende tijdvakken. De volledige koppelingen zijn te
+beoordelen met hun oorspronkelijke bronregelnummers, volledige
+teksten en overlaptijd. Ook het aantal ongekoppelde regels
+in **beide** sporen staat in de preview.
+
+Een voorgestelde inhoudelijk onjuiste koppeling kan de gebruiker
+**handmatig uitsluiten**. Zo'n regel uit het tweede spoor blijft
+altijd als een losse ondertitel bestaan, terwijl de overige
+koppelingen opnieuw worden gekozen. Afzonderlijk herstellen
+en alles herstellen kan zonder verlies van het originele
+bronbestand. De gewone volledige voor/na-preview,
+bestandsgrenzen, Undo/Redo en aparte Android SAF-save blijven
+van kracht. Er wordt geen spraak/audio geanalyseerd.
+[Zelf koppelingen nakijken](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: subtitle-drift corrigeren met twee ankerparen
 
 Als twee handmatig aangeleverde SRT/WebVTT-sporen **geleidelijk uit
