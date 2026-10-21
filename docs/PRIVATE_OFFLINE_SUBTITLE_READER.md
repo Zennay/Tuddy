@@ -148,6 +148,35 @@ geldige JSON3 kopiëren, eerst privé inspecteren en daarna expliciet
 als nieuwe SRT/VTT-kopie bewaren. Ongeldige JSON3 wordt niet tot
 gewone automatische gesprekstranscriptie of vertaling gedegradeerd.
 
+## Rechtstreeks openen vanuit Android Bestanden
+
+In een Android-bestandsbeheerder of documentprovider kun je bij een
+ondersteund tekstbestand **Openen met → Tuddy** kiezen. De app biedt
+hiervoor bewust alleen `ACTION_VIEW` met Android `content://` en de
+MIME-typen `text/plain`, `text/vtt`, `text/srt`,
+`application/x-subrip` en `application/json` aan. Sommige
+bestandsbeheerders geven voor SRT/LRC/SBV/JSON3 een ander MIME-type
+terug: gebruik dan **Gesprekstools → Open ondertitelbestand…**.
+Tuddy is geen universele viewer voor willekeurige JSON of tekst.
+
+De geselecteerde URI wordt éénmalig en uitsluitend tijdens deze
+bewuste Openen-met-actie gelezen. De bestaande strikte UTF-8
+providerlezer beperkt het document tot 256 KiB, controleert
+SRT/WebVTT/LRC/CSV/TSV/SBV/JSON3 en voert IO buiten de UI-thread uit.
+Ongeldige bestandstypen en `file://`-, `http://`- of
+`https://`-URI's worden geweigerd; Tuddy volgt nooit weblinks
+naar videos of transcripties.
+
+**Voor het openen van de editor verschijnt eerst een aparte, scrollbare
+preview van alle cues en hun aangeleverde tijdcodes.**
+Pas na **Open tijdelijk in editor** worden de regels aangeboden aan
+de bestaande private editor. **Annuleren**, het naar de achtergrond
+brengen van de app of een ongeldig bestand opent niets en laat het
+lopende gesprek intact. Er is geen automatische vertaling of opslag.
+De originele provider-URI wordt niet in intent-/stateopslag bewaard;
+er worden geen blijvende documentrechten gevraagd. Een externe
+bestandsprovider kan zelfstandig synchroniseren.
+
 ## Zelf een beperkt ondertitelfragment delen
 
 Via **Bewerkbare ondertitel-editor → Kies zelf bronregels om te bewaren…**

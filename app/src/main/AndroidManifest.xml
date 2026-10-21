@@ -26,6 +26,18 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="text/plain"/>
             </intent-filter>
+            <!-- Explicit "Open with Tuddy" from Android Files/providers.
+                 Only content:// URI grants, bounded UTF-8 and human preview. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="content"/>
+                <data android:mimeType="text/plain"/>
+                <data android:mimeType="text/vtt"/>
+                <data android:mimeType="text/srt"/>
+                <data android:mimeType="application/x-subrip"/>
+                <data android:mimeType="application/json"/>
+            </intent-filter>
             <!-- User-highlighted text from Android's selection toolbar. -->
             <intent-filter>
                 <action android:name="android.intent.action.PROCESS_TEXT"/>

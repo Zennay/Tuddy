@@ -206,6 +206,8 @@ private data class Line(
 class MainActivity : ComponentActivity() {
     // Lives only in Activity memory; no savedInstanceState or external text logs.
     private var pendingExternalText by mutableStateOf<IncomingSharedText?>(null)
+    private var pendingViewedSubtitle by mutableStateOf<IncomingViewedSubtitleDocument?>(null)
+    private var nextViewedSubtitleRequest = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -214,13 +216,21 @@ class MainActivity : ComponentActivity() {
         // the original Intent after it was already dismissed or consumed.
         pendingExternalText = if (savedInstanceState == null)
             SharedPlainTextIntent.read(intent) else null
+        pendingViewedSubtitle = if (savedInstanceState == null)
+            ExternalSubtitleDocumentIntent.read(intent, ++nextViewedSubtitleRequest) else null
         // Do not keep the original other-app text in Activity Intent extras.
         intent?.removeExtra(Intent.EXTRA_TEXT)
         intent?.removeExtra(Intent.EXTRA_PROCESS_TEXT)
+        // Do not leave an externally supplied URI in the retained Activity Intent.
+        if (intent?.action == Intent.ACTION_VIEW) intent.data = null
         setContent {
             TuddyScreen(
                 incomingExternalText = pendingExternalText,
-                onExternalTextConsumed = { pendingExternalText = null }
+                onExternalTextConsumed = { pendingExternalText = null },
+                incomingViewedSubtitle = pendingViewedSubtitle,
+                onViewedSubtitleConsumed = { id ->
+                    if (pendingViewedSubtitle?.requestId == id) pendingViewedSubtitle = null
+                }
             )
         }
     }
@@ -228,6 +238,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         pendingExternalText = SharedPlainTextIntent.read(intent)
+        pendingViewedSubtitle = ExternalSubtitleDocumentIntent.read(
+            intent, ++nextViewedSubtitleRequest
+        )
+        if (intent.action == Intent.ACTION_VIEW) intent.data = null
         intent.removeExtra(Intent.EXTRA_TEXT)
         intent.removeExtra(Intent.EXTRA_PROCESS_TEXT)
         setIntent(intent)
@@ -237,7 +251,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun TuddyScreen(
     incomingExternalText: IncomingSharedText?,
-    onExternalTextConsumed: () -> Unit
+    onExternalTextConsumed: () -> Unit,
+    incomingViewedSubtitle: IncomingViewedSubtitleDocument?,
+    onViewedSubtitleConsumed: (Long) -> Unit
 ) {
     val context = LocalContext.current
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
@@ -428,6 +444,10 @@ private fun TuddyScreen(
     // Explicitly opened timed subtitle text including user JSON3; never live speech.
     var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
     var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    // Android Open-with is a user-initiated, read-only, preview-first route.
+    var viewedSubtitlePreview by remember {
+        mutableStateOf<List<PrivateSubtitleCue>?>(null)
+    }
     var subtitlePasteOpen by remember { mutableStateOf(false) }
     var pendingManualSubtitleDocument by remember {
         mutableStateOf<PendingManualSubtitleDocument?>(null)
@@ -1988,6 +2008,7 @@ private fun TuddyScreen(
                 manualText = ""
                 previewArchiveRows = null
                 subtitleFileCues = null
+                viewedSubtitlePreview = null
                 subtitlePasteOpen = false
                 readyFirstPasteDocument = null
                 readySecondPasteDocument = null
@@ -2035,6 +2056,7 @@ private fun TuddyScreen(
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             subtitleFileCues = null
+            viewedSubtitlePreview = null
             subtitlePasteOpen = false
             pendingManualSubtitleDocument = null
             readyFirstPasteDocument = null
@@ -2084,6 +2106,34 @@ private fun TuddyScreen(
             if (active) screenActivity?.window
                 ?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
+    }
+
+    // A user explicitly chose "Open with Tuddy" in Android Files. A
+    // content:// stream is bounded and decoded entirely outside the UI.
+    // Never follow file://, https:// or Android EXTRA_STREAM attachments.
+    LaunchedEffect(incomingViewedSubtitle) {
+        val request = incomingViewedSubtitle ?: return@LaunchedEffect
+        val currentGeneration = generation
+        if (request.uri == null) {
+            error = request.notice ?: "Geen ondersteund Android-ondertitelbestand."
+        } else if (subtitleFileCues != null || subtitlePasteOpen ||
+            viewedSubtitlePreview != null || pendingManualSubtitleDocument != null) {
+            error = "Er is al een ondertitelconcept open. Sluit dat eerst en open opnieuw."
+        } else {
+            val (loaded, reason) = readSelectedSubtitle(request.uri)
+            if (currentGeneration == generation &&
+                lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) &&
+                incomingViewedSubtitle?.requestId == request.requestId) {
+                if (loaded == null) {
+                    error = reason + " Het huidige gesprek blijft ongewijzigd."
+                } else {
+                    stop() // Do not combine a file preview with live microphone capture.
+                    viewedSubtitlePreview = loaded.toList()
+                    error = ""
+                }
+            }
+        }
+        onViewedSubtitleConsumed(request.requestId)
     }
 
     // Android Sharesheet text is only offered as an editable RAM draft.
@@ -2495,6 +2545,49 @@ private fun TuddyScreen(
                     readyFirstPasteDocument = null
                     subtitleFileCues = imported.toList()
                     error = ""
+                }
+            )
+        }
+        viewedSubtitlePreview?.let { preview ->
+            AlertDialog(
+                onDismissRequest = { viewedSubtitlePreview = null },
+                title = { Text("Bestand openen met Tuddy?") },
+                text = {
+                    Column(
+                        modifier = Modifier.heightIn(max = 500.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Android heeft een document aangeboden. Hieronder " +
+                            "staan de aangeleverde tijdcodes en alle lokale tekstregels. " +
+                            "Bekijk ze vóór je het tijdelijke concept opent. " +
+                            "Er wordt niets automatisch vertaald, opgeslagen of " +
+                            "naar een server gestuurd.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Text("${preview.size} ondertitelregels",
+                            style = MaterialTheme.typography.titleSmall)
+                        LazyColumn(
+                            modifier = Modifier.heightIn(max = 355.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(preview.size) { index ->
+                                val cue = preview[index]
+                                Text("${index + 1}. ${cue.startLabel} → ${cue.endLabel}\n${cue.text}",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        subtitleFileCues = preview.toList()
+                        viewedSubtitlePreview = null
+                        error = ""
+                    }) { Text("Open tijdelijk in editor") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewedSubtitlePreview = null }) {
+                        Text("Annuleren")
+                    }
                 }
             )
         }
