@@ -3738,6 +3738,28 @@ private fun TuddyScreen(
                                     " Open het exportbestand alleen in vertrouwde apps.",
                                 style = MaterialTheme.typography.bodySmall
                             )
+                            if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML &&
+                                included.isNotEmpty()
+                            ) {
+                                val perRound = included.size *
+                                    (if (pinnedStudyDirection == PinnedStudyDirection.BOTH)
+                                        2 else 1)
+                                pinnedClozePass.indices.forEach { round ->
+                                    val cardNumbers =
+                                        PrivatePinnedCaptionClozeHtml.orderedCardIndices(
+                                            perRound, round, pinnedClozeCardOrder
+                                        )
+                                    Text("Ronde ${round + 1} · kaartvolgorde uit " +
+                                        "de oorspronkelijke selectie: " +
+                                        cardNumbers.take(12).joinToString(" → ") {
+                                            (it + 1).toString()
+                                        } + (if (cardNumbers.size > 12)
+                                            " … (${cardNumbers.size} kaarten)" else "") +
+                                        ". De vraag- en antwoordnummers worden " +
+                                        "in de gekozen volgorde opnieuw genummerd.",
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
                             if (pinnedOnlyPersonalStudy && included.isEmpty()) {
                                 Text("Er zijn geen geschikte persoonlijke correcties " +
                                     "in deze selectie. Keer terug naar ★ gemarkeerd " +
