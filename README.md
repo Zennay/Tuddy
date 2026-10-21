@@ -1,3 +1,31 @@
+## Nieuw: echte schrijflijnen en optioneel antwoordblad bij afdrukken
+
+Een HTML-aanvuloefening levert op papier nu daadwerkelijk **twee of vier
+zichtbare schrijflijnen per vraag** op, ook wanneer de printer geen
+achtergrondafbeeldingen of -kleuren afdrukt. Dat was voorheen slechts
+een hoge lege ruimte met één onderste lijn.
+
+**Zelfstudie-HTML wordt zonder antwoordsleutel afgedrukt totdat je
+zelf expliciet het vakje `Print ook het antwoordblad (bewuste keuze)`
+aanvinkt.** Deze schakelaar staat in het opgeslagen offline
+HTML-bestand onder de vragen. Zonder vinkje verschijnt het
+antwoordblad **niet in de afdruk of afdrukvoorbeeld** — ook niet als
+je het antwoordblad eerder via de browserlink hebt geopend. Met
+vinkje krijgt het volledige antwoordblad een eigen afdrukpagina
+met dezelfde ronde- en kaartnummers. Het blijft op het scherm
+alleen zichtbaar na bewuste navigatie.
+
+Let op: zelfstudie-HTML **bevat** de complete antwoorden ook wanneer
+ze niet worden afgedrukt. Gebruik voor het delen van een bestand
+met leerlingen daarom altijd de aparte optie **Leerlingenblad · geen
+antwoorden in bestand**, niet de zelfstudieversie. Ook andere
+browsers kunnen eerder ingevulde velden soms herstellen. Geen
+JavaScript, netwerkverzoeken, beoordelingsdatabase of nieuwe
+Android-permissie. De Android-exportdialoog meldt nu expliciet
+dat afdrukken van het antwoordblad standaard uit staat.
+
+---
+
 ## Nieuw: drie aanvulrondes over dezelfde zelfgekozen tweetalige zinnen
 
 Bij **★ gemarkeerd → Exporteer selectie… → Aanvuloefening · HTML**
