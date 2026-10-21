@@ -2863,3 +2863,13 @@ In het overzicht van alle on-device spraakpakketten kan een onbereikbare
 Android-spraakdienst de lijst niet eindeloos blokkeren: na 8 seconden toont
 Tuddy *onbekend* voor die taal en gaat het overzicht verder. Je kunt de
 controle altijd stoppen. [Handleiding](docs/OFFLINE_SPEECH_PACKS.md).
+
+
+### Spraakpakketten doorzoeken en kopiëren
+
+In het on-device spreektaalpakkettenoverzicht kun je op taal of
+regiocode zoeken en **Toon alleen aanwezig** inschakelen. Wie dat wil,
+kan na de afzonderlijke controles via **Kopieer pakketoverzicht** de
+statussen naar het Android-klembord kopiëren. Het overzicht bevat
+apparaat- en taalstatussen, niet de gesproken zinnen of audio. Dit
+is vrijwillig, geen upload en geen bewijs van toestelacceptatie.
