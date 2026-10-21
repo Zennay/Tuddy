@@ -84,6 +84,35 @@ Heb je zelf nauwkeurige begin- en eindtijdcodes naast je tweetalige zinnen, dan 
 
 Deze eigen tijdcodes zijn **niet bewezen** aan een audio- of videobestand gesynchroniseerd; Tuddy kopieert uitsluitend de tijdcodes die je zelf invoert.
 
+## Bestaande transcript-tijden uit een CSV-spreadsheet plakken
+
+Naast tabgescheiden drie- en vierkolomsinvoer ondersteunt **Plak zelf tekst**
+nu **CSV: begintijd, eindtijd, eigen tekst** en
+**CSV: begintijd, eindtijd, bron, betekenis**. Dit werkt voor eigen of
+rechtmatig verkregen transcriptregels uit een spreadsheet.
+
+Plak **zonder kolomkoppen** precies één ondertitelkaart per fysieke regel.
+De parser accepteert komma's als scheidingsteken, volledig gequote velden
+en verdubbelde dubbele aanhalingstekens voor een letterlijk aanhalingsteken.
+Voorbeeld met drie kolommen (tijdcodes met komma moeten gequote zijn):
+
+```csv
+"00:00:01,500","00:00:04,000","Hallo, dit is mijn transcript"
+"00:00:05,000","00:00:08,000","Nog een ""eigen"" zin"
+```
+
+Kies de vierkolomsmodus wanneer je een vierde kolom met een **zelfgeschreven
+betekenis** aanlevert. Tuddy genereert geen vertalingen. Tijden worden
+letterlijk overgenomen, niet uit audio afgeleid. CSV-velden met echte
+regelovergangen worden bewust **niet** ondersteund: één kaart per fysieke
+regel voorkomt onzichtbaar verschuivende bronnummers. Lege rijen, foute
+kolomaantallen, ongeldige tijden en malformeerde quotes tonen een
+rijgebonden melding. De bron blijft maximaal 256 KiB, 500 cues en
+800 tekens per tekstkolom. De bron moet zowel als SRT als WebVTT geldig
+blijven. Bestaande TSV-, SRT- en WebVTT-import, de volledige preview,
+zoekfunctie en het kiezen van meerdere losse bronregelbereiken blijven
+beschikbaar. Alleen expliciet gekozen rijen komen in de tijdelijke editor.
+De Android-bestandskeuze bij later opslaan blijft een aparte handeling.
 ## Meer dan één los bronregelbereik importeren
 
 De plakpreview ondersteunt nu **Losse regels (optioneel)** voor bewust
