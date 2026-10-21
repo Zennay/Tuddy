@@ -2682,6 +2682,31 @@ private fun TuddyScreen(
                         saveSbvSubtitle.launch("Tuddy-eigen-tijdvakken.sbv")
                     }
                 },
+                onShareExcerpt = { selectedCues, format ->
+                    // Explicitly chosen original rows from the private editor.
+                    // No URI, audio or complete live conversation is transferred.
+                    val payload = PrivateSubtitleOutgoingShare.text(selectedCues, format)
+                    if (payload == null) {
+                        error = "Delen geweigerd: kies maximaal 24 veilige SRT/VTT-" +
+                            "regels van samen hooguit 16 KiB."
+                    } else {
+                        val outbound = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, payload)
+                        }
+                        val chooser = Intent.createChooser(
+                            outbound, "Deel geselecteerde eigen ondertitels"
+                        )
+                        val launched = runCatching {
+                            context.startActivity(chooser)
+                            true
+                        }.getOrDefault(false)
+                        if (!launched) {
+                            error = "Android kan geen deelmenu openen. " +
+                                "De geselecteerde tekst is niet gedeeld."
+                        }
+                    }
+                },
                 onSaveTimedSheet = { editorDraft, exportCues, format ->
                     val bytes = PrivateTimedSubtitleSheet.snapshot(exportCues, format)
                     if (bytes == null) {

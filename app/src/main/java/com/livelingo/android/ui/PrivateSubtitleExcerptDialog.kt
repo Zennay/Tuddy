@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDraftEditor
+import com.livelingo.android.PrivateSubtitleOutgoingShare
 import com.livelingo.android.PrivateSubtitleFilteredExcerpt
 import com.livelingo.android.PrivateSubtitleRowSelection
 import com.livelingo.android.PrivateSubtitleTimeWindowRows
@@ -46,6 +47,7 @@ internal fun PrivateSubtitleExcerptDialog(
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     onSaveTimedSheet: (List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
     onSaveLrc: (List<PrivateSubtitleCue>) -> Unit,
+    onShareExcerpt: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     onDismiss: () -> Unit
 ) {
     val initialExpression = remember(allCues, initialSourceRows) {
@@ -82,6 +84,13 @@ internal fun PrivateSubtitleExcerptDialog(
     }
 
     val bytes = snapshot(proposed)
+    val shareFormat = when (format) {
+        SubtitleExcerptSaveFormat.SRT -> SubtitleDraftFormat.SRT
+        SubtitleExcerptSaveFormat.WEBVTT -> SubtitleDraftFormat.WEBVTT
+        else -> null
+    }
+    val sharePreview = if (shareFormat != null && proposed != null)
+        PrivateSubtitleOutgoingShare.text(proposed, shareFormat) else null
     val durationMs = if (proposed != null)
         proposed.maxOf { it.endMillis } - proposed.first().startMillis else 0L
     val pageCount = maxOf(1, ((selectedIndices?.size ?: 0) + 5) / 6)
@@ -242,6 +251,12 @@ internal fun PrivateSubtitleExcerptDialog(
                         style = MaterialTheme.typography.titleSmall)
                     PrivateSubtitlePagedExportPreview(bytes)
                 }
+                Text("Delen kan uitsluitend met een geselecteerd SRT/VTT-fragment " +
+                    "(maximaal 24 regels en 16 KiB). De externe app die je daarna " +
+                    "zelf kiest, ontvangt de LETTERLIJKE ondertiteltekst, inclusief " +
+                    "eventuele persoonsgegevens. Er gaat nooit een bestand, " +
+                    "toegangsrecht of het volledige live gesprek mee.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("Pas na de aparte, expliciete Android-bestandskeuze " +
                     "wordt een nieuw bestand geschreven. Een gekozen " +
                     "externe provider kan zelf gegevens synchroniseren.",
@@ -275,6 +290,24 @@ internal fun PrivateSubtitleExcerptDialog(
                 }
             }) { Text("Kies opslaglocatie…") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } }
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TextButton(enabled = sharePreview != null, onClick = {
+                    val refreshed = PrivateSubtitleRowSelection
+                        .parse(expression, allCues.size)
+                        ?.map { allCues[it] }
+                        ?.let { PrivateSubtitleFilteredExcerpt.prepare(it, timing) }
+                    val fresh = if (refreshed != null && shareFormat != null)
+                        PrivateSubtitleOutgoingShare.text(refreshed, shareFormat)
+                    else null
+                    if (fresh != null && fresh == sharePreview &&
+                        refreshed != null && shareFormat != null) {
+                        onDismiss()
+                        onShareExcerpt(refreshed.toList(), shareFormat)
+                    }
+                }) { Text("Deel selectie…") }
+                TextButton(onClick = onDismiss) { Text("Annuleren") }
+            }
+        }
     )
 }
