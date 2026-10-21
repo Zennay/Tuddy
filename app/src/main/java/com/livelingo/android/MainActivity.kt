@@ -2017,10 +2017,13 @@ private fun TuddyScreen(
                         text = shared.subtitleDraft,
                         format = SubtitlePasteFormat(
                             plainLines = false,
-                            lrcMode = false,
+                            lrcMode = shared.subtitleIsLrc,
                             splitMode = PlainSubtitleSplitMode.LINES
                         ),
-                        notice = "Gedeelde SRT/WebVTT is alleen een tijdelijk voorstel. " +
+                        notice = (if (shared.subtitleIsLrc)
+                            "Gedeelde LRC-lyrics hebben alleen zelf opgegeven begintijden; " +
+                                "eindtijden blijven geschat. "
+                            else "Gedeelde SRT/WebVTT is alleen een tijdelijk voorstel. ") +
                             "Controleer inhoud en tijdcodes en bevestig apart; " +
                             "er wordt niets automatisch opgeslagen of vertaald."
                     )
