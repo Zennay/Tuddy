@@ -2840,3 +2840,13 @@ en bevestigen weigert de verouderde export. Sprekerlabels zijn nooit
 biometrisch herkend, geen echte persoonsidentiteit, niet gesynchroniseerd
 door Tuddy en niet in het normale archief opgeslagen. Een gekozen externe
 bestandsprovider kan documenten wel opslaan of synchroniseren.
+
+
+### Systeemspraakinstellingen zonder de startcheck kwijt te raken
+
+Via **Offline startcheck → Open Android spraakinstellingen** kun je lokaal
+spraakpakketten beheren. Als je terugkeert naar de nog draaiende Tuddy-app,
+wordt de startcheck voor de gekozen taal weer geopend en wordt alleen-lezen
+opnieuw gekeken welke spraak- en tekstmodellen Android en ML Kit melden.
+Tuddy begint daarbij geen opname, cloudspraak of download. Android 12 blijft
+'onbekend' wanneer de spraakdienst geen per-taal status kan melden.
