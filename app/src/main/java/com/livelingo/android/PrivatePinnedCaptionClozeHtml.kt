@@ -158,6 +158,9 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "textarea{display:block;box-sizing:border-box;width:100%;min-height:84px;" +
                 "border:1px solid #64748b;border-radius:6px;padding:8px;" +
                 "font:inherit;resize:vertical;unicode-bidi:plaintext}" +
+                ".grade{border:0;padding:0;margin:10px 0}" +
+                ".grade label{display:inline-block;margin:4px 18px 4px 0}" +
+                ".printgrade{display:none}" +
                 ".reset{margin-top:8px;padding:7px 12px;border:1px solid #64748b;" +
                 "border-radius:5px;background:#fff;color:#182435;cursor:pointer}" +
                 "summary{cursor:pointer;padding:8px 0}" +
@@ -165,7 +168,8 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "min-height:" + answerSpace.printHeightPx + "px;margin-top:12px}" +
                 ".answers{break-before:page;page-break-before:always}" +
                 "@media print{@page{margin:14mm}body{padding:0}" +
-                "details,.work,textarea,.reset{display:none}.write{display:block}" +
+                "details,.work,textarea,.reset,.grade{display:none}" +
+                ".write,.printgrade{display:block}" +
                 ".card{break-inside:avoid}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
                 "<p>Moeilijkheid: " + escape(difficulty.title) + ". " +
@@ -176,6 +180,8 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "of eigen correcties. Geen automatische taalcontrole." +
                 " Schrijf je antwoord direct in dit offline browserblad " +
                 "(niet automatisch nagekeken of door Tuddy opgeslagen). " +
+                "Beoordeel iedere kaart desgewenst zelf; er is geen score " +
+                "of voortgangsopslag. Wissen leegt ook je kaartbeoordeling. " +
                 "Sommige browsers kunnen zelf getypte velden herstellen. " +
                 "De antwoorden staan op een nieuwe afdrukpagina.</p>" +
                 "<section aria-label=\"Oefenvragen\"><h2>Vragen</h2>"
@@ -194,8 +200,16 @@ internal object PrivatePinnedCaptionClozeHtml {
                     "autocomplete=\"off\" autocorrect=\"off\" " +
                     "aria-label=\"Mijn eigen antwoord voor kaart ").append(index + 1)
                 .append("\"></textarea>")
+                .append("<fieldset class=\"grade\"><legend>Zelf beoordelen " +
+                    "(tijdelijk, zonder score)</legend>")
+                .append("<label><input type=\"radio\" name=\"grade-").append(index + 1)
+                .append("\" value=\"retry\"> Nog oefenen</label>")
+                .append("<label><input type=\"radio\" name=\"grade-").append(index + 1)
+                .append("\" value=\"known\"> Ik wist het</label></fieldset>")
                 .append("<button class=\"reset\" type=\"reset\">" +
-                    "Wis mijn antwoord op deze kaart</button></form>")
+                    "Wis mijn antwoord en beoordeling</button></form>")
+                .append("<p class=\"printgrade\">Zelf beoordelen: &#9633; " +
+                    "Nog oefenen &nbsp; &#9633; Ik wist het</p>")
                 .append("<div class=\"write\" aria-hidden=\"true\"></div>")
                 .append("<details><summary>Bekijk volledig antwoord</summary>")
                 .append("<p class=\"phrase\"><bdi dir=\"auto\">")
