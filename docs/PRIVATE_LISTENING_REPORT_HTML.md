@@ -34,6 +34,16 @@ bevat dezelfde informatie als eenvoudige UTF-8 tekst, handig voor
 persoonlijke notities; er wordt niets automatisch gedeeld.
 Ook teksten met geldige Unicode-emoji blijven leesbaar.
 
+In het privé-overzicht verschijnt nu ook de eigen ondertiteltekst van de
+handmatig gekozen fragmenten: bij maximaal acht bronregels worden **alle
+originele regelposities** afzonderlijk getoond. Bij langere fragmenten
+toont Tuddy bewust de eerste vier en laatste vier regels, met het
+**exacte aantal niet-getoonde tussenregels**. Een bronzin langer dan
+240 Unicode-codepunten krijgt zichtbaar `[ingekort]` in plaats van een
+stilzwijgend verlies; emoji blijven heel. Dit is uitsluitend een
+transparant fragmentoverzicht, geen volledige SRT-export. De bestaande
+CSV houdt zijn compacte ondertitelvoorbeeld.
+
 Tuddy kopieert hierbij nooit het geluidsbestand of zijn Android-URI,
 maakt geen nieuwe audiofragmenten en schrijft geen herhaalplanning
 weg. Het verslag gebruikt enkel de tijdelijke fragmentkeuzes,
