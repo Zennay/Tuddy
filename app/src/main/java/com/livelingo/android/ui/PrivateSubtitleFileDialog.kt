@@ -60,6 +60,7 @@ import com.livelingo.android.PrivateSubtitleMultiAnchor
 import com.livelingo.android.PrivateSubtitleDriftSelection
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
+import com.livelingo.android.PrivateSubtitleTimelineNavigation
 import com.livelingo.android.PrivateLrcSubtitleExport
 import com.livelingo.android.PrivateTimedSubtitleSheet
 import com.livelingo.android.TimedSubtitleSheetFormat
@@ -111,6 +112,8 @@ internal fun PrivateSubtitleFileDialog(
     var mergeIndex by remember { mutableStateOf<Int?>(null) }
     var splitFirst by remember { mutableStateOf("") }
     var splitSecond by remember { mutableStateOf("") }
+    var splitAtTime by remember { mutableStateOf("") }
+    var splitError by remember { mutableStateOf("") }
     var editValue by remember { mutableStateOf("") }
     var editSourceLine by remember { mutableStateOf("") }
     var editMeaningLine by remember { mutableStateOf("") }
@@ -628,6 +631,8 @@ internal fun PrivateSubtitleFileDialog(
                             val cut = current.text.indexOf(' ', current.text.length / 2)
                             splitFirst = if (cut > 0) current.text.substring(0, cut) else current.text
                             splitSecond = if (cut > 0) current.text.substring(cut + 1) else ""
+                            splitAtTime = ""
+                            splitError = ""
                             splitIndex = index
                         },
                         onMerge = { mergeIndex = found[shownIndex].first },
@@ -2384,41 +2389,102 @@ internal fun PrivateSubtitleFileDialog(
     }
     val splitting = splitIndex
     if (splitting != null) {
+        val selectedCue = draft.getOrNull(splitting)
+        val splitAtMillis = splitAtTime.takeIf { it.isNotBlank() }?.let {
+            PrivateSubtitleTimelineNavigation.timestamp(it)
+        }
+        val splitTimeInvalid = splitAtTime.isNotBlank() && splitAtMillis == null
+        val splitBoundary = splitAtMillis ?: selectedCue?.let {
+            it.startMillis + (it.endMillis - it.startMillis) / 2
+        }
+        val splitProposal = if (!splitTimeInvalid) PrivateSubtitleDraftEditor.splitCue(
+            draft, splitting, splitFirst.trim(), splitSecond.trim(), splitAtMillis
+        ) else null
         AlertDialog(onDismissRequest = { splitIndex = null },
             title = { Text("Splits één ondertitel in twee") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Kies zelf twee zinsdelen. De bestaande tijdsduur " +
-                        "wordt gelijk gedeeld; dit is geen gecontroleerde audiotiming.",
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Kies zelf twee zinsdelen. Laat de tijd leeg voor het midden, " +
+                        "of vul zelf de exacte grens in (mm:ss.mmm of uu:mm:ss.mmm). " +
+                        "Beide nieuwe delen duren minstens 0,6 seconde. De tijden komen " +
+                        "niet uit audioherkenning.",
                         style = MaterialTheme.typography.bodySmall)
+                    if (selectedCue != null) {
+                        Text("Huidige cue: ${selectedCue.startLabel} → ${selectedCue.endLabel}",
+                            style = MaterialTheme.typography.labelMedium)
+                    }
+                    OutlinedTextField(
+                        value = splitAtTime,
+                        onValueChange = { splitAtTime = it.take(13); splitError = "" },
+                        label = { Text("Exacte splitsingstijd (optioneel)") },
+                        placeholder = { Text("Leeg = exact midden") },
+                        isError = splitTimeInvalid,
+                        supportingText = {
+                            if (splitTimeInvalid) Text(
+                                "Ongeldige tijdcode. Gebruik bijvoorbeeld 01:23.500 of 00:01:23.500."
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    if (splitBoundary != null && selectedCue != null && !splitTimeInvalid) {
+                        Text("Voorgestelde grens: ${splitBoundary} ms vanaf het begin van de media. " +
+                            "Eerste deel: ${splitBoundary - selectedCue.startMillis} ms; " +
+                            "tweede deel: ${selectedCue.endMillis - splitBoundary} ms.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                     OutlinedTextField(
                         value = splitFirst,
-                        onValueChange = { if (it.length <= 2400) splitFirst = it },
+                        onValueChange = { if (it.length <= 2400) { splitFirst = it; splitError = "" } },
                         label = { Text("Eerste deel") }, modifier = Modifier.fillMaxWidth(),
                         minLines = 2, maxLines = 4)
                     OutlinedTextField(
                         value = splitSecond,
-                        onValueChange = { if (it.length <= 2400) splitSecond = it },
+                        onValueChange = { if (it.length <= 2400) { splitSecond = it; splitError = "" } },
                         label = { Text("Tweede deel") }, modifier = Modifier.fillMaxWidth(),
                         minLines = 2, maxLines = 4)
+                    if (splitProposal == null && !splitTimeInvalid && splitError.isBlank()) {
+                        Text("Deze verdeling past niet: beide teksten moeten geldig zijn, " +
+                            "beide delen minimaal 0,6 s duren en de grens mag niet voorbij " +
+                            "het volgende cue-begin vallen.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (splitError.isNotBlank()) {
+                        Text(splitError, color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val next = PrivateSubtitleDraftEditor.splitCue(
-                        draft, splitting, splitFirst.trim(), splitSecond.trim())
+                    val next = if (splitTimeInvalid) null else PrivateSubtitleDraftEditor.splitCue(
+                        draft, splitting, splitFirst.trim(), splitSecond.trim(), splitAtMillis)
                     if (next == null) {
-                        notice = "Splitsing geweigerd: tekst/tijdsduur of cuevolgorde ongeldig."
+                        splitError = when {
+                            splitTimeInvalid -> "De opgegeven tijdcode is ongeldig; corrigeer hem of laat het veld leeg."
+                            else -> "Splitsing geweigerd. Controleer beide tekststukken, de minimale duur en het volgende cue-begin."
+                        }
                     } else {
                         applyChange(next)
                         shownIndex = -1
-                        notice = "Regel in twee bewerkbare regels gesplitst."
+                        notice = if (splitAtMillis == null)
+                            "Regel op het exacte midden in twee tijdelijke cues gesplitst."
+                        else "Regel op ${splitAtMillis} ms in twee tijdelijke cues gesplitst."
+                        splitIndex = null
+                        splitAtTime = ""
+                        splitError = ""
                     }
-                    splitIndex = null
                 }) { Text("Splits tijdelijk") }
             },
             dismissButton = {
-                TextButton(onClick = { splitIndex = null }) { Text("Annuleren") }
+                TextButton(onClick = { splitIndex = null; splitAtTime = ""; splitError = "" }) {
+                    Text("Annuleren")
+                }
             }
         )
     }
