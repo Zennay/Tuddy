@@ -1,3 +1,19 @@
+## Nieuw op PR #225: woordvolger met zelf getikte tijdankers
+
+In de bestaande privé-audiospeler kun je naast de gelijkmatig geschatte
+woordpositie nu maximaal **16 zelf gekozen tijdankers per ondertitelregel**
+zetten. Typ een woordnummer (vanaf 2), luister naar je eigen audio en tik
+op **Markeer dit woord op huidige audiotijd**. De lokale woordvolger,
+Vorig/Volgend, woord- en woordgroepherhaling volgen deze eigen ankers;
+tussen de ankers blijft een begrensde, gelijkmatige *schatting* gelden.
+Oplopende ankers, voldoende tijd tussen woorden en de bestaande cuegrenzen
+worden afgedwongen. Je kunt de markeringen per regel wissen; een nieuwe
+audio/ondertitel of verschoven cueklok wist ze ook. Geen ASR, gemeten
+spraakuitlijning, gewijzigde bronbestanden, netwerk of nieuwe rechten.
+[Volledige uitleg](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
 ## Nieuw op PR #225: een eigen geschatte woordgroep herhalen
 
 Bij **▶ Eigen audio met tijdcodes afspelen** en de optionele
