@@ -84,7 +84,10 @@ internal object PrivateSubtitleTrackPairing {
 
         val rows = primary.mapIndexed { index, cue ->
             val other = matched[index]
-            if (other == null || other == cue.text) cue
+            // A user-authored secondary cue is never silently erased, even
+            // when both texts happen to be identical: the separate track
+            // remains visible as its own second line.
+            if (other == null) cue
             else cue.copy(text = cue.text + "\n" + other)
         }.plus(leftovers).sortedBy { it.startMillis }
 
