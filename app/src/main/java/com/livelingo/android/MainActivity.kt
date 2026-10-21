@@ -102,6 +102,14 @@ private data class PendingLrcSubtitleSave(
     val bytes: ByteArray
 )
 
+/** Explicit new SBV copy after opt-in full preview and Android SAF consent. */
+private data class PendingSbvSubtitleSave(
+    val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
+    val cues: List<PrivateSubtitleCue>,
+    val bytes: ByteArray
+)
+
 /** Exact user-consented timed spreadsheet saved after Android's provider choice. */
 private data class PendingTimedSubtitleSheetSave(
     val session: Int,
@@ -124,6 +132,8 @@ private fun detectedSubtitlePasteFormat(raw: String): SubtitlePasteFormat? {
         return SubtitlePasteFormat(false, false, PlainSubtitleSplitMode.LINES)
     if (raw.contains('[') && PrivateLrcSubtitleDraft.preview(raw) != null)
         return SubtitlePasteFormat(false, true, PlainSubtitleSplitMode.LINES)
+    if (PrivateSbvSubtitleReader.read(raw) != null)
+        return SubtitlePasteFormat(false, false, PlainSubtitleSplitMode.LINES)
     val timed = PrivateTimedSubtitleSheet.readAuthored(raw) ?: return null
     val paired = timed.firstOrNull()?.text?.contains('\n') == true
     val mode = if ('\t' in raw) {
@@ -454,6 +464,9 @@ private fun TuddyScreen(
     var pendingSubtitleDraft by remember { mutableStateOf<PendingEditedSubtitleSave?>(null) }
     var pendingLrcSubtitleSave by remember {
         mutableStateOf<PendingLrcSubtitleSave?>(null)
+    }
+    var pendingSbvSubtitleSave by remember {
+        mutableStateOf<PendingSbvSubtitleSave?>(null)
     }
     var pendingTimedSubtitleSheet by remember {
         mutableStateOf<PendingTimedSubtitleSheetSave?>(null)
@@ -1618,6 +1631,7 @@ private fun TuddyScreen(
     ) { uri ->
         val pending = pendingLrcSubtitleSave
         pendingLrcSubtitleSave = null
+                pendingSbvSubtitleSave = null
         if (pending != null && pending.session == generation) {
             subtitleFileCues = pending.editorDraft
             val current = PrivateLrcSubtitleExport.snapshot(pending.cues)
@@ -1636,6 +1650,36 @@ private fun TuddyScreen(
                     }.getOrDefault(false)
                     if (saved) "Nieuwe LRC-kopie met eigen begintijden opgeslagen."
                     else "LRC kon niet worden opgeslagen; het concept is heropend."
+                }
+            }
+        }
+    }
+
+    val saveSbvSubtitle = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingSbvSubtitleSave
+        pendingSbvSubtitleSave = null
+        if (pending != null && pending.session == generation) {
+            // SAF temporarily stops the editor; the authorized snapshot
+            // survives only until the document picker returns.
+            subtitleFileCues = pending.editorDraft
+            val fresh = PrivateSbvSubtitleExport.snapshot(pending.cues)
+            editedSubtitleSaveNotice = when {
+                fresh == null || !fresh.contentEquals(pending.bytes) ->
+                    "SBV-opslag geweigerd: de bevestigde preview is veranderd."
+                uri == null -> "SBV-opslag geannuleerd; concept heropend."
+                uri.scheme != "content" -> "Ongeldige locatie; geen SBV geschreven."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { out ->
+                            out.write(pending.bytes)
+                            out.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved) "Nieuwe SBV-kopie met eigen begin- en eindtijden opgeslagen."
+                    else "SBV kon niet worden opgeslagen; origineel ongewijzigd."
                 }
             }
         }
@@ -2009,6 +2053,7 @@ private fun TuddyScreen(
             pendingSubtitleDraft = null
             pendingTimedSubtitleSheet = null
             pendingLrcSubtitleSave = null
+                pendingSbvSubtitleSave = null
             editedSubtitleSaveNotice = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
@@ -2074,7 +2119,7 @@ private fun TuddyScreen(
                             shared.subtitleTimedSheetMode != null ->
                                 "Gedeelde CSV/TSV heeft expliciete begin- en eindtijden; " +
                                     "een tweede tekstkolom is geen geverifieerde vertaling. "
-                            else -> "Gedeelde SRT/WebVTT is alleen een tijdelijk voorstel. "
+                            else -> "Gedeelde SRT/WebVTT/SBV is alleen een tijdelijk voorstel. "
                         }) + "Controleer inhoud en tijdcodes en bevestig apart; " +
                             "er wordt niets automatisch opgeslagen of vertaald."
                     )
@@ -2522,6 +2567,17 @@ private fun TuddyScreen(
                             generation, editorDraft.toList(), exportCues.toList(), bytes
                         )
                         saveLrcSubtitle.launch("Tuddy-eigen-begintijden.lrc")
+                    }
+                },
+                onSaveSbv = { editorDraft, exportCues ->
+                    val bytes = PrivateSbvSubtitleExport.snapshot(exportCues)
+                    if (bytes == null) {
+                        error = "Geen veilige SBV-kopie mogelijk; gebruik SRT/VTT."
+                    } else {
+                        pendingSbvSubtitleSave = PendingSbvSubtitleSave(
+                            generation, editorDraft.toList(), exportCues.toList(), bytes
+                        )
+                        saveSbvSubtitle.launch("Tuddy-eigen-tijdvakken.sbv")
                     }
                 },
                 onSaveTimedSheet = { editorDraft, exportCues, format ->
@@ -4713,6 +4769,7 @@ private fun TuddyScreen(
                         readySecondPasteDocument = null
                         pendingTimedSubtitleSheet = null
                         pendingLrcSubtitleSave = null
+                pendingSbvSubtitleSave = null
                         pendingTranscriptExport = null
                         pendingPinnedExport = null
                         pinnedExportOpen = false
