@@ -47,3 +47,14 @@ De privé-zinnenlijst en de import-/verwijderpreview tonen eigen Sorani (`ckb`) 
 ## Automatische tekstrichting voor gemengde schriften
 
 De algemene ondertitel-plakbewerker kiest nu de schrijfrichting op basis van het eerste Unicode-teken met een sterke links- of rechtsrichting, niet op basis van de telefooninstelling. Dat geldt voor de brontekst en de zelfgeschreven betekenis; het grote live-ondertitelkaartje gebruikt dezelfde regel met de herkende taalcode alleen als terugval voor tekst zonder richtingsinformatie. Tekst wordt niet herschreven of getranslitereerd.
+
+
+## Compact ASR research leads — 21 October 2026
+
+These cards improve research visibility only. None is downloaded, bundled, integrated or enabled as a Tuddy speech backend.
+
+- [amedcj/kurmanji-asr-model](https://huggingface.co/amedcj/kurmanji-asr-model): model card declares MIT and 94.4M parameters, but its description is still placeholder text and it provides no useful evaluation summary. Dataset provenance, dialect coverage, file footprint and Android runtime suitability remain unverified.
+- [RevgeAI/vekol-stt-ckb-tiny](https://huggingface.co/RevgeAI/vekol-stt-ckb-tiny): model card reports 18 MB int4 / 37 MB int8 and self-reported WER 35.0% / CER 9.85% on Common Voice 25. It is **CC-BY-NC-4.0**, so it is not a commercial-release candidate without separate permission. The figures have not been independently reproduced on Android.
+- [Sabtain-Dev/STT-Whisper-Pashto](https://huggingface.co/Sabtain-Dev/STT-Whisper-Pashto): model card declares MIT, 0.2B parameters and self-reported WER 43.83% on its Pashto-ASR dataset. Model-file size, dataset terms/split and Android performance remain unverified.
+
+A permissive model-card license is not a dataset/provenance audit. These leads do not meet the full offline ASR+MT gate and must not change the Kurmanji, Sorani or Pashto preview-only status.
