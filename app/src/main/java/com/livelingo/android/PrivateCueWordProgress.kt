@@ -75,6 +75,29 @@ internal object PrivateCueWordProgress {
         return (begin to finish).takeIf { (a, b) -> b > a && b - a >= 750L }
     }
 
+    /**
+     * Explicitly selected consecutive words can form a short repeat region.
+     * This is a coarse equal-slice estimate based solely on the user's own
+     * subtitle cue; never treat it as detected spoken-word alignment.
+     */
+    fun estimatedPhraseReplayWindow(
+        text: String, startMs: Long, endMs: Long,
+        firstIndex: Int, lastIndex: Int
+    ): Pair<Long, Long>? {
+        if (!safeWindow(startMs, endMs)) return null
+        val tokens = ranges(text) ?: return null
+        if (firstIndex !in tokens.indices || lastIndex !in tokens.indices ||
+            lastIndex < firstIndex || endMs - startMs < tokens.size) return null
+        val begin = startAt(startMs, endMs, firstIndex, tokens.size)
+        val finish = if (lastIndex == tokens.lastIndex) endMs
+            else startAt(startMs, endMs, lastIndex + 1, tokens.size)
+        // Prevent deceptively precise tiny slices and accidental multi-minute
+        // repeat regions. Users can still practice longer A-B cue passages.
+        return (begin to finish).takeIf { (a, b) ->
+            b > a && b - a in 750L..120_000L
+        }
+    }
+
     /** All explicitly selectable estimated positions for one visible cue. */
     fun choices(text: String, startMs: Long, endMs: Long): List<EstimatedCueWord>? {
         if (!safeWindow(startMs, endMs)) return null
