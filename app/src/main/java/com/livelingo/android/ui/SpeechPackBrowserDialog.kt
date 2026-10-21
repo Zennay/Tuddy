@@ -78,6 +78,7 @@ internal fun SpeechPackBrowserDialog(
                 TextButton(onClick = { confirmTag = null }) { Text("Annuleren") }
             }
         )
+        return
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -116,7 +117,7 @@ internal fun SpeechPackBrowserDialog(
                     }
                     if (downloadTag != null) {
                         OutlinedButton(onClick = onCancelFollow) {
-                            Text("Stop pakketvoortgang volgen")
+                            Text("Stop controle of voortgang volgen")
                         }
                     }
                 }
