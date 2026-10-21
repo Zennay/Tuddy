@@ -1,3 +1,17 @@
+## Nieuw: handmatige LRC-begintijden weer opslaan
+
+Tuddy kan bestaande `.lrc`-tekst met eigen beginmomenten niet alleen
+importeren maar ook uit een bewerkt lokaal ondertitelconcept
+**bewust als LRC-kopie exporteren**. In de editor kies je **Bewaar eigen
+begintijden als LRC…** en bekijk je de complete ruwe
+`[mm:ss.mmm]eigen tekst`-preview vóór Androids bestandskiezer.
+Alleen enkelregelige cues en strikt oplopende tijdcodes worden
+geaccepteerd. **LRC bewaart geen eindtijden**: gebruik SRT, VTT,
+CSV of TSV wanneer die behouden moeten blijven. De bestaande
+privacy- en bytegrenzen en expliciete opslagtoestemming blijven van
+kracht. Geen automatische vertaling of audio-uitlijning.
+[Details](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Hersteld: Android-documentkiezer verliest geen tijdelijk ondertitelconcept
 
 Bij een expliciete SRT/VTT/LRC/CSV/TSV/TXT-bestandskeuze kan Android
