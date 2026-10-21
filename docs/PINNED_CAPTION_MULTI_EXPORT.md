@@ -1,3 +1,14 @@
+### Meerdere rondes in dezelfde browser of op papier
+
+Bij **Alle drie rondes** toont het zelfstandige HTML-bestand interne
+**Ga naar ronde 1 / 2 / 3**-links; die openen niets externs en hebben geen
+JavaScript nodig. Iedere nieuwe ronde begint bij afdrukken op een
+nieuwe pagina en telt de oefenkaarten weer **vanaf 1**. Op het afzonderlijke
+zelfstudieantwoordblad hebben de volledige antwoorden hetzelfde ronde-
+en kaartnummer als de bijbehorende vragen. De leerlingenversie krijgt
+geen van deze volledige antwoorden. De navigatielinks zijn niet zichtbaar
+in het afgedrukte bestand.
+
 ## Nieuw: drie aanvulrondes over dezelfde zelfgekozen tweetalige zinnen
 
 Bij **★ gemarkeerd → Exporteer selectie… → Aanvuloefening · HTML**
