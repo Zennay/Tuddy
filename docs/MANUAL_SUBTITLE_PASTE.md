@@ -608,6 +608,32 @@ wordt niet alsnog opgeslagen. Een gekozen externe Android-provider
 kan zelf online synchroniseren. Undo-geschiedenis in de dialoog
 wordt niet als langdurige opslag bewaard.
 
+## Tijdvensters ook voor verwijdering en tekstcorrecties
+
+Hetzelfde eigen **Vanaf/Tot**-tijdvenster kan nu vanuit de
+tijdelijke editor worden omgezet naar een bronregelselectie in
+**Meerdere eigen ondertitelregels verwijderen…** en in
+**Zoek en vervang · tijdelijk**. De selectie wordt pas
+overgenomen als je expliciet op de bijbehorende knop tikt.
+De app kiest complete cues waarvan de bestaande tijden het
+gevraagde venster overlappen; hij knipt geen regels of tijdcodes
+automatisch af.
+
+Daarna zie je bij verwijderen alle gekozen originele tekstregels
+en tijden, inclusief het aantal resterende cues, vóór de bewuste
+bevestiging. Bij Zoek/Vervang zie je de **volledige voor/na-tekst**
+van iedere daadwerkelijk getroffen originele cue. In het
+laatste venster blijft de keuze voor eerste regel, tweede eigen
+betekenis of volledige tekst gelden. Een invalid tijdvenster
+wijzigt de selectie niet, en bestaande Undo/Redo en
+SRT/VTT-limieten blijven actief.
+
+Dezelfde selectiemethode bestaat dus in vier acties:
+**export**, **tijdverschuiving**, **verwijdering** en
+**gerichte letterlijke vervanging**. Elke actie herberekent
+zijn huidige bronregels bij bevestiging en raakt het live gesprek
+en oorspronkelijke bestand niet.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
