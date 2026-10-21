@@ -2889,7 +2889,7 @@ internal fun PrivateSubtitleFileDialog(
             },
             onSaved = { count ->
                 batchPhraseOpen = false
-                notice = "$" + "{count} eigen, nagelezen oefenzinnen privé opgeslagen."
+                notice = count.toString() + " eigen, nagelezen oefenzinnen privé opgeslagen."
             },
             onDismiss = { batchPhraseOpen = false }
         )
