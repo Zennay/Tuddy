@@ -5500,7 +5500,7 @@ private fun TuddyScreen(
                                         else -> "Pasjtoe"
                                     }
                                     DropdownMenuItem(
-                                        text = { Text("Kies $previewLabel in de basiswoordenpreview") },
+                                        text = { Text("Selecteer $previewLabel voor de basiswoordenpreview") },
                                         onClick = {
                                             previewTarget = previewSuggestion
                                             previewResult = null
