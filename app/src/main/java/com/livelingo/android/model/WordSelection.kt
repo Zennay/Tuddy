@@ -20,7 +20,11 @@ fun wordAt(text: String, characterOffset: Int): String? {
 
     fun core(cp: Int): Boolean {
         val category = Character.getType(cp)
-        return Character.isLetterOrDigit(cp) ||
+        // Retain the original BMP letter rule while supporting full
+        // Unicode code points and combining marks beyond a single Char.
+        val c = cp.toChar()
+        return (cp <= Char.MAX_VALUE.code && c.isLetter()) ||
+            Character.isLetterOrDigit(cp) ||
             category == Character.NON_SPACING_MARK.toInt() ||
             category == Character.COMBINING_SPACING_MARK.toInt() ||
             category == Character.ENCLOSING_MARK.toInt()
@@ -59,5 +63,5 @@ fun wordAt(text: String, characterOffset: Int): String? {
         candidate.codePoints().noneMatch { Character.isLetter(it) }) return null
 
     // Do not reinterpret isolated marks or numbers as a dictionary word.
-    return candidate
+    return text.substring(left, right)
 }
