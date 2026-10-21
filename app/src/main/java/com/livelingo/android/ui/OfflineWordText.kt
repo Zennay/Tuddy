@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -68,14 +69,14 @@ internal fun OfflineWordText(
                     onLongPress = { point ->
                         val offset = layout?.getOffsetForPosition(point)
                         val word = offset?.let { wordAt(text, it) }
-                        heldWord = word?.take(40)
+                        heldWord = word
                     },
                     onTap = { point ->
                         val offset = layout?.getOffsetForPosition(point)
                         val word = offset?.let { wordAt(text, it) }
                         if (word != null) {
                             heldWord = null
-                            selectedWord = word.take(40)
+                            selectedWord = word
                             meaningDraft = ""
                             noteMessage = ""
                             dialogOpen = true
@@ -113,7 +114,8 @@ internal fun OfflineWordText(
                     verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Text("Woord · ${language?.uppercase() ?: "onbekend"}: $peek",
-                        style = MaterialTheme.typography.titleSmall)
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            textDirection = TextDirection.ContentOrRtl))
                     Text(
                         if (local != null) "${local.illustration} ${local.definition}"
                         else "Geen bekende lokale woordenboekbetekenis.",
@@ -142,11 +144,17 @@ internal fun OfflineWordText(
                     OutlinedTextField(
                         value = selectedWord,
                         onValueChange = {
-                            selectedWord = it.take(40)
-                            meaningDraft = ""
-                            noteMessage = ""
+                            if (it.length <= 40) {
+                                selectedWord = it
+                                meaningDraft = ""
+                                noteMessage = ""
+                            } else {
+                                noteMessage = "Maximaal 40 tekens; een woord wordt niet afgekapt."
+                            }
                         },
                         label = { Text("Woord uit de zin") },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            textDirection = TextDirection.ContentOrRtl),
                         singleLine = true
                     )
                     Text(
@@ -169,6 +177,8 @@ internal fun OfflineWordText(
                             value = meaningDraft,
                             onValueChange = { meaningDraft = it.take(180) },
                             label = { Text("Mijn eigen betekenis · niet gecontroleerd") },
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = TextDirection.ContentOrRtl),
                             maxLines = 3
                         )
                         TextButton(
@@ -186,8 +196,12 @@ internal fun OfflineWordText(
                         }
                     }
                     Text(
-                        "Alleen enkele basiswoorden in NL, EN, DE, FR en ES. " +
-                            "Geen AI-gok of online woordenboek; niet gebruiken als medisch of juridisch advies.",
+                        "Alleen enkele gecontroleerde basiswoorden in NL, EN, DE, FR en ES. " +
+                            "Ook Sorani/Pasjtoe-woorden kun je hier zelf selecteren " +
+                            "en van een eigen, niet geverifieerde betekenis voorzien " +
+                            "als de eigen-woordenfunctie beschikbaar is. " +
+                            "Geen automatische vertaling, AI-gok of online woordenboek; " +
+                            "niet gebruiken als medisch of juridisch advies.",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
