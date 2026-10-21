@@ -210,13 +210,13 @@ internal fun LocalSubtitleAudioPreviewDialog(
             PrivatePracticeReportFormat.WORKSHEET_HTML ->
                 PrivateListeningWorksheet.snapshot(
                     cues, subtitleOffsetMs, savedPracticePassages,
-                    passageRatings, passageNotes
+                    passageRatings, passageNotes, worksheetScope
                 )
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
             PrivatePracticeReportFormat.CSV ->
                 PrivatePrintablePracticeSummary.snapshotCsv(
                     cues, subtitleOffsetMs, savedPracticePassages,
-                    passageRatings, passageNotes
+                    passageRatings, passageNotes, worksheetScope
                 )
         }
         if (payload == null) {
@@ -1557,9 +1557,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             else "Bekijk mijn volledige CSV vóór opslaan")
                     }
                     if (practiceCsvPreviewOpen) {
+                        Text("CSV-selectie: " + worksheetScope.title + " (" +
+                            privatePracticeRouteCandidates(
+                                savedPracticePassages, passageRatings, worksheetScope
+                            ).size + " fragmenten).",
+                            style = MaterialTheme.typography.bodySmall)
                         val csvPreview = PrivatePrintablePracticeSummary.snapshotCsv(
                             cues, subtitleOffsetMs, savedPracticePassages,
-                            passageRatings, passageNotes
+                            passageRatings, passageNotes, worksheetScope
                         )?.toString(Charsets.UTF_8)
                         SelectionContainer {
                             Text(
@@ -1571,9 +1576,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         }
                     }
                     TextButton(
-                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        enabled = !guidedActive &&
+                            privatePracticeRouteCandidates(
+                                savedPracticePassages, passageRatings, worksheetScope
+                            ).isNotEmpty(),
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.CSV) }
-                    ) { Text("Bewaar mijn oefenfragmenten als CSV…") }
+                    ) { Text("Bewaar mijn geselecteerde oefenfragmenten als CSV…") }
                     SelectionContainer {
                         Text(
                             practiceSummaryText,
