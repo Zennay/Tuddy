@@ -328,6 +328,10 @@ internal object PrivatePinnedCaptionClozeHtml {
                 ".answers:target{display:block}" +
                 ".roundheading{border-bottom:2px solid #64748b;padding:9px 0}" +
                 ".roundnav a{display:inline-block;margin:6px 12px 6px 0}" +
+                ".cardnav{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}" +
+                ".card:target{outline:2px solid #2563a6;scroll-margin-top:12px}" +
+                ".answer-row{border-bottom:1px solid #b6c0ca;padding:10px 0;" +
+                    "break-inside:avoid;page-break-inside:avoid}" +
                 ".answerlink{display:inline-block;margin:12px 0}" +
                 ".printcontrol{display:inline-block;margin:14px 0 0 8px;" +
                     "font-weight:600;cursor:pointer}" +
@@ -338,7 +342,7 @@ internal object PrivatePinnedCaptionClozeHtml {
                 ".answers,.answers:target{display:none}" +
                 ".printkey:checked ~ .answers," +
                     ".printkey:checked ~ .answers:target{display:block}" +
-                ".answerlink,.roundnav,.printkey,.printcontrol{display:none}" +
+                ".answerlink,.roundnav,.cardnav,.printkey,.printcontrol{display:none}" +
                 ".card{break-inside:avoid}.roundheading.newpage{" +
                     "break-before:page;page-break-before:always}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
@@ -390,7 +394,8 @@ internal object PrivatePinnedCaptionClozeHtml {
                 out.append("\" id=\"round-").append(roundIndex + 1)
                     .append("\">Oefenronde ").append(roundIndex + 1).append("</h2>")
             }
-            out.append("<article class=\"card\"><b>Ronde ").append(roundIndex + 1)
+            out.append("<article class=\"card\" id=\"card-").append(index + 1)
+                .append("\"><b>Ronde ").append(roundIndex + 1)
                 .append(" · kaart ").append(index % cardsPerRound + 1)
                 .append("</b><p class=\"phrase\">")
                 .append(htmlBidiText(question, card.questionLanguageCode, showLanguageTags))
@@ -431,7 +436,16 @@ internal object PrivatePinnedCaptionClozeHtml {
                     .append(htmlBidiText(answer, card.answerLanguageCode, showLanguageTags))
                     .append("</p></details>")
             }
-            out.append("</article>")
+            out.append("<nav class=\"cardnav\" aria-label=\"Kaartnavigatie\">")
+            if (index > 0) {
+                out.append("<a href=\"#card-").append(index)
+                    .append("\">← Vorige kaart</a>")
+            }
+            if (index + 1 < cards.size) {
+                out.append("<a href=\"#card-").append(index + 2)
+                    .append("\">Volgende kaart →</a>")
+            }
+            out.append("</nav></article>")
             if (out.length > MAX_BYTES) return null
         }
         out.append("</section>")
@@ -448,11 +462,15 @@ internal object PrivatePinnedCaptionClozeHtml {
                     "Terug naar vragen</a>")
             cards.forEachIndexed { index, card ->
                 val answer = card.answer
-                out.append("<p class=\"phrase\"><b>Ronde ").append(card.roundIndex + 1)
+                out.append("<div class=\"answer-row\"><b>Ronde ")
+                    .append(card.roundIndex + 1)
                     .append(" · kaart ").append(index % cardsPerRound + 1)
-                    .append(".</b> ")
+                    .append("</b><p class=\"phrase\">Vraag: ")
+                    .append(htmlBidiText(card.question, card.questionLanguageCode, showLanguageTags))
+                    .append("</p><p class=\"phrase\">Juiste antwoord: ")
                     .append(htmlBidiText(answer, card.answerLanguageCode, showLanguageTags))
-                    .append("</p>")
+                    .append("</p><a class=\"answerlink\" href=\"#card-")
+                    .append(index + 1).append("\">Terug naar deze kaart</a></div>")
                 if (out.length > MAX_BYTES) return null
             }
             out.append("</section>")
