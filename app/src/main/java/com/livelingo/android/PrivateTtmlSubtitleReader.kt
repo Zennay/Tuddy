@@ -63,7 +63,9 @@ internal object PrivateTtmlSubtitleReader {
                         continue
                     }
                     when {
-                        stack.size == 1 && name == "tt" -> Unit
+                        stack.size == 1 && name == "tt" -> {
+                            if (hasTiming(parser)) return null
+                        }
                         stack.size == 2 && name == "head" && parent == "tt" &&
                             !hasBody -> skippedHead = 1
                         name == "body" && parent == "tt" && !hasBody -> {
@@ -75,9 +77,7 @@ internal object PrivateTtmlSubtitleReader {
                         }
                         name == "p" && parent in setOf("body", "div") &&
                             activeStart == null -> {
-                            if (parser.getAttributeValue(null, "dur") != null ||
-                                parser.getAttributeValue(null, "timeContainer") != null)
-                                return null
+                            if (hasTiming(parser, paragraph = true)) return null
                             val start = time(parser.getAttributeValue(null, "begin"))
                                 ?: return null
                             val end = time(parser.getAttributeValue(null, "end"))
@@ -145,11 +145,21 @@ internal object PrivateTtmlSubtitleReader {
         return cues
     }
 
-    private fun hasTiming(parser: XmlPullParser): Boolean {
+    private fun hasTiming(
+        parser: XmlPullParser,
+        paragraph: Boolean = false
+    ): Boolean {
+        val forbidden = setOf(
+            "dur", "timeContainer", "repeatCount", "repeatDur",
+            "timeBase", "frameRate", "frameRateMultiplier", "tickRate", "subFrameRate"
+        )
         for (i in 0 until parser.attributeCount) {
-            if (parser.getAttributeName(i) in setOf(
-                    "begin", "end", "dur", "timeContainer", "repeatCount", "repeatDur"
-                )) return true
+            val name = parser.getAttributeName(i)
+            if (name in forbidden || (!paragraph && name in setOf("begin", "end")))
+                return true
+            if (name == "space" &&
+                parser.getAttributeNamespace(i) == "http://www.w3.org/XML/1998/namespace" &&
+                parser.getAttributeValue(i) == "preserve") return true
         }
         return false
     }
