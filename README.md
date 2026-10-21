@@ -1,3 +1,18 @@
+## Nieuw: gerichte ondertitelcorrecties en volledige SRT/VTT-bestandspreview
+
+De privé-editor kan een letterlijke zoek/vervangactie beperken tot
+losse originele bronregels (`1-3,7,12`) en apart de eerste of tweede
+eigen tekstregel corrigeren. De bewerking heeft een paginavoorbeeld
+van **alle** gewijzigde tekst en blijft als één actie herstelbaar.
+Bestaande Van/Tot-correcties blijven bruikbaar zonder losse selectie.
+
+Ook de SRT- en WebVTT-export toont nu eerst de complete exacte
+UTF-8-inhoud in paginavorm, met bytegrootte en alle tijdcodes. De
+opslagknop blijft geblokkeerd voor ongeldige documenten; vlak voor
+Androids expliciete opslagkeuze worden de bytes opnieuw herleid en
+vergeleken. Bronbestand en live spraak worden nooit overschreven.
+[Details](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: meerdere eigen ondertitelregels in één keer verwijderen
 
 In de tijdelijke ondertiteleditor kun je nu originele bronregels, zoals
