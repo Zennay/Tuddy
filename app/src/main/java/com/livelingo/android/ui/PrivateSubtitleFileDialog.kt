@@ -162,6 +162,8 @@ internal fun PrivateSubtitleFileDialog(
     var secondaryAnchorPage by remember { mutableIntStateOf(0) }
     var anchorSelectionNeedsApply by remember { mutableStateOf(false) }
     var secondTrackPreviewPage by remember { mutableIntStateOf(0) }
+    var pairReviewPage by remember { mutableIntStateOf(0) }
+    var pairReviewOpen by remember { mutableStateOf(false) }
     var driftSelectorOpen by remember { mutableStateOf(false) }
     var selectedDrift by remember { mutableStateOf<PrivateSubtitleDriftSelection?>(null) }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
@@ -981,8 +983,9 @@ internal fun PrivateSubtitleFileDialog(
                                 "tijdcodes en maximaal 256 KiB per export."
                         else if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES)
                             "${proposed.pairedCount} regelparen met gedeelde tijdcodes, " +
-                                "${proposed.unpairedSecondTrack} regels uit tweede bestand " +
-                                "apart gehouden, ${proposed.cues.size} regels in resultaat. " +
+                                "${proposed.unpairedSecondTrack} regels uit tweede spoor apart; " +
+                                "${proposed.unpairedFirstTrack} regels uit eerste spoor " +
+                                "zonder tweede tekst. ${proposed.cues.size} regels in resultaat. " +
                                 "Beoordeel eerst tekst en timing; er is geen " +
                                 "audio-/video-uitlijning."
                         else "${proposed.cues.size} regels in de gecombineerde versie. " +
@@ -990,6 +993,47 @@ internal fun PrivateSubtitleFileDialog(
                             "Controleer tijdcodes zelf; er is geen audio-/video-uitlijning.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (proposed != null &&
+                        importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                pairReviewOpen = !pairReviewOpen
+                                pairReviewPage = 0
+                            }) {
+                            Text((if (pairReviewOpen) "▼ " else "▶ ") +
+                                "Controleer elke bronregel-koppeling " +
+                                "(${proposed.pairedLinks.size} paren)")
+                        }
+                        if (pairReviewOpen) {
+                            val pages = maxOf(1, (proposed.pairedLinks.size + 3) / 4)
+                            val currentPairPage = pairReviewPage.coerceIn(0, pages - 1)
+                            Text("Gekoppelde originele bronregelnummers, pagina " +
+                                "${currentPairPage + 1}/$pages. Alleen " +
+                                "tijdsoverlap: dit bewijst geen overeenkomst " +
+                                "van taal of betekenis.",
+                                style = MaterialTheme.typography.bodySmall)
+                            proposed.pairedLinks.drop(currentPairPage * 4).take(4)
+                                .forEach { link ->
+                                    Text("Spoor 1 · bronregel ${link.primarySourceRow} · " +
+                                        "${link.primaryStart}\n${link.primaryText}\n" +
+                                        "Spoor 2 · bronregel ${link.secondarySourceRow} · " +
+                                        "${link.secondaryStart}\n${link.secondaryText}\n" +
+                                        "Overlappende tijd: ${link.overlapMillis} ms.",
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween) {
+                                TextButton(enabled = currentPairPage > 0,
+                                    onClick = { pairReviewPage = currentPairPage - 1 }) {
+                                    Text("← Vorige paren")
+                                }
+                                TextButton(enabled = currentPairPage < pages - 1,
+                                    onClick = { pairReviewPage = currentPairPage + 1 }) {
+                                    Text("Volgende paren →")
+                                }
+                            }
+                        }
+                    }
                     if (proposed != null) {
                         Text("Volledige resultaat-preview, vijf cues per pagina " +
                             "(niet alleen de tekstparen): pagina ${shownPairPage + 1}/" +
@@ -1050,7 +1094,8 @@ internal fun PrivateSubtitleFileDialog(
                     else null
                     if (draft != stagedImport.existing || updated == null ||
                         proposed == null || updated.cues != proposed.cues ||
-                        updated.pairedCount != proposed.pairedCount) {
+                        updated.pairedCount != proposed.pairedCount ||
+                        updated.pairedLinks != proposed.pairedLinks) {
                         notice = "Het concept is veranderd of de gecombineerde " +
                             "ondertitels zijn ongeldig. Probeer opnieuw."
                     } else {
