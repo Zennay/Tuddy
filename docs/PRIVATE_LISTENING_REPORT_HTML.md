@@ -1,3 +1,13 @@
+## Nieuw — leerlingen-CSV zonder ondertiteltekst of privébeoordelingen
+
+Kies **Mijn privé luisteroverzicht → Leerlingenblad · zonder bronregels of privébeoordeling**. Je kunt nu ook **Bewaar leerlingen-CSV zonder bronregels…** kiezen. Het scherm toont eerst de **complete** CSV-inhoud: voor elk geselecteerd eigen A–B-fragment het fragmentnummer, de begin- en eindtijd, de door jou gekozen oefenopdracht (ook de optionele afwijkende opdracht per fragment) en een lege antwoordcel. Maximaal vier fragmenten, met dezelfde bewuste selectie **Alle / Nog oefenen / Nog niet beoordeeld**. Deze selectie gebruikt jouw tijdelijke beoordelingen alleen **op het toestel** om te bepalen welke fragmenten meegaan; het leerlingenbestand zelf neemt geen beoordelingen, notities, ondertitelregels, audio-URI, bronbestandsnaam of transcript op.
+
+De CSV wordt uitsluitend na jouw expliciete Android-bestandskeuze gemaakt en na terugkeer opnieuw berekend. Veranderde fragmenten, beoordelingen, oefenopdrachten of bestemming zorgen dat oude uitvoer niet stilzwijgend wordt geschreven. Het voorstel heet **Tuddy-luister-leerlingenblad-zonder-bronregels.csv**. De gebruiker kiest zelf of de Android-provider eventueel synchroniseert.
+
+Bij **Leerlingenblad** verbergt de app de privé TXT/CSV-bronexports en is **Bewaar zelf HTML…** niet beschikbaar. Schakel eerst bewust terug naar **Zelfstudie** als je je persoonlijke verslag met bronzinnen, notities en beoordelingen wilt opslaan. Het afzonderlijke leerlingen-HTML-werkblad blijft bestaan. Dit zijn zelfgekozen opdrachten, geen automatische spraak- of begripsanalyse.
+
+---
+
 ## Vrij gekozen opdrachten per offline luisterfragment
 
 Bij **Mijn privé luisteroverzicht → Bewaar luisterwerkblad…** kies je
