@@ -295,9 +295,6 @@ private fun TuddyScreen(
     val context = LocalContext.current
     // Cache only a few local source/target translator clients for live captions.
     val localTranslatorPool = remember { LocalTranslatorPool() }
-    DisposableEffect(localTranslatorPool) {
-        onDispose { localTranslatorPool.close() }
-    }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
         mutableStateOf(PrivateScreenShield.enabled(context))
