@@ -136,6 +136,7 @@ internal fun PrivateSubtitleFileDialog(
     var excerptSourceRows by remember { mutableStateOf<List<Int>>(emptyList()) }
     var practiceOpen by remember { mutableStateOf(false) }
     var retimingOpen by remember { mutableStateOf(false) }
+    var selectiveRetimingOpen by remember { mutableStateOf(false) }
     var inspectorOpen by remember { mutableStateOf(false) }
     var twoAnchorOpen by remember { mutableStateOf(false) }
     var practiceCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
@@ -388,6 +389,10 @@ internal fun PrivateSubtitleFileDialog(
                 ) { Text("⏱ Tijdcodes van alle regels aanpassen…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
+                    onClick = { selectiveRetimingOpen = true }
+                ) { Text("⏱ Alleen gekozen bronregels in tijd verschuiven…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
                     onClick = { inspectorOpen = true }
                 ) { Text("⌁ Bekijk de ondertiteltijdlijn…") }
                 OutlinedButton(
@@ -606,6 +611,21 @@ internal fun PrivateSubtitleFileDialog(
         )
     }
 
+    if (selectiveRetimingOpen) {
+        SubtitleScopedShiftDialog(
+            draft = draft,
+            foundSourceRows = if (query.isNotBlank())
+                found.map { it.first + 1 } else emptyList(),
+            onApply = { updated ->
+                applyChange(updated)
+                shownIndex = -1
+                notice = "Gekozen oorspronkelijke regels verschoven; " +
+                    "Terug herstelt alle tijdcodes in één stap."
+                selectiveRetimingOpen = false
+            },
+            onDismiss = { selectiveRetimingOpen = false }
+        )
+    }
     if (retimingOpen) {
         SubtitleRetimingDialog(
             draft = draft,
