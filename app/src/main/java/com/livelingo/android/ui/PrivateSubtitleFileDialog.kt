@@ -628,7 +628,17 @@ internal fun PrivateSubtitleFileDialog(
                         onEndLater = { nudgeSelected(0L, 500L) },
                         onSplit = {
                             val index = found[shownIndex].first
-                            val cut = current.text.indexOf(' ', current.text.length / 2)
+                            val midpoint = current.text.length / 2
+                            val breaks = current.text.indices.filter { position ->
+                                position in 1 until current.text.lastIndex &&
+                                    current.text[position].isWhitespace()
+                            }
+                            // Prefer a user-authored line break; otherwise choose
+                            // the closest safe whitespace around the text midpoint.
+                            val cut = breaks.filter { current.text[it] == '\n' }
+                                .minByOrNull { kotlin.math.abs(it - midpoint) }
+                                ?: breaks.minByOrNull { kotlin.math.abs(it - midpoint) }
+                                ?: -1
                             splitFirst = if (cut > 0) current.text.substring(0, cut) else current.text
                             splitSecond = if (cut > 0) current.text.substring(cut + 1) else ""
                             splitAtTime = ""
