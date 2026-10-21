@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import com.livelingo.android.PrivatePhraseTextPolicy
 
 /** An explicitly authored personal note from ONE user-selected subtitle cue.
  * Never infer source language, invent a meaning or save source files/audio. */
@@ -26,12 +27,7 @@ internal fun PrivateSubtitlePersonalPhraseDialog(
     var approved by remember(sourceText) { mutableStateOf(false) }
     var message by remember(sourceText) { mutableStateOf("") }
     fun safe(value: String, max: Int): Boolean =
-        value.isNotBlank() && value.length <= max && value == value.trim() &&
-            value.none { ch ->
-                Character.isISOControl(ch) || Character.isSurrogate(ch) ||
-                    (Character.getType(ch) == Character.FORMAT.toInt() && ch != '\u200C') ||
-                    ch == '\u2028' || ch == '\u2029'
-            }
+        PrivatePhraseTextPolicy.valid(value, max)
     val valid = safe(phrase, 120) && safe(meaning, 180)
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -56,7 +52,8 @@ internal fun PrivateSubtitlePersonalPhraseDialog(
                 }
                 OutlinedTextField(
                     value = phrase,
-                    onValueChange = { if (it.length <= 2400) phrase = it
+                    onValueChange = { if (it.length <= 2400 &&
+                        PrivatePhraseTextPolicy.wellFormed(it)) phrase = it
                         approved = false; message = "" },
                     label = { Text("Mijn eigen zin · maximaal 120 tekens, één regel") },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
@@ -79,7 +76,8 @@ internal fun PrivateSubtitlePersonalPhraseDialog(
                 }
                 OutlinedTextField(
                     value = meaning,
-                    onValueChange = { if (it.length <= 180) meaning = it
+                    onValueChange = { if (it.length <= 180 &&
+                        PrivatePhraseTextPolicy.wellFormed(it)) meaning = it
                         approved = false; message = "" },
                     label = { Text("Mijn betekenis · maximaal 180 tekens") },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
