@@ -12,7 +12,9 @@ internal enum class PrivatePracticeReportFormat(
     HTML("text/html", "Tuddy-mijn-luisteroefening.html", "HTML"),
     WORKSHEET_HTML("text/html", "Tuddy-mijn-luisterwerkblad.html", "HTML-oefenblad"),
     TXT("text/plain", "Tuddy-mijn-luisteroefening.txt", "TXT"),
-    CSV("text/csv", "Tuddy-mijn-luisteroefening.csv", "CSV")
+    CSV("text/csv", "Tuddy-mijn-luisteroefening.csv", "CSV"),
+    DETAILED_CSV("text/csv", "Tuddy-mijn-bronregels-per-fragment.csv",
+        "CSV · bronregels per fragment")
 }
 
 internal data class PendingPrivatePracticeReport(
@@ -147,6 +149,117 @@ internal object PrivatePrintablePracticeSummary {
             }
         }
         return output.toByteArray(Charsets.UTF_8).takeIf { it.size <= MAX_BYTES }
+    }
+
+    /**
+     * A source-row-per-line CSV for explicitly chosen listening fragments.
+     * The A–B marks are user-authored and NEVER assert audio alignment:
+     * include only complete SRT/VTT cues contained in each chosen interval.
+     *
+     * Unlike the compact six-column CSV, this preserves every matching
+     * authored subtitle line (up to the existing bounded UTF-8 document
+     * limit). Source and notes are treated as untrusted spreadsheet text.
+     */
+    fun snapshotDetailedCsv(
+        cues: List<com.livelingo.android.PrivateSubtitleCue>,
+        offsetMs: Long,
+        passages: List<Pair<Long, Long>>,
+        ratings: Map<Pair<Long, Long>, String>,
+        notes: Map<Pair<Long, Long>, String>,
+        scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL
+    ): ByteArray? {
+        if (passages.isEmpty() || passages.size > 4 ||
+            passages.distinct().size != passages.size || cues.size > 5_000) return null
+        val selected = privatePracticeRouteCandidates(passages, ratings, scope)
+        if (selected.isEmpty() || selected.any { span ->
+                span.first < 0L || span.second <= span.first ||
+                    span.second - span.first > 300_000L
+            }) return null
+
+        // Validate all shifted timestamps, not only the visible excerpt.
+        val shifted = ArrayList<Pair<Long, Long>>(cues.size)
+        for (cue in cues) {
+            val start = runCatching { Math.addExact(cue.startMillis, offsetMs) }
+                .getOrNull() ?: return null
+            val end = runCatching { Math.addExact(cue.endMillis, offsetMs) }
+                .getOrNull() ?: return null
+            shifted.add(start to end)
+        }
+        fun clock(ms: Long): String {
+            val whole = ms / 1_000L
+            return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d.%03d",
+                whole / 3_600L, (whole / 60L) % 60L, whole % 60L,
+                ms % 1_000L)
+        }
+        fun safeCell(input: String): String? {
+            // Prevent a very long or malformed phrase from silently
+            // becoming an apparently complete source-line export.
+            if (input.length > 8_192) return null
+            val result = StringBuilder(input.length)
+            var index = 0
+            while (index < input.length) {
+                val cp = input.codePointAt(index)
+                if (cp in 0xD800..0xDFFF) return null
+                index += Character.charCount(cp)
+                if (cp in 0x202A..0x202E || cp in 0x2066..0x2069 ||
+                    cp == 0xFEFF || Character.isISOControl(cp)) {
+                    if (cp == '\n'.code || cp == '\r'.code || cp == '\t'.code)
+                        result.append(' ')
+                    continue
+                }
+                if (cp == 0x2028 || cp == 0x2029) result.append(' ')
+                else result.appendCodePoint(cp)
+            }
+            val clean = result.toString().trim()
+            val firstVisible = clean.codePoints().toArray().firstOrNull { cp ->
+                !Character.isWhitespace(cp) && !Character.isSpaceChar(cp) &&
+                    Character.getType(cp) != Character.FORMAT.toInt()
+            }
+            // Quoting CSV alone does not neutralize spreadsheet formulae;
+            // also protect fields prefixed with invisible format marks.
+            return if (firstVisible in listOf('='.code, '+'.code, '-'.code, '@'.code))
+                "'" + clean else clean
+        }
+        fun row(vararg cells: String): String = cells.joinToString(",") { cell ->
+            "\"" + cell.replace("\"", "\"\"") + "\""
+        } + "\r\n"
+        val out = StringBuilder()
+        out.append(row("Fragment", "Mijn A-B begin", "Mijn A-B einde",
+            "Mijn beoordeling", "Mijn volgende oefenstap",
+            "Oorspronkelijke bronregel", "Ondertitel begin", "Ondertitel einde",
+            "Volledige eigen ondertiteltekst"))
+        for ((passIndex, passage) in selected.withIndex()) {
+            val rating = when (ratings[passage]) {
+                "repeat" -> "Nog oefenen"
+                "okay" -> "Gaat goed"
+                "easy" -> "Makkelijk"
+                else -> "Nog niet beoordeeld"
+            }
+            val note = safeCell(notes[passage].orEmpty()) ?: return null
+            val meta = arrayOf((passIndex + 1).toString(), clock(passage.first),
+                clock(passage.second), rating, note)
+            var found = 0
+            for ((cueIndex, cue) in cues.withIndex()) {
+                val times = shifted[cueIndex]
+                if (times.first < passage.first || times.second > passage.second ||
+                    times.second <= times.first) continue
+                val sourceText = safeCell(cue.text) ?: return null
+                if (sourceText.isBlank()) continue
+                out.append(row(*meta, (cueIndex + 1).toString(),
+                    clock(times.first), clock(times.second), sourceText))
+                found++
+                if (out.length > 131_072) return null
+            }
+            if (found == 0) {
+                // Do not invent an alignment or pretend that a manually
+                // chosen time span contains actual detected speech.
+                out.append(row(*meta, "", "", "",
+                    "Geen volledig passende ondertitelregel (eigen A-B-tijdvak)"))
+            }
+            if (out.length > 131_072) return null
+        }
+        return out.toString().toByteArray(Charsets.UTF_8)
+            .takeIf { it.size <= 131_072 }
     }
 
     fun snapshotText(summary: String): ByteArray? =
