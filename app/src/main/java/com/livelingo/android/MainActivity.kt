@@ -5486,12 +5486,28 @@ private fun TuddyScreen(
                             )
                             val matchingTargets = TargetCatalog.search(targetQuery).take(35)
                             if (matchingTargets.isEmpty()) {
+                                val previewSuggestion = CommunityLanguageAvailabilityHint.targetForQuery(targetQuery)
                                 Text(
                                     CommunityLanguageAvailabilityHint.forQuery(targetQuery)
                                         ?: "Geen vertaaltaal gevonden.",
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                     style = MaterialTheme.typography.bodySmall
                                 )
+                                if (previewSuggestion != null) {
+                                    val previewLabel = when (previewSuggestion) {
+                                        "kmr" -> "Kurmanji"
+                                        "ckb" -> "Sorani"
+                                        else -> "Pasjtoe"
+                                    }
+                                    DropdownMenuItem(
+                                        text = { Text("Kies $previewLabel in de basiswoordenpreview") },
+                                        onClick = {
+                                            previewTarget = previewSuggestion
+                                            previewResult = null
+                                            targetOpen = false
+                                        }
+                                    )
+                                }
                             }
                             matchingTargets.forEach { choice ->
                                 DropdownMenuItem(text = { Text(choice.title) }, onClick = {
