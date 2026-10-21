@@ -1088,6 +1088,14 @@ tijdactiegeschiedenis; onbedoeld terugzetten van daarna geschreven
 eigen tekst wordt zo voorkomen. Sluiten van het dialoogvenster
 verwijdert deze tijdelijke geschiedenis.
 
+Bij lange bestanden van maximaal 500 cues toont de preview
+**Vorige wijziging**, **Volgende wijziging** en
+**Ga naar eerste gewijzigde regel**. Die knoppen springen niet
+alleen naar aangepaste begintijden, maar ook naar aangrenzende
+regels waarvan de **eindtijd** verschuift doordat een volgend
+LRC-begin veranderde. Normaal pagineren door alle regels blijft
+beschikbaar, ook voor ongewijzigde cues.
+
 De bestaande [offset:]-header blijft exact behouden. De wijziging
 past alleen de door de gebruiker gekozen timestamp-tags aan, ook
 wanneer meerdere refreinmomenten op één fysieke bronregel staan;
