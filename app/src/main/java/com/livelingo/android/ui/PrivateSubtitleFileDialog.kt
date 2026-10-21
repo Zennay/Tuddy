@@ -1479,18 +1479,44 @@ internal fun PrivateSubtitleFileDialog(
     }
     val chosenFormat = requestSave
     if (chosenFormat != null) {
+        val exactSnapshot = PrivateSubtitleDraftEditor.snapshot(draft, chosenFormat)
         AlertDialog(onDismissRequest = { requestSave = null },
-            title = { Text("Nieuw ondertitelbestand bewaren?") },
-            text = { Text("Je kiest bewust een Android-bestandsprovider. " +
-                "Die kan jouw tekst buiten Tuddy synchroniseren. Tijdcodes zijn " +
-                "handmatige schattingen en teksten zijn niet geverifieerd. " +
-                "Het eerder geopende bestand blijft ongewijzigd.") },
+            title = { Text("Nieuw ${chosenFormat.name}-bestand controleren") },
+            text = {
+                Column(modifier = Modifier.heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Controleer alle originele tekstregels en tijdcodes " +
+                        "voordat je een nieuw eigen ondertitelbestand opslaat. " +
+                        "Dit is geen automatische audio-uitlijning of vertaling.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (exactSnapshot == null) {
+                        Text("SRT/VTT niet beschikbaar: het huidige concept " +
+                            "overschrijdt de bestaande grenzen of bevat ongeldige " +
+                            "tijdcodes/tekst. Het originele document blijft intact.",
+                            color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text("${draft.size} ondertitels · ${exactSnapshot.size} " +
+                            "UTF-8 bytes. De volledige exacte bestandsinhoud " +
+                            "is per deelpagina te bekijken.",
+                            style = MaterialTheme.typography.titleSmall)
+                        PrivateSubtitlePagedExportPreview(exactSnapshot)
+                    }
+                    Text("Het live gesprek en eerder geopende bestand blijven " +
+                        "ongewijzigd. Alleen na jouw keuze wordt een nieuwe " +
+                        "kopie bij een Android-bestandsprovider geschreven. " +
+                        "Die provider kan zelf extern synchroniseren.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(enabled = exactSnapshot != null, onClick = {
+                    val current = PrivateSubtitleDraftEditor.snapshot(draft, chosenFormat)
+                    if (exactSnapshot == null || current == null ||
+                        !current.contentEquals(exactSnapshot)) {
+                        notice = "Concept veranderd: controleer de SRT/VTT-preview opnieuw."
+                    } else onSaveCopy(draft.toList(), chosenFormat)
                     requestSave = null
-                    if (PrivateSubtitleDraftEditor.snapshot(draft, chosenFormat) == null)
-                        notice = "Ongeldig concept: kan geen ondertitelbestand maken."
-                    else onSaveCopy(draft.toList(), chosenFormat)
                 }) { Text("Kies opslaglocatie…") }
             },
             dismissButton = {
