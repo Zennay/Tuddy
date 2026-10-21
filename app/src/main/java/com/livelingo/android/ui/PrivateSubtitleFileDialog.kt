@@ -2441,11 +2441,18 @@ internal fun PrivateSubtitleFileDialog(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
-                    if (splitBoundary != null && selectedCue != null && !splitTimeInvalid) {
-                        Text("Voorgestelde grens: ${splitBoundary} ms vanaf het begin van de media. " +
-                            "Eerste deel: ${splitBoundary - selectedCue.startMillis} ms; " +
-                            "tweede deel: ${selectedCue.endMillis - splitBoundary} ms.",
-                            style = MaterialTheme.typography.bodySmall)
+                    if (splitProposal != null && splitBoundary != null && selectedCue != null) {
+                        val originalStart = PrivateSubtitleTimelineNavigation
+                            .formatTimestamp(selectedCue.startMillis)
+                        val boundaryLabel = PrivateSubtitleTimelineNavigation
+                            .formatTimestamp(splitBoundary)
+                        val originalEnd = PrivateSubtitleTimelineNavigation
+                            .formatTimestamp(selectedCue.endMillis)
+                        if (originalStart != null && boundaryLabel != null && originalEnd != null) {
+                            Text("Voorgestelde tijdlijn: ${originalStart} → ${boundaryLabel} " +
+                                "en ${boundaryLabel} → ${originalEnd}.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                     OutlinedTextField(
                         value = splitFirst,
