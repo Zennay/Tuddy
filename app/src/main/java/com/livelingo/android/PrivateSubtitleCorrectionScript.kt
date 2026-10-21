@@ -10,7 +10,11 @@ internal object PrivateSubtitleCorrectionScript {
     private const val MAX_RULES = 12
     private const val MAX_INPUT = 4096
 
-    data class Rule(val search: String, val replacement: String)
+    data class Rule(
+        val search: String,
+        val replacement: String,
+        val fieldOverride: SubtitleReplaceField? = null
+    )
 
     fun parse(input: String): List<Rule>? {
         if (input.isBlank() || input.length > MAX_INPUT) return null
@@ -25,12 +29,23 @@ internal object PrivateSubtitleCorrectionScript {
         for (line in lines) {
             val delimiter = line.indexOf("=>")
             if (delimiter < 1) return null
-            val search = line.substring(0, delimiter).trim()
+            val left = line.substring(0, delimiter).trim()
+            // A recipe can explicitly target source and meaning independently.
+            // Unprefixed rules retain the global user-selected text scope.
+            val scopedField = when {
+                left.startsWith("@bron:") -> SubtitleReplaceField.FIRST_LINE
+                left.startsWith("@betekenis:") -> SubtitleReplaceField.SECOND_LINE
+                left.startsWith("@alles:") -> SubtitleReplaceField.ALL_TEXT
+                left.startsWith("@") -> return null
+                else -> null
+            }
+            val search = if (scopedField == null) left else
+                left.substringAfter(':').trim()
             val replacement = line.substring(delimiter + 2).trim()
             if (search.isEmpty() || search.length > 100 || replacement.length > 200 ||
                 search.contains("=>") || search.any { it.isISOControl() } ||
                 replacement.any { it.isISOControl() }) return null
-            rules += Rule(search, replacement)
+            rules += Rule(search, replacement, scopedField)
         }
         return rules
     }
@@ -57,8 +72,8 @@ internal object PrivateSubtitleCorrectionScript {
             // always rejected by the same complete draft validation.
             val result = PrivateSubtitleBatchReplace.preview(
                 current, rule.search, rule.replacement, matchCase,
-                fromRow, throughRow, field, explicitRows, wholeWords,
-                allowNoChange = skipUnmatched
+                fromRow, throughRow, rule.fieldOverride ?: field,
+                explicitRows, wholeWords, allowNoChange = skipUnmatched
             ) ?: return null
             if (result.changedCues == 0) skipped++
             ruleChanges.add(result.replacements)

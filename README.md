@@ -2008,6 +2008,11 @@ providerbron wordt niet overschreven. Onmogelijke tijden, gewijzigde
 chronologische cue-identiteit en niet als SRT én VTT exporteerbare
 uitkomsten worden volledig geweigerd. Er wordt geen audio gelezen,
 spraak herkend, automatisch vertaald of cloudfallback gestart.
+Eén correctierecept kan nu zelfgeschreven brontekst én betekenis
+gericht aanpassen met `@bron:`, `@betekenis:` of `@alles:`
+per regel. De preview toont exact welke tekstzijde door welke
+regel gewijzigd wordt; er wordt geen taal herkend of vertaald.
+
 Hergebruik een eigen reeks op documenten waar niet alle foutwoorden
 voorkomen: de optionele instelling **Sla niet-gevonden
 tekstcorrecties over** toont per regel wat daadwerkelijk veranderde,

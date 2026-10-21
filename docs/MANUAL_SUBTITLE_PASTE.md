@@ -413,6 +413,24 @@ een geldig oud begin van de tekst over te nemen. Iedere geplakte reeks
 vereist opnieuw volledige validatie, een bladerbare preview en aparte
 bevestiging.
 
+Je kunt bron- en betekenisregels **binnen hetzelfde correctierecept**
+onafhankelijk aanpassen. Zet optioneel vóór de zoekterm
+`@bron:`, `@betekenis:` of `@alles:`, bijvoorbeeld:
+
+```text
+@bron:goeiemorge => goedemorgen
+@betekenis:helllo => hello
+@alles:rare fout => nieuwe tekst
+```
+
+De prefix bepaalt uitsluitend voor die regel welk tekstdeel in
+de geselecteerde oorspronkelijke cues aangepast mag worden.
+Zonder prefix geldt nog steeds de algemene keuze **Alle tekstregels**,
+**Alleen eerste regel** of **Alleen tweede regel**. Bij een ontbrekende
+tweede regel ontstaat nooit automatisch een vertaling. Een onbekende
+`@`-prefix wordt als een ongeldige regel geweigerd. De preview vermeldt
+voor iedere regel het werkelijke tekstdeel en het aantal vervangingen.
+
 Voor herbruikbare recepten die niet bij elk document alle foutwoorden
 bevatten, kun je **Sla niet-gevonden tekstcorrecties over** kiezen.
 Standaard blijft de bestaande strikte werkwijze actief: elke regel

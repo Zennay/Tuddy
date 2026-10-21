@@ -2341,8 +2341,13 @@ internal fun PrivateSubtitleFileDialog(
                     if (batchUseScript) {
                         Text("Maximaal 12 regels: oude tekst => nieuwe tekst. " +
                             "De regels worden in volgorde toegepast. " +
-                            "Elke regel moet resultaat hebben; bij een fout wordt " +
-                            "het hele voorstel geweigerd.",
+                            "Gebruik optioneel @bron:, @betekenis: of @alles: " +
+                            "voor de zoekterm om per regel het tekstdeel te kiezen. " +
+                            "Zonder prefix geldt de algemene keuze hierboven. " +
+                            "Bij een fout wordt het voorstel geheel geweigerd.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Text("Voorbeeld: @bron:goeiemorge => goedemorgen; " +
+                            "@betekenis:helllo => hello (ieder op eigen regel).",
                             style = MaterialTheme.typography.bodySmall)
                         OutlinedTextField(
                             value = batchScript,
@@ -2447,7 +2452,12 @@ internal fun PrivateSubtitleFileDialog(
                         val parsedRules = PrivateSubtitleCorrectionScript.parse(batchScript)
                         parsedRules?.forEachIndexed { index, rule ->
                             val count = proposed.ruleChanges.getOrNull(index) ?: 0
-                            Text("${index + 1}. ${rule.search} → ${rule.replacement} " +
+                            val scope = when (rule.fieldOverride ?: batchField) {
+                                SubtitleReplaceField.FIRST_LINE -> "bron"
+                                SubtitleReplaceField.SECOND_LINE -> "betekenis"
+                                SubtitleReplaceField.ALL_TEXT -> "alle tekst"
+                            }
+                            Text("${index + 1}. [$scope] ${rule.search} → ${rule.replacement} " +
                                 (if (count == 0) "· overgeslagen"
                                 else "· $count vervangingen"),
                                 style = MaterialTheme.typography.bodySmall)
