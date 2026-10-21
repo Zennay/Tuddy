@@ -111,6 +111,31 @@ private data class PendingTimedSubtitleSheetSave(
     val bytes: ByteArray
 )
 
+/**
+ * A user-picked file has no trustworthy MIME/extension. Suggest an input mode
+ * only after its complete bounded content passes the corresponding parser.
+ * Unrecognized plain text keeps the user's explicit existing mode instead.
+ */
+private fun detectedSubtitlePasteFormat(raw: String): SubtitlePasteFormat? {
+    if (raw.isEmpty() || raw.length > PrivateSubtitleFileReader.MAX_BYTES) return null
+    val bytes = raw.toByteArray(Charsets.UTF_8)
+    if (bytes.isEmpty() || bytes.size > PrivateSubtitleFileReader.MAX_BYTES) return null
+    if (raw.contains("-->") && PrivateSubtitleFileReader.read(bytes) != null)
+        return SubtitlePasteFormat(false, false, PlainSubtitleSplitMode.LINES)
+    if (raw.contains('[') && PrivateLrcSubtitleDraft.preview(raw) != null)
+        return SubtitlePasteFormat(false, true, PlainSubtitleSplitMode.LINES)
+    val timed = PrivateTimedSubtitleSheet.readAuthored(raw) ?: return null
+    val paired = timed.firstOrNull()?.text?.contains('\n') == true
+    val mode = if ('\t' in raw) {
+        if (paired) PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
+        else PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS
+    } else {
+        if (paired) PlainSubtitleSplitMode.TIMED_PAIRED_CSV
+        else PlainSubtitleSplitMode.TIMED_TEXT_CSV
+    }
+    return SubtitlePasteFormat(true, false, mode)
+}
+
 /** Explicit Android file selection with a RAM-only draft recovery point. */
 private data class PendingManualSubtitleDocument(
     val session: Int,
@@ -1772,19 +1797,27 @@ private fun TuddyScreen(
                     pending.previous.copy(notice =
                         "Ongeldige Android-bestandslocatie; je eerdere invoer is behouden.")
                 } else {
-                    val loaded = withContext(Dispatchers.IO) {
-                        PrivateSubtitleImportDocument.read(context.contentResolver, uri)
+                    val (loaded, detectedFormat) = withContext(Dispatchers.IO) {
+                        val selected = PrivateSubtitleImportDocument.read(
+                            context.contentResolver, uri
+                        )
+                        selected to if (selected is PrivateSubtitleImportDocument.Result.Ready)
+                            detectedSubtitlePasteFormat(selected.text) else null
                     }
                     when (loaded) {
                         is PrivateSubtitleImportDocument.Result.Ready ->
                             pending.previous.copy(
                                 text = loaded.text,
+                                format = detectedFormat ?: pending.previous.format,
                                 ownMeaning = "",
                                 firstRow = "1",
                                 lastRow = "",
                                 explicitRows = "",
                                 search = "",
                                 notice = "Document lokaal ingelezen (${loaded.sizeBytes} bytes). " +
+                                    (if (detectedFormat != null)
+                                        "Geldig ondertitelformaat herkend; bekijk de gekozen modus. "
+                                     else "Geen ondertitelformaat vastgesteld; eerdere modus behouden. ") +
                                     "Controleer eerst alle regels; niets is toegepast."
                             )
                         is PrivateSubtitleImportDocument.Result.Rejected ->
