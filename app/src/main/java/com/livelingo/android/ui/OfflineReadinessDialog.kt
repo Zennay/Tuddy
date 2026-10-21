@@ -44,6 +44,7 @@ internal fun OfflineReadinessDialog(
     onDownloadSpeech: () -> Unit,
     onCancelSpeech: () -> Unit,
     onOpenSpeechSettings: () -> Unit,
+    onCopyDiagnostics: () -> Unit,
     onCheckText: () -> Unit,
     onPrepareText: () -> Unit,
     onEditLanguages: () -> Unit,
@@ -153,6 +154,11 @@ internal fun OfflineReadinessDialog(
                 OutlinedButton(onClick = onEditLanguages, modifier = Modifier.fillMaxWidth()) {
                     Text("Wijzig talen of bekijk details")
                 }
+                OutlinedButton(onClick = onCopyDiagnostics, modifier = Modifier.fillMaxWidth()) {
+                    Text("Kopieer diagnoserapport")
+                }
+                Text("Het rapport bevat alleen apparaat-, taal- en modelstatus; geen transcript of audio.",
+                    style = MaterialTheme.typography.bodySmall)
                 if (!isListening) {
                     TextButton(onClick = onOpenTyped, modifier = Modifier.fillMaxWidth()) {
                         Text("Of typ een zin zonder microfoon")
