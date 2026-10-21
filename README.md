@@ -1,3 +1,16 @@
+## Nieuw: meerdere eigen ondertitelregels in één keer verwijderen
+
+In de tijdelijke ondertiteleditor kun je nu originele bronregels, zoals
+`2-4,7,12`, als één herstelbare bewerking verwijderen. De dialog toont
+de volledige tekst en tijdcodes van **elke** geselecteerde regel in
+bladerbare pagina's, plus hoeveel regels overblijven. Wie eerst zoekt,
+kan die oorspronkelijke zoekresultaatnummers expliciet overnemen;
+zoeken alleen verandert de selectie nooit. Ongeldige of dubbele
+ranges en het verwijderen van alle cues worden geweigerd. Overige
+tekst/tijdcodes, bronbestanden en het live gesprek blijven intact;
+bewaren vereist opnieuw een afzonderlijke Android-bestandskeuze.
+[Instructies](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: paginavoorbeeld voor grote eigen ondertitelbestanden
 
 De CSV/TSV- en LRC-exportdialoog toont niet meer alle 256 KiB ineens
