@@ -1,3 +1,38 @@
+## Nieuw: drie aanvulrondes over dezelfde zelfgekozen tweetalige zinnen
+
+Bij **★ gemarkeerd → Exporteer selectie… → Aanvuloefening · HTML**
+kun je voortaan kiezen tussen **Ronde 1**, **Ronde 2**, **Ronde 3** en
+**Alle drie rondes · volledig oefenboek**. De ronde verandert bewust
+**welke afzonderlijke woorden ontbreken**, niet de bronzinnen,
+eigen correcties, moeilijkheid of gedeelde inhoud. Eén zelfstandig
+offline HTML-bestand kan alle drie de rondes bevatten; iedere ronde
+begint dan op een nieuwe afdrukpagina. Het volledige antwoordblad
+voor een zelfstudieboek blijft apart en is in de browser pas zichtbaar
+na een bewuste actie.
+
+De algoritmen zijn **vast en herhaalbaar**, niet willekeurig.
+Bij *Licht* ontbreekt ongeveer één van drie met per ronde wisselende
+posities; bij *Uitdaging* ongeveer twee van drie; bij *Normaal*
+ongeveer de helft, met een aanvullende derde variant. Erg korte
+zinnen en schriftvormen zonder aangeleverde spaties kunnen niet
+altijd drie verschillende patronen opleveren: Tuddy verzint geen
+woordgrenzen. Bij het tonen van de eerste letter wordt een antwoord
+van maar één teken **niet volledig onthuld**. Dezelfde keuze geldt
+voor **zelfstudie** en het **leerlingenbestand zonder complete antwoorden**.
+
+Het Android-exportvenster toont voor ieder zichtbaar bronpaar
+de **echt gegenereerde hints per gekozen ronde** en het juiste
+totale aantal kaarten. De bestandsbytes bevatten de gekozen
+rondetitel, alle kaarten met zichtbare rondenummers en de bijbehorende
+antwoorden uitsluitend wanneer **Zelfstudie** is gekozen. De
+rondekeuze is opgenomen in `PendingPinnedCaptionExport` en in
+de byte-herberekening wanneer de Android-documentkiezer terugkeert.
+Verandert de ronde tussentijds, dan weigert Tuddy de oude export.
+Geen scripts, opslag van oefenbeoordelingen, automatische taalcontrole,
+netwerk, nieuwe machtigingen of gefabriceerde vertalingen.
+
+---
+
 ## Nieuw: veilige leerlingenversie van de tweetalige invuloefening
 
 Bij **★ gemarkeerd → Exporteer selectie… → Aanvuloefening · HTML** kies je
