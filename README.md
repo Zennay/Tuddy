@@ -1,3 +1,7 @@
+## Nieuw: eigen ASS/SSA-ondertitels lokaal openen
+
+Open een zelf gekozen .ass- of .ssa-bestand via **Open ondertitelbestand…**, deel geldige platte tekst met Tuddy of plak het in de ondertitelbewerker. Tuddy haalt alleen getimede Dialogue-tekst uit de [Events]-sectie; styling, animatie, scripts, geluid en vector-tekeningen worden niet uitgevoerd. Bekijk en bevestig de tijdelijke preview voordat je een nieuwe SRT/WebVTT-kopie maakt. [Formaatgrenzen en details](docs/ASS_SSA_SUBTITLE_IMPORT.md).
+
 ## Nieuw: taalondersteuning zonder valse offlineclaims
 
 Open **Taal- en modelinstellingen → Bekijk alle taalondersteuning** voor één doorzoekbaar overzicht van ML Kit-tekstdoelen, Android-spraaklocale-kandidaten en talen die alleen een beperkte woordenpreview hebben of nog geen vrij offline model. De lijst onderscheidt taalkeuze van daadwerkelijk geïnstalleerde modellen; hij claimt geen toestelondersteuning of vertaalnauwkeurigheid. [Details](docs/LANGUAGE_SUPPORT_GUIDE.md).
