@@ -35,6 +35,17 @@ internal object UnavailableTextLanguageCatalog {
             "commercieel gebruik uit; dit is geen goedgekeurd Tuddy-downloadpakket."
     )
 
+    private val madladResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Tekstvertaling",
+        title = "Google MADLAD-400-3B-MT",
+        url = "https://huggingface.co/google/madlad400-3b-mt",
+        declaredLicense = "Apache-2.0 volgens modelkaart",
+        footprint = "3B-parameter model; genoemde gequantiseerde GGUF is circa 1,65 GB",
+        limitation = "Modelkaart noemt ckb, ps, ku, nl en en, maar niet dialectspecifiek kmr. " +
+            "Kwaliteit varieert per taal en is niet productiebeoordeeld. Niet geïntegreerd " +
+            "of op Android getest; zelfs de gequantiseerde variant is groot."
+    )
+
     val entries = listOf(
         UnavailableTextLanguage(
             "kmr", "Kurmancî · Kurmanji (Noord-Koerdisch)",
@@ -55,7 +66,7 @@ internal object UnavailableTextLanguageCatalog {
                         "dialectnauwkeurigheid, latency en geheugenbeslag zijn niet geverifieerd."
                 )
             ),
-            translationCandidates = listOf(nllbResearchCandidate)
+            translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
         UnavailableTextLanguage(
             "ckb", "سۆرانی · Sorani (Centraal-Koerdisch)",
@@ -76,7 +87,7 @@ internal object UnavailableTextLanguageCatalog {
                         "Sorani-variantdekking, latency en geheugenbeslag zijn niet geverifieerd."
                 )
             ),
-            translationCandidates = listOf(nllbResearchCandidate)
+            translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
         UnavailableTextLanguage(
             "ps", "پښتو · Pasjtoe / Pashto",
@@ -100,6 +111,7 @@ internal object UnavailableTextLanguageCatalog {
             ),
             translationCandidates = listOf(
                 nllbResearchCandidate,
+                madladResearchCandidate,
                 OfflineLanguageModelCandidate(
                     category = "Tekstvertaling",
                     title = "ZamAI Pashto ↔ English translator",
@@ -109,6 +121,16 @@ internal object UnavailableTextLanguageCatalog {
                     limitation = "Licentiecompatibiliteit is niet opgehelderd: de upstream " +
                         "facebook/nllb-200-3.3B-gewichten zijn niet-commercieel gelicentieerd. " +
                         "Niet vrijgeven of bundelen zonder rechtenbeoordeling."
+                ),
+                OfflineLanguageModelCandidate(
+                    category = "Tekstvertaling",
+                    title = "Meta M2M100 418M",
+                    url = "https://huggingface.co/facebook/m2m100_418M",
+                    declaredLicense = "MIT volgens modelkaart",
+                    footprint = "repository circa 3,88 GB",
+                    limitation = "De modelkaart bevat Pasjtoe (ps), Nederlands (nl) en Engels (en), " +
+                        "maar geen Koerdische taalcode. Niet geïntegreerd; er is geen gequantiseerd " +
+                        "Android-pakket of toestelprestatie aangetoond."
                 )
             )
         ),

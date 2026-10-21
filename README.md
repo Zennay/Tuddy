@@ -16,7 +16,7 @@ Open een zelf gekozen .ass- of .ssa-bestand via **Open ondertitelbestand…**, d
 
 ## Nieuw: taalondersteuning zonder valse offlineclaims
 
-Open **Taal- en modelinstellingen → Bekijk alle taalondersteuning** voor ML Kit-tekstdoelen, Android-spraaklocale-kandidaten en talen met alleen een beperkte woordenpreview. Voor Kurmanji, Sorani en Pasjtoe zijn nu ook openbare ASR-/MT-onderzoekskandidaten, modelgrootte en licentiewaarschuwingen zichtbaar. De kaarten zijn geen geïntegreerde packs; ze worden alleen op jouw tik extern geopend en er wordt niets gedownload. De ondertitel-editor herkent ook automatisch RTL/LTR aan de tekstinhoud. [Details](docs/LANGUAGE_SUPPORT_GUIDE.md).
+Open **Taal- en modelinstellingen → Bekijk alle taalondersteuning** voor ML Kit-tekstdoelen, Android-spraaklocale-kandidaten en talen met alleen een beperkte woordenpreview. Voor Kurmanji, Sorani en Pasjtoe zijn nu ook openbare ASR-/MT-onderzoekskandidaten, modelgrootte en licentiewaarschuwingen zichtbaar, waaronder MIT M2M100 voor Pasjtoe en Apache-2.0 MADLAD-400 voor onderzoek naar Sorani/Pasjtoe. Beide zijn te groot en niet gevalideerd als Android-pack; geen model is geïntegreerd of automatisch gedownload. De kaarten zijn geen geïntegreerde packs; ze worden alleen op jouw tik extern geopend en er wordt niets gedownload. De ondertitel-editor herkent ook automatisch RTL/LTR aan de tekstinhoud. [Details](docs/LANGUAGE_SUPPORT_GUIDE.md).
 
 ## Android Delen → Tuddy: ook LRC-lyrics met eigen tijdcodes
 
