@@ -145,7 +145,10 @@ internal object PrivateListeningWorksheet {
                 "<meta http-equiv=\"Content-Security-Policy\" " +
                 "content=\"default-src 'none'; style-src 'unsafe-inline';" +
                 " form-action 'none'; base-uri 'none'\">" +
-                "<title>Tuddy · Mijn luisterwerkblad</title>" +
+                "<title>" +
+                (if (audience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                    "Tuddy · Luisterleerlingenblad zonder bronregels"
+                else "Tuddy · Mijn luisterwerkblad") + "</title>" +
                 "<style>body{font:16px system-ui,sans-serif;line-height:1.55;" +
                 "max-width:850px;margin:auto;padding:22px;color:#202332}" +
                 "article{border:1px solid #999;border-radius:9px;padding:12px;" +
@@ -153,6 +156,9 @@ internal object PrivateListeningWorksheet {
                 "bdi{overflow-wrap:anywhere}summary{cursor:pointer}" +
                 "textarea{width:100%;min-height:88px;box-sizing:border-box;" +
                 "padding:10px;font:inherit;resize:vertical;unicode-bidi:plaintext}" +
+                ".rating{border:0;margin:8px 0;padding:0}" +
+                ".rating label{display:inline-block;margin:4px 14px 4px 0}" +
+                ".print-rating{display:none}" +
                 ".reset{margin:8px 0;padding:6px 10px;cursor:pointer}" +
                 ".answer-key{display:none;break-before:page;page-break-before:always}" +
                 ".answer-key:target{display:block}" +
@@ -160,9 +166,13 @@ internal object PrivateListeningWorksheet {
                 ".line{display:none;border-bottom:1px solid #555;height:24px}" +
                 "p{overflow-wrap:anywhere}" +
                 "@media print{body{padding:0}details,form,.answerlink{display:none}" +
+                ".print-rating{display:block}" +
                 ".answer-key,.line{display:block}" +
                 "article{border:0;border-bottom:1px solid #999}}" +
-                "</style></head><body><main id=\"top\"><h1>Mijn privé luisterwerkblad</h1>" +
+                "</style></head><body><main id=\"top\"><h1>" +
+                (if (audience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                    "Mijn luisterleerlingenblad"
+                else "Mijn privé luisterwerkblad") + "</h1>" +
                 "<p>Luister eerst naar je eigen A–B-fragment. Schrijf op wat je " +
                 "hoort of begrijpt. " +
                 (if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
@@ -191,8 +201,19 @@ internal object PrivateListeningWorksheet {
                 .append("<textarea id=\"answer-").append(part.number)
                 .append("\" rows=\"4\" dir=\"auto\" spellcheck=\"false\" " +
                     "autocomplete=\"off\" autocorrect=\"off\"></textarea>")
-                .append("<button class=\"reset\" type=\"reset\">Wis mijn antwoord" +
-                    "</button></form>")
+                .append("<fieldset class=\"rating\"><legend>Mijn eigen luisterinschatting " +
+                    "(optioneel, niet opgeslagen)</legend>")
+                .append("<label><input type=\"radio\" name=\"rating-").append(part.number)
+                .append("\" value=\"repeat\"> Nog oefenen</label>")
+                .append("<label><input type=\"radio\" name=\"rating-").append(part.number)
+                .append("\" value=\"okay\"> Ging goed</label>")
+                .append("<label><input type=\"radio\" name=\"rating-").append(part.number)
+                .append("\" value=\"easy\"> Makkelijk</label></fieldset>")
+                .append("<button class=\"reset\" type=\"reset\">Wis mijn antwoord " +
+                    "en inschatting</button></form>")
+                .append("<p class=\"print-rating\">Eigen luisterinschatting: " +
+                    "&#9633; Nog oefenen &nbsp; &#9633; Ging goed &nbsp; " +
+                    "&#9633; Makkelijk</p>")
                 .append("<div class=\"line\"></div><div class=\"line\"></div>")
             if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
                 out.append("<details><summary>Toon zelf gekozen bronregels (")
