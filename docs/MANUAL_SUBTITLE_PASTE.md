@@ -62,17 +62,40 @@ wanneer de maximale veilige tijdgrens bereikt is. Dit is geen gemeten audio-
 of woorduitlijning. In de bestaande editor kun je de tijden handmatig
 controleren, corrigeren en apart als SRT of WebVTT opslaan.
 
-Het formaat moet strikt één tijdstempel `[mm:ss.xx]` of `[mm:ss.xxx]`
-per niet-lege regel bevatten, in oplopende volgorde. Maximaal 500 cues,
-800 tekens per tekstregel en maximaal 256 KiB volledig geldige UTF-8
-worden geaccepteerd. Lege regels worden genegeerd. Bekende informatieve
-LRC-metadata vóór de eerste cue (`ar`, `ti`, `al`, `by`, `length`) worden
-bewust genegeerd; onbekende directives, `offset`-verschuivingen en meerdere
-tijden op dezelfde regel zijn ongeldig in plaats van stilzwijgend
-geïnterpreteerd. Het hele resultaat moet geldig exporteerbaar zijn als
-SRT **én** WebVTT. De normale volledige preview, zoekfunctie, bronregelselectie
-en handmatige bevestiging blijven verplicht. Dit bewijst geen offline
-ASR/MT, taalinhoud of echt gesynchroniseerde audio.
+Het formaat accepteert nu **één tot zestien expliciete tijdstempels vóór
+dezelfde tekstregel**. Een tijdstempel heeft precies het formaat
+`[mm:ss.xx]` of `[mm:ss.xxx]`. Dit is handig voor eigen, herhaalde refreinen
+waarbij meerdere keren exact dezelfde eigen tekst wordt gebruikt:
+
+```text
+[ar:Eigen artiest (optionele metadata)]
+[00:01.25][01:10.50]Een zelfgeschreven refrein
+[00:04.50][01:13.75]De volgende eigen refreinregel
+[00:17.00]Eenmalige eigen tekst
+```
+
+De ene fysieke bronregel met twee tijdstempels wordt **twee afzonderlijke
+cues**. Tuddy sorteert alle expliciete begintijden na de volledige import
+chronologisch; bovenstaande regels worden dus `00:01.25`, `00:04.50`,
+`00:17.00`, `01:10.50`, `01:13.75`. Het eindmoment van elke cue wordt
+berekend uit het **volgende chronologische begin**. De laatste cue krijgt
+een expliciete duurinschatting van hoogstens drie seconden. Deze volgorde
+is in de native preview zichtbaar; kiezen op nummer verwijst daarom naar
+een **uitgewerkte chronologische cue**, niet naar de oorspronkelijke
+fysieke LRC-regel.
+
+Maximaal 500 uitgewerkte cues, 16 tijdstempels per regel, 800 tekens
+per tekstregel en 256 KiB geldige UTF-8 zijn toegestaan. Dubbele
+tijdstempels (ook op andere regels), ongeldige chronologie na
+samenvoegen, ontbrekende teksten en te veel items worden **volledig
+geweigerd**; niet stilzwijgend overgeslagen. Lege regels worden
+genegeerd. Informatieve LRC-metadata vóór de eerste cue (`ar`, `ti`,
+`al`, `by`, `length`) worden genegeerd; onbekende directives en
+`offset`-verschuivingen worden nog steeds niet geïnterpreteerd. Het
+resultaat moet veilig als volledige SRT **én** WebVTT exporteerbaar zijn.
+Volledige preview, zoeken, eigen cue-selectie en bewuste Android-keuze
+blijven vereist. Tijdcodes zijn aangeleverd, **niet gemeten**, en
+zeggen niets over correcte spraak-/woorduitlijning, ASR of MT.
 
 ## Direct openen
 
