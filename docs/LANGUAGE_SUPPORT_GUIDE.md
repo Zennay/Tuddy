@@ -15,7 +15,7 @@ De app voert geen automatische cloudspraakfallback uit. Het overzicht downloadt 
 - Een ML Kit-tekstmodel is geen spraakherkenningsmodel.
 - Een Android-spraakpakket bewijst niet dat tekstvertaling offline werkt.
 - Een locale-kandidaat bewijst niet dat een toestel het pakket bevat.
-- Een vaste woordenlijst is geen vrije vertaling en bewijst geen ASR.
+- Een vaste woordenlijst is geen vrije vertaling en bewijst geen ASR. Bij Kurmanji, Sorani en Pasjtoe opent de knop in het overzicht rechtstreeks de bestaande vijfwoordenpreview.
 - Volledige Kurmanji/Sorani/Pasjtoe-ondersteuning vereist een geschikt gelicentieerd on-device model, native-speakerbeoordeling en fysieke vliegtuigmodusacceptatie.
 
 De gids is informatief en doorzoekbaar; zij vervangt geen toestelcontrole, modellicentiecontrole of native-speakerbeoordeling.
