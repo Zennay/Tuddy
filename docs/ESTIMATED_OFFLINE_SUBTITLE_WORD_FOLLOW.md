@@ -10,6 +10,11 @@ moment te springen, zonder eerst alle eerdere woorden langs te gaan.
 De lijst is begrensd op maximaal 300 woorden per ondertitel en wordt
 bij een andere regel opnieuw vanaf de eerste pagina getoond.
 
+De wordsegmenten en springposities zijn nu met exacte gehele
+milliseconden berekend: dezelfde geschatte grens wordt gebruikt voor
+kleuren en springen, zonder floating-pointafronding. Extreem lange of
+ongeldige tijdvakken worden geweigerd in plaats van onveilig berekend.
+
 Dit is uitsluitend een handmatige navigatiebediening bovenop de
 bestaande gelijke tijdverdeling. Er is geen automatische woordherkenning,
 spraakverwerking, geluidsexport, permanente oefenhistorie of gewijzigde
