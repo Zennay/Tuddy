@@ -11,6 +11,7 @@ internal enum class PinnedCaptionFormat(
     CSV("Leerkaarten · CSV", "text/csv", "Tuddy-eigen-leerkaarten.csv"),
     STUDY_HTML("Oefenblad · HTML", "text/html", "Tuddy-leerkaarten-oefenblad.html"),
     FOLD_HTML("Vouwkaartjes · HTML", "text/html", "Tuddy-leerkaarten-vouwkaartjes.html"),
+    CLOZE_HTML("Aanvuloefening · HTML", "text/html", "Tuddy-leerkaarten-aanvuloefening.html"),
     JSON("Archief · JSON", "application/json", "Tuddy-selectie.json"),
     HTML("Afdrukbaar · HTML", "text/html", "Tuddy-selectie.html"),
     SRT("Ondertitelconcept · SRT", "application/x-subrip", "Tuddy-selectie-concept.srt"),
@@ -125,7 +126,8 @@ internal object PrivatePinnedCaptionExport {
         if (format == PinnedCaptionFormat.TSV ||
             format == PinnedCaptionFormat.CSV ||
             format == PinnedCaptionFormat.STUDY_HTML ||
-            format == PinnedCaptionFormat.FOLD_HTML) {
+            format == PinnedCaptionFormat.FOLD_HTML ||
+            format == PinnedCaptionFormat.CLOZE_HTML) {
             return selected.filter { row ->
                 row.caption.status == "Lokaal vertaald" &&
                     row.caption.translated.isNotBlank() &&
@@ -187,6 +189,8 @@ internal object PrivatePinnedCaptionExport {
                 PrivatePinnedCaptionStudyHtml.snapshot(rows, studyDirection, showLanguageTags)
             PinnedCaptionFormat.FOLD_HTML ->
                 PrivatePinnedCaptionFoldHtml.snapshot(rows, studyDirection, showLanguageTags)
+            PinnedCaptionFormat.CLOZE_HTML ->
+                PrivatePinnedCaptionClozeHtml.snapshot(rows, studyDirection, showLanguageTags)
             PinnedCaptionFormat.JSON -> PrivateTranscriptJsonExport.snapshot(rows)
             PinnedCaptionFormat.HTML -> PrivatePrintableConversation.snapshot(rows, onlyFinished = false)
             PinnedCaptionFormat.SRT ->
