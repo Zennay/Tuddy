@@ -63,7 +63,6 @@ import com.livelingo.android.PrivateSubtitleMultiAnchor
 import com.livelingo.android.PrivateSubtitleDriftSelection
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
-import com.livelingo.android.PrivateSubtitleTimelineNavigation
 import com.livelingo.android.PrivateLrcSubtitleExport
 import com.livelingo.android.PrivateTimedSubtitleSheet
 import com.livelingo.android.TimedSubtitleSheetFormat
