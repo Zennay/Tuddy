@@ -109,6 +109,12 @@ internal fun SubtitlePasteDialog(
                 row.value.text.contains(search.trim().take(120), ignoreCase = true)
         }
     }
+    val foundRowsExpression = remember(parsed, filtered, search) {
+        if (search.isBlank() || parsed == null) null
+        else PrivateSubtitleRowSelection.formatSourceRows(
+            filtered.map { it.index + 1 }, parsed.size
+        )
+    }
     val pageSize = 15
     val countPages = maxOf(1, (filtered.size + pageSize - 1) / pageSize)
     val safePage = page.coerceIn(0, countPages - 1)
@@ -494,6 +500,33 @@ internal fun SubtitlePasteDialog(
                         "${filtered.size} zoekresultaten · pagina ${safePage + 1} van ${countPages}",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (search.isNotBlank()) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = foundRowsExpression != null && filtered.isNotEmpty(),
+                            onClick = {
+                                // User explicitly promotes visible search hits to
+                                // the import selection, which remains editable.
+                                val exact = foundRowsExpression ?: return@OutlinedButton
+                                explicitRows = exact
+                                page = 0
+                            }
+                        ) {
+                            Text("Gebruik ${filtered.size} gevonden regels als selectie")
+                        }
+                        Text(
+                            "Dit vervangt bewust de huidige importselectie door de " +
+                                "gevonden originele bronregels. De knop opent of " +
+                                "bewaart nog niets; bevestig dat apart hieronder.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TextButton(onClick = {
+                            explicitRows = ""
+                            firstRow = "1"
+                            lastRow = ""
+                            page = 0
+                        }) { Text("Doorzoek opnieuw alle bronregels") }
+                    }
                     filtered.drop(safePage * pageSize).take(pageSize).forEach { item ->
                         Text(
                             "Regel ${item.index + 1} · ${item.value.startLabel} → " +
