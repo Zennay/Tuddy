@@ -1525,8 +1525,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     Text(
                         "Je kunt een afdrukbare HTML-rapportage, een zelfstandig " +
                             "luisterwerkblad, een TXT-notitie of CSV met eigen beoordelingen " +
-                            "bewaren. Op het luisterwerkblad blijven de bronregels tijdens " +
-                            "het oefenen ingeklapt en staan ze op een eigen afdrukpagina. " +
+                            "bewaren. Op het luisterwerkblad blijven bronregels tijdens " +
+                            "het oefenen ingeklapt en worden ze op papier alleen " +
+                            "met een expliciet aangevinkt afdrukvakje toegevoegd. " +
                             "Externe Android-opslag kan synchroniseren; audio of audiobestandsnamen " +
                             "gaan niet mee.",
                         style = MaterialTheme.typography.bodySmall
@@ -1570,7 +1571,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 "notities/beoordelingen. Controleer de fragmenttijden " +
                                 "voordat je het bestand deelt."
                         else "Zelfstudie: tik expliciet om bronregels te onthullen. " +
-                            "De bronregels worden op een aparte pagina afgedrukt.",
+                            "Het bronregelblad wordt uitsluitend op een aparte " +
+                            "pagina afgedrukt als je het afdrukvakje vooraf aanvinkt.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     TextButton(
