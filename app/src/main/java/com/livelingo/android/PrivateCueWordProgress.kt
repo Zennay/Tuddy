@@ -112,8 +112,8 @@ internal object PrivateCueWordProgress {
         source: String, text: String, startMs: Long, endMs: Long
     ): Map<Int, Long>? {
         if (source.isBlank() || source.length > 512) return null
-        val pieces = source.split(';', '\n').map(String::trim)
-        if (pieces.size !in 1..MAX_MANUAL_MARKS || pieces.any(String::isEmpty))
+        val pieces = source.split(';', '\n').map { it.trim() }
+        if (pieces.size !in 1..MAX_MANUAL_MARKS || pieces.any { it.isEmpty() })
             return null
         val pattern = Regex(
             """^([1-9][0-9]{0,2})=([0-9]{2,6}):([0-5][0-9]):([0-5][0-9])\.([0-9]{3})$"""
