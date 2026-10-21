@@ -115,19 +115,26 @@ internal object PrivateCueWordProgress {
         val pieces = source.split(';', '\n').map { it.trim() }
         if (pieces.size !in 1..MAX_MANUAL_MARKS || pieces.any { it.isEmpty() })
             return null
+        // A leading + means an offset from this cue start rather than an
+        // absolute timestamp. Mixing modes in one sheet is ambiguous.
         val pattern = Regex(
-            """^([1-9][0-9]{0,2})=([0-9]{2,6}):([0-5][0-9]):([0-5][0-9])\.([0-9]{3})$"""
+            """^([1-9][0-9]{0,2})=(\+?)([0-9]{2,6}):([0-5][0-9]):([0-5][0-9])\.([0-9]{3})$"""
         )
         val marks = linkedMapOf<Int, Long>()
+        var relativeMode: Boolean? = null
         for (piece in pieces) {
             val match = pattern.matchEntire(piece) ?: return null
+            val isRelative = match.groupValues[2] == "+"
+            if (relativeMode != null && relativeMode != isRelative) return null
+            relativeMode = isRelative
             val number = match.groupValues[1].toIntOrNull() ?: return null
-            val hours = match.groupValues[2].toLongOrNull() ?: return null
-            val minutes = match.groupValues[3].toLongOrNull() ?: return null
-            val seconds = match.groupValues[4].toLongOrNull() ?: return null
-            val millis = match.groupValues[5].toLongOrNull() ?: return null
-            val absoluteMs = hours * 3_600_000L + minutes * 60_000L +
+            val hours = match.groupValues[3].toLongOrNull() ?: return null
+            val minutes = match.groupValues[4].toLongOrNull() ?: return null
+            val seconds = match.groupValues[5].toLongOrNull() ?: return null
+            val millis = match.groupValues[6].toLongOrNull() ?: return null
+            val parsedMs = hours * 3_600_000L + minutes * 60_000L +
                 seconds * 1_000L + millis
+            val absoluteMs = if (isRelative) startMs + parsedMs else parsedMs
             if (number < 2 || number > MAX_WORDS ||
                 marks.put(number - 1, absoluteMs) != null) return null
         }
@@ -148,6 +155,27 @@ internal object PrivateCueWordProgress {
                     "%02d:%02d:%02d.%03d",
                     seconds / 3_600L, seconds / 60L % 60L,
                     seconds % 60L, stamp % 1_000L)
+        }
+    }
+
+    /**
+     * Portable relative anchor text: 2=+00:00:01.250. Reusing it for
+     * another subtitle preserves explicit cue-relative offsets only.
+     * The receiving cue must still pass the complete validation.
+     */
+    fun formatRelativeManualMarkSheet(
+        marks: Map<Int, Long>, startMs: Long, endMs: Long
+    ): String? {
+        if (!safeWindow(startMs, endMs) ||
+            formatManualMarkSheet(marks) == null ||
+            marks.values.any { it <= startMs || it >= endMs }) return null
+        return marks.toSortedMap().entries.joinToString(";") { (index, stamp) ->
+            val offset = stamp - startMs
+            val seconds = offset / 1_000L
+            (index + 1).toString() + "=+" +
+                String.format(java.util.Locale.ROOT, "%02d:%02d:%02d.%03d",
+                    seconds / 3_600L, seconds / 60L % 60L,
+                    seconds % 60L, offset % 1_000L)
         }
     }
 

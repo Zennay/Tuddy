@@ -1,3 +1,13 @@
+## Nieuw · cue-relatieve handmatige woordankers hergebruiken
+
+Naast absolute markeringen accepteert de offline woordvolger nu
+ook `2=+00:00:01.250` als offset vanaf het begin van een cue.
+De gebruiker kan zelf een relatieve ankerreeks kopiëren of in het
+tijdelijke invoerveld zetten. Hergebruik op een andere ondertitel
+vereist opnieuw volledige cue- en tijdcontrole en bewuste bevestiging;
+gemengde absolute/relatieve invoer wordt geweigerd. De gebruiker
+kiest alle tijden zelf: geen audioanalyse, ASR of cloud.
+
 ## Nieuw · eigen woordtijdankers terugplakken zonder audioanalyse
 
 De optionele **geschatte woordvolger** kan maximaal 16 expliciet door

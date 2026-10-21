@@ -1,3 +1,25 @@
+## Relatieve woordankers voor een andere zelfgekozen ondertitel
+
+Naast absolute tijdcodes is er nu een eigen **cue-relatieve** notatie:
+`2=+00:00:01.250;5=+00:00:02.900`. Die tijden betekenen 1,25
+en 2,9 seconden **na het begin van de actieve ondertitel**.
+Bij al geplaatste handmatige ankers verschijnt een apart selecteerbaar
+overzicht met **Kopieer relatieve ankers** en **Vul relatieve tijden in**.
+Je kunt dezelfde zelfgekozen offsets later bewust in een andere,
+passende cue invoeren; de nieuwe cue moet de hele reeks opnieuw
+accepteren. Zonder passende tekst, woordvolgorde en genoeg duur
+wordt het voorstel geheel geweigerd.
+
+Gebruik uitsluitend één vorm per invoer: alle tijden absoluut
+(`2=00:00:12.250`) óf alle tijden relatief
+(`2=+00:00:01.250`). Gemengde reeksen, negatieve offsets,
+buiten-cue-tijden, dubbelen en onmogelijke woordinterpolatie
+worden volledig afgewezen. Maximaal 16 ankers en 512 tekens;
+bestaande bewuste preview, aparte bevestiging en RAM-only
+sessiegedrag veranderen niet. Het formaat verplaatst geen
+audio of ondertitelbron, detecteert geen woorden en verricht
+geen automatische taaluitlijning.
+
 ## Eigen woordankers hergebruiken met kopieerbare tijdcodetekst
 
 Bij **Handmatige woordankers** kun je de huidige set nu als gewone
@@ -11,7 +33,7 @@ woordnummers en de handmatig aangebrachte **absolute** tijdcodes:
 geen audio, transcriptietekst, account of verborgen woordenkaartdata.
 
 Wil je een eerder bewaarde eigen reeks opnieuw gebruiken, plak deze in
-**Woord=uu:mm:ss.mmm** bij **de juiste actieve ondertitel**. Scheid
+**Woord=uu:mm:ss.mmm of Woord=+uu:mm:ss.mmm** bij **de juiste actieve ondertitel**. Scheid
 paren met een puntkomma of regeleinde. Er mogen maximaal **16
 verschillende oorspronkelijke woordnummers** (2 t/m het werkelijke
 aantal van die cue) staan; de totale invoer is maximaal 512 tekens.

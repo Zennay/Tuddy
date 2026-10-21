@@ -1543,6 +1543,32 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     manualWordBatchOversized = false
                                 }) { Text("Vul als invoer in") }
                             }
+                            val relativeSheet =
+                                PrivateCueWordProgress.formatRelativeManualMarkSheet(
+                                    activeWordMarks, cueStart(active), cueEnd(active))
+                            if (relativeSheet != null) {
+                                Text("Of gebruik relatieve tijden vanaf het begin van " +
+                                    "deze cue, bijvoorbeeld 2=+00:00:01.250. " +
+                                    "Een andere cue accepteert die alleen als alle " +
+                                    "ankers binnen zijn eigen tijdvak passen.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                SelectionContainer {
+                                    Text(relativeSheet,
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(onClick = {
+                                        clipboard.setText(AnnotatedString(relativeSheet))
+                                        notice = "Relatieve woordankers gekopieerd; " +
+                                            "controleer elke andere cue zelf."
+                                    }) { Text("Kopieer relatieve ankers") }
+                                    TextButton(onClick = {
+                                        manualWordBatchInput = relativeSheet
+                                        manualWordBatchOversized = false
+                                    }) { Text("Vul relatieve tijden in") }
+                                }
+                            }
                         }
                         OutlinedTextField(
                             value = manualWordBatchInput,
@@ -1558,7 +1584,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Woord=uu:mm:ss.mmm; woord=uu:mm:ss.mmm") },
+                            label = { Text("2=00:00:12.250 of 2=+00:00:01.250") },
                             minLines = 2,
                             maxLines = 5
                         )
@@ -1589,7 +1615,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         } else if (manualWordBatchInput.isNotBlank() &&
                             proposedMarkSheet == null) {
                             Text("Ongeldige ankers: gebruik 2=00:00:12.250;" +
-                                "5=00:00:13.900 en maximaal 16 unieke, " +
+                                 "5=00:00:13.900, of overal +cue-offsets. Maximaal 16 unieke, " +
                                 "strikt oplopende tijden binnen deze ondertitel.",
                                 style = MaterialTheme.typography.bodySmall)
                         }
