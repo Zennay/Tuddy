@@ -640,9 +640,16 @@ tijdcodes** de nieuwe knop **Meerdere tijdankers: corrigeer
    én anker-begintijden. De app weigert omgekeerde, verdwenen
    of te korte tijdvakken en volledige kopieën die niet in
    zowel SRT als VTT veilig exporteerbaar zijn.
-5. **Neem alle tijdankers over** slaat nog niets op.
-   Controleer eerst de volledige samengevoegde tijdlijn en
-   de afzonderlijke originele ongekoppelde bronregels.
+5. In de ankerselector verschijnt eerst de **complete
+   oorspronkelijke tweede-spoortijdlijn**, met per bronregel
+   (vijf per pagina) de **oude en nieuwe begin-/eindtijd**
+   en de hele eigen brontekst. Je kunt direct naar een originele
+   spoor-2-regel springen. Dat is een berekening uit de
+   vier tot zestien handmatig gekozen bronnummers; er wordt
+   geen audio herkend. **Neem alle tijdankers over** slaat
+   nog niets op. Controleer daarna ook de volledige
+   samengevoegde tijdlijn en de afzonderlijke originele
+   ongekoppelde bronregels.
    Met de andere knop **Voeg alleen toe aan tijdelijk
    concept** bevestig je de op dat moment geheel
    opnieuw berekende combinatie. Dezelfde bronbestanden,
