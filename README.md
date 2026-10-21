@@ -1,5 +1,20 @@
 # Tuddy 🎙️
 
+## Nieuw: afdrukbaar privé-oefenblad uit eigen tweetalige zinnen
+
+Maak uit de bewust geselecteerde **★ gemarkeerde** gesprekszinnen nu
+ook **Oefenblad · HTML**: een zelfstandig bestand met alle vragen
+voorop en de bijbehorende antwoorden op een afzonderlijke
+afdrukpagina. Dezelfde keuze voor bron→vertaling, omgekeerde kaarten
+of beide richtingen, optionele taalcodes, alleen persoonlijk
+gecorrigeerde antwoorden en ontdubbeling als bij TSV/CSV blijft intact.
+Alles gebeurt in RAM en pas na expliciete Android-bestandskeuze.
+Geen ongevraagde opslag, netwerk, nieuwe machtigingen of
+geverifieerde vertaalclaims.
+[Handleiding](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 ## Nieuw: leerkaartbestand uitsluitend uit handmatig gecorrigeerde antwoorden
 
 Selecteer bij de TSV- of CSV-export **Alleen mijn handmatig gecorrigeerde
