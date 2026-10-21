@@ -76,6 +76,7 @@ import com.livelingo.android.ui.FocusCaptionLine
 import com.livelingo.android.ui.SessionCaptionStudyDialog
 import com.livelingo.android.ui.LiveInterimWordFocus
 import com.livelingo.android.ui.OfflineStarterPhraseboard
+import com.livelingo.android.ui.OfflinePersonalPhraseTurnsDialog
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
