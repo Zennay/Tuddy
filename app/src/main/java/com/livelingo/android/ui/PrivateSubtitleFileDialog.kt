@@ -1255,14 +1255,9 @@ internal fun PrivateSubtitleFileDialog(
                             color = MaterialTheme.colorScheme.error)
                     } else {
                         Text("${draft.size} eigen regels · ${exactLrc.size} UTF-8 bytes. " +
-                            "Volledige werkelijke LRC-inhoud:",
+                            "Werkelijke LRC-inhoud, volledig op deelpagina's:",
                             style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            String(exactLrc, Charsets.UTF_8),
-                            modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
-                                .verticalScroll(rememberScrollState()),
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        PrivateSubtitlePagedExportPreview(exactLrc)
                     }
                     Text("Deze preview past niets toe op het live gesprek. " +
                         "Alleen na jouw volgende expliciete keuze van een " +
@@ -1314,15 +1309,10 @@ internal fun PrivateSubtitleFileDialog(
                             color = MaterialTheme.colorScheme.error)
                     } else {
                         Text("${draft.size} originele cues · ${columns ?: 0} kolommen · " +
-                            "${snapshot.size} UTF-8 bytes. Dit is de volledige " +
-                            "werkelijke bestandsinhoud, inclusief tijdcodes.",
+                            "${snapshot.size} UTF-8 bytes. De volledige werkelijke " +
+                            "bestandsinhoud is te bekijken per pagina.",
                             style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            String(snapshot, Charsets.UTF_8),
-                            modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
-                                .verticalScroll(rememberScrollState()),
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        PrivateSubtitlePagedExportPreview(snapshot)
                     }
                     Text("Je kiest zelf een Android-bestandsprovider; die kan " +
                         "extern synchroniseren. Origineel en live gesprek " +
