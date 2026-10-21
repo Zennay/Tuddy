@@ -10,6 +10,12 @@ import java.util.Locale
  *
  * Never receives or embeds audio URIs, files, permissions, or accounts.
  */
+/** Decide up front whether the recipient may receive the underlying subtitle text. */
+internal enum class PrivateListeningWorksheetAudience(val title: String) {
+    SELF_STUDY("Zelfstudie · bronregels zelf onthullen"),
+    STUDENT_HANDOUT("Leerlingenblad · zonder bronregels of privébeoordeling")
+}
+
 internal object PrivateListeningWorksheet {
     private const val MAX_BYTES = 131_072
     private const val MAX_CUES = 5_000
@@ -91,7 +97,8 @@ internal object PrivateListeningWorksheet {
         passages: List<Pair<Long, Long>>,
         ratings: Map<Pair<Long, Long>, String>,
         notes: Map<Pair<Long, Long>, String>,
-        scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL
+        scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL,
+        audience: PrivateListeningWorksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY
     ): ByteArray? {
         if (passages.isEmpty() || passages.size > 4 ||
             passages.distinct().size != passages.size ||
@@ -135,33 +142,60 @@ internal object PrivateListeningWorksheet {
             "<!doctype html><html lang=\"nl\"><head><meta charset=\"utf-8\">" +
                 "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
                 "<meta name=\"referrer\" content=\"no-referrer\">" +
+                "<meta http-equiv=\"Content-Security-Policy\" " +
+                "content=\"default-src 'none'; style-src 'unsafe-inline';" +
+                " form-action 'none'; base-uri 'none'\">" +
                 "<title>Tuddy · Mijn luisterwerkblad</title>" +
                 "<style>body{font:16px system-ui,sans-serif;line-height:1.55;" +
                 "max-width:850px;margin:auto;padding:22px;color:#202332}" +
                 "article{border:1px solid #999;border-radius:9px;padding:12px;" +
                 "margin:18px 0;break-inside:avoid}li{margin:12px 0}" +
                 "bdi{overflow-wrap:anywhere}summary{cursor:pointer}" +
-                ".answer-key{break-before:page;page-break-before:always}" +
+                "textarea{width:100%;min-height:88px;box-sizing:border-box;" +
+                "padding:10px;font:inherit;resize:vertical;unicode-bidi:plaintext}" +
+                ".reset{margin:8px 0;padding:6px 10px;cursor:pointer}" +
+                ".answer-key{display:none;break-before:page;page-break-before:always}" +
+                ".answer-key:target{display:block}" +
+                ".answerlink{display:inline-block;margin:10px 0}" +
                 ".line{display:none;border-bottom:1px solid #555;height:24px}" +
                 "p{overflow-wrap:anywhere}" +
-                "@media print{body{padding:0}details{display:none}" +
-                ".line{display:block}article{border:0;border-bottom:1px solid #999}}" +
-                "</style></head><body><main><h1>Mijn privé luisterwerkblad</h1>" +
+                "@media print{body{padding:0}details,form,.answerlink{display:none}" +
+                ".answer-key,.line{display:block}" +
+                "article{border:0;border-bottom:1px solid #999}}" +
+                "</style></head><body><main id=\"top\"><h1>Mijn privé luisterwerkblad</h1>" +
                 "<p>Luister eerst naar je eigen A–B-fragment. Schrijf op wat je " +
                 "hoort of begrijpt. Open daarna de eigen bronregels om zelf te " +
-                "vergelijken. Dit zijn handmatig gekozen tijden en eigen teksten, " +
+                "vergelijken. " +
+                (if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
+                    "De bronregels staan achter een bewuste keuze en op een aparte " +
+                        "afdrukpagina. "
+                else "Dit leerlingenblad bevat geen oorspronkelijke bronregels, " +
+                    "persoonlijke inschattingen of eigen notities. ") +
+                "Dit zijn handmatig gekozen tijden en eigen teksten, " +
                 "geen ASR, uitspraakmeting of geverifieerde vertaling.</p>" +
                 "<p>Mijn bewust gekozen selectie: " + html(scope.title) + " (" +
-                selected.size + " van " + passages.size + " eigen fragmenten).</p>"
+                selected.size + " van " + passages.size + " eigen fragmenten).</p>" +
+                "<p>Bestemming: " + html(audience.title) + ".</p>"
         )
         for (part in sections) {
             out.append("<article><h2>Fragment ").append(part.number).append("</h2><p>")
                 .append(time(part.start)).append(" – ").append(time(part.end))
-                .append(" · eigen inschatting: ").append(html(part.rating))
-                .append("</p><p>Wat hoor ik? Schrijf mijn eigen antwoord op:</p>")
+                .append("</p>")
+            if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
+                out.append("<p>Eigen inschatting: ").append(html(part.rating)).append("</p>")
+            }
+            out.append("<p>Wat hoor ik? Schrijf mijn eigen antwoord op:</p>")
+                .append("<form autocomplete=\"off\"><label for=\"answer-")
+                .append(part.number).append("\">Mijn eigen antwoord (alleen deze browser)</label>")
+                .append("<textarea id=\"answer-").append(part.number)
+                .append("\" rows=\"4\" dir=\"auto\" spellcheck=\"false\" " +
+                    "autocomplete=\"off\" autocorrect=\"off\"></textarea>")
+                .append("<button class=\"reset\" type=\"reset\">Wis mijn antwoord" +
+                    "</button></form>")
                 .append("<div class=\"line\"></div><div class=\"line\"></div>")
-                .append("<details><summary>Toon zelf gekozen bronregels (")
-                .append(part.lines.size).append(" getoond)</summary>")
+            if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
+                out.append("<details><summary>Toon zelf gekozen bronregels (")
+                    .append(part.lines.size).append(" getoond)</summary>")
             if (part.lines.isEmpty()) {
                 out.append("<p>Geen volledig passende ondertitelregel; " +
                     "dit is alleen mijn handmatig gekozen audiotijdvak.</p>")
@@ -176,15 +210,22 @@ internal object PrivateListeningWorksheet {
             if (part.omitted > 0) out.append("<p>")
                 .append(part.omitted)
                 .append(" tussenliggende bronregels niet getoond.</p>")
-            out.append("</details>")
-            if (part.note.isNotBlank()) out.append("<p>Mijn volgende oefenstap: <bdi dir=\"auto\">")
-                .append(html(part.note)).append("</bdi></p>")
+                out.append("</details>")
+                if (part.note.isNotBlank()) out.append(
+                    "<p>Mijn volgende oefenstap: <bdi dir=\"auto\">"
+                ).append(html(part.note)).append("</bdi></p>")
+            }
             out.append("</article>")
             if (out.length > MAX_BYTES) return null
         }
-        out.append("<section class=\"answer-key\"><h2>Bronregels voor zelfcontrole</h2>" +
-            "<p>De bronregels komen uit mijn eigen SRT/VTT; ze zijn niet " +
-            "automatisch naar het geluidsbestand uitgelijnd.</p>")
+        if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
+            out.append("<a class=\"answerlink\" href=\"#bronregels\">" +
+                "Open compleet bronregelblad (bewuste keuze)</a>")
+                .append("<section class=\"answer-key\" id=\"bronregels\">" +
+                    "<h2>Bronregels voor zelfcontrole</h2>" +
+                    "<a class=\"answerlink\" href=\"#top\">Terug naar start</a>" +
+                    "<p>De bronregels komen uit mijn eigen SRT/VTT; ze zijn niet " +
+                    "automatisch naar het geluidsbestand uitgelijnd.</p>")
         for (part in sections) {
             out.append("<h3>Fragment ").append(part.number).append(" · ")
                 .append(time(part.start)).append(" – ").append(time(part.end)).append("</h3>")
@@ -200,7 +241,9 @@ internal object PrivateListeningWorksheet {
                 .append(part.omitted).append(" middenregels overgeslagen.</p>")
             if (out.length > MAX_BYTES) return null
         }
-        out.append("</section><p>Alleen na expliciete keuze via Android bewaard. " +
+            out.append("</section>")
+        }
+        out.append("<p>Alleen na expliciete keuze via Android bewaard. " +
             "Een externe bestandsprovider kan de tekst synchroniseren of delen. " +
             "Geen audio, URI, account of netwerkaanvraag in dit HTML-bestand." +
             "</p></main></body></html>")
