@@ -365,17 +365,24 @@ internal object PrivatePinnedCaptionStudyHtml {
                 "<title>Tuddy · Mijn leerkaarten</title>" +
                 "<style>body{font:16px system-ui,sans-serif;max-width:850px;margin:auto;" +
                 "padding:24px;color:#161616}li{margin:18px 0;white-space:pre-wrap;" +
-                "overflow-wrap:anywhere;unicode-bidi:plaintext}.answer-key{break-before:page;page-break-before:always}" +
-                "@media print{body{padding:0}li{break-inside:avoid}}</style></head><body>" +
+                "overflow-wrap:anywhere;unicode-bidi:plaintext}" +
+                "summary{cursor:pointer;color:#254c84;padding:6px 0}" +
+                "details{margin-top:8px} .write-line{display:none}" +
+                ".answer-key{break-before:page;page-break-before:always}" +
+                "@media print{body{padding:0}li{break-inside:avoid}" +
+                "details{display:none}.write-line{display:block}}</style></head><body>" +
                 "<h1>Mijn tweetalige oefenblad</h1>" +
                 "<p>Zelf gekozen en lokaal verwerkte teksten. Modelvertalingen en eigen " +
                 "correcties zijn niet onafhankelijk geverifieerd. " +
                 "Vul eerst de antwoorden in; de antwoorden staan op een aparte pagina.</p>" +
                 "<h2>Vragen</h2><ol>"
         )
-        for ((front, _) in cards) {
+        for ((front, back) in cards) {
             out.append("<li><bdi dir=\"auto\">").append(escape(front)).append("</bdi>")
-                .append("<br><span aria-hidden=\"true\">________________________</span></li>")
+                .append("<details><summary>Toon antwoord</summary><bdi dir=\"auto\">")
+                .append(escape(back)).append("</bdi></details>")
+                .append("<span class=\"write-line\" aria-hidden=\"true\">")
+                .append("________________________</span></li>")
             if (out.length > MAX_BYTES) return null
         }
         out.append("</ol><section class=\"answer-key\"><h2>Antwoorden</h2><ol>")
