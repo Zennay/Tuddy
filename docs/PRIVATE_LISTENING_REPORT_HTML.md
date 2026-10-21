@@ -1,5 +1,15 @@
 # Mijn privé luisteroefening als HTML of TXT
 
+## Milliseconden blijven zichtbaar in je eigen tijdmarkeringen
+
+De weergegeven begin- en eindtijd van iedere handmatig gekozen
+A–B-passage gebruikt nu **uu:mm:ss.mmm**, ook in een bewust bewaard
+HTML-/TXT-overzicht en het CSV-bestand. Daardoor blijven twee momenten
+binnen dezelfde seconde onderscheidbaar, zelfs bij fragmenten van
+minder dan één seconde. Dit zijn uitsluitend eigen gekozen tijden,
+geen gemeten uitspraak- of woordtijdstempels. Het geluid, het gekozen
+ondertitelbestand en de oefenroute zelf worden niet gewijzigd.
+
 Open een SRT/VTT-document en selecteer bewust je eigen audio in
 **▶ Eigen audio met tijdcodes afspelen…**. Maak in het paneel voor
 **audiomarkeringen en begeleide oefenroute** maximaal vier eigen
