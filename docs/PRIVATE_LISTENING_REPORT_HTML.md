@@ -1,3 +1,15 @@
+## Toegankelijke bronregels voor je zelfgekozen ondertiteltaal
+
+Als je vóór het bewaren zelf een taal kiest bij de eigen ondertiteltekst,
+neemt het HTML-luisterwerkblad die expliciete keuze nu mee in de bronregels:
+elk getoond bronfragment krijgt een gevalideerd HTML-`lang`-attribuut en
+een passende tekstoriëntatie. Dat helpt schermlezers bij bijvoorbeeld
+Kurmanji, Sorani, Pasjtoe en andere ondersteunde taalkeuzes. De keuze is
+geen automatische taaldetectie en verandert geen ondertitelinhoud. Zonder
+geldige expliciete taalkeuze blijft de browser de richting uit de tekst halen.
+
+---
+
 ## Nieuw: afdrukken van bronantwoorden vereist nu een bewuste keuze
 
 Een offline **zelfstudie-luisterwerkblad** heeft onder de vragen een
