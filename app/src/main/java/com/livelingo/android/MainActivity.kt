@@ -759,17 +759,32 @@ private fun TuddyScreen(
             when (receipt.stage) {
                 OfflineTextStage.CHECKING -> Unit
                 OfflineTextStage.READY -> {
-                    localTranslatorPool.translate(from, targetCode, text) { result ->
-                        if (translationStillRelevant(id, token, revision)) {
-                            result.fold(
-                                onSuccess = { output ->
+                    val lease = try {
+                        localTranslatorPool.acquire(from, targetCode)
+                    } catch (_: Exception) {
+                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                        return@check
+                    }
+                    val translator = lease.translator
+                    try {
+                        translator.translate(text)
+                            .addOnSuccessListener { output ->
+                                try {
                                     updateLine(id, output, "Lokaal vertaald", token, revision)
-                                },
-                                onFailure = {
-                                    updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                                } finally {
+                                    localTranslatorPool.release(lease)
                                 }
-                            )
-                        }
+                            }
+                            .addOnFailureListener {
+                                try {
+                                    updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                                } finally {
+                                    localTranslatorPool.release(lease)
+                                }
+                            }
+                    } catch (_: Exception) {
+                        localTranslatorPool.release(lease)
+                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
                     }
                 }
                 OfflineTextStage.MISSING -> updateLine(
@@ -976,18 +991,37 @@ private fun TuddyScreen(
                 return@Runnable
             }
             interimTranslationBusy = true
-            // This pool only translates; it never requests or downloads a model.
-            localTranslatorPool.translate(sourceCode, targetCode, text) { result ->
-                try {
-                    val translated = result.getOrNull()
-                    if (translated != null && InterimTranslationPolicy.mayPublish(
-                            revision, partialRevision, token, generation,
-                            voiceSessions.isCurrent(voiceToken), listening)) {
-                        partialTranslation = translated
+            // Do not call downloadModelIfNeeded: no per-word model traffic.
+            val lease = try {
+                localTranslatorPool.acquire(sourceCode, targetCode)
+            } catch (_: Exception) {
+                return@Runnable
+            }
+            val translator = lease.translator
+            interimTranslationBusy = true
+            try {
+                translator.translate(text)
+                    .addOnSuccessListener { translated ->
+                        try {
+                            if (InterimTranslationPolicy.mayPublish(
+                                    revision, partialRevision, token, generation,
+                                    voiceSessions.isCurrent(voiceToken), listening)) {
+                                partialTranslation = translated
+                            }
+                        } finally {
+                            localTranslatorPool.release(lease)
+                            interimTranslationBusy = false
+                        }
                     }
-                } finally {
-                    interimTranslationBusy = false
-                }
+                    .addOnFailureListener {
+                        // A missing local model leaves the preview untranslated.
+                        // Never display raw ML Kit error text or attempt cloud STT.
+                        localTranslatorPool.release(lease)
+                        interimTranslationBusy = false
+                    }
+            } catch (_: Exception) {
+                localTranslatorPool.release(lease)
+                interimTranslationBusy = false
             }
         }
         pendingInterim = task
