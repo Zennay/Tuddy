@@ -2050,15 +2050,17 @@ internal fun PrivateSubtitleFileDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Voeg alleen op gewone spaties regelafbrekingen toe. " +
                         "Tekst, woordvolgorde en tijdcodes blijven behouden. " +
-                        "Kies een gewenste maximale regelbreedte; langere woorden " +
-                        "blijven intact. Dit is geen taalkundige of audioanalyse.",
+                        "Kies een maximale breedte in zichtbare Unicode-tekens: " +
+                        "emoji en gecombineerde letters tellen als één. " +
+                        "Langere woorden blijven intact. Dit is geen " +
+                        "taalkundige of audioanalyse.",
                         style = MaterialTheme.typography.bodySmall)
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         listOf(32, 42, 50).forEach { option ->
                             OutlinedButton(modifier = Modifier.fillMaxWidth(),
                                 onClick = { wrapWidth = option }) {
                                 Text((if (wrapWidth == option) "✓ " else "") +
-                                    "$option tekens")
+                                    "$option zichtbare tekens")
                             }
                         }
                     }

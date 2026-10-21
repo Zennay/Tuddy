@@ -1,5 +1,8 @@
 package com.livelingo.android
 
+import java.text.BreakIterator
+import java.util.Locale
+
 /**
  * Explicitly requested formatting of an open, RAM-only subtitle draft.
  * Replaces ordinary single word-separator spaces with line breaks without
@@ -15,13 +18,40 @@ internal data class SubtitleLineWrapPreview(
 internal object PrivateSubtitleLineWrap {
     private val allowedWidths = setOf(32, 42, 50)
 
+    /**
+     * Unicode character boundaries, rather than UTF-16 code units, represent
+     * the glyph clusters users see. Emoji (including surrogate pairs), joined
+     * marks and Sorani/Pashto diacritics must not count as multiple columns.
+     * We intentionally only insert breaks at existing ASCII spaces.
+     */
+    private fun visibleWidth(line: String): Int {
+        val cursor = BreakIterator.getCharacterInstance(Locale.ROOT)
+        cursor.setText(line)
+        var count = 0
+        while (cursor.next() != BreakIterator.DONE) count++
+        return count
+    }
+
+    /** UTF-16 index at the end of at most `width` grapheme clusters. */
+    private fun cutoff(line: String, width: Int): Int {
+        val cursor = BreakIterator.getCharacterInstance(Locale.ROOT)
+        cursor.setText(line)
+        var end = 0
+        repeat(width) {
+            val next = cursor.next()
+            if (next == BreakIterator.DONE) return line.length
+            end = next
+        }
+        return end
+    }
+
     private fun wrapLine(line: String, width: Int): String {
         var remaining = line
         val pieces = mutableListOf<String>()
-        while (remaining.length > width && pieces.size < 7) {
-            // Prefer an ordinary single inter-word space. Do not change
-            // punctuation, repeated spaces, tabs or words without spaces.
-            val point = remaining.lastIndexOf(' ', width)
+        while (visibleWidth(remaining) > width && pieces.size < 7) {
+            // Use the grapheme cutoff only to FIND an existing separator.
+            // Do not split a word, combining sequence, emoji or RTL cluster.
+            val point = remaining.lastIndexOf(' ', cutoff(remaining, width))
             if (point < 1 || point >= remaining.lastIndex ||
                 remaining[point - 1] == ' ' || remaining[point + 1] == ' '
             ) break
@@ -51,7 +81,7 @@ internal object PrivateSubtitleLineWrap {
                 changed++
                 breaks += safe.count { it == '\n' } - cue.text.count { it == '\n' }
             }
-            if (safe.lines().any { it.length > width }) unresolved++
+            if (safe.lines().any { visibleWidth(it) > width }) unresolved++
             cue.copy(text = safe)
         }
         if (PrivateSubtitleDraftEditor.snapshot(next, SubtitleDraftFormat.SRT) == null ||
