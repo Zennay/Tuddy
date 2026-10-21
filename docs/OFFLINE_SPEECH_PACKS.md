@@ -99,3 +99,11 @@ Er wordt nooit automatisch een microfoon, modeldownload of cloudspraak gestart.
 Een wisseling van broncode of volledig afgesloten app annuleert de
 terugkeeractie; op Android 12 blijft de pakketstatus onbekend als de
 systeemdienst geen inspectie biedt. Het is geen fysiek toestelbewijs.
+
+
+De knop naar Android-spraakinstellingen verschijnt ook wanneer Android
+`download aangeboden`, `in behandeling`, `alleen online`, `niet ondersteund`
+of `downloadfout` terugmeldt. Hiermee kan de gebruiker de systeemprovider
+of reeds gedownloade taalpakketten zelf bekijken in plaats van vast te
+lopen op een niet-ondersteunde API. Terugkeer betekent nooit dat Tuddy
+automatisch aannneemt dat de taal offline klaarstaat.
