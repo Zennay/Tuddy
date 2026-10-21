@@ -38,6 +38,16 @@
                 <data android:mimeType="application/x-subrip"/>
                 <data android:mimeType="application/json"/>
             </intent-filter>
+            <!-- Explicit one-file Android Share: selected content URI only.
+                 No generic */* receiving and no multi-file permissions. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/vtt"/>
+                <data android:mimeType="text/srt"/>
+                <data android:mimeType="application/x-subrip"/>
+                <data android:mimeType="application/json"/>
+            </intent-filter>
             <!-- User-highlighted text from Android's selection toolbar. -->
             <intent-filter>
                 <action android:name="android.intent.action.PROCESS_TEXT"/>

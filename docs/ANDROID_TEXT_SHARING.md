@@ -72,10 +72,37 @@ De gekozen tekst blijft een tijdelijke preview zonder vertaling of
 automatische opslag. Een ongeldig gestructureerd JSON3-bericht wordt
 niet stilzwijgend als een gewone vertaalzin behandeld.
 
+## Een volledig ondertitelbestand delen vanaf Android Bestanden
+
+Wanneer een Android-bestandsapp **Delen → Tuddy** gebruikt voor **één
+tekstondertitelbestand** (bijvoorbeeld een `.srt`, `.vtt`, `.lrc`,
+`.sbv` of `.json3`), bevat het deelverzoek soms een
+`content://`-URI via `ACTION_SEND`/`EXTRA_STREAM` in plaats van
+platte `EXTRA_TEXT`-inhoud. Tuddy ondersteunt nu beide bewuste
+routes, maar **verwisselt een bestandsbijlage nooit met een chatzin**.
+
+De bijlageroute accepteert uitsluitend één document van een expliciet
+toegelaten MIME-type (`text/plain`, `text/vtt`, `text/srt`,
+`application/x-subrip`, `application/json`). Aangeleverde
+gemengde tekst/HTML of meerdere bijlagen worden geweigerd. Bij andere
+MIME-typen, zoals generiek `application/octet-stream`, gebruik je
+**Open ondertitelbestand…**. Geen `file://`, links, wildcard
+`*/*`, opslagmachtigingen, cloud-downloads of blijvende
+providerrechten. Een externe Android-provider kan zelf synchroniseren.
+
+Tuddy leest alleen de gekozen `content://`-bijlage via de bestaande
+256-KiB begrensde UTF-8 documentlezer, buiten de UI-thread. Na strikte
+validatie toont de app **alle ondertitelregels en hun tijdcodes**
+in een aparte scrollbare preview. Pas met **Open tijdelijk in editor**
+worden de regels een bewerkbaar lokaal concept. Annuleren of naar de
+achtergrond gaan maakt de preview leeg, zonder automatische
+tekstvertaling, microfoonactivatie of permanente opslag. De oorspronkelijke
+bijlage blijft onaangeroerd.
+
 ## Grenzen en privacy
 
 - **Geen automatische vertaling, opslag, export, microfoonactivatie of serverupload** bij binnenkomst van een deelverzoek.
-- Alleen `ACTION_SEND` met `text/plain` en Androids `EXTRA_TEXT` wordt aanvaard. Geen `ACTION_SEND_MULTIPLE`, HTML, foto's, bijlagen, content-URI-lezen of automatisch ophalen van webpagina's.
+- `EXTRA_TEXT` blijft uitsluitend platte geselecteerde tekst. Eén expliciet gedeelde ondertitelbijlage via `EXTRA_STREAM` wordt apart via een strikt begrensde `content://`-lezer aangeboden, nooit als gesprekstekst. Geen `ACTION_SEND_MULTIPLE`, HTML, foto's, generieke bijlagen of automatisch ophalen van webpagina's.
 - Gewone gesprekstekst blijft begrensd op 1500 UTF-16-code-eenheden. Een **volledig valide gedeeld ondertiteldocument** volgt in plaats daarvan de bestaande strikte 256-KiB-/500-cue-parserlimieten. Niet-passende of onveilige inhoud wordt niet automatisch overgenomen als ondertitel.
 - Een ontvangen geldig deelverzoek stopt eventueel actieve on-device microfoonluistermodus voordat het invoervenster opent. Zonder bevestiging wordt geen model aangevraagd.
 - Het delen vanuit een andere app betekent niet dat Tuddy die andere app beheert; de verzendende app kan een eigen kopie bewaren. Gedeelde tekst kan persoonsgegevens bevatten.

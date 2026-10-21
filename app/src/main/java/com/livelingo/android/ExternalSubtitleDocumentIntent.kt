@@ -4,7 +4,7 @@ import android.content.Intent
 import android.net.Uri
 
 /**
- * User-initiated Android "Open with" for a content:// subtitle document.
+ * User-initiated Android "Open with" or single-file "Share to Tuddy" for a content:// subtitle document.
  * Capture only the ephemeral URI; never fetch URLs, follow links, persist
  * provider permissions, store document bytes or auto-start recognition.
  */
@@ -21,13 +21,29 @@ internal object ExternalSubtitleDocumentIntent {
     )
 
     fun read(intent: Intent?, requestId: Long): IncomingViewedSubtitleDocument? {
-        if (intent?.action != Intent.ACTION_VIEW) return null
+        val action = intent?.action
+        if (action != Intent.ACTION_VIEW && action != Intent.ACTION_SEND) return null
+        if (action == Intent.ACTION_SEND && !intent.hasExtra(Intent.EXTRA_STREAM))
+            return null // Ordinary selected text remains with the text-only ingress.
+        if (action == Intent.ACTION_SEND &&
+            (intent.hasExtra(Intent.EXTRA_TEXT) ||
+                intent.hasExtra(Intent.EXTRA_HTML_TEXT) ||
+                (intent.clipData?.itemCount ?: 0) > 1))
+            return IncomingViewedSubtitleDocument(requestId, null,
+                "Gemengde tekst, HTML en meerdere bijlagen worden niet ingelezen. " +
+                    "Deel één enkel tekstondertitelbestand.")
+
         val type = intent.type?.substringBefore(';')?.trim()?.lowercase()
         if (type !in allowedTypes)
             return IncomingViewedSubtitleDocument(requestId, null,
                 "Geen ondersteund tekstondertiteltype. Kies een SRT/VTT/LRC/" +
                     "CSV/TSV/SBV/JSON3-document via Open ondertitelbestand…")
-        val chosen = intent.data
+        val chosen = if (action == Intent.ACTION_VIEW) intent.data else
+            runCatching {
+                // This is a URI supplied by the user's own single-file SHARE.
+                // Do not read clipData or recursively inspect attachments.
+                intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            }.getOrNull()
         if (chosen == null || chosen.scheme != "content" ||
             chosen.authority.isNullOrBlank())
             return IncomingViewedSubtitleDocument(requestId, null,

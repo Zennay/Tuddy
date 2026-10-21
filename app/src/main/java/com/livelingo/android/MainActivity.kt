@@ -214,13 +214,18 @@ class MainActivity : ComponentActivity() {
         PrivateScreenShield.restore(this)
         // A configuration recreation must never re-import private text from
         // the original Intent after it was already dismissed or consumed.
-        pendingExternalText = if (savedInstanceState == null)
-            SharedPlainTextIntent.read(intent) else null
+        // A deliberate single-file share takes precedence over text/plain:
+        // it cannot be misread as a translation prompt or rejected by the
+        // ordinary text-only sharesheet ingress.
         pendingViewedSubtitle = if (savedInstanceState == null)
             ExternalSubtitleDocumentIntent.read(intent, ++nextViewedSubtitleRequest) else null
+        pendingExternalText = if (savedInstanceState == null &&
+            pendingViewedSubtitle == null) SharedPlainTextIntent.read(intent) else null
         // Do not keep the original other-app text in Activity Intent extras.
         intent?.removeExtra(Intent.EXTRA_TEXT)
         intent?.removeExtra(Intent.EXTRA_PROCESS_TEXT)
+        intent?.removeExtra(Intent.EXTRA_STREAM)
+        if (intent?.action == Intent.ACTION_SEND) intent.clipData = null
         // Do not leave an externally supplied URI in the retained Activity Intent.
         if (intent?.action == Intent.ACTION_VIEW) intent.data = null
         setContent {
@@ -237,13 +242,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        pendingExternalText = SharedPlainTextIntent.read(intent)
         pendingViewedSubtitle = ExternalSubtitleDocumentIntent.read(
             intent, ++nextViewedSubtitleRequest
         )
+        pendingExternalText = if (pendingViewedSubtitle == null)
+            SharedPlainTextIntent.read(intent) else null
         if (intent.action == Intent.ACTION_VIEW) intent.data = null
         intent.removeExtra(Intent.EXTRA_TEXT)
         intent.removeExtra(Intent.EXTRA_PROCESS_TEXT)
+        intent.removeExtra(Intent.EXTRA_STREAM)
+        if (intent.action == Intent.ACTION_SEND) intent.clipData = null
         setIntent(intent)
     }
 }
@@ -2108,7 +2116,7 @@ private fun TuddyScreen(
         }
     }
 
-    // A user explicitly chose "Open with Tuddy" in Android Files. A
+    // A user explicitly chose "Open with Tuddy" or single-file sharing. A
     // content:// stream is bounded and decoded entirely outside the UI.
     // Never follow file://, https:// or Android EXTRA_STREAM attachments.
     LaunchedEffect(incomingViewedSubtitle) {
