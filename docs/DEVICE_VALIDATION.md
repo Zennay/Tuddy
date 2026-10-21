@@ -6,7 +6,24 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Current candidate (17 October 2026):
+Latest main candidate (21 October 2026):
+
+| Field | Immutable evidence |
+|---|---|
+| Source Git SHA | `ecd97aade8ca098e8653925d3dd56a0205fe97ce` |
+| Hosted Android run | [#39655468714](https://github.com/Zennay/Tuddy/actions/runs/39655468714) — COMPLETED SUCCESS |
+| Artifact | `Tuddy-debug-apk` (ID `12371971869`) |
+| APK filename | `app-debug.apk` |
+| **APK SHA256** | `620783ab4a47c868c205f8343c478ad34ed136a702c50dd23bb6987b5fb6791c` |
+| Artifact ZIP SHA256 (not APK) | `b9051cc2d0f4c6b3b1403ad827ba63b1315d704aee7a1e8f9e5b0377cbd2956e` |
+| Package | `com.livelingo.android` (legacy ID retained until deliberate migration) |
+| Version | `0.4.0` |
+| Proof of physical installation | **NOT PROVIDED** |
+| Proof of airplane-mode session | **NOT PROVIDED** |
+
+The artifact was downloaded from run #39655468714. Its `source-commit.txt` exactly matches the source SHA above, and the APK bytes verified successfully against the bundled `app-debug.apk.sha256`. The artifact ZIP digest is recorded separately and must never be substituted for the APK digest. **This proves build provenance only, not installation or device acceptance.**
+
+Previous candidate (17 October 2026; superseded by the latest main candidate):
 
 | Field | Immutable evidence |
 |---|---|
@@ -20,11 +37,7 @@ Current candidate (17 October 2026):
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-Download the artifact directly from the successful Actions run. Check its
-`source-commit.txt` matches the source above and verify **APK bytes** locally
-against the APK SHA256 using an independent SHA256 tool before installation.
-Never substitute the hash of the ZIP for the APK hash. If the candidate main SHA
-changes, derive a new exact source/apk pair; do not reuse this proof blindly.
+The 17 October table below is retained as historical evidence only; do not use that APK as the current main candidate. For the latest candidate, independently download the artifact from run #39655468714 and verify `source-commit.txt` plus the APK SHA256 before installation. If main changes, derive a new exact source/APK pair. Neither successful CI nor a matching checksum substitutes for a physical Android 12+ airplane-mode acceptance record.
 
 Device report to attach to [Tuddy #1](https://github.com/Zennay/Tuddy/issues/1):
 handset model/serial-free identifier, Android version/API, recognition provider
