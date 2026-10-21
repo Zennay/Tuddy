@@ -117,7 +117,12 @@ internal fun OfflineReadinessDialog(
                         ) { Text("Stop volgen") }
                     }
                     if (speechCurrent && speechServicePresent &&
-                        speech.stage == SpeechPackStage.UNKNOWN) {
+                        speech.stage in setOf(
+                            SpeechPackStage.UNKNOWN, SpeechPackStage.PENDING,
+                            SpeechPackStage.REQUESTED, SpeechPackStage.ONLINE_ONLY,
+                            SpeechPackStage.UNSUPPORTED, SpeechPackStage.ERROR,
+                            SpeechPackStage.DOWNLOADABLE
+                        )) {
                         OutlinedButton(
                             onClick = onOpenSpeechSettings,
                             modifier = Modifier.fillMaxWidth()
