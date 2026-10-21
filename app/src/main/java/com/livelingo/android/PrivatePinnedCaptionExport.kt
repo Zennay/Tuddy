@@ -220,7 +220,7 @@ internal object PrivatePinnedCaptionStudyTsv {
         return true
     }
 
-    private fun field(text: String): String {
+    internal fun field(text: String, spreadsheetSafe: Boolean = true): String {
         // Each card must remain exactly one physical TSV line.
         val flattened = text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
             .map { char ->
@@ -235,10 +235,10 @@ internal object PrivatePinnedCaptionStudyTsv {
         val formulaCandidate = flattened.dropWhile {
             it.isWhitespace() || Character.getType(it) == Character.FORMAT.toInt()
         }
-        return if (formulaCandidate.startsWith("=") ||
+        return if (spreadsheetSafe && (formulaCandidate.startsWith("=") ||
             formulaCandidate.startsWith("+") ||
             formulaCandidate.startsWith("-") ||
-            formulaCandidate.startsWith("@")
+            formulaCandidate.startsWith("@"))
         ) "'$flattened" else flattened
     }
 
@@ -342,16 +342,20 @@ internal object PrivatePinnedCaptionStudyHtml {
         direction: PinnedStudyDirection,
         showLanguageTags: Boolean = false
     ): ByteArray? {
-        // Reuse the bounded, fail-closed TSV exporter for identical card count,
-        // correction scope, language tags, UTF-16 and formula-safe text fields.
-        val tsv = PrivatePinnedCaptionStudyTsv.snapshot(rows, direction, showLanguageTags)
-            ?.toString(Charsets.UTF_8) ?: return null
+        // First validate with the exact existing two-column exporter, including
+        // bounded source data. HTML isn't a spreadsheet: don't display the
+        // additional formula-protection apostrophe that TSV/CSV require.
+        if (PrivatePinnedCaptionStudyTsv.snapshot(rows, direction, showLanguageTags) == null)
+            return null
         val cards = ArrayList<Pair<String, String>>()
-        for (line in tsv.lineSequence()) {
-            if (line.isEmpty()) continue
-            val fields = line.split('\t')
-            if (fields.size != 2 || fields.any { it.isBlank() }) return null
-            cards.add(fields[0] to fields[1])
+        for (row in rows) {
+            val source = PrivatePinnedCaptionStudyTsv.field(row.original, spreadsheetSafe = false)
+            val meaning = PrivatePinnedCaptionStudyTsv.field(row.translated, spreadsheetSafe = false)
+            if (source.isBlank() || meaning.isBlank()) return null
+            val front = if (showLanguageTags) "[${row.sourceCode}] $source" else source
+            val back = if (showLanguageTags) "[${row.targetCode}] $meaning" else meaning
+            if (direction != PinnedStudyDirection.TARGET_TO_SOURCE) cards.add(front to back)
+            if (direction != PinnedStudyDirection.SOURCE_TO_TARGET) cards.add(back to front)
         }
         if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2) return null
 
@@ -361,7 +365,7 @@ internal object PrivatePinnedCaptionStudyHtml {
                 "<title>Tuddy · Mijn leerkaarten</title>" +
                 "<style>body{font:16px system-ui,sans-serif;max-width:850px;margin:auto;" +
                 "padding:24px;color:#161616}li{margin:18px 0;white-space:pre-wrap;" +
-                "overflow-wrap:anywhere}.answer-key{break-before:page;page-break-before:always}" +
+                "overflow-wrap:anywhere;unicode-bidi:plaintext}.answer-key{break-before:page;page-break-before:always}" +
                 "@media print{body{padding:0}li{break-inside:avoid}}</style></head><body>" +
                 "<h1>Mijn tweetalige oefenblad</h1>" +
                 "<p>Zelf gekozen en lokaal verwerkte teksten. Modelvertalingen en eigen " +
@@ -370,13 +374,13 @@ internal object PrivatePinnedCaptionStudyHtml {
                 "<h2>Vragen</h2><ol>"
         )
         for ((front, _) in cards) {
-            out.append("<li>").append(escape(front))
+            out.append("<li><bdi dir=\"auto\">").append(escape(front)).append("</bdi>")
                 .append("<br><span aria-hidden=\"true\">________________________</span></li>")
             if (out.length > MAX_BYTES) return null
         }
         out.append("</ol><section class=\"answer-key\"><h2>Antwoorden</h2><ol>")
         for ((_, back) in cards) {
-            out.append("<li>").append(escape(back)).append("</li>")
+            out.append("<li><bdi dir=\"auto\">").append(escape(back)).append("</bdi></li>")
             if (out.length > MAX_BYTES) return null
         }
         out.append("</ol><p>Privé-uitvoer via een door jou gekozen Android-bestandsprovider." +
