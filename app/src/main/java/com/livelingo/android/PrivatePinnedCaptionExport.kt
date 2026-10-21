@@ -346,11 +346,13 @@ internal object PrivatePinnedCaptionStudyHtml {
         // correction scope, language tags, UTF-16 and formula-safe text fields.
         val tsv = PrivatePinnedCaptionStudyTsv.snapshot(rows, direction, showLanguageTags)
             ?.toString(Charsets.UTF_8) ?: return null
-        val cards = tsv.lineSequence().filter { it.isNotEmpty() }.map { line ->
+        val cards = ArrayList<Pair<String, String>>()
+        for (line in tsv.lineSequence()) {
+            if (line.isEmpty()) continue
             val fields = line.split('\t')
             if (fields.size != 2 || fields.any { it.isBlank() }) return null
-            fields[0] to fields[1]
-        }.toList()
+            cards.add(fields[0] to fields[1])
+        }
         if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2) return null
 
         val out = StringBuilder(
