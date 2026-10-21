@@ -1,3 +1,19 @@
+## Nieuw: exact geselecteerde privé-luister-CSV zonder verborgen regels
+
+De selectie **Alle / Nog oefenen / Nog niet beoordeeld** geldt nu ook
+voor de CSV-export. Android toont de echte geselecteerde rijen en weigert
+de bewaarde versie na een verandering van selectie, zelfs wanneer
+verschillende filters toevallig dezelfde rijen opleveren. De zelfstandige
+HTML-luisterwerkbladexport gebruikt eveneens dezelfde categorie vóór én
+na de bestandskiezer. Een CSV-bronexcerpt meldt exact hoeveel
+tussenliggende regels zijn weggelaten, zonder vermeende audio-uitlijning.
+Ongeldige tijdverschuivingen worden geweigerd en het privé-luisteroverzicht
+kan geen valse cue-koppelingen meer tonen door integer-overloop.
+Geen audio, netwerk, automatische scores of permanente oefenresultaten.
+[Meer uitleg](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 ## Nieuw: offline luisterwerkblad met ingeklapte bronregels en afdrukversie
 
 Maak in de eigen SRT/VTT-audiospeler maximaal vier A–B-fragmenten en
