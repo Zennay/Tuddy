@@ -48,6 +48,7 @@ internal fun PrivatePhraseArchiveAction(
     var previewExport by remember { mutableStateOf<ArchiveExport?>(null) }
     var pendingWrite by remember { mutableStateOf<ByteArray?>(null) }
     var previewRestore by remember { mutableStateOf<ArchiveRestore?>(null) }
+    var mergeMode by remember { mutableStateOf(true) }
 
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -96,6 +97,7 @@ internal fun PrivatePhraseArchiveAction(
                 feedback = "Bestand geweigerd: ongeldig, onbekende versie of te groot. " +
                     "De eigen zinnen blijven intact."
             } else {
+                mergeMode = true
                 previewRestore = ArchiveRestore(
                     candidate, baseline.toList(), topics.exportSnapshot()
                 )
@@ -183,17 +185,40 @@ internal fun PrivatePhraseArchiveAction(
     if (restoring != null) {
         AlertDialog(
             onDismissRequest = { previewRestore = null },
-            title = { Text("Vervang ALLE eigen zinnen én thema’s?") },
+            title = { Text("Privéback-up samenvoegen of vervangen?") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
-                    Text("Dit vervangt het hele eigen-zinnenboek en alle thema’s " +
-                        "atomair. De huidige eigen favorieten en herhaalplanning " +
-                        "worden gewist. Andere studieboeken en gesprekken blijven " +
-                        "behouden.", color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = { mergeMode = true }) {
+                        Text(if (mergeMode) "☑ Veilig samenvoegen (aanbevolen)"
+                            else "☐ Veilig samenvoegen")
+                    }
+                    TextButton(onClick = { mergeMode = false }) {
+                        Text(if (!mergeMode) "☑ Hele lijst vervangen (destructief)"
+                            else "☐ Hele lijst vervangen")
+                    }
+                    val existing = restoring.originalNotes.map {
+                        it.language + "|" + it.phrase.lowercase(java.util.Locale.ROOT)
+                    }.toSet()
+                    val newRows = restoring.archive.notes.count {
+                        it.language + "|" + it.phrase.lowercase(java.util.Locale.ROOT) !in existing
+                    }
+                    Text(if (mergeMode)
+                        "Samenvoegen voegt maximaal $newRows nieuwe zinnen en " +
+                            "nieuwe thema’s toe zonder bestaande betekenissen, " +
+                            "favorieten, eigen thema-indeling of herhaalplanning " +
+                            "te overschrijven. Duplicaten worden overgeslagen; " +
+                            "als de limiet van 80 zinnen of 12 thema’s bereikt " +
+                            "wordt, verandert niets."
+                    else "Vervangen verwijdert de bestaande eigen zinnen en thema’s " +
+                        "en wist hun favorieten en herhaalplanning. " +
+                        "Andere studieboeken en gesprekken blijven intact.",
+                        color = if (mergeMode) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
                     Text("Nieuwe thema’s: " + (if (restoring.archive.topics.isEmpty())
                         "geen" else restoring.archive.topics.joinToString(", ")))
                     restoring.archive.notes.forEachIndexed { index, note ->
@@ -212,17 +237,25 @@ internal fun PrivatePhraseArchiveAction(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val okay = deck.replaceArchiveIfUnchanged(
+                    val okay = if (mergeMode) deck.mergeArchiveIfUnchanged(
+                        context, restoring.archive, restoring.originalNotes,
+                        restoring.originalThemes
+                    ) else deck.replaceArchiveIfUnchanged(
                         context, restoring.archive, restoring.originalNotes,
                         restoring.originalThemes
                     )
                     if (okay) onChanged()
-                    feedback = if (okay)
-                        "Eigen zinnen en thema’s samen hersteld; oude oefenplanning gewist."
-                    else "Lokale notities/thema’s veranderden of bestand onveilig: " +
-                        "niets vervangen. Open opnieuw."
+                    feedback = if (okay && mergeMode)
+                        "Nieuwe eigen zinnen en thema’s toegevoegd. Bestaande betekenissen, favorieten en planning behouden."
+                    else if (okay)
+                        "Alle eigen zinnen en thema’s vervangen; oude oefenplanning gewist."
+                    else "Samenvoegen/herstel geweigerd: lokale gegevens zijn gewijzigd, " +
+                        "bestand onveilig of limiet bereikt. Niets gewijzigd."
                     previewRestore = null
-                }) { Text("Vervang alles bewust") }
+                }) {
+                    Text(if (mergeMode) "Voeg alleen nieuwe zinnen/thema’s toe"
+                        else "Vervang ALLES bewust")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { previewRestore = null }) { Text("Annuleren") }
