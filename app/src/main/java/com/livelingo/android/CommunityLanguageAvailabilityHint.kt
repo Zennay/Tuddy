@@ -8,7 +8,7 @@ internal object CommunityLanguageAvailabilityHint {
     private val phraseOnlyNames = setOf(
         "kurmanji", "kurmani", "kurmanci", "kurdi", "kurdish", "koerdisch", "kurdisch",
         "sorani", "pashto", "pasjtoe", "pushto", "kmr", "ckb", "ps",
-        "کوردی", "کوردیی", "کردی", "پښتو", "پشتو"
+        "کوردی", "کوردیی", "کردی", "کورمانجی", "كورمانجي", "سۆرانی", "پښتو", "پشتو"
     )
     private val phraseOnlyPhrases = setOf("northern kurdish", "central kurdish")
 
@@ -30,8 +30,8 @@ internal object CommunityLanguageAvailabilityHint {
         val words = normalized.split(Regex("[^\\p{L}\\p{N}-]+"))
             .filter { it.isNotBlank() }
         return when {
-            words.any { it in setOf("kurmanji", "kurmani", "kurmanci", "kmr") } -> "kmr"
-            words.any { it in setOf("sorani", "ckb", "کوردی", "کوردیی", "کردی") } ||
+            words.any { it in setOf("kurmanji", "kurmani", "kurmanci", "kmr", "کورمانجی", "كورمانجي") } -> "kmr"
+            words.any { it in setOf("sorani", "ckb", "سۆرانی", "کوردی", "کوردیی", "کردی") } ||
                 normalized.contains("central kurdish") -> "ckb"
             words.any { it in setOf("pashto", "pasjtoe", "pushto", "ps", "پښتو", "پشتو") } -> "ps"
             else -> null
