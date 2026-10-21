@@ -66,6 +66,7 @@ import com.livelingo.android.ui.SessionMeaningRow
 import com.livelingo.android.ui.PrivateSubtitleFileDialog
 import com.livelingo.android.ui.SubtitlePasteDialog
 import com.livelingo.android.ui.SubtitlePasteFileContent
+import com.livelingo.android.ui.SubtitlePasteFormat
 import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
