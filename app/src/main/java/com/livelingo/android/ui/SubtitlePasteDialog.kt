@@ -80,6 +80,8 @@ internal fun SubtitlePasteDialog(
     var lrcMode by remember(initialDocument) {
         mutableStateOf(initialDocument?.format?.lrcMode ?: false)
     }
+    // Manually typed whole-track LRC offset. Stays transient in this dialog.
+    var lrcOffsetInput by remember(initialDocument) { mutableStateOf("") }
     var splitMode by remember(initialDocument) {
         mutableStateOf(initialDocument?.format?.splitMode ?: PlainSubtitleSplitMode.LINES)
     }
@@ -632,6 +634,7 @@ internal fun SubtitlePasteDialog(
                             } else {
                                 raw = updated
                                 page = 0
+                                lrcOffsetInput = ""
                                 documentNotice = "Alle eigen LRC-cues zijn expliciet " +
                                     "bijgesteld; bekijk de nieuwe chronologische preview. " +
                                     "Het oorspronkelijke bestand is niet veranderd."
@@ -657,11 +660,38 @@ internal fun SubtitlePasteDialog(
                                 onClick = { applyOffset(currentOffset + 500L) }
                             ) { Text("+ 0,5 s") }
                         }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = lrcOffsetInput,
+                                onValueChange = { candidate ->
+                                    if (candidate.length <= 6 &&
+                                        candidate.withIndex().all { (index, char) ->
+                                            char in '0'..'9' ||
+                                                (index == 0 && (char == '+' || char == '-'))
+                                        }
+                                    ) lrcOffsetInput = candidate
+                                },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                label = { Text("Exacte offset in ms") },
+                                placeholder = { Text("-125 of +750") }
+                            )
+                            val desired = lrcOffsetInput.toLongOrNull()
+                            OutlinedButton(
+                                enabled = desired != null && desired in -30_000L..30_000L &&
+                                    desired != currentOffset,
+                                onClick = { desired?.let(applyOffset) }
+                            ) { Text("Pas toe") }
+                        }
                         Text(
-                            "Deze knoppen wijzigen alleen je huidige tijdelijke " +
-                                "LRC-tekst en daarmee de hele voorbeeldtijdlijn. " +
-                                "Geen audioanalyse en geen wijziging aan het " +
-                                "originele bestand of de live transcriptie.",
+                            "Positieve milliseconden verschuiven alle woorden later, " +
+                                "negatieve eerder (maximaal ±30000 ms). Alleen " +
+                                "de huidige lokale LRC-tekst verandert na je tik. " +
+                                "Geen audioanalyse of wijziging aan het originele " +
+                                "bestand of de live transcriptie.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
