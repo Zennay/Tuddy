@@ -19,6 +19,13 @@ internal data class PersonalPhrase(
     val ownMeaning: String
 )
 
+/** One user-owned, self-contained offline transfer of phrases and their themes. */
+internal data class PrivatePhraseArchive(
+    val notes: List<PersonalPhrase>,
+    val topics: List<String>,
+    val assignments: Map<String, String>
+)
+
 internal data class DuePersonalPhrase(val phrase: PersonalPhrase, val stage: Int, val dueDay: Long)
 
 internal class PrivatePhraseDeck(context: Context) {
@@ -342,6 +349,138 @@ internal class PrivatePhraseDeck(context: Context) {
         return text.toByteArray(Charsets.UTF_8).takeIf { bytes ->
             bytes.size <= MAX_JSON && previewTsvImport(bytes) == rows
         }
+    }
+
+    private fun validArchiveTopic(value: String): Boolean =
+        value.length in 1..30 && value == value.trim() &&
+            !value.startsWith("__") && value.none { character ->
+                character == '|' || Character.isISOControl(character) ||
+                    Character.isSurrogate(character) ||
+                    (Character.getType(character) == Character.FORMAT.toInt() &&
+                        character != '\u200C')
+            }
+
+    private fun archiveObject(archive: PrivatePhraseArchive): JSONObject {
+        val topics = JSONArray()
+        archive.topics.forEach { topics.put(it) }
+        val links = JSONArray()
+        archive.assignments.toSortedMap().forEach { (id, name) ->
+            links.put(JSONObject().put("identity", id).put("topic", name))
+        }
+        return JSONObject().put("format", "tuddy-private-phrase-archive-v1")
+            .put("entries", toJson(archive.notes))
+            .put("topics", topics).put("assignments", links)
+    }
+
+    /**
+     * One deliberately requested portable snapshot; includes only previously
+     * user-authored notes, theme labels and SHA-256 note identities. Favorites,
+     * audio, transcripts and review schedules are never included.
+     */
+    @Synchronized
+    fun exportArchiveSnapshot(context: Context): ByteArray? {
+        val notes = decode() ?: return null
+        if (notes.isEmpty()) return null
+        val themes = PrivatePhraseTopics(context)
+        val names = themes.topics()
+        val existing = themes.exportSnapshot()
+        if (names.isNotEmpty() && existing == null) return null
+        val linked = if (existing == null) emptyMap() else {
+            val root = runCatching {
+                JSONObject(existing.toString(Charsets.UTF_8))
+            }.getOrNull() ?: return null
+            val array = root.optJSONArray("assignments") ?: return null
+            val mapped = mutableMapOf<String, String>()
+            for (i in 0 until array.length()) {
+                val pair = array.optJSONObject(i) ?: return null
+                mapped[pair.optString("identity")] = pair.optString("topic")
+            }
+            mapped
+        }
+        val snapshot = PrivatePhraseArchive(notes, names, linked)
+        val bytes = (archiveObject(snapshot).toString() + "\n")
+            .toByteArray(Charsets.UTF_8)
+        return bytes.takeIf { it.size <= 70_000 && previewArchiveImport(it) == snapshot }
+    }
+
+    /** Parse an entire portable archive without changing local preferences. */
+    fun previewArchiveImport(bytes: ByteArray): PrivatePhraseArchive? {
+        if (bytes.isEmpty() || bytes.size > 70_000) return null
+        val decoded = bytes.toString(Charsets.UTF_8)
+        if (!decoded.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        return try {
+            val root = JSONObject(decoded)
+            if (root.length() != 4 ||
+                root.opt("format") != "tuddy-private-phrase-archive-v1" ||
+                root.opt("entries") !is JSONArray ||
+                root.opt("topics") !is JSONArray ||
+                root.opt("assignments") !is JSONArray) return null
+            val notes = parseEntries(root.getJSONArray("entries")) ?: return null
+            if (notes.isEmpty()) return null
+            val rawNames = root.getJSONArray("topics")
+            if (rawNames.length() > PrivatePhraseTopics.MAX_TOPICS) return null
+            val names = mutableListOf<String>()
+            for (i in 0 until rawNames.length()) {
+                val name = rawNames.opt(i) as? String ?: return null
+                if (!validArchiveTopic(name) ||
+                    names.any { it.equals(name, ignoreCase = true) }) return null
+                names.add(name)
+            }
+            val hashes = notes.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
+            if (hashes.size != notes.size) return null
+            val rawLinks = root.getJSONArray("assignments")
+            if (rawLinks.length() > MAX_ROWS) return null
+            val linked = mutableMapOf<String, String>()
+            for (i in 0 until rawLinks.length()) {
+                val row = rawLinks.optJSONObject(i) ?: return null
+                if (row.length() != 2 ||
+                    row.opt("identity") !is String ||
+                    row.opt("topic") !is String) return null
+                val hash = row.getString("identity")
+                val topic = row.getString("topic")
+                if (hash.length != 64 ||
+                    hash.any { it !in "0123456789abcdef" } ||
+                    hash !in hashes || topic !in names || hash in linked) return null
+                linked[hash] = topic
+            }
+            PrivatePhraseArchive(notes, names, linked)
+        } catch (_: Exception) { null }
+    }
+
+    /**
+     * One atomic replacement for a user-approved file. A stale preview, newer
+     * local phrase, changed theme or malformed payload refuses the whole write.
+     * Bookmarks and schedules are cleared (not misattributed to new meanings).
+     */
+    @Synchronized
+    fun replaceArchiveIfUnchanged(
+        context: Context,
+        candidate: PrivatePhraseArchive,
+        expectedNotes: List<PersonalPhrase>?,
+        expectedThemes: ByteArray?
+    ): Boolean {
+        if (expectedNotes == null || entries() != expectedNotes) return false
+        val currentThemes = PrivatePhraseTopics(context).exportSnapshot()
+        if ((currentThemes == null) != (expectedThemes == null) ||
+            currentThemes != null && expectedThemes != null &&
+            !currentThemes.contentEquals(expectedThemes)) return false
+        val archiveBytes = (archiveObject(candidate).toString() + "\n")
+            .toByteArray(Charsets.UTF_8)
+        if (archiveBytes.size > 70_000 ||
+            previewArchiveImport(archiveBytes) != candidate) return false
+        val value = toJson(candidate.notes).toString()
+        if (value.length > MAX_JSON) return false
+        val assignments = candidate.assignments.map { (hash, topic) ->
+            hash + "|" + topic
+        }.toSet()
+        return try {
+            prefs.edit().putString(KEY, value)
+                .putStringSet(PrivatePhraseTopics.TOPICS_KEY, candidate.topics.toSet())
+                .putStringSet(PrivatePhraseTopics.ASSIGNMENTS_KEY, assignments)
+                .remove(PrivatePhraseShortcuts.KEY)
+                .remove(REVIEW_OPT_IN).remove(REVIEW_ROWS)
+                .commit()
+        } catch (_: RuntimeException) { false }
     }
 
     /** User-chosen Storage Access Framework export; never background/silent. */

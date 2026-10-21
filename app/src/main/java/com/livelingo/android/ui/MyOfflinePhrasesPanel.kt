@@ -692,6 +692,7 @@ internal fun MyOfflinePhrasesPanel(
                             "application/octet-stream"))
                     }) { Text("Herstel back-up…") }
                 }
+                PrivatePhraseArchiveAction(deck = deck, onChanged = { revision++ })
                 OutlinedButton(
                     enabled = phrases?.isNotEmpty() == true,
                     onClick = {
