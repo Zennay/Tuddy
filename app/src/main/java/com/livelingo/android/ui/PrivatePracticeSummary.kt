@@ -68,6 +68,11 @@ internal fun privatePracticeSummary(
         return clipped + if (safe.size > maxCodePoints) " … [ingekort]" else ""
     }
 
+    // Avoid long overflow making an unrelated cue look aligned.
+    fun shifted(millis: Long): Long? = runCatching {
+        Math.addExact(millis, offsetMs)
+    }.getOrNull()
+
     val bounded = passages.take(4)
     return buildString {
         appendLine("TUDDY · MIJN PRIVÉ LUISTEROEFENING")
@@ -80,12 +85,14 @@ internal fun privatePracticeSummary(
             val start = span.first
             val end = span.second
             appendLine((index + 1).toString() + ". " + clock(start) + " – " + clock(end))
-            val first = cues.indexOfFirst { it.startMillis + offsetMs == start }
-            val last = cues.indexOfLast { it.endMillis + offsetMs == end }
+            val first = cues.indexOfFirst { shifted(it.startMillis) == start }
+            val last = cues.indexOfLast { shifted(it.endMillis) == end }
             if (first >= 0 && last >= first &&
                 cues.subList(first, last + 1).all {
-                    it.startMillis + offsetMs >= start &&
-                        it.endMillis + offsetMs <= end
+                    val cueStart = shifted(it.startMillis)
+                    val cueEnd = shifted(it.endMillis)
+                    cueStart != null && cueEnd != null && cueStart >= start &&
+                        cueEnd <= end && cueEnd > cueStart
                 }) {
                 appendLine("   Mijn ondertitelregels " + (first + 1) + "–" + (last + 1) + ": " +
                     excerpt(cues[first].text) +
