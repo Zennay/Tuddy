@@ -86,3 +86,16 @@ Documentation: https://developer.android.com/reference/android/speech/SpeechReco
 ## Privacy-safe readiness diagnostics
 
 The offline readiness dialog includes an explicit **Kopieer diagnoserapport** action. The report contains the app version, Android API/device model, airplane-mode state, selected language codes, speech-service availability, speech/text-model readiness states, the source SHA, and GitHub Actions run ID (local builds are marked `local`). The CI APK artifact also contains `build-manifest.txt` with source SHA, workflow run ID/attempt, event/ref, APK SHA-256 and byte size. Match the report's source/run ID to that external manifest; the APK checksum cannot be embedded in the APK itself. It never includes transcript text or audio. Copying is user-triggered and marks the clipboard content as sensitive; the user can review it before sharing.
+
+
+## Automatisch terug naar de startcheck na Android-instellingen
+
+Bij **Open Android spraakinstellingen** bewaart Tuddy alleen in RAM voor
+welke spreektaal je die instellingen opende. Zodra je terugkeert naar de
+draaiende app, heropent Tuddy de offline startcheck en voert opnieuw de
+**alleen-lezen** controles uit voor het gekozen spraakpakket en lokale
+teksttaalpaar. Dat bespaart het handmatig opnieuw openen van het venster.
+Er wordt nooit automatisch een microfoon, modeldownload of cloudspraak gestart.
+Een wisseling van broncode of volledig afgesloten app annuleert de
+terugkeeractie; op Android 12 blijft de pakketstatus onbekend als de
+systeemdienst geen inspectie biedt. Het is geen fysiek toestelbewijs.
