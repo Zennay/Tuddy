@@ -42,7 +42,7 @@ internal object PrivateTimedSubtitleSheet {
             // Quoting a spreadsheet value is not reliable formula protection.
             // Reject instead of silently prefixing a character that breaks
             // round-trip fidelity. SRT/VTT remain available for these cues.
-            return value.firstOrNull() !in listOf('=', '+', '-', '@')
+            return value[0] !in "=+-@"
         }
 
         val lines = ArrayList<String>(cues.size)
