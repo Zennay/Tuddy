@@ -2174,7 +2174,7 @@ in bestaande gesprek-/SRT-/WebVTT-bestanden of deelacties.**
 
 It aims to display speech and its translation together like synchronized lyrics, with a selected target language, automatic source-language detection, scrollable conversation history, and compact word cards. The project prioritizes newcomer and refugee language access.
 
-**Language picker search:** search by code, native or English label, Dutch localized name, and common aliases. Accents and combining marks are ignored, so `Francais` finds `Français`, and Dutch searches such as `Japans` or `Koreaans` work. Search improves discovery only; it does not imply additional offline model support.
+**Language picker search:** both the spoken-source and translation-target pickers match language codes, native/English labels, Dutch localized names, and common aliases. Accents and combining marks are ignored, so `Francais` finds `Français`, while `Japans`, `Koreaans`, `Engels`, and regional Arabic aliases are searchable. Search improves discovery only; it does not imply additional offline model support.
 
 ## Nieuw: een afgeronde gesprekszin groot tonen
 
