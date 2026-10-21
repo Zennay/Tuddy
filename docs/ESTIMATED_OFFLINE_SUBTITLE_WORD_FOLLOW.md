@@ -2,7 +2,10 @@
 
 Open **Kies direct een woord uit deze ondertitel** terwijl de optionele
 woordvolger aanstaat. Vul **Van woord** en **Tot en met** in, bijvoorbeeld
-`3` en `7`. Tik op **↻ Herhaal gekozen woordgroep** om de geschatte
+`3` en `7`. Je kunt de nummers intypen of tijdens het luisteren met **Start = huidig woord**
+en **Eind = huidig woord** de twee grenzen rechtstreeks vastleggen.
+De app toont de daadwerkelijk gekozen originele woordgroep vóór herhalen.
+Tik op **↻ Herhaal gekozen woordgroep** om de geschatte
 tijdspanne van die vijf aaneengesloten woorden binnen dezelfde actieve
 ondertitel te herhalen. De bestaande knop **Stop geschatte
 woordherhaling** stopt zowel een enkel woord als de gekozen groep.
