@@ -2852,3 +2852,13 @@ een bruikbare bronkeuze eenvoudiger zonder dat de app cloudspraak opent of
 automatisch een model downloadt. Kies een bron en ga terug naar de afzonderlijke
 spraak- én tekststartcheck; de oude status wordt nooit overgenomen.
 Op Android 12 blijft de pakketstatus onbekend. [Uitleg](docs/OFFLINE_SPEECH_PACKS.md).
+
+
+### Spraakpakketten doorzoeken en kopiëren
+
+In het on-device spreektaalpakkettenoverzicht kun je op taal of
+regiocode zoeken en **Toon alleen aanwezig** inschakelen. Wie dat wil,
+kan na de afzonderlijke controles via **Kopieer pakketoverzicht** de
+statussen naar het Android-klembord kopiëren. Het overzicht bevat
+apparaat- en taalstatussen, niet de gesproken zinnen of audio. Dit
+is vrijwillig, geen upload en geen bewijs van toestelacceptatie.
