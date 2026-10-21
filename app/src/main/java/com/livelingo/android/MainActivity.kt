@@ -3701,14 +3701,19 @@ private fun TuddyScreen(
                                     if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML) {
                                         val targetHint = PrivatePinnedCaptionClozeHtml.previewHint(
                                             if (reverse) record.caption.original
-                                            else record.caption.translated
+                                            else record.caption.translated,
+                                            if (!pinnedStudyLanguageTags) null
+                                            else if (reverse) record.caption.sourceCode
+                                            else record.caption.targetCode
                                         )
                                         Text("Aanvulhint (niet het antwoord): " + targetHint,
                                             style = MaterialTheme.typography.bodySmall)
                                         if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
                                             Text("Omgekeerde aanvulhint: " +
                                                 PrivatePinnedCaptionClozeHtml.previewHint(
-                                                    record.caption.original
+                                                    record.caption.original,
+                                                    if (pinnedStudyLanguageTags)
+                                                        record.caption.sourceCode else null
                                                 ), style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
