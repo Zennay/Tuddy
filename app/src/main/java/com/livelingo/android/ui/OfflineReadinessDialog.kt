@@ -43,6 +43,7 @@ internal fun OfflineReadinessDialog(
     onCheckSpeech: () -> Unit,
     onDownloadSpeech: () -> Unit,
     onCancelSpeech: () -> Unit,
+    onOpenSpeechSettings: () -> Unit,
     onCheckText: () -> Unit,
     onPrepareText: () -> Unit,
     onEditLanguages: () -> Unit,
@@ -110,6 +111,13 @@ internal fun OfflineReadinessDialog(
                             onClick = onCancelSpeech,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Stop volgen") }
+                    }
+                    if (speechCurrent && speechServicePresent &&
+                        speech.stage == SpeechPackStage.UNKNOWN) {
+                        OutlinedButton(
+                            onClick = onOpenSpeechSettings,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Open Android spraakinstellingen") }
                     }
                 }
                 HorizontalDivider()
