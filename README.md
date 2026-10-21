@@ -1,3 +1,9 @@
+## Offline invuloefeningen: direct naar kaarten en antwoord met vraagcontext
+
+In het zelfstandige **Aanvuloefening · HTML** kun je zonder scripts of internet met **Vorige kaart / Volgende kaart** door een heel oefenboek bladeren. Op het zelfstudie-antwoordblad staan nu **de oorspronkelijke vraag en het volledige antwoord samen**, met overeenkomstig ronde-/kaartnummer en een teruglink naar de vraag. Bij afdrukken verdwijnt de navigatie en blijft het antwoordblad alleen beschikbaar na de bestaande bewuste printkeuze. Een **leerlingenblad** bevat ook nu geen volledige antwoorden. De bestaande expliciete Android-export en maximale uitvoergrootte blijven gehandhaafd. [Details](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 ## Nieuw · eigen Unicode-woordgrenzen blijven intact in invulhints
 
 De meerrondige, tweetalige HTML-aanvuloefening herkent nu ook
