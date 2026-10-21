@@ -1108,6 +1108,41 @@ overschrijving of verkapte fallback. De toekomstig opgeslagen
 SRT/VTT-eindtijden volgen nog steeds uit het volgende LRC-begin
 (laatste eindtijd blijft geschat), niet uit opgenomen audio.
 
+## Tweepuntscorrectie van een eigen LRC-ondertitelreeks
+
+Naast een constante verschuiving kunnen twee **expliciet door jou
+gekozen oorspronkelijke bronregels** een aaneengesloten tijdvak
+opnieuw verdelen. Stel in de LRC-plakdialoog eerst **Van regel**
+en **Tot regel** in of kies één aaneengesloten lijst met minstens
+twee uitgewerkte chronologische cue-nummers. Losse niet-aangrenzende
+regels worden bewust geweigerd.
+
+Bij **Tweepuntscorrectie** kun je de twee bestaande begintijden
+eerst laten invullen en vervolgens de gewenste nieuwe begintijden
+bewerken, bijvoorbeeld van `00:00:12.000`/`00:00:35.000`
+naar `00:00:11.500`/`00:00:34.000`.
+Alle tussenliggende cues worden uitsluitend volgens hun bestaande
+LRC-begintijden tussen de twee door jou gekozen tijdankers opnieuw
+verdeeld. Het vroegere en latere anker blijven exacte tijdstempels.
+Het toegestane tijdsverloop is 0,5× tot 2× het originele interval.
+
+De **volledige oude/nieuwe preview** omvat iedere bronregel en toont
+ook gewijzigde eindtijden van de cue vóór het eerste anker. Blader
+vijf regels tegelijk of spring naar het volgende gewijzigde blok.
+Pas na **Bevestig deze volledige tweepuntscorrectie** verandert
+de lokale LRC-tekst. Dezelfde beperkte **ongedaan/opnieuw**
+bediening geldt als bij één losse tijdsverschuiving.
+
+Originele teksten, eigen refreinherhalingen, overige tijdstempels
+buiten de ankers, `[offset:]` en toegestane metadata worden
+niet herschreven. Waar de correctie een tijdlijn zou omkeren,
+starttijden zou laten samenvallen, een tijd buiten het veilige
+bereik zou brengen of export als gehele SRT én VTT zou verhinderen,
+wordt het voorstel **volledig geweigerd**. Er zijn geen
+geanalyseerde audiowoorden, vertalingen of automatisch
+herkende overeenkomsten en het originele providerbestand
+wordt niet overschreven.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
