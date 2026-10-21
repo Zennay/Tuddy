@@ -173,7 +173,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 PrivatePracticeReportFormat.WORKSHEET_HTML ->
                     PrivateListeningWorksheet.snapshot(
                         cues, subtitleOffsetMs, savedPracticePassages,
-                        passageRatings, passageNotes, worksheetScope, worksheetAudience
+                        passageRatings, passageNotes, worksheetScope, worksheetAudience,
+                        chosenSubtitleLanguage
                     )
                 PrivatePracticeReportFormat.TXT ->
                     PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
@@ -214,7 +215,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
             PrivatePracticeReportFormat.WORKSHEET_HTML ->
                 PrivateListeningWorksheet.snapshot(
                     cues, subtitleOffsetMs, savedPracticePassages,
-                    passageRatings, passageNotes, worksheetScope, worksheetAudience
+                    passageRatings, passageNotes, worksheetScope, worksheetAudience,
+                        chosenSubtitleLanguage
                 )
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
             PrivatePracticeReportFormat.CSV ->
