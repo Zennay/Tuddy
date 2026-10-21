@@ -32,6 +32,20 @@ kies daar de LRC-modus en sla uitsluitend na een afzonderlijke
 Android-opslagbevestiging een nieuwe volledige LRC-bronkopie op.
 Het originele gekozen document wordt niet overschreven.
 
+## Bestandskeuze binnen de handmatige editor
+
+Ook vanuit **Plak of importeer ondertiteltekst… → Kies document…**
+kan de gebruiker zelf een bronbestand kiezen. Na een geldige, begrensde
+UTF-8-documentread probeert Tuddy buiten de UI-thread exact dezelfde
+SRT/VTT-, LRC- of getimede CSV/TSV-parser als bij **Open ondertitelbestand…**.
+Alleen bij bewezen geldig formaat wordt de passende invoermodus gekozen.
+Bij onbekende maar leesbare platte tekst blijft de eerder door de gebruiker
+gekozen handmatige modus behouden. Een teruggekeerde bestandskiezer
+**past nooit direct een cue toe**: de oorspronkelijke tekst, gekozen modus
+en volledige voorvertoning moeten nog apart gecontroleerd en bevestigd
+worden. Dit werkt eveneens wanneer een tweede ondertitelspoor handmatig
+uit een apart bestand wordt gekozen.
+
 ## CSV en TSV: eigen tijdcodes heropenen
 
 Het bestaande **Bewaar tijdcodes als CSV/TSV…** in de privé-editor
