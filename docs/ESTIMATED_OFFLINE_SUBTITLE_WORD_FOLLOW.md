@@ -1,5 +1,21 @@
 # Gescheiden tijdcodewoordvolger bij je eigen audio
 
+## Meteen naar een zelfgekozen woord in de actieve regel
+
+Open binnen de optionele woordvolger **Kies direct een woord uit deze
+ondertitel**. Een doorbladerbare lijst toont maximaal negen opeenvolgende
+woorden per pagina, met de originele tokenvolgorde en woordnummers.
+Tik op een woord om direct naar het uit de originele cue-tijd geschatte
+moment te springen, zonder eerst alle eerdere woorden langs te gaan.
+De lijst is begrensd op maximaal 300 woorden per ondertitel en wordt
+bij een andere regel opnieuw vanaf de eerste pagina getoond.
+
+Dit is uitsluitend een handmatige navigatiebediening bovenop de
+bestaande gelijke tijdverdeling. Er is geen automatische woordherkenning,
+spraakverwerking, geluidsexport, permanente oefenhistorie of gewijzigde
+bestandsrechten. Woordkaarten blijven beschikbaar nadat je de
+woordvolger zelf uitzet.
+
 Tuddy gebruikt in de eigen-audiospeler een door jou gekozen audiofragment
 en zelf aangeleverd SRT/VTT-bestand. Standaard blijven alle
 ondertitelwoorden **aanklikbaar** voor de lokale woordkaart.
