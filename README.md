@@ -12,6 +12,11 @@ De hele wijziging is één lokale Undo/Redo-stap; het bronbestand wordt niet
 overschreven en de grens wordt niet uit audio herkend.
 [Handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
 
+Bij **Samenvoegen** laat een extra preview beide originele tijdvakken zien
+en waarschuwt die expliciet wanneer een tijdgat verdwijnt of de cues
+elkaar overlappen. De bevestiging is één Undo/Redo-bewerking in de
+tijdelijke editor; de originele bestanden blijven onaangeroerd.
+
 ---
 
 ## Nieuw: herhaalde refreinen rechtstreeks uit eigen LRC-bestanden openen
