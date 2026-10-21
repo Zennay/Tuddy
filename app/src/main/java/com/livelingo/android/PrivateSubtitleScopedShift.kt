@@ -13,14 +13,16 @@ internal data class SubtitleScopedShiftPreview(
 
 internal object PrivateSubtitleScopedShift {
     private const val MAX_TIME_MS = 359_999_999L
-    val allowedOffsets = setOf(-5000L, -2000L, -500L, 500L, 2000L, 5000L)
+    // Explicit user-authored shifts up to ten minutes, in whole milliseconds.
+    // All updated cues still have to pass full SRT/VTT and timeline validation.
+    private const val MAX_ABSOLUTE_SHIFT_MS = 600_000L
 
     fun preview(
         cues: List<PrivateSubtitleCue>,
         originalRows: String,
         offsetMs: Long
     ): SubtitleScopedShiftPreview? {
-        if (cues.isEmpty() || cues.size > 500 || offsetMs !in allowedOffsets ||
+        if (cues.isEmpty() || cues.size > 500 || offsetMs == 0L || offsetMs !in -MAX_ABSOLUTE_SHIFT_MS..MAX_ABSOLUTE_SHIFT_MS ||
             PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.SRT) == null ||
             PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.WEBVTT) == null
         ) return null
