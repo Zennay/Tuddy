@@ -67,6 +67,11 @@ internal fun SubtitlePasteDialog(
                 splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_CSV
         ) else null
     }
+    val csvPairInspection = remember(raw, plainLines, splitMode) {
+        if (plainLines && splitMode == PlainSubtitleSplitMode.PAIRED_CSV)
+            PrivatePlainTextSubtitleDraft.inspectCsvPairs(raw)
+        else null
+    }
     val pairedInspection = remember(raw, ownMeaning, plainLines, splitMode) {
         if (plainLines && splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES)
             PrivatePlainTextSubtitleDraft.inspectPaired(raw, ownMeaning)
@@ -182,6 +187,13 @@ internal fun SubtitlePasteDialog(
                             "Vier kolommen: begin · einde · bron · betekenis")
                     }
                     OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        splitMode = PlainSubtitleSplitMode.PAIRED_CSV
+                        page = 0
+                    }) {
+                        Text((if (splitMode == PlainSubtitleSplitMode.PAIRED_CSV)
+                            "✓ " else "") + "CSV: brontekst, eigen betekenis (tijden geschat)")
+                    }
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         splitMode = PlainSubtitleSplitMode.TIMED_TEXT_CSV
                         page = 0
                     }) {
@@ -204,7 +216,8 @@ internal fun SubtitlePasteDialog(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    if (splitMode == PlainSubtitleSplitMode.TIMED_TEXT_CSV ||
+                    if (splitMode == PlainSubtitleSplitMode.PAIRED_CSV ||
+                        splitMode == PlainSubtitleSplitMode.TIMED_TEXT_CSV ||
                         splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_CSV) {
                         Text(
                             "Plak gewone komma-gescheiden CSV, één kaart per fysieke regel. " +
@@ -322,6 +335,8 @@ internal fun SubtitlePasteDialog(
                             "Begin [TAB] einde [TAB] bron [TAB] betekenis"
                         splitMode == PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS ->
                             "Begin [TAB] einde [TAB] zelf geschreven tekst"
+                        splitMode == PlainSubtitleSplitMode.PAIRED_CSV ->
+                            "Eigen bron, eigen betekenis (CSV, 2 kolommen)"
                         splitMode == PlainSubtitleSplitMode.TIMED_TEXT_CSV ->
                             "Begin,einde,tekst (CSV, 3 kolommen)"
                         splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_CSV ->
@@ -365,6 +380,14 @@ internal fun SubtitlePasteDialog(
                         }
                     }
                 }
+                if (csvPairInspection != null) {
+                    Text("${csvPairInspection.rowCount} CSV-tekstparen uit eigen invoer.",
+                        style = MaterialTheme.typography.bodySmall)
+                    csvPairInspection.message?.let { message ->
+                        Text(message, color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
                 if (timedInspection != null) {
                     Text(
                         "${timedInspection.rowCount} tijdregels uit eigen invoer.",
@@ -384,7 +407,8 @@ internal fun SubtitlePasteDialog(
                     Text(
                         if (plainLines)
                             "Geen geldig tekstconcept: 1–500 cues, maximaal 800 " +
-                                "tekens per kolom. Drie kolommen: begin/einde/bron; " +
+                                "tekens per kolom. CSV kan 2 kolommen met eigen " +
+                                "betekenis bevatten. Drie kolommen: begin/einde/bron; " +
                                 "vier kolommen: begin/einde/bron/betekenis. " +
                                 "Alle velden moeten expliciet geldig zijn."
                         else "Geen volledig geldig SRT/WebVTT-document: " +
