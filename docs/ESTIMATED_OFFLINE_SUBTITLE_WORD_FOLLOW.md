@@ -1,3 +1,11 @@
+## 21 oktober — ook korte geschatte woorden kunnen herhalen
+
+De **↻ Herhaal alleen dit geschatte woordfragment**-knop werkt nu ook wanneer een handmatig gemarkeerd of gelijkmatig verdeeld woordvenster zelf korter dan **0,75 seconde** is. Tuddy maakt dan uitsluitend binnen de huidige zelf aangeleverde ondertitelcue een afspeelvenster van **0,75 seconde** en neemt zo nodig wat geluid vóór/na het geschatte woord mee. Bij een cue korter dan 0,75 seconde wordt geen herhaallus gestart; een geschat woordvenster langer dan twee minuten wordt eveneens geweigerd.
+
+Dit is bewust **geen akoestische woorddetectie of automatische uitlijning**. Het extra fragment kan delen van aangrenzende woorden bevatten. De oorspronkelijke broncue, de eigen handmatige woordankers en SRT/VTT-bestanden worden niet veranderd. De optie blijft expliciet en werkt alleen met lokaal geopende audio; geen extra toestemming, netwerkcall of persistente analyse. Het Android-scherm vermeldt de beperkingen bij de herhaalknop.
+
+---
+
 ## Relatieve woordankers voor een andere zelfgekozen ondertitel
 
 Naast absolute tijdcodes is er nu een eigen **cue-relatieve** notatie:
