@@ -46,6 +46,8 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
     }
     var primaryInput by remember(primary, secondary) { mutableStateOf("") }
     var anchorExpression by remember(primary, secondary) { mutableStateOf("") }
+    var sourcePreviewPage by remember(primary, secondary) { mutableIntStateOf(0) }
+    var sourcePreviewJump by remember(primary, secondary) { mutableStateOf("") }
     var editingIndex by remember(primary, secondary) { mutableStateOf<Int?>(null) }
     var secondaryInput by remember(primary, secondary) { mutableStateOf("") }
 
@@ -281,8 +283,60 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
                             "${preview.segmentTargetSpansMs[index]} ms.",
                             style = MaterialTheme.typography.bodySmall)
                     }
-                    Text("Na overnemen volgt de volledige gecombineerde " +
-                        "preview met alle losse bronregels. Pas de aparte " +
+                    val totalPages = maxOf(1,
+                        (preview.adjustedSecondary.size + 4) / 5)
+                    val page = sourcePreviewPage.coerceIn(0, totalPages - 1)
+                    Text("Volledige vóór/na-preview van werkelijk " +
+                        "verschoven bronregels uit spoor 2 · " +
+                        "pagina ${page + 1}/$totalPages.",
+                        style = MaterialTheme.typography.titleSmall)
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            modifier = Modifier.weight(1f),
+                            value = sourcePreviewJump,
+                            onValueChange = {
+                                sourcePreviewJump = it.filter { ch ->
+                                    ch in '0'..'9' }.take(4)
+                            },
+                            label = { Text("Ga naar originele spoor-2-regel") },
+                            singleLine = true
+                        )
+                        val index = sourcePreviewJump.toIntOrNull()
+                        OutlinedButton(
+                            enabled = index != null &&
+                                index in 1..preview.adjustedSecondary.size,
+                            onClick = {
+                                val chosen = sourcePreviewJump.toIntOrNull()
+                                if (chosen != null &&
+                                    chosen in 1..preview.adjustedSecondary.size)
+                                    sourcePreviewPage = (chosen - 1) / 5
+                            }
+                        ) { Text("Ga") }
+                    }
+                    preview.adjustedSecondary.drop(page * 5).take(5)
+                        .forEachIndexed { localIndex, adjusted ->
+                            val row = page * 5 + localIndex
+                            val source = secondary[row]
+                            Text("Oorspronkelijke spoor-2-regel ${row + 1}\n" +
+                                "Oud: ${source.startLabel} → ${source.endLabel}\n" +
+                                "Nieuw: ${adjusted.startLabel} → " +
+                                "${adjusted.endLabel}\n" + source.text,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(enabled = page > 0,
+                            onClick = { sourcePreviewPage = page - 1 }) {
+                            Text("← Vorige tijden")
+                        }
+                        TextButton(enabled = page < totalPages - 1,
+                            onClick = { sourcePreviewPage = page + 1 }) {
+                            Text("Volgende tijden →")
+                        }
+                    }
+                    Text("Na overnemen volgt ook de complete gecombineerde " +
+                        "preview met alle ongekoppelde bronregels. Pas de aparte " +
                         "bevestiging verandert het tijdelijke concept.",
                         style = MaterialTheme.typography.bodySmall)
                 }
