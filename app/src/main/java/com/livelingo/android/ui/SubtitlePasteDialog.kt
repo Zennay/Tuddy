@@ -31,6 +31,7 @@ import com.livelingo.android.PrivateLrcSubtitleDraft
 import com.livelingo.android.PrivatePlainTextSubtitleDraft
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
+import com.livelingo.android.PrivateTtmlSubtitleReader
 import com.livelingo.android.PrivateAssSubtitleReader
 import com.livelingo.android.PrivateSbvSubtitleReader
 import com.livelingo.android.PrivateYoutubeJson3SubtitleReader
@@ -204,6 +205,7 @@ internal fun SubtitlePasteDialog(
         else if (!plainLines && lrcMode) PrivateLrcSubtitleDraft.preview(raw)
         else if (!plainLines) PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
             ?: PrivateAssSubtitleReader.read(raw)
+            ?: PrivateTtmlSubtitleReader.read(raw)
             ?: PrivateSbvSubtitleReader.read(raw)
             ?: PrivateYoutubeJson3SubtitleReader.read(raw.takeIf { it.length <= 65_536 } ?: "")
         else null
@@ -332,7 +334,7 @@ internal fun SubtitlePasteDialog(
                             search = search
                         ))
                     }
-                ) { Text("📂 Kies eigen UTF-8 SRT, VTT, LRC, CSV, TSV of TXT-document…") }
+                ) { Text("📂 Kies eigen UTF-8 SRT, VTT, ASS, TTML, LRC, CSV, TSV of TXT…") }
                 Text(
                     "Selecteer hieronder eerst de passende SRT/VTT-, LRC- of tekstmodus. " +
                         "Het gekozen document vervangt alleen het tekstvak en wordt " +
@@ -689,7 +691,7 @@ internal fun SubtitlePasteDialog(
                             "afzonderlijke cues, 800 teksttekens per regel; " +
                             "dubbele tijden, ongeldige of te grote offsets " +
                             "en ongeldige tekst worden geweigerd."
-                        else "Geen volledig geldig SRT/WebVTT-document: " +
+                        else "Geen volledig geldig SRT/VTT/ASS/TTML/SBV/JSON3-document: " +
                             "controleer tijdcodes en maximaal 500 regels.",
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
@@ -1586,6 +1588,7 @@ internal fun SubtitlePasteDialog(
                 else if (lrcMode) PrivateLrcSubtitleDraft.preview(raw)
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
                     ?: PrivateAssSubtitleReader.read(raw)
+            ?: PrivateTtmlSubtitleReader.read(raw)
                     ?: PrivateSbvSubtitleReader.read(raw)
                     ?: PrivateYoutubeJson3SubtitleReader.read(raw.takeIf { it.length <= 65_536 } ?: "")
                 if (confirmed == null) return@TextButton

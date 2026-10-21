@@ -132,7 +132,9 @@ private fun detectedSubtitlePasteFormat(raw: String): SubtitlePasteFormat? {
         return SubtitlePasteFormat(false, false, PlainSubtitleSplitMode.LINES)
     if (raw.contains('[') && PrivateLrcSubtitleDraft.preview(raw) != null)
         return SubtitlePasteFormat(false, true, PlainSubtitleSplitMode.LINES)
-    if (PrivateSbvSubtitleReader.read(raw) != null ||
+    if (PrivateTtmlSubtitleReader.read(raw) != null ||
+        PrivateAssSubtitleReader.read(raw) != null ||
+        PrivateSbvSubtitleReader.read(raw) != null ||
         PrivateYoutubeJson3SubtitleReader.read(raw) != null)
         return SubtitlePasteFormat(false, false, PlainSubtitleSplitMode.LINES)
     val timed = PrivateTimedSubtitleSheet.readAuthored(raw) ?: return null
@@ -1844,12 +1846,13 @@ private fun TuddyScreen(
                     val parsed = PrivateSubtitleFileReader.read(
                         selected.text.toByteArray(Charsets.UTF_8)
                     ) ?: PrivateAssSubtitleReader.read(selected.text)
+                        ?: PrivateTtmlSubtitleReader.read(selected.text)
                         ?: PrivateLrcSubtitleDraft.preview(selected.text)
                         ?: PrivateTimedSubtitleSheet.readAuthored(selected.text)
                         ?: PrivateSbvSubtitleReader.read(selected.text)
                         ?: PrivateYoutubeJson3SubtitleReader.read(selected.text)
                     if (parsed == null)
-                        null to "Geen geldig SRT/VTT/ASS/SSA/LRC/CSV/TSV/SBV/JSON3-document: controleer " +
+                        null to "Geen geldig SRT/VTT/ASS/SSA/TTML/LRC/CSV/TSV/SBV/JSON3-document: controleer " +
                             "tijdcodes, tekstregels en maximaal 500 cues."
                     else parsed to ""
                 }
