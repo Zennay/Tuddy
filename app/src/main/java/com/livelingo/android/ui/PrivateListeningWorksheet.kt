@@ -20,7 +20,8 @@ internal object PrivateListeningWorksheet {
     private const val MAX_BYTES = 131_072
     private const val MAX_CUES = 5_000
     private const val MAX_VISIBLE_LINES = 18
-    private const val MAX_LINE_CODEPOINTS = 600
+    private const val MAX_PREVIEW_CODEPOINTS = 600
+    private const val MAX_FULL_LINE_CODEPOINTS = 8_192
 
     private fun time(ms: Long): String {
         val millis = ms.coerceAtLeast(0L)
@@ -134,6 +135,7 @@ internal object PrivateListeningWorksheet {
         val selected = privatePracticeRouteCandidates(passages, ratings, scope)
         if (selected.isEmpty()) return null
         val sections = ArrayList<Passage>()
+        var fullSourceBytes = 0
         for ((index, bounds) in selected.withIndex()) {
             val start = bounds.first
             val end = bounds.second
@@ -153,16 +155,28 @@ internal object PrivateListeningWorksheet {
                     val cueEnd = runCatching { Math.addExact(cue.endMillis, offsetMs) }
                         .getOrNull() ?: return null
                     if (cueStart >= start && cueEnd <= end && cueEnd > cueStart) {
-                        val line = clean(cue.text, MAX_LINE_CODEPOINTS) ?: return null
-                        if (line.isNotBlank()) allLines.add(cueIndex + 1 to line)
+                        // Keep the actual source sentence in the answer key.
+                        // Only the compact in-card peek may truncate a line.
+                        // Refuse oversized originals instead of silently
+                        // mislabelling an abbreviated key as complete.
+                        val line = clean(cue.text, MAX_FULL_LINE_CODEPOINTS)
+                            ?: return null
+                        if (line.isNotBlank()) {
+                            fullSourceBytes += line.toByteArray(Charsets.UTF_8).size
+                            if (fullSourceBytes > MAX_BYTES) return null
+                            allLines.add(cueIndex + 1 to line)
+                        }
                     }
                 }
             }
             // When a longer passage is selected, disclose any omitted middle
             // lines instead of silently claiming a complete transcription.
-            val visible = if (allLines.size <= MAX_VISIBLE_LINES) allLines
+            val visibleFull = if (allLines.size <= MAX_VISIBLE_LINES) allLines
                 else allLines.take(MAX_VISIBLE_LINES / 2) +
                     allLines.takeLast(MAX_VISIBLE_LINES / 2)
+            val visible = visibleFull.map { (number, text) ->
+                number to (clean(text, MAX_PREVIEW_CODEPOINTS) ?: return null)
+            }
             sections.add(Passage(
                 number = index + 1, start = start, end = end,
                 rating = rating(ratings[bounds]), note = note,
