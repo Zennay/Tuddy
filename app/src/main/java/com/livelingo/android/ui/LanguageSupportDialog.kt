@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.LanguageSearch
 import com.livelingo.android.TargetCatalog
@@ -34,6 +35,8 @@ internal fun LanguageSupportDialog(
     onPreviewLanguage: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val uriHandler = LocalUriHandler.current
+    var linkNotice by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
     val normalizedQuery = LanguageSearch.normalize(query)
     val textTargets = remember(normalizedQuery) {
@@ -116,6 +119,9 @@ internal fun LanguageSupportDialog(
                 if (unavailable.isEmpty()) {
                     Text("Geen niet-beschikbare taal gevonden.", style = MaterialTheme.typography.bodySmall)
                 } else {
+                    Text("Modelkaarten hieronder zijn alleen onderzoekskandidaten. " +
+                        "Openen gaat naar een externe website; Tuddy downloadt of activeert niets.",
+                        style = MaterialTheme.typography.bodySmall)
                     unavailable.forEach { item ->
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
@@ -124,6 +130,27 @@ internal fun LanguageSupportDialog(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Text(item.reason, style = MaterialTheme.typography.bodySmall)
+                            val candidates = item.speechCandidates + item.translationCandidates
+                            if (candidates.isNotEmpty()) {
+                                Text("Modelonderzoek · niet in Tuddy geïntegreerd",
+                                    style = MaterialTheme.typography.labelMedium)
+                                candidates.forEach { candidate ->
+                                    Text(candidate.category + " · " + candidate.title,
+                                        style = MaterialTheme.typography.bodyMedium)
+                                    Text("Licentie volgens modelkaart: " + candidate.declaredLicense +
+                                        ". Omvang: " + candidate.footprint + ".",
+                                        style = MaterialTheme.typography.bodySmall)
+                                    Text(candidate.limitation,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    TextButton(onClick = {
+                                        runCatching { uriHandler.openUri(candidate.url) }
+                                            .onFailure { linkNotice =
+                                                "Modelkaart kon niet worden geopend. " +
+                                                    "Er is niets gedownload." }
+                                    }) { Text("Open externe modelkaart ↗") }
+                                }
+                            }
                             if (item.hasFivePhrasePreview) {
                                 Text(
                                     "Alleen vijf vaste basiswoorden; geen vrije zinsvertaling of bewezen ASR.",
@@ -139,6 +166,10 @@ internal fun LanguageSupportDialog(
                             }
                         }
                     }
+                }
+                if (linkNotice.isNotBlank()) {
+                    Text(linkNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error)
                 }
             }
         },

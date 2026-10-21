@@ -7,7 +7,8 @@ import java.util.Locale
  * Text translation targets explicitly supported by ML Kit v17.
  * Availability of offline *speech recognition* is independent of this list.
  * Kurdish Kurmanji, Sorani and Pashto are intentionally absent until a
- * separate licensed, device-tested speech and translation engine exists.
+ * complete, license-cleared, integrated and device-tested speech + translation
+ * pipeline exists. Public model cards alone are not evidence of support.
  */
 data class TextTarget(val code: String, val title: String)
 
