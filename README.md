@@ -1,3 +1,16 @@
+## Nieuw: schermlezers volgen je zelfgekozen ondertiteltaal in het luisterwerkblad
+
+Wanneer je zelf de taal van je ondertiteltekst kiest, neemt het afdrukbare
+luisterwerkblad die taal mee in de HTML-bronregels. De regels krijgen een
+gevalideerd taalattribuut en passende LTR/RTL-richting, zodat bijvoorbeeld
+Sorani en Pasjtoe niet als Nederlandse tekst worden voorgelezen. Er wordt
+geen taal automatisch herkend; zonder expliciete keuze blijft de richting
+afhankelijk van de tekst.
+
+[Handleiding](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 ## Nieuw: afdrukken van bronantwoorden vereist nu een bewuste keuze
 
 Een offline **zelfstudie-luisterwerkblad** heeft onder de vragen een
