@@ -155,15 +155,15 @@ internal object PrivateLrcSubtitleDraft {
     ): String? {
         val before = preview(raw) ?: return null
         if (firstIndex !in before.indices ||
-            lastIndex !in before.indices || firstIndex >= lastIndex) return null
+            lastIndex !in before.indices || firstIndex >= lastIndex ||
+            targetFirstMillis !in 0L until MAX_TIME_MS ||
+            targetLastMillis !in 0L until MAX_TIME_MS) return null
         val oldFirst = before[firstIndex].startMillis
         val oldLast = before[lastIndex].startMillis
         val oldSpan = oldLast - oldFirst
         val newSpan = targetLastMillis - targetFirstMillis
         if (oldSpan <= 0L || newSpan <= 0L ||
-            newSpan * 2L < oldSpan || newSpan > oldSpan * 2L ||
-            targetFirstMillis !in 0L until MAX_TIME_MS ||
-            targetLastMillis !in 0L until MAX_TIME_MS) return null
+            newSpan * 2L < oldSpan || newSpan > oldSpan * 2L) return null
         val desired = (firstIndex..lastIndex).associateWith { index ->
             val distance = before[index].startMillis - oldFirst
             targetFirstMillis + (distance * newSpan + oldSpan / 2L) / oldSpan
