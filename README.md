@@ -1,3 +1,21 @@
+## Nieuw: herhaalde refreinen rechtstreeks uit eigen LRC-bestanden openen
+
+Tuddy importeert nu ook gewone LRC-regels met meerdere expliciete
+tijdstempels, zoals `[00:12.50][01:24.20]Mijn refrein`. Iedere
+tijdstempel wordt een eigen ondertitel-cue met dezelfde zelfgeschreven
+tekst. De volledige reeks wordt chronologisch gesorteerd, waarna de
+eindtijden uit het volgende begin worden afgeleid. In de Android-preview
+staan de **uitgewerkte cue-nummers en tijden**, zodat selecteren geen
+bronregels verwart met herhaalde voorkomens. Boven de grens van 500 cues,
+meer dan 16 momenten op een regel of bij dubbele/ongeldige tijdstempels
+wordt het volledige document geweigerd. Geen gefingeerde vertaling,
+geluidsexport, netwerk of automatische audio-/woorduitlijning. De
+bestaande lokale editor en expliciete Android-bestandskeuze blijven
+verplicht.
+[Voorbeeld en handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
+
 ## Nieuw: vier ondertitelbewerkingen op dezelfde tijdselectie
 
 Exporteren, tijdcodes verschuiven, ongewenste ondertitels
