@@ -28,3 +28,22 @@ No subtitle is auto-translated, no URL is fetched, no media or microphone is
 opened, and no live transcript is persisted by this export. It is **not**
 offline Kurdish/Pashto speech recognition, signed release or proof of an
 Android 12+ airplane-mode installation. See [import restrictions](ASS_SSA_SUBTITLE_IMPORT.md).
+
+
+## Selecteer en deel een beperkte ASS-kopie
+
+Open **Eigen ondertitelregels selecteren en bewaren**. Kies oorspronkelijke
+bronregelnummers (niet paginaposities), behoud de tijden of maak opzettelijk
+een compact fragment en kies **ASS**. De app toont vóór bevestiging het
+exacte resultaat. Kies **Kies opslaglocatie…** voor een NIEUW bestand, of
+**Deel selectie…** om alleen een letterlijke kleine ASS-tekst naar een door
+jou gekozen Android-app te sturen.
+
+Delen is begrensd tot **24 geselecteerde cues en 16 KiB**, zonder URI,
+bestandsrechten, audio, automatische cloudactie of volledig live transcript.
+Ook de gedeelde tekst bevat eventuele door jou geschreven persoonsgegevens:
+controleer de preview en de ontvangende app. Er wordt geen enkel
+tijdstempel naar centiseconden afgerond: bevat een regel bijvoorbeeld
+1.234 seconden, dan is ASS onbeschikbaar en kun je SRT/VTT kiezen.
+Een compacte selectie telt als nieuwe, bewust veranderde tijdlijn,
+niet als automatisch herkende of uitgelijnde media.
