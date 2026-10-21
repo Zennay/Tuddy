@@ -1,3 +1,27 @@
+## Extra vanaf de gecombineerde woordvolger: ook het luisterwerkblad en geselecteerde CSV
+
+In deze optionele woordvolger is de actuele privé-luisterexport
+uit [PR #224](https://github.com/Zennay/Tuddy/pull/224) geïntegreerd.
+Bij **Mijn privé oefenoverzicht** kun je nu behalve HTML en TXT ook
+een volledig zelfstandig, afdrukbaar **luisterwerkblad** met
+ingeklapte eigen SRT/VTT-bronregels bewaren. Antwoorden staan op een
+aparte afdrukpagina. De gebruiker kan bewust kiezen uit **Alle
+fragmenten**, **Nog oefenen** of **Nog niet beoordeeld**, onafhankelijk
+van de gewone afspeelroute. Deze categorie wordt eveneens toegepast op
+de volledige **CSV-voorbeeldweergave én de echte CSV-export**.
+
+Een ongeldige/lege selectie wordt geweigerd. Als de gebruiker de
+categorie, beoordelingen of notities wijzigt terwijl de externe
+Android-bestandskiezer openstaat, wordt het oude bestand niet
+opgeslagen. Ook worden inhoud en exacte bytes opnieuw berekend.
+De CSV laat bij ingekorte ondertitelvoorbeelden zien hoeveel
+tussenliggende bronregels zijn weggelaten; onmogelijke
+integer-tijdverschuivingen kunnen geen schijnbaar passende bronzinnen
+opleveren. Het bestand bevat geen audio, bestands-URI, accountgegevens,
+cloudherkenning of automatische vertaal- of uitspraakkwaliteit.
+
+---
+
 # Mijn privé luisteroefening als HTML of TXT
 
 Open een SRT/VTT-document en selecteer bewust je eigen audio in
