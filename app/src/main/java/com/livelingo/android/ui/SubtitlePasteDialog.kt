@@ -43,6 +43,10 @@ internal data class SubtitlePasteFormat(
     val lrcMode: Boolean,
     val splitMode: PlainSubtitleSplitMode
 )
+internal enum class LrcCorrectionTool {
+    SHIFT_SELECTED, BULK_EXACT, SINGLE_EXACT, TWO_ANCHORS
+}
+
 internal data class SubtitlePasteFileContent(
     val text: String,
     val format: SubtitlePasteFormat,
@@ -95,6 +99,9 @@ internal fun SubtitlePasteDialog(
     var lrcBatchInput by remember(initialDocument) { mutableStateOf("") }
     var lrcBatchPreviewPage by remember { mutableIntStateOf(0) }
     var lrcBatchTooLarge by remember { mutableStateOf(false) }
+    var lrcCorrectionTool by remember(initialDocument) {
+        mutableStateOf(LrcCorrectionTool.SHIFT_SELECTED)
+    }
     // Only deliberate in-dialog LRC timing actions are undoable here.
     // Bounded to eight RAM snapshots (each input is already <=256 KiB).
     var lrcUndo by remember(initialDocument) { mutableStateOf(emptyList<String>()) }
@@ -913,7 +920,57 @@ internal fun SubtitlePasteDialog(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    if (!plainLines && lrcMode && chosenIndices != null) {
+                    if (!plainLines && lrcMode) {
+                        Text(
+                            "Kies eerst één LRC-correctiegereedschap. " +
+                                "Alle andere correctievelden blijven verborgen " +
+                                "tot je ze zelf kiest; tussentijdse eigen tekst " +
+                                "en keuzes verdwijnen niet door wisselen.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    lrcCorrectionTool = LrcCorrectionTool.SHIFT_SELECTED
+                                }
+                            ) {
+                                Text((if (lrcCorrectionTool ==
+                                    LrcCorrectionTool.SHIFT_SELECTED) "✓ " else "") +
+                                    "Verschuif selectie")
+                            }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = { lrcCorrectionTool = LrcCorrectionTool.BULK_EXACT }
+                            ) {
+                                Text((if (lrcCorrectionTool ==
+                                    LrcCorrectionTool.BULK_EXACT) "✓ " else "") +
+                                    "Meerdere exacte tijden")
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    lrcCorrectionTool = LrcCorrectionTool.SINGLE_EXACT
+                                }
+                            ) {
+                                Text((if (lrcCorrectionTool ==
+                                    LrcCorrectionTool.SINGLE_EXACT) "✓ " else "") +
+                                    "Eén exact tijdstip")
+                            }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = { lrcCorrectionTool = LrcCorrectionTool.TWO_ANCHORS }
+                            ) {
+                                Text((if (lrcCorrectionTool ==
+                                    LrcCorrectionTool.TWO_ANCHORS) "✓ " else "") +
+                                    "Twee tijdankers")
+                            }
+                        }
+                    }
+                    if (!plainLines && lrcMode && chosenIndices != null &&
+                        lrcCorrectionTool == LrcCorrectionTool.SHIFT_SELECTED) {
                         Text(
                             "Verschuif alleen de ${chosenIndices.size} bewust gekozen " +
                                 "chronologische LRC-cues; andere begintijden en alle " +
@@ -1038,7 +1095,8 @@ internal fun SubtitlePasteDialog(
                             }
                         }
                     }
-                    if (!plainLines && lrcMode) {
+                    if (!plainLines && lrcMode &&
+                        lrcCorrectionTool == LrcCorrectionTool.BULK_EXACT) {
                         Text(
                             "Meerdere eigen LRC-begintijden tegelijk corrigeren: " +
                                 "schrijf bronnummer = exacte tijd, gescheiden door " +
@@ -1170,7 +1228,8 @@ internal fun SubtitlePasteDialog(
                             }
                         }
                     }
-                    if (!plainLines && lrcMode) {
+                    if (!plainLines && lrcMode &&
+                        lrcCorrectionTool == LrcCorrectionTool.SINGLE_EXACT) {
                         Text(
                             "Corrigeer één foutief LRC-begin exact: kies een " +
                                 "chronologisch uitgewerkt origineel bronregelnummer " +
@@ -1296,7 +1355,8 @@ internal fun SubtitlePasteDialog(
                             }
                         }
                     }
-                    if (!plainLines && lrcMode && chosenIndices != null) {
+                    if (!plainLines && lrcMode && chosenIndices != null &&
+                        lrcCorrectionTool == LrcCorrectionTool.TWO_ANCHORS) {
                         Text(
                             "Tweepuntscorrectie van een aaneengesloten LRC-reeks: " +
                                 "kies eerst Van/Tot zonder losse gaten, en geef de " +
