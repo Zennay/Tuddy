@@ -163,6 +163,7 @@ internal fun PrivateSubtitleFileDialog(
     var anchorSelectionNeedsApply by remember { mutableStateOf(false) }
     var secondTrackPreviewPage by remember { mutableIntStateOf(0) }
     var pairReviewPage by remember { mutableIntStateOf(0) }
+    var excludedReviewPage by remember { mutableIntStateOf(0) }
     var pairReviewOpen by remember { mutableStateOf(false) }
     var excludedSecondRows by remember { mutableStateOf(setOf<Int>()) }
     var driftSelectorOpen by remember { mutableStateOf(false) }
@@ -192,6 +193,7 @@ internal fun PrivateSubtitleFileDialog(
                 driftSelectorOpen = false
                 selectedDrift = null
                 excludedSecondRows = emptySet()
+                excludedReviewPage = 0
                 pairReviewPage = 0
                 pairReviewOpen = false
                 notice = ""
@@ -718,6 +720,7 @@ internal fun PrivateSubtitleFileDialog(
                 driftSelectorOpen = false
                 selectedDrift = null
                 excludedSecondRows = emptySet()
+                excludedReviewPage = 0
                 pairReviewPage = 0
                 pairReviewOpen = false
                 notice = ""
@@ -1013,18 +1016,49 @@ internal fun PrivateSubtitleFileDialog(
                     )
                     if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES &&
                         excludedSecondRows.isNotEmpty()) {
-                        Text("${excludedSecondRows.size} origineel gekozen " +
-                            "bronregels uit het tweede spoor blijven bewust " +
-                            "ongekoppeld: " +
-                            excludedSecondRows.sorted().joinToString(", ") +
-                            ". Hun volledige tekst blijft als losse cue bewaard.",
+                        val excludedSorted = excludedSecondRows.sorted()
+                        val excludedPages = maxOf(1, (excludedSorted.size + 3) / 4)
+                        val shownExcludedPage =
+                            excludedReviewPage.coerceIn(0, excludedPages - 1)
+                        Text("${excludedSorted.size} bronregels uit spoor twee " +
+                            "expliciet als losse cues behouden · pagina " +
+                            "${shownExcludedPage + 1}/$excludedPages. " +
+                            "Geen van hun teksten wordt verwijderd.",
                             style = MaterialTheme.typography.bodySmall)
+                        excludedSorted.drop(shownExcludedPage * 4).take(4)
+                            .forEach { sourceRow ->
+                                val sourceCue = stagedImport.imported.getOrNull(sourceRow - 1)
+                                if (sourceCue != null) {
+                                    Text("Spoor 2 · bronregel $sourceRow · " +
+                                        "${sourceCue.startLabel} · " +
+                                        sourceCue.text.replace('\n', ' ').take(120),
+                                        style = MaterialTheme.typography.bodySmall)
+                                    OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            excludedSecondRows =
+                                                excludedSecondRows - sourceRow
+                                            secondTrackPreviewPage = 0
+                                        }) { Text("Sta koppeling van regel $sourceRow weer toe") }
+                                }
+                            }
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(enabled = shownExcludedPage > 0,
+                                onClick = {
+                                    excludedReviewPage = shownExcludedPage - 1
+                                }) { Text("← Vorige losse regels") }
+                            TextButton(enabled = shownExcludedPage < excludedPages - 1,
+                                onClick = {
+                                    excludedReviewPage = shownExcludedPage + 1
+                                }) { Text("Volgende →") }
+                        }
                         OutlinedButton(modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 excludedSecondRows = emptySet()
+                                excludedReviewPage = 0
                                 pairReviewPage = 0
                                 secondTrackPreviewPage = 0
-                            }) { Text("Herstel alle handmatige koppelingen") }
+                            }) { Text("Sta alle eerder uitgesloten koppelingen weer toe") }
                     }
                     if (proposed != null &&
                         importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
@@ -1059,6 +1093,7 @@ internal fun PrivateSubtitleFileDialog(
                                             excludedSecondRows =
                                                 excludedSecondRows + link.secondarySourceRow
                                             pairReviewPage = 0
+                                            excludedReviewPage = 0
                                             secondTrackPreviewPage = 0
                                         }) {
                                         Text("Laat tweede bronregel " +
