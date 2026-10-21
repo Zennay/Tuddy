@@ -1,3 +1,25 @@
+## 21 oktober · volledig luisterbronregelblad en correcte A–B-CSV
+
+In de **offline luisteroefening** geeft de uitklapbare preview nog steeds
+maximaal 18 brontekstregels weer, maar het apart te openen/optioneel
+te printen **volledige bronregelblad** bevat nu alle ondertitelregels
+die geheel binnen het door jou gekozen A–B-fragment liggen. Bij meer
+dan één fragment kun je via de schermlinks direct naar een fragment
+springen. Het antwoordblad wordt standaard **niet** afgedrukt; de
+leerlingenexport bevat nog steeds helemaal geen bronregels. Bij een
+te groot werkblad wordt de volledige export geweigerd, niet afgekapt.
+
+Ook de eigen **CSV-ondertitelvoorbeelden** tonen nu ondertitelregels
+die geheel binnen de zelfgekozen audiogrenzen vallen, zelfs wanneer
+die markeringen niet op exact dezelfde milliseconde als een SRT/VTT-cue
+liggen. De CSV vermeldt hoeveel passende tussenregels zijn weggelaten,
+zonder een echte audio-uitlijning te claimen. Alleen expliciete Android
+SAF-opslag; geen nieuwe netwerkroute of machtiging.
+
+[Handleiding luisterwerkblad](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 ## Nieuw: schermlezers volgen je zelfgekozen ondertiteltaal in het luisterwerkblad
 
 Wanneer je zelf de taal van je ondertiteltekst kiest, neemt het afdrukbare
