@@ -37,6 +37,37 @@ internal object PrivateLrcSubtitleDraft {
         return null
     }
 
+    /**
+     * Explicit editor-only change: replace or insert the single LRC header.
+     * A valid existing document must stay valid after rewriting; neither the
+     * Android-picked original file nor any audio is touched.
+     */
+    fun withDeclaredOffset(raw: String, newOffsetMs: Long): String? {
+        if (newOffsetMs !in -MAX_OFFSET_MS..MAX_OFFSET_MS || preview(raw) == null)
+            return null
+        val lines = raw.removePrefix("\uFEFF")
+            .replace("\r\n", "\n").replace('\r', '\n').split('\n').toMutableList()
+        var firstContent = lines.size
+        var existingOffset = -1
+        for ((index, source) in lines.withIndex()) {
+            val line = source.trim()
+            if (line.isEmpty() || metadata.matches(line)) continue
+            if (offsetHeader.matches(line)) existingOffset = index
+            else firstContent = index
+            break
+        }
+        // Removing a header keeps all actual text unchanged. Inserting a new
+        // one happens at the start, before authored lyric rows and metadata.
+        if (existingOffset >= 0) lines.removeAt(existingOffset)
+        if (newOffsetMs != 0L) {
+            val header = "[offset:" +
+                (if (newOffsetMs > 0L) "+" else "") + newOffsetMs + "]"
+            lines.add(if (existingOffset >= 0) existingOffset else 0, header)
+        }
+        val candidate = lines.joinToString("\n")
+        return candidate.takeIf { preview(it) != null }
+    }
+
     fun preview(raw: String): List<PrivateSubtitleCue>? {
         val bytes = runCatching {
             StandardCharsets.UTF_8.newEncoder()
