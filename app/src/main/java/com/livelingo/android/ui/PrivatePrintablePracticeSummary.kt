@@ -10,7 +10,8 @@ internal enum class PrivatePracticeReportFormat(
     val mime: String, val filename: String, val title: String
 ) {
     HTML("text/html", "Tuddy-mijn-luisteroefening.html", "HTML"),
-    TXT("text/plain", "Tuddy-mijn-luisteroefening.txt", "TXT")
+    TXT("text/plain", "Tuddy-mijn-luisteroefening.txt", "TXT"),
+    CSV("text/csv", "Tuddy-mijn-luisteroefening.csv", "CSV")
 }
 
 internal data class PendingPrivatePracticeReport(
@@ -42,6 +43,78 @@ internal object PrivatePrintablePracticeSummary {
             index++
         }
         return true
+    }
+
+
+    /**
+     * Explicit, standalone CSV for a person's own fragment ratings and
+     * next-step notes. This is not a speech model output or verified alignment.
+     * Never accept the audio URI, media bytes, or account metadata.
+     */
+    fun snapshotCsv(
+        cues: List<com.livelingo.android.PrivateSubtitleCue>,
+        offsetMs: Long,
+        passages: List<Pair<Long, Long>>,
+        ratings: Map<Pair<Long, Long>, String>,
+        notes: Map<Pair<Long, Long>, String>
+    ): ByteArray? {
+        if (passages.isEmpty() || passages.size > 4) return null
+        fun clean(value: String, limit: Int): String {
+            val readable = value.codePoints().toArray().asSequence()
+                .filter { point ->
+                    point >= 32 && point != 127 &&
+                        point !in 0xD800..0xDFFF &&
+                        !Character.isISOControl(point) &&
+                        point !in 0x202A..0x202E && point !in 0x2066..0x2069 &&
+                        point != 0xFEFF
+                }
+                .take(limit).joinToString("") { point ->
+                    String(Character.toChars(point))
+                }.trim()
+            // All fields are quoted, but quoting alone does NOT prevent a
+            // spreadsheet treating a user-authored field as a formula.
+            val firstVisible = readable.firstOrNull { !it.isWhitespace() &&
+                Character.getType(it) != Character.FORMAT.toInt() }
+            return if (firstVisible in listOf('=', '+', '-', '@') ||
+                readable.firstOrNull() in listOf('=', '+', '-', '@')
+            ) "'" + readable else readable
+        }
+        fun time(ms: Long): String {
+            val whole = ms.coerceAtLeast(0L) / 1000L
+            return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d",
+                whole / 3600L, (whole / 60L) % 60L, whole % 60L)
+        }
+        fun row(vararg columns: String): String = columns.joinToString(",") {
+            "\"" + it.replace("\"", "\"\"") + "\""
+        } + "\r\n"
+        val output = buildString {
+            append(row("Fragment", "Begin (eigen tijd)", "Einde (eigen tijd)",
+                "Mijn beoordeling", "Mijn volgende oefenstap", "Ondertitelvoorbeeld"))
+            passages.forEachIndexed { index, span ->
+                val first = cues.indexOfFirst { it.startMillis + offsetMs == span.first }
+                val last = cues.indexOfLast { it.endMillis + offsetMs == span.second }
+                val matched = first >= 0 && last >= first &&
+                    cues.subList(first, last + 1).all {
+                        it.startMillis + offsetMs >= span.first &&
+                            it.endMillis + offsetMs <= span.second
+                    }
+                val preview = if (matched) {
+                    val start = clean(cues[first].text, 90)
+                    val end = if (first == last) "" else
+                        " … " + clean(cues[last].text, 90)
+                    start + end
+                } else "Alleen handmatig audiotijdvak; geen exacte brontekstmatch"
+                val rating = when (ratings[span]) {
+                    "repeat" -> "Nog oefenen"
+                    "okay" -> "Gaat goed"
+                    "easy" -> "Makkelijk"
+                    else -> "Nog niet beoordeeld"
+                }
+                append(row((index + 1).toString(), time(span.first), time(span.second),
+                    rating, clean(notes[span].orEmpty(), 240), preview))
+            }
+        }
+        return output.toByteArray(Charsets.UTF_8).takeIf { it.size <= MAX_BYTES }
     }
 
     fun snapshotText(summary: String): ByteArray? =
