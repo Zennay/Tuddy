@@ -33,7 +33,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      # GitHub-hosted Ubuntu runners ship the Android command-line SDK. The old
+      # Hosted Ubuntu runners ship the Android command-line SDK; this avoids
+      # competing with Tuddy/zCloud workloads on the overloaded VPS. The old
       # setup-android action requests the removed 'tools' SDK package and fails.
       - name: Resolve installed Android SDK on hosted runner
         shell: bash

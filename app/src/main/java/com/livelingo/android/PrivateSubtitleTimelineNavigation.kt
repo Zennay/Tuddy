@@ -1,5 +1,7 @@
 package com.livelingo.android
 
+import java.util.Locale
+
 /**
  * Manual timecode navigation in an explicitly opened document.
  * It never advances audio, changes the transcript or relies on ASR timing.
@@ -24,6 +26,14 @@ internal object PrivateSubtitleTimelineNavigation {
                 g[3].ifBlank { "0" }.toLong()
         }
         return millis.takeIf { it <= MAX_TIME }
+    }
+
+    /** Human-readable absolute timestamp for a preview; null outside media bounds. */
+    fun formatTimestamp(millis: Long): String? {
+        if (millis !in 0L..MAX_TIME) return null
+        return String.format(Locale.ROOT, "%02d:%02d:%02d.%03d",
+            millis / 3_600_000L, millis / 60_000L % 60L,
+            millis / 1_000L % 60L, millis % 1_000L)
     }
 
     /** First cue starting at/after requested time; otherwise the final cue. */

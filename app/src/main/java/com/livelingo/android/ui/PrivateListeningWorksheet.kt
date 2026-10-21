@@ -10,11 +10,29 @@ import java.util.Locale
  *
  * Never receives or embeds audio URIs, files, permissions, or accounts.
  */
+/** Decide up front whether the recipient may receive the underlying subtitle text. */
+internal enum class PrivateListeningWorksheetAudience(val title: String) {
+    SELF_STUDY("Zelfstudie · bronregels zelf onthullen"),
+    STUDENT_HANDOUT("Leerlingenblad · zonder bronregels of privébeoordeling")
+}
+
+/** The exercise is user-selected, never generated from recorded speech. */
+internal enum class PrivateListeningWorksheetPrompt(
+    val title: String, val instruction: String
+) {
+    TRANSCRIBE("Letterlijk opschrijven", "Schrijf op wat je precies hoort."),
+    KEYWORDS("Kernwoorden herkennen", "Noteer de belangrijkste woorden."),
+    SUMMARY("Zelf samenvatten", "Vat in eigen woorden samen wat je hoort."),
+    OWN_TRANSLATION("Zelf betekenis opschrijven",
+        "Schrijf zelf wat de woorden volgens jou betekenen; geen automatische vertaling.")
+}
+
 internal object PrivateListeningWorksheet {
     private const val MAX_BYTES = 131_072
     private const val MAX_CUES = 5_000
     private const val MAX_VISIBLE_LINES = 18
-    private const val MAX_LINE_CODEPOINTS = 600
+    private const val MAX_PREVIEW_CODEPOINTS = 600
+    private const val MAX_FULL_LINE_CODEPOINTS = 8_192
 
     private fun time(ms: Long): String {
         val millis = ms.coerceAtLeast(0L)
@@ -68,6 +86,31 @@ internal object PrivateListeningWorksheet {
         })
     }
 
+    private val LANGUAGE_TAG_CODE = Regex("""^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$""")
+    private val RTL_BASE_LANGUAGES =
+        setOf("ar", "ckb", "dv", "fa", "he", "ps", "sd", "ug", "ur", "yi")
+    private val RTL_SCRIPTS = setOf("arab", "hebr", "syrc", "thaa")
+
+    private fun htmlDirection(languageCode: String?): String {
+        if (languageCode == null || !LANGUAGE_TAG_CODE.matches(languageCode)) return "auto"
+        val subtags = languageCode.split('-')
+        val script = subtags.firstOrNull {
+            it.length == 4 && it.all { ch -> ch.isLetter() }
+        }?.lowercase(Locale.ROOT)
+        if (script != null) return if (script in RTL_SCRIPTS) "rtl" else "ltr"
+        return if (subtags.first().lowercase(Locale.ROOT) in RTL_BASE_LANGUAGES)
+            "rtl" else "ltr"
+    }
+
+    private fun htmlLanguageAttribute(languageCode: String?): String {
+        if (languageCode == null || !LANGUAGE_TAG_CODE.matches(languageCode)) return ""
+        return " lang=\"" + html(languageCode) + "\""
+    }
+
+    private fun htmlBidiText(value: String, languageCode: String?): String =
+        "<bdi dir=\"" + htmlDirection(languageCode) + "\"" +
+            htmlLanguageAttribute(languageCode) + ">" + html(value) + "</bdi>"
+
     private fun rating(value: String?): String = when (value) {
         "repeat" -> "Nog oefenen"
         "okay" -> "Gaat goed"
@@ -81,7 +124,9 @@ internal object PrivateListeningWorksheet {
         val end: Long,
         val rating: String,
         val note: String,
+        val prompt: PrivateListeningWorksheetPrompt,
         val lines: List<Pair<Int, String>>,
+        val fullLines: List<Pair<Int, String>>,
         val omitted: Int
     )
 
@@ -91,7 +136,12 @@ internal object PrivateListeningWorksheet {
         passages: List<Pair<Long, Long>>,
         ratings: Map<Pair<Long, Long>, String>,
         notes: Map<Pair<Long, Long>, String>,
-        scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL
+        scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL,
+        audience: PrivateListeningWorksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY,
+        subtitleLanguageCode: String? = null,
+        prompt: PrivateListeningWorksheetPrompt = PrivateListeningWorksheetPrompt.TRANSCRIBE,
+        perFragmentPrompts: Map<Pair<Long, Long>, PrivateListeningWorksheetPrompt> =
+            emptyMap()
     ): ByteArray? {
         if (passages.isEmpty() || passages.size > 4 ||
             passages.distinct().size != passages.size ||
@@ -100,33 +150,54 @@ internal object PrivateListeningWorksheet {
         val selected = privatePracticeRouteCandidates(passages, ratings, scope)
         if (selected.isEmpty()) return null
         val sections = ArrayList<Passage>()
+        var fullSourceBytes = 0
         for ((index, bounds) in selected.withIndex()) {
             val start = bounds.first
             val end = bounds.second
             if (start < 0L || end <= start || end - start > 300_000L) return null
-            val note = clean(notes[bounds].orEmpty(), 240) ?: return null
+            // A student handout never needs the subtitle or private-note
+            // content at all: avoid traversing it or rejecting this redacted
+            // document due to unrelated malformed source text.
+            val note = if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
+                clean(notes[bounds].orEmpty(), 240) ?: return null else ""
             val allLines = ArrayList<Pair<Int, String>>()
-            // Match complete subtitle cues only. A manually picked A–B window
-            // may have no exact cue coverage: clearly say so, never invent text.
-            for ((cueIndex, cue) in cues.withIndex()) {
-                val cueStart = runCatching { Math.addExact(cue.startMillis, offsetMs) }
-                    .getOrNull() ?: return null
-                val cueEnd = runCatching { Math.addExact(cue.endMillis, offsetMs) }
-                    .getOrNull() ?: return null
-                if (cueStart >= start && cueEnd <= end && cueEnd > cueStart) {
-                    val line = clean(cue.text, MAX_LINE_CODEPOINTS) ?: return null
-                    if (line.isNotBlank()) allLines.add(cueIndex + 1 to line)
+            if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
+                // Match complete subtitle cues only. Hand-picked A–B times
+                // never imply that audio and SRT/VTT have been aligned.
+                for ((cueIndex, cue) in cues.withIndex()) {
+                    val cueStart = runCatching { Math.addExact(cue.startMillis, offsetMs) }
+                        .getOrNull() ?: return null
+                    val cueEnd = runCatching { Math.addExact(cue.endMillis, offsetMs) }
+                        .getOrNull() ?: return null
+                    if (cueStart >= start && cueEnd <= end && cueEnd > cueStart) {
+                        // Keep the actual source sentence in the answer key.
+                        // Only the compact in-card peek may truncate a line.
+                        // Refuse oversized originals instead of silently
+                        // mislabelling an abbreviated key as complete.
+                        val line = clean(cue.text, MAX_FULL_LINE_CODEPOINTS)
+                            ?: return null
+                        if (line.isNotBlank()) {
+                            fullSourceBytes += line.toByteArray(Charsets.UTF_8).size
+                            if (fullSourceBytes > MAX_BYTES) return null
+                            allLines.add(cueIndex + 1 to line)
+                        }
+                    }
                 }
             }
             // When a longer passage is selected, disclose any omitted middle
             // lines instead of silently claiming a complete transcription.
-            val visible = if (allLines.size <= MAX_VISIBLE_LINES) allLines
+            val visibleFull = if (allLines.size <= MAX_VISIBLE_LINES) allLines
                 else allLines.take(MAX_VISIBLE_LINES / 2) +
                     allLines.takeLast(MAX_VISIBLE_LINES / 2)
+            val visible = visibleFull.map { (number, text) ->
+                number to (clean(text, MAX_PREVIEW_CODEPOINTS) ?: return null)
+            }
             sections.add(Passage(
                 number = index + 1, start = start, end = end,
                 rating = rating(ratings[bounds]), note = note,
+                prompt = perFragmentPrompts[bounds] ?: prompt,
                 lines = visible,
+                fullLines = allLines,
                 omitted = allLines.size - visible.size
             ))
         }
@@ -135,72 +206,162 @@ internal object PrivateListeningWorksheet {
             "<!doctype html><html lang=\"nl\"><head><meta charset=\"utf-8\">" +
                 "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
                 "<meta name=\"referrer\" content=\"no-referrer\">" +
-                "<title>Tuddy · Mijn luisterwerkblad</title>" +
+                "<meta http-equiv=\"Content-Security-Policy\" " +
+                "content=\"default-src 'none'; style-src 'unsafe-inline';" +
+                " form-action 'none'; base-uri 'none'\">" +
+                "<title>" +
+                (if (audience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                    "Tuddy · Luisterleerlingenblad zonder bronregels"
+                else "Tuddy · Mijn luisterwerkblad") + "</title>" +
                 "<style>body{font:16px system-ui,sans-serif;line-height:1.55;" +
                 "max-width:850px;margin:auto;padding:22px;color:#202332}" +
                 "article{border:1px solid #999;border-radius:9px;padding:12px;" +
                 "margin:18px 0;break-inside:avoid}li{margin:12px 0}" +
                 "bdi{overflow-wrap:anywhere}summary{cursor:pointer}" +
-                ".answer-key{break-before:page;page-break-before:always}" +
+                "textarea{width:100%;min-height:88px;box-sizing:border-box;" +
+                "padding:10px;font:inherit;resize:vertical;unicode-bidi:plaintext}" +
+                ".rating{border:0;margin:8px 0;padding:0}" +
+                ".rating label{display:inline-block;margin:4px 14px 4px 0}" +
+                ".print-rating{display:none}" +
+                ".reset{margin:8px 0;padding:6px 10px;cursor:pointer}" +
+                ".answer-key{display:none;break-before:page;page-break-before:always}" +
+                ".answer-key:target{display:block}" +
+                ".answerlink{display:inline-block;margin:10px 0}" +
+                ".printcontrol{display:inline-block;margin:12px 0;font-weight:600;" +
+                    "cursor:pointer}.printkey{vertical-align:middle;margin-right:8px}" +
                 ".line{display:none;border-bottom:1px solid #555;height:24px}" +
                 "p{overflow-wrap:anywhere}" +
-                "@media print{body{padding:0}details{display:none}" +
-                ".line{display:block}article{border:0;border-bottom:1px solid #999}}" +
-                "</style></head><body><main><h1>Mijn privé luisterwerkblad</h1>" +
-                "<p>Luister eerst naar je eigen A–B-fragment. Schrijf op wat je " +
-                "hoort of begrijpt. Open daarna de eigen bronregels om zelf te " +
-                "vergelijken. Dit zijn handmatig gekozen tijden en eigen teksten, " +
+                ".fragment-nav a{display:inline-block;margin:0 12px 8px 0;" +
+                    "padding:6px 12px;border:1px solid #777;border-radius:6px}" +
+                "@media print{body{padding:0}details,form,.answerlink,.fragment-nav," +
+                    ".printkey,.printcontrol{display:none}" +
+                ".print-rating{display:block}" +
+                ".line{display:block}" +
+                ".answer-key,.answer-key:target{display:none}" +
+                ".printkey:checked ~ .answer-key," +
+                    ".printkey:checked ~ .answer-key:target{display:block}" +
+                "article{border:0;border-bottom:1px solid #999}}" +
+                "</style></head><body><main id=\"top\"><h1>" +
+                (if (audience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                    "Mijn luisterleerlingenblad"
+                else "Mijn privé luisterwerkblad") + "</h1>" +
+                "<p>Luister eerst naar je eigen A–B-fragment. " +
+                html(prompt.instruction) + " " +
+                (if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
+                    "Open de eigen bronregels daarna bewust om te vergelijken. " +
+                        "Bij het afdrukken verschijnt het complete bronregelblad " +
+                        "pas als je zelf het bijbehorende afdrukvakje aanvinkt. "
+                else "Dit leerlingenblad bevat geen oorspronkelijke bronregels, " +
+                    "persoonlijke inschattingen of eigen notities. ") +
+                "Dit zijn handmatig gekozen fragmenttijden, " +
                 "geen ASR, uitspraakmeting of geverifieerde vertaling.</p>" +
-                "<p>Mijn bewust gekozen selectie: " + html(scope.title) + " (" +
-                selected.size + " van " + passages.size + " eigen fragmenten).</p>"
+                (if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
+                    "<p>Mijn bewust gekozen selectie: " + html(scope.title) + " (" +
+                        selected.size + " van " + passages.size + " eigen fragmenten).</p>"
+                else "<p>Oefenfragmenten: " + selected.size + ".</p>") +
+                "<p>Bestemming: " + html(audience.title) + ".</p>" +
+                "<p>Algemene opdracht: " + html(prompt.title) + ".</p>"
         )
+        if (sections.size > 1) {
+            out.append("<nav class=\"fragment-nav\" aria-label=\"Ga naar luisterfragment\">" +
+                "<p>Ga direct naar fragment: ")
+            for (part in sections) out.append("<a href=\"#fragment-")
+                .append(part.number).append("\">").append(part.number).append("</a> ")
+            out.append("</p></nav>")
+        }
         for (part in sections) {
-            out.append("<article><h2>Fragment ").append(part.number).append("</h2><p>")
+            out.append("<article id=\"fragment-").append(part.number)
+                .append("\"><h2>Fragment ").append(part.number).append("</h2><p>")
                 .append(time(part.start)).append(" – ").append(time(part.end))
-                .append(" · eigen inschatting: ").append(html(part.rating))
-                .append("</p><p>Wat hoor ik? Schrijf mijn eigen antwoord op:</p>")
+                .append("</p>")
+            if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
+                out.append("<p>Eigen inschatting: ").append(html(part.rating)).append("</p>")
+            }
+            val answerLanguage = if (
+                part.prompt == PrivateListeningWorksheetPrompt.TRANSCRIBE ||
+                part.prompt == PrivateListeningWorksheetPrompt.KEYWORDS
+            ) subtitleLanguageCode else null
+            out.append("<p>Opdracht: ").append(html(part.prompt.title)).append("</p>")
+                .append("<p>").append(html(part.prompt.instruction)).append("</p>")
+                .append("<form autocomplete=\"off\"><label for=\"answer-")
+                .append(part.number).append("\">Mijn eigen antwoord (alleen deze browser)</label>")
+                .append("<textarea id=\"answer-").append(part.number)
+                .append("\" rows=\"4\" dir=\"")
+                .append(htmlDirection(answerLanguage))
+                .append("\"").append(htmlLanguageAttribute(answerLanguage))
+                .append(" spellcheck=\"false\" autocomplete=\"off\" " +
+                    "autocorrect=\"off\"></textarea>")
+                .append("<fieldset class=\"rating\"><legend>Mijn eigen luisterinschatting " +
+                    "(optioneel, niet opgeslagen)</legend>")
+                .append("<label><input type=\"radio\" name=\"rating-").append(part.number)
+                .append("\" value=\"repeat\"> Nog oefenen</label>")
+                .append("<label><input type=\"radio\" name=\"rating-").append(part.number)
+                .append("\" value=\"okay\"> Ging goed</label>")
+                .append("<label><input type=\"radio\" name=\"rating-").append(part.number)
+                .append("\" value=\"easy\"> Makkelijk</label></fieldset>")
+                .append("<button class=\"reset\" type=\"reset\">Wis mijn antwoord " +
+                    "en inschatting</button></form>")
+                .append("<p class=\"print-rating\">Eigen luisterinschatting: " +
+                    "&#9633; Nog oefenen &nbsp; &#9633; Ging goed &nbsp; " +
+                    "&#9633; Makkelijk</p>")
                 .append("<div class=\"line\"></div><div class=\"line\"></div>")
-                .append("<details><summary>Toon zelf gekozen bronregels (")
-                .append(part.lines.size).append(" getoond)</summary>")
+            if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
+                out.append("<details><summary>Toon eigen bronregels (")
+                    .append(part.lines.size).append(" van ")
+                    .append(part.fullLines.size).append(" in korte preview)</summary>")
             if (part.lines.isEmpty()) {
                 out.append("<p>Geen volledig passende ondertitelregel; " +
                     "dit is alleen mijn handmatig gekozen audiotijdvak.</p>")
             } else {
                 out.append("<ol>")
                 for ((number, line) in part.lines) {
-                    out.append("<li>Bronregel ").append(number).append(": <bdi dir=\"auto\">")
-                        .append(html(line)).append("</bdi></li>")
+                    out.append("<li>Bronregel ").append(number).append(": ")
+                        .append(htmlBidiText(line, subtitleLanguageCode)).append("</li>")
                 }
                 out.append("</ol>")
             }
             if (part.omitted > 0) out.append("<p>")
                 .append(part.omitted)
                 .append(" tussenliggende bronregels niet getoond.</p>")
-            out.append("</details>")
-            if (part.note.isNotBlank()) out.append("<p>Mijn volgende oefenstap: <bdi dir=\"auto\">")
-                .append(html(part.note)).append("</bdi></p>")
+                out.append("</details>")
+                if (part.note.isNotBlank()) out.append(
+                    "<p>Mijn volgende oefenstap: <bdi dir=\"auto\">"
+                ).append(html(part.note)).append("</bdi></p>")
+            }
             out.append("</article>")
             if (out.length > MAX_BYTES) return null
         }
-        out.append("<section class=\"answer-key\"><h2>Bronregels voor zelfcontrole</h2>" +
-            "<p>De bronregels komen uit mijn eigen SRT/VTT; ze zijn niet " +
-            "automatisch naar het geluidsbestand uitgelijnd.</p>")
+        if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
+            out.append("<input id=\"print-listening-key\" class=\"printkey\" " +
+                    "type=\"checkbox\" aria-label=\"Print ook mijn bronregelblad\">" +
+                    "<label class=\"printcontrol\" for=\"print-listening-key\">" +
+                    "Print ook mijn bronregelblad (bewuste keuze)</label>")
+            out.append("<a class=\"answerlink\" href=\"#bronregels\">" +
+                "Open compleet bronregelblad (bewuste keuze)</a>")
+                .append("<section class=\"answer-key\" id=\"bronregels\">" +
+                    "<h2>Bronregels voor zelfcontrole</h2>" +
+                    "<a class=\"answerlink\" href=\"#top\">Terug naar start</a>" +
+                    "<p>De bronregels komen uit mijn eigen SRT/VTT; ze zijn niet " +
+                    "automatisch naar het geluidsbestand uitgelijnd.</p>")
         for (part in sections) {
             out.append("<h3>Fragment ").append(part.number).append(" · ")
                 .append(time(part.start)).append(" – ").append(time(part.end)).append("</h3>")
-            if (part.lines.isEmpty()) out.append("<p>Geen exacte cue-koppeling.</p>")
+            if (part.fullLines.isEmpty()) out.append("<p>Geen exacte cue-koppeling.</p>")
             else {
                 out.append("<ol>")
-                for ((number, line) in part.lines) out.append("<li>")
-                    .append(number).append(". <bdi dir=\"auto\">")
-                    .append(html(line)).append("</bdi></li>")
+                for ((number, line) in part.fullLines) out.append("<li>")
+                    .append(number).append(". ")
+                    .append(htmlBidiText(line, subtitleLanguageCode)).append("</li>")
                 out.append("</ol>")
             }
-            if (part.omitted > 0) out.append("<p>")
-                .append(part.omitted).append(" middenregels overgeslagen.</p>")
+            // The answer key is genuinely complete; only the in-card peek
+            // is abbreviated. Oversized output fails closed rather than
+            // falsely presenting a truncated transcript as complete.
             if (out.length > MAX_BYTES) return null
         }
-        out.append("</section><p>Alleen na expliciete keuze via Android bewaard. " +
+            out.append("</section>")
+        }
+        out.append("<p>Alleen na expliciete keuze via Android bewaard. " +
             "Een externe bestandsprovider kan de tekst synchroniseren of delen. " +
             "Geen audio, URI, account of netwerkaanvraag in dit HTML-bestand." +
             "</p></main></body></html>")

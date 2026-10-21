@@ -1,6 +1,7 @@
 package com.livelingo.android
 
 import android.Manifest
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -196,6 +198,43 @@ private fun TuddyScreen(
     val manuallyAssignedSpeakers = remember { mutableStateMapOf<Long, String>() }
     var pinsOpen by remember { mutableStateOf(false) }
     var pinsNotice by remember { mutableStateOf("") }
+    // Null means every pinned caption is selected; a non-null set is an
+    // explicit temporary selection for export or in-app practice.
+    var pinnedChosenIds by remember { mutableStateOf<Set<Long>?>(null) }
+    // Single-step recovery of a mistakenly removed star or all temporary stars.
+    var pinnedRemovedUndo by remember { mutableStateOf(emptySet<Long>()) }
+    var pinnedSearchTerm by remember { mutableStateOf("") }
+    var pinnedManageScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
+    var pinnedManagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var pinnedPairMenuOpen by remember { mutableStateOf(false) }
+    var pinnedNewestFirst by remember { mutableStateOf(false) }
+    // These manually authored corrections apply ONLY to temporary study
+    // cards. The source transcript, JSON, HTML and subtitles stay untouched.
+    val pinnedStudyEdits = remember { mutableStateMapOf<Long, PinnedStudyCorrection>() }
+    var pinnedStudyEditId by remember { mutableStateOf<Long?>(null) }
+    var pinnedStudyEditSignature by remember { mutableStateOf<List<String>?>(null) }
+    var pinnedStudyDraft by remember { mutableStateOf("") }
+    var pinnedStudyEditError by remember { mutableStateOf("") }
+    var pinnedExportOpen by remember { mutableStateOf(false) }
+    var pinnedPracticeOpen by remember { mutableStateOf(false) }
+    var pinnedPracticeOnlyPersonal by remember { mutableStateOf(false) }
+    var pinnedExportNotice by remember { mutableStateOf("") }
+    var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
+    var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
+    var pinnedStudyDirection by remember { mutableStateOf(PinnedStudyDirection.SOURCE_TO_TARGET) }
+    var pinnedClozeDifficulty by remember { mutableStateOf(PinnedClozeDifficulty.NORMAL) }
+    var pinnedClozeHintMode by remember { mutableStateOf(PinnedClozeHintMode.BLANK) }
+    var pinnedClozeAnswerSpace by remember { mutableStateOf(PinnedClozeAnswerSpace.STANDARD) }
+    var pinnedClozeAudience by remember { mutableStateOf(PinnedClozeAudience.SELF_STUDY) }
+    var pinnedClozePass by remember { mutableStateOf(PinnedClozePass.FIRST) }
+    var pinnedClozeCardOrder by remember { mutableStateOf(PinnedClozeCardOrder.SOURCE) }
+    var pinnedOnlyPersonalStudy by remember { mutableStateOf(false) }
+    var pinnedStudyLanguageTags by remember { mutableStateOf(false) }
+    var pinnedLanguagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var pinnedExportShowAll by remember { mutableStateOf(false) }
+    var pinnedExactPreviewOpen by remember { mutableStateOf(false) }
+    var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
+    var pendingPinnedExport by remember { mutableStateOf<PendingPinnedCaptionExport?>(null) }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
     var pronunciationNotice by remember { mutableStateOf("") }
     val captionHaptics = remember(context) { CaptionHapticCues(context) }
@@ -456,6 +495,16 @@ private fun TuddyScreen(
             TranscriptExportRow(line.original, line.translated, line.status,
                 line.sourceCode, line.targetCode, line.recordedAtMillis)
         }, onlyFinished)
+
+    fun currentPinnedSelection(): List<PinnedCaptionRow> = lines
+        .filter { it.id in captionPins &&
+            (pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty()) }
+        .map { line ->
+            PinnedCaptionRow(line.id, TranscriptExportRow(
+                line.original, line.translated, line.status,
+                line.sourceCode, line.targetCode, line.recordedAtMillis
+            ))
+        }
 
     fun captureSubtitleDraft(): ByteArray? =
         PrivateSubtitleDraftExport.snapshot(lines.map { line ->
@@ -974,6 +1023,7 @@ private fun TuddyScreen(
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             val removed = lines.removeAt(0)
                             captionPins = captionPins - removed.id
+                            pinnedStudyEdits.remove(removed.id)
                             manuallyAssignedSpeakers.remove(removed.id)
                             if (editingCaptionId == removed.id) {
                                 editingCaptionId = null
@@ -1070,6 +1120,7 @@ private fun TuddyScreen(
         pendingCaptionShare = null
         pendingSpeakerExport = null
         pendingTranscriptExport = null
+        pendingPinnedExport = null
         pendingArchiveExcerpt = null
         exportStatus = ""
         sourceOpen = false
@@ -1112,6 +1163,7 @@ private fun TuddyScreen(
             val removed = lines.removeAt(0)
             manuallyAssignedSpeakers.remove(removed.id)
             captionPins = captionPins - removed.id
+                            pinnedStudyEdits.remove(removed.id)
             if (editingCaptionId == removed.id) {
                 editingCaptionId = null
                 pendingCaptionLanguageChange = null
@@ -1179,6 +1231,64 @@ private fun TuddyScreen(
                 exportStatus = "JSON-gesprek opgeslagen op de door jou gekozen locatie."
             } else {
                 error = "JSON-gesprek niet opgeslagen. Kies een andere locatie en probeer opnieuw."
+            }
+        }
+    }
+
+    // A pinned selection is rechecked after the external picker returns; a
+    // changed pin, edited sentence or new session invalidates the handoff.
+    val savePinnedCaptionFile = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val pending = pendingPinnedExport
+        pendingPinnedExport = null
+        if (result.resultCode == Activity.RESULT_OK &&
+            result.data?.data != null && pending != null
+        ) {
+            val currentSelection = currentPinnedSelection()
+            val currentBytes = PrivatePinnedCaptionExport.snapshot(
+                currentSelection, pending.format, pending.subtitleOptions, pending.scope,
+                pending.languagePair, pending.studyDirection,
+                pinnedStudyEdits.toMap(), pending.onlyPersonallyCorrected,
+                pending.showLanguageTags, pending.clozeDifficulty, pending.clozeHintMode,
+                pending.clozeAnswerSpace, pending.clozeAudience, pending.clozePass,
+                pending.clozeCardOrder
+            )
+            if (pending.generation != generation || listening ||
+                pending.format != pinnedExportFormat ||
+                pending.scope != pinnedExportScope ||
+                pending.languagePair != pinnedLanguagePair ||
+                pending.studyDirection != pinnedStudyDirection ||
+                pending.studyEdits != pinnedStudyEdits.toMap() ||
+                pending.onlyPersonallyCorrected != pinnedOnlyPersonalStudy ||
+                pending.showLanguageTags != pinnedStudyLanguageTags ||
+                pending.clozeDifficulty != pinnedClozeDifficulty ||
+                pending.clozeHintMode != pinnedClozeHintMode ||
+                pending.clozeAnswerSpace != pinnedClozeAnswerSpace ||
+                pending.clozeAudience != pinnedClozeAudience ||
+                pending.clozePass != pinnedClozePass ||
+                pending.clozeCardOrder != pinnedClozeCardOrder ||
+                pending.subtitleOptions != pinnedSubtitleOptions ||
+                currentSelection != pending.selection || currentBytes == null ||
+                !currentBytes.contentEquals(pending.bytes)
+            ) {
+                exportStatus = "De gemarkeerde regels zijn gewijzigd. Kies opnieuw om te bewaren."
+            } else {
+                val uri = result.data?.data
+                val saved = runCatching {
+                    if (uri == null) false else
+                        context.contentResolver.openOutputStream(uri, "w")?.use {
+                            it.write(pending.bytes)
+                            it.flush()
+                            true
+                        } ?: false
+                }.getOrDefault(false)
+                if (saved) {
+                    exportStatus = "Alleen de geselecteerde regels zijn bewust bewaard als " +
+                        pending.format.title + ". Controleer externe opslag en inhoud."
+                } else {
+                    error = "Gemarkeerde regels niet opgeslagen. Kies een andere opslaglocatie."
+                }
             }
         }
     }
@@ -1579,6 +1689,7 @@ private fun TuddyScreen(
                 archiveStudyOpen = false
                 archiveReaderOpen = false
                 archiveSearchQuery = ""
+                pinnedExportOpen = false
                 pendingArchiveExcerpt = null
                 archiveExcerptNotice = ""
                 pendingCaptionShare = null
@@ -1634,6 +1745,8 @@ private fun TuddyScreen(
             draftFromExternalShare = false
             manualText = ""
             pendingSpeakerExport = null
+            pendingPinnedExport = null
+            pinnedExportOpen = false
             editingCaptionId = null
             captionCorrectionDraft = ""
             pendingSingleCaptionDelete = null
@@ -1939,6 +2052,39 @@ private fun TuddyScreen(
                     sessionCaptionStudyStartId = selected
                     sessionCaptionStudyOpen = true
                 }
+            )
+        }
+        if (pinnedPracticeOpen) {
+            SessionCaptionStudyDialog(
+                captions = lines.filter { line ->
+                    val selected = line.id in captionPins &&
+                        (pinnedChosenIds == null || line.id in pinnedChosenIds.orEmpty())
+                    val correction = pinnedStudyEdits[line.id]?.appliesTo(
+                        TranscriptExportRow(line.original, line.translated, line.status,
+                            line.sourceCode, line.targetCode, line.recordedAtMillis)
+                    ) == true
+                    selected && (!pinnedPracticeOnlyPersonal || correction)
+                }.map { line ->
+                    FocusCaptionLine(
+                        line.id, line.original,
+                        pinnedStudyEdits[line.id]
+                            ?.takeIf { it.appliesTo(TranscriptExportRow(
+                                line.original, line.translated, line.status,
+                                line.sourceCode, line.targetCode, line.recordedAtMillis
+                            )) }?.answer ?: line.translated,
+                        line.status,
+                        line.sourceCode, line.targetCode,
+                        manuallyAssignedSpeakers[line.id], line.personalMeaning
+                    )
+                },
+                onDismiss = { pinnedPracticeOpen = false },
+                originLabel = "alleen gemarkeerde zinnen",
+                manualStudyAnswers = lines.filter { line ->
+                    pinnedStudyEdits[line.id]?.appliesTo(TranscriptExportRow(
+                        line.original, line.translated, line.status,
+                        line.sourceCode, line.targetCode, line.recordedAtMillis
+                    )) == true
+                }.map { it.id }.toSet()
             )
         }
         if (sessionCaptionStudyOpen) {
@@ -2862,67 +3008,329 @@ private fun TuddyScreen(
         }
         if (pinsOpen) {
             val pinnedLines = lines.filter { it.id in captionPins }
+            val chosenPins = pinnedLines.filter {
+                pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty()
+            }
+            val term = pinnedSearchTerm.trim()
+            val pinnedPairs = pinnedLines.map { it.sourceCode to it.targetCode }.distinct()
+            val filteredPins = pinnedLines.filter { line ->
+                val pairMatches = pinnedManagePair == null ||
+                    (line.sourceCode to line.targetCode) == pinnedManagePair
+                val scopeMatches = when (pinnedManageScope) {
+                    PinnedCaptionScope.ALL -> true
+                    PinnedCaptionScope.COMPLETED ->
+                        line.status == "Lokaal" || line.status == "Lokaal vertaald"
+                    PinnedCaptionScope.TRANSLATED ->
+                        line.status == "Lokaal vertaald" && line.translated.isNotBlank()
+                }
+                pairMatches && scopeMatches && (term.isBlank() ||
+                    line.original.contains(term, ignoreCase = true) ||
+                    line.translated.contains(term, ignoreCase = true) ||
+                    line.sourceCode.contains(term, ignoreCase = true) ||
+                    line.targetCode.contains(term, ignoreCase = true))
+            }.let { if (pinnedNewestFirst) it.reversed() else it }
+            val visiblePinIds = filteredPins.map { it.id }.toSet()
+            val studyReadyPins = chosenPins.count {
+                val row = TranscriptExportRow(it.original, it.translated, it.status,
+                    it.sourceCode, it.targetCode, it.recordedAtMillis)
+                val answer = pinnedStudyEdits[it.id]?.takeIf { edit ->
+                    edit.appliesTo(row)
+                }?.answer ?: it.translated
+                it.status == "Lokaal vertaald" &&
+                    (!pinnedPracticeOnlyPersonal ||
+                        pinnedStudyEdits[it.id]?.appliesTo(row) == true) &&
+                    it.original.isNotBlank() && answer.isNotBlank() &&
+                    it.original != answer &&
+                    it.original.codePointCount(0, it.original.length) <= 400 &&
+                    answer.codePointCount(0, answer.length) <= 400
+            }
             AlertDialog(
                 onDismissRequest = { pinsOpen = false },
                 title = { Text("Gemarkeerde gespreksregels") },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "Alleen in dit gesprek, maximaal ${SessionCaptionPins.MAX_PINS}. " +
-                                "Sluiten wist de markeringen niet; Wis gesprek wel.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    // One scroll owner: on small phones the filters, all selected
+                    // rows and the practice action remain reachable.
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item(key = "intro") {
+                            Text(
+                                "Alleen in dit gesprek, maximaal ${SessionCaptionPins.MAX_PINS}. " +
+                                    "Sluiten wist de markeringen niet; Wis gesprek wel.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                         if (pinnedLines.isEmpty()) {
-                            Text("Geen gemarkeerde zinnen in dit gesprek.")
+                            item(key = "empty") {
+                                Text("Geen gemarkeerde zinnen in dit gesprek.")
+                            }
                         } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxWidth().heightIn(max = 370.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                items(pinnedLines, key = { it.id }) { line ->
-                                    Column {
-                                        Text(
-                                            DateFormat.getTimeInstance(DateFormat.SHORT)
-                                                .format(Date(line.recordedAtMillis)) +
-                                                " · " + line.sourceCode + " → " + line.targetCode,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                        Text(line.original, style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontSize = MaterialTheme.typography.bodyMedium.fontSize * captionSize.scale
-                                        ))
-                                        if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
-                                            Text(line.translated,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                style = MaterialTheme.typography.bodyLarge.copy(
-                                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
-                                                ))
-                                        } else {
-                                            Text("[Vertaling niet voltooid]",
-                                                style = MaterialTheme.typography.bodySmall)
+                            item(key = "filters") {
+                                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    OutlinedTextField(
+                                        value = pinnedSearchTerm,
+                                        onValueChange = { pinnedSearchTerm = it.take(120) },
+                                        label = { Text("Zoek mijn gemarkeerde zinnen") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Text(
+                                        "${chosenPins.size} van ${pinnedLines.size} gekozen · " +
+                                            "${filteredPins.size} zichtbaar. Zoeken en filters " +
+                                            "veranderen je gekozen selectie niet.",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        TextButton(
+                                            onClick = { pinnedPairMenuOpen = true },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Taalrichting: " +
+                                                (pinnedManagePair?.let {
+                                                    it.first + " → " + it.second
+                                                } ?: "Alle taalrichtingen") + " ▾")
                                         }
-                                        TextButton(onClick = {
-                                            val index = lines.indexOfFirst { it.id == line.id }
-                                            pinsOpen = false
-                                            if (index >= 0) {
-                                                follow = false
-                                                coroutineScope.launch {
-                                                    listState.animateScrollToItem(index)
+                                        DropdownMenu(
+                                            expanded = pinnedPairMenuOpen,
+                                            onDismissRequest = { pinnedPairMenuOpen = false }
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("Alle taalrichtingen") },
+                                                onClick = {
+                                                    pinnedManagePair = null
+                                                    pinnedPairMenuOpen = false
                                                 }
+                                            )
+                                            pinnedPairs.forEach { pair ->
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Text(pair.first + " → " + pair.second)
+                                                    },
+                                                    onClick = {
+                                                        pinnedManagePair = pair
+                                                        pinnedPairMenuOpen = false
+                                                    }
+                                                )
                                             }
-                                        }) { Text("Ga naar uitspraak") }
-                                        HorizontalDivider()
+                                        }
                                     }
+                                    PinnedCaptionScope.entries.forEach { scope ->
+                                        TextButton(
+                                            onClick = { pinnedManageScope = scope },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text((if (pinnedManageScope == scope) "● " else "○ ") +
+                                                scope.title)
+                                        }
+                                    }
+                                    TextButton(onClick = {
+                                        pinnedNewestFirst = !pinnedNewestFirst
+                                    }, modifier = Modifier.fillMaxWidth()) {
+                                        Text(if (pinnedNewestFirst) "Nieuwste eerst ✓"
+                                            else "Oudste eerst ✓ · tik voor nieuwste")
+                                    }
+                                    TextButton(
+                                        enabled = visiblePinIds.isNotEmpty(),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = { pinnedChosenIds = visiblePinIds }
+                                    ) { Text("Kies uitsluitend ${visiblePinIds.size} zichtbare regels") }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        TextButton(
+                                            enabled = visiblePinIds.isNotEmpty(),
+                                            modifier = Modifier.weight(1f),
+                                            onClick = {
+                                                pinnedChosenIds =
+                                                    (pinnedChosenIds ?: captionPins) + visiblePinIds
+                                            }
+                                        ) { Text("Voeg zichtbare toe") }
+                                        TextButton(
+                                            enabled = visiblePinIds.isNotEmpty(),
+                                            modifier = Modifier.weight(1f),
+                                            onClick = {
+                                                pinnedChosenIds =
+                                                    (pinnedChosenIds ?: captionPins) - visiblePinIds
+                                            }
+                                        ) { Text("Deselecteer zichtbare") }
+                                    }
+                                    TextButton(
+                                        onClick = { pinnedChosenIds = null },
+                                        enabled = chosenPins.size < pinnedLines.size,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) { Text("Kies alle markeringen") }
+                                }
+                            }
+                            if (filteredPins.isEmpty()) {
+                                item(key = "no_matches") {
+                                    Text("Geen resultaten. Pas je zoekterm of filter aan.")
+                                }
+                            }
+                            items(filteredPins, key = { it.id }) { line ->
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = pinnedChosenIds == null ||
+                                                line.id in pinnedChosenIds.orEmpty(),
+                                            onCheckedChange = { checked ->
+                                                val selected = pinnedChosenIds ?: captionPins
+                                                pinnedChosenIds = if (checked)
+                                                    selected + line.id else selected - line.id
+                                            }
+                                        )
+                                        Text("In mijn oefen-/exportselectie",
+                                            style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Text(
+                                        DateFormat.getTimeInstance(DateFormat.SHORT)
+                                            .format(Date(line.recordedAtMillis)) +
+                                            " · " + line.sourceCode + " → " + line.targetCode,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                    Text(line.original,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = MaterialTheme.typography.bodyMedium.fontSize *
+                                                captionSize.scale
+                                        ))
+                                    if (line.status == "Lokaal vertaald" ||
+                                        line.status == "Lokaal") {
+                                        Text(line.translated,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = MaterialTheme.typography.bodyLarge.copy(
+                                                fontSize =
+                                                    MaterialTheme.typography.bodyLarge.fontSize *
+                                                        captionSize.scale
+                                            ))
+                                        if (line.status == "Lokaal vertaald" &&
+                                            line.translated.isNotBlank()) {
+                                            val originalRow = TranscriptExportRow(
+                                                line.original, line.translated, line.status,
+                                                line.sourceCode, line.targetCode,
+                                                line.recordedAtMillis
+                                            )
+                                            val authored = pinnedStudyEdits[line.id]?.takeIf {
+                                                it.appliesTo(originalRow)
+                                            }
+                                            if (authored != null) {
+                                                Text("Mijn gecorrigeerde studieantwoord:",
+                                                    style = MaterialTheme.typography.labelMedium)
+                                                Text(authored.answer,
+                                                    style = MaterialTheme.typography.bodyLarge)
+                                            } else {
+                                                Text("Modelantwoord: niet onafhankelijk geverifieerd.",
+                                                    style = MaterialTheme.typography.bodySmall)
+                                            }
+                                            TextButton(enabled = !listening, onClick = {
+                                                captionSpeaker.stop()
+                                                pinnedStudyEditId = line.id
+                                                pinnedStudyEditSignature = listOf(
+                                                    line.original, line.translated,
+                                                    line.sourceCode, line.targetCode
+                                                )
+                                                pinnedStudyDraft = authored?.answer
+                                                    ?: line.translated
+                                                pinnedStudyEditError = ""
+                                                pinsOpen = false
+                                            }) { Text(if (authored == null)
+                                                "✎ Corrigeer alleen studieantwoord"
+                                                else "✎ Bewerk mijn studieantwoord") }
+                                            if (authored != null) {
+                                                TextButton(onClick = {
+                                                    pinnedStudyEdits.remove(line.id)
+                                                    pinsNotice =
+                                                        "Eigen studiecorrectie hersteld naar model."
+                                                }) { Text("Gebruik weer modelvertaling") }
+                                            }
+                                        }
+                                    } else {
+                                        Text("[Vertaling niet voltooid]",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    TextButton(onClick = {
+                                        val index = lines.indexOfFirst { it.id == line.id }
+                                        pinsOpen = false
+                                        if (index >= 0) {
+                                            follow = false
+                                            coroutineScope.launch {
+                                                listState.animateScrollToItem(index)
+                                            }
+                                        }
+                                    }) { Text("Ga naar uitspraak") }
+                                    TextButton(onClick = {
+                                        pinnedRemovedUndo = setOf(line.id)
+                                        captionPins = captionPins - line.id
+                                        pinnedChosenIds = pinnedChosenIds?.minus(line.id)
+                                        pinsNotice = "Ster verwijderd. Herstel hieronder indien nodig."
+                                    }) { Text("Verwijder alleen deze ster") }
+                                    HorizontalDivider()
+                                }
+                            }
+                            item(key = "practice") {
+                                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = pinnedPracticeOnlyPersonal,
+                                            onCheckedChange = {
+                                                pinnedPracticeOnlyPersonal = it
+                                            }
+                                        )
+                                        Text("Oefen alleen mijn handmatig gecorrigeerde antwoorden",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    if (pinnedPracticeOnlyPersonal && studyReadyPins == 0) {
+                                        Text("Geen geschikte eigen studiecorrecties " +
+                                            "in de gekozen zinnen. Corrigeer eerst een " +
+                                            "modelantwoord of zet het filter uit.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error)
+                                    }
+                                    OutlinedButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = studyReadyPins > 0 && !listening,
+                                        onClick = {
+                                            captionSpeaker.stop()
+                                            pinsOpen = false
+                                            pinnedPracticeOpen = true
+                                        }
+                                    ) {
+                                        Text("Oefen ${studyReadyPins} gekozen vertaalparen")
+                                    }
+                                    Text(
+                                        "Tijdelijke leerkaarten; alleen echt vertaalde zinnen. " +
+                                            "Sluiten wist de oefenronde.",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    TextButton(onClick = {
+                                        pinnedRemovedUndo = captionPins
+                                        captionPins = emptySet()
+                                        pinnedChosenIds = null
+                                        pinsNotice = "Alle sterren gewist. Herstel de laatste " +
+                                            "verwijdering hieronder zolang dit scherm open is."
+                                    }) { Text("Wis markeringen") }
                                 }
                             }
                         }
                         if (pinsNotice.isNotBlank()) {
-                            Text(pinsNotice, style = MaterialTheme.typography.bodySmall)
+                            item(key = "notice") {
+                                Text(pinsNotice, style = MaterialTheme.typography.bodySmall)
+                            }
                         }
-                        if (pinnedLines.isNotEmpty()) {
-                            TextButton(onClick = {
-                                captionPins = emptySet()
-                                pinsNotice = "Alle markeringen van dit gesprek zijn gewist."
-                            }) { Text("Wis markeringen") }
+                        if (pinnedRemovedUndo.isNotEmpty()) {
+                            item(key = "undo_removed") {
+                                val availableIds = lines.map { it.id }.toSet()
+                                val restore = pinnedRemovedUndo.intersect(availableIds)
+                                val withinLimit = (captionPins + restore).size <=
+                                    SessionCaptionPins.MAX_PINS
+                                TextButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = restore.isNotEmpty() && withinLimit,
+                                    onClick = {
+                                        captionPins = captionPins + restore
+                                        pinnedChosenIds = null
+                                        pinnedRemovedUndo = emptySet()
+                                        pinsNotice = "${restore.size} ster(ren) hersteld."
+                                    }
+                                ) { Text("↶ Herstel ${restore.size} laatst verwijderde ster(ren)") }
+                            }
                         }
                     }
                 },
@@ -2931,25 +3339,711 @@ private fun TuddyScreen(
                 },
                 dismissButton = {
                     TextButton(
-                        enabled = pinnedLines.isNotEmpty() && !listening,
+                        enabled = chosenPins.isNotEmpty() && !listening,
                         onClick = {
-                            val snapshot = PrivateTranscriptExport.snapshot(
-                                pinnedLines.map { line ->
-                                    TranscriptExportRow(
-                                        line.original, line.translated, line.status,
-                                        line.sourceCode, line.targetCode, line.recordedAtMillis
-                                    )
-                                }
+                            pinsNotice = ""
+                            pinnedExportNotice = ""
+                            pinnedExactPreviewOpen = false
+                            pinnedExportOpen = true
+                            pinsOpen = false
+                        }
+                    ) { Text("Exporteer ${chosenPins.size} gekozen…") }
+                }
+            )
+        }
+        if (pinnedStudyEditId != null) {
+            val editId = pinnedStudyEditId
+            val editLine = lines.firstOrNull { it.id == editId && it.id in captionPins }
+            if (editLine == null || editLine.status != "Lokaal vertaald" ||
+                editLine.translated.isBlank()) {
+                LaunchedEffect(editId) {
+                    pinnedStudyEditId = null
+                    pinnedStudyEditSignature = null
+                    pinnedStudyEditError = ""
+                }
+            } else {
+                AlertDialog(
+                    onDismissRequest = {
+                        pinnedStudyEditId = null
+                        pinnedStudyEditError = ""
+                        pinsOpen = true
+                    },
+                    title = { Text("Eigen studieantwoord · alleen voor oefenkaarten") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Originele zin: " + editLine.original,
+                                style = MaterialTheme.typography.bodyMedium)
+                            Text("Modelvertaling: " + editLine.translated,
+                                style = MaterialTheme.typography.bodySmall)
+                            OutlinedTextField(
+                                value = pinnedStudyDraft,
+                                onValueChange = {
+                                    pinnedStudyDraft = it.take(850)
+                                    pinnedStudyEditError = ""
+                                },
+                                label = { Text("Mijn eigen betekenis · max. 400 tekens") },
+                                minLines = 2,
+                                maxLines = 5,
+                                modifier = Modifier.fillMaxWidth()
                             )
-                            if (snapshot == null) {
-                                pinsNotice = "Selectie kan niet veilig worden geëxporteerd."
-                            } else {
-                                pendingTranscriptExport = generation to snapshot
-                                pinsOpen = false
-                                saveTranscript.launch("Tuddy-gemarkeerde-zinnen.txt")
+                            Text("Dit is jouw eigen notitie, geen gecontroleerde vertaling. " +
+                                "Wijzigt nooit de herkende tekst, modelvertaling, " +
+                                "privé-JSON/HTML of ondertitels. Alleen in RAM.",
+                                style = MaterialTheme.typography.bodySmall)
+                            if (pinnedStudyEditError.isNotBlank()) {
+                                Text(pinnedStudyEditError,
+                                    color = MaterialTheme.colorScheme.error)
                             }
                         }
-                    ) { Text("Bewaar selectie…") }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val answer = pinnedStudyDraft.trim()
+                            val stillOriginal = pinnedStudyEditSignature == listOf(
+                                editLine.original, editLine.translated,
+                                editLine.sourceCode, editLine.targetCode
+                            )
+                            if (!stillOriginal) {
+                                pinnedStudyEditError =
+                                    "De oorspronkelijke zin of vertaling is veranderd. " +
+                                        "Annuleer en open de correctie opnieuw."
+                            } else if (!PrivatePinnedCaptionExport.validStudyEdit(answer)) {
+                                pinnedStudyEditError =
+                                    "Vul één veilige tekstregel in (maximaal 400 Unicode-tekens)."
+                            } else {
+                                if (answer == editLine.translated) {
+                                    pinnedStudyEdits.remove(editLine.id)
+                                } else {
+                                    pinnedStudyEdits[editLine.id] = PinnedStudyCorrection(
+                                        editLine.original, editLine.translated,
+                                        editLine.sourceCode, editLine.targetCode, answer
+                                    )
+                                }
+                                pinnedStudyEditId = null
+                                pinnedStudyEditSignature = null
+                                pinnedStudyEditError = ""
+                                pinsNotice = "Studieantwoord aangepast, bron ongewijzigd."
+                                pinsOpen = true
+                            }
+                        }) { Text("Gebruik in mijn oefenkaarten") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            pinnedStudyEditId = null
+                            pinnedStudyEditError = ""
+                            pinsOpen = true
+                        }) { Text("Annuleren") }
+                    }
+                )
+            }
+        }
+        if (pinnedExportOpen && !pinnedExactPreviewOpen) {
+            val selection = currentPinnedSelection()
+            val included = remember(selection, pinnedExportScope,
+                pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
+                pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
+                pinnedStudyLanguageTags
+            ) {
+                PrivatePinnedCaptionExport.includedRows(
+                    selection, pinnedExportFormat, pinnedSubtitleOptions,
+                    pinnedExportScope, pinnedLanguagePair,
+                    pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy
+                )
+            }
+            val computedPreview = remember(selection, pinnedExportScope,
+                pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
+                pinnedStudyDirection, pinnedStudyEdits.toMap(),
+                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder
+            ) {
+                PrivatePinnedCaptionExport.snapshot(
+                    selection, pinnedExportFormat, pinnedSubtitleOptions,
+                    pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection,
+                    pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
+                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder
+                )
+            }
+            AlertDialog(
+                onDismissRequest = {
+                    pinnedExportOpen = false
+                    pinnedExactPreviewOpen = false
+                },
+                title = { Text("Alleen gemarkeerde regels bewaren") },
+                text = {
+                    Column(
+                        modifier = Modifier.heightIn(max = 470.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            "${selection.size} gekozen regels uit maximaal ${SessionCaptionPins.MAX_PINS}. " +
+                                "Alle andere zinnen blijven buiten het bestand. " +
+                                "Controleer hieronder het formaat. De gekozen Android-provider " +
+                                "kan deze gevoelige tekst opslaan, delen of synchroniseren.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        PinnedCaptionFormat.entries.forEach { format ->
+                            TextButton(onClick = {
+                                pinnedExportFormat = format
+                                pinnedExportNotice = ""
+                            }) {
+                                Text((if (pinnedExportFormat == format) "● " else "○ ") +
+                                    format.title)
+                            }
+                        }
+                        if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.CSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML)) {
+                            HorizontalDivider()
+                            Text("Kies hoe je de tweetalige modelvertalingen wilt oefenen",
+                                style = MaterialTheme.typography.titleSmall)
+                            PinnedStudyDirection.entries.forEach { direction ->
+                                TextButton(onClick = {
+                                    pinnedStudyDirection = direction
+                                    pinnedExportNotice = ""
+                                }) {
+                                    Text((if (pinnedStudyDirection == direction) "● " else "○ ") +
+                                        direction.title)
+                                }
+                            }
+                            if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML) {
+                                HorizontalDivider()
+                                Text("Hoeveel woorden wil je zelf aanvullen?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozeDifficulty.entries.forEach { difficulty ->
+                                    TextButton(onClick = {
+                                        pinnedClozeDifficulty = difficulty
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozeDifficulty == difficulty) "● "
+                                            else "○ ") + difficulty.title)
+                                    }
+                                }
+                                Text("Hoeveel hulp bieden de verborgen woorden?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozeHintMode.entries.forEach { hintMode ->
+                                    TextButton(onClick = {
+                                        pinnedClozeHintMode = hintMode
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozeHintMode == hintMode) "● "
+                                            else "○ ") + hintMode.title)
+                                    }
+                                }
+                                HorizontalDivider()
+                                Text("Hoeveel schrijfruimte wil je op papier?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozeAnswerSpace.entries.forEach { space ->
+                                    TextButton(onClick = {
+                                        pinnedClozeAnswerSpace = space
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozeAnswerSpace == space) "● "
+                                            else "○ ") + space.title)
+                                    }
+                                }
+                                HorizontalDivider()
+                                Text("Voor wie is dit oefenbestand?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozeAudience.entries.forEach { audience ->
+                                    TextButton(onClick = {
+                                        pinnedClozeAudience = audience
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozeAudience == audience) "● "
+                                            else "○ ") + audience.title)
+                                    }
+                                }
+                                Text(if (pinnedClozeAudience == PinnedClozeAudience.STUDENT_HANDOUT)
+                                    "Leerlingenblad: geen volledige vertaling of antwoorden, " +
+                                        "ook niet verborgen in de HTML-broncode. Bewaar " +
+                                        "voor jezelf zo nodig een aparte zelfstudieversie."
+                                else "Zelfstudie: antwoorden achter openklapkeuzes. " +
+                                    "Het antwoordblad is in de browser aanvankelijk verborgen " +
+                                    "en wordt bij afdrukken alleen toegevoegd als je daar " +
+                                    "eerst zelf het vakje 'Print ook het antwoordblad' aanvinkt.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                HorizontalDivider()
+                                Text("Welke ronde(s) wil je oefenen?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozePass.entries.forEach { pass ->
+                                    TextButton(onClick = {
+                                        pinnedClozePass = pass
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozePass == pass) "● " else "○ ") +
+                                            pass.title)
+                                    }
+                                }
+                                HorizontalDivider()
+                                Text("In welke volgorde wil je de kaarten?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozeCardOrder.entries.forEach { cardOrder ->
+                                    TextButton(onClick = {
+                                        pinnedClozeCardOrder = cardOrder
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozeCardOrder == cardOrder) "● "
+                                            else "○ ") + cardOrder.title)
+                                    }
+                                }
+                                Text("Afwisselend: ronde 1 in bronvolgorde, ronde 2 " +
+                                    "achterstevoren en ronde 3 met verschoven begin. " +
+                                    "Eén kaart kan uiteraard niet van positie wisselen.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                Text("Bij meerdere rondes komen dezelfde zinnen terug " +
+                                    "met andere ontbrekende woorden. De volgorde ligt " +
+                                    "vast; er worden geen nieuwe vertalingen gemaakt.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                Text("De gekozen moeilijkheid en exacte invulhints " +
+                                    "komen ook op je eigen oefenblad. Dit is geen " +
+                                    "geautomatiseerde taal- of juistheidsbeoordeling.",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = pinnedOnlyPersonalStudy,
+                                    onCheckedChange = {
+                                        pinnedOnlyPersonalStudy = it
+                                        pinnedExportNotice = ""
+                                    }
+                                )
+                                Text("Alleen mijn handmatig gecorrigeerde antwoorden",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = pinnedStudyLanguageTags,
+                                    onCheckedChange = {
+                                        pinnedStudyLanguageTags = it
+                                        pinnedExportNotice = ""
+                                    }
+                                )
+                                Text("Toon taalcode bij elke kaartzijde",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text("Zelf corrigeren is geen onafhankelijke verificatie. " +
+                                "De oorspronkelijke modelvertalingen blijven ongewijzigd.",
+                                style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                "Alleen daadwerkelijk voltooide lokale vertalingen komen in " +
+                                    "de kaarten. Geen onvoltooide betekenissen, automatische " +
+                                    "kwaliteitscontrole of leerprofiel. Handmatig importeren " +
+                                    (when (pinnedExportFormat) {
+                                        PinnedCaptionFormat.CSV ->
+                                            "als UTF-8 CSV met twee gequote kolommen."
+                                        PinnedCaptionFormat.STUDY_HTML ->
+                                            "als zelfstandig HTML-oefenblad: per vraag antwoord " +
+                                                "openklappen, met aparte afdrukpagina."
+                                        PinnedCaptionFormat.FOLD_HTML ->
+                                            "als afdrukbare HTML-vouwkaartjes: een zijde bedrukken, " +
+                                                "knippen en de rechter betekenis achter de vraag vouwen."
+                                        PinnedCaptionFormat.CLOZE_HTML ->
+                                            "als lokaal HTML-aanvulblad: ontbrekende woorden, " +
+                                                "handmatig te openen antwoorden en apart antwoordblad."
+                                        else -> "als UTF-8 TSV met twee tabgescheiden velden " +
+                                            "(voor- en achterkant)."
+                                    }),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        HorizontalDivider()
+                        Text("Welke taalrichting wil je bewaren?",
+                            style = MaterialTheme.typography.titleSmall)
+                        TextButton(onClick = {
+                            pinnedLanguagePair = null
+                            pinnedExportNotice = ""
+                        }) {
+                            Text((if (pinnedLanguagePair == null) "● " else "○ ") +
+                                "Alle taalrichtingen")
+                        }
+                        val languagePairs = selection.map {
+                            it.caption.sourceCode to it.caption.targetCode
+                        }.distinct()
+                        languagePairs.forEach { pair ->
+                            TextButton(onClick = {
+                                pinnedLanguagePair = pair
+                                pinnedExportNotice = ""
+                            }) {
+                                Text((if (pinnedLanguagePair == pair) "● " else "○ ") +
+                                    pair.first + " → " + pair.second)
+                            }
+                        }
+                        HorizontalDivider()
+                        Text("Welke gemarkeerde regels wil je meenemen?",
+                            style = MaterialTheme.typography.titleSmall)
+                        PinnedCaptionScope.entries.forEach { scope ->
+                            TextButton(onClick = {
+                                pinnedExportScope = scope
+                                pinnedExportNotice = ""
+                            }) {
+                                Text((if (pinnedExportScope == scope) "● " else "○ ") +
+                                    scope.title)
+                            }
+                        }
+                        Text(
+                            if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.CSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML))
+                                "${included.size} unieke, werkelijk vertaalde paren van " +
+                                    "${selection.size} markeringen (identieke paren worden " +
+                                    "niet dubbel geëxporteerd)."
+                            else
+                                "${included.size} van ${selection.size} gemarkeerde regels " +
+                                    "komen in de export. Een niet-voltooide vertaling wordt " +
+                                    "nooit als afgerond voorgesteld.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.CSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML)) {
+                            val cards = included.size *
+                                (if (pinnedStudyDirection == PinnedStudyDirection.BOTH) 2 else 1) *
+                                (if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML)
+                                    pinnedClozePass.indices.size else 1)
+                            Text(
+                                "$cards studiekaarten in " +
+                                    (when (pinnedExportFormat) {
+                                        PinnedCaptionFormat.CSV -> "CSV"
+                                        PinnedCaptionFormat.STUDY_HTML -> "oefen-HTML"
+                                        PinnedCaptionFormat.FOLD_HTML -> "vouw-HTML"
+                                        PinnedCaptionFormat.CLOZE_HTML -> "aanvul-HTML"
+                                        else -> "TSV"
+                                    }) + (when (pinnedExportFormat) {
+                                        PinnedCaptionFormat.STUDY_HTML ->
+                                            " met antwoorden om open te klappen en aparte afdrukpagina. "
+                                        PinnedCaptionFormat.FOLD_HTML ->
+                                            " met linker vragen en rechter vouwantwoorden. "
+                                        PinnedCaptionFormat.CLOZE_HTML ->
+                                            " (" + pinnedClozeDifficulty.title + "; " +
+                                                pinnedClozeHintMode.title + "; " + pinnedClozeAnswerSpace.title + "; " + pinnedClozeAudience.title +
+                                                "; " + pinnedClozePass.title +
+                                                "; " + pinnedClozeCardOrder.title +
+                                                ") met invulwoorden " +
+                                                (if (pinnedClozeAudience == PinnedClozeAudience.SELF_STUDY)
+                                                    "en optioneel afdrukbaar antwoordblad. "
+                                                else "zonder volledige antwoorden. ")
+                                        else -> " met twee tekstkolommen. "
+                                    }) +
+                                    (if (pinnedOnlyPersonalStudy)
+                                        "Alleen handmatig gecorrigeerde antwoorden; " +
+                                            "nog steeds niet onafhankelijk geverifieerd."
+                                    else "Overige lokale modelvertalingen zijn " +
+                                        "niet onafhankelijk gecontroleerd.") +
+                                    " Open het exportbestand alleen in vertrouwde apps.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML &&
+                                included.isNotEmpty()
+                            ) {
+                                val perRound = included.size *
+                                    (if (pinnedStudyDirection == PinnedStudyDirection.BOTH)
+                                        2 else 1)
+                                pinnedClozePass.indices.forEach { round ->
+                                    val cardNumbers =
+                                        PrivatePinnedCaptionClozeHtml.orderedCardIndices(
+                                            perRound, round, pinnedClozeCardOrder
+                                        )
+                                    Text("Ronde ${round + 1} · kaartvolgorde uit " +
+                                        "de oorspronkelijke selectie: " +
+                                        cardNumbers.take(12).joinToString(" → ") {
+                                            (it + 1).toString()
+                                        } + (if (cardNumbers.size > 12)
+                                            " … (${cardNumbers.size} kaarten)" else "") +
+                                        ". De vraag- en antwoordnummers worden " +
+                                        "in de gekozen volgorde opnieuw genummerd.",
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            if (pinnedOnlyPersonalStudy && included.isEmpty()) {
+                                Text("Er zijn geen geschikte persoonlijke correcties " +
+                                    "in deze selectie. Keer terug naar ★ gemarkeerd " +
+                                    "om je studieantwoorden te verbeteren.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        if (pinnedExportFormat == PinnedCaptionFormat.SRT ||
+                            pinnedExportFormat == PinnedCaptionFormat.WEBVTT
+                        ) {
+                            Text(
+                                "Geschatte ondertiteltijden: geen audio-opname, " +
+                                    "geen automatische synchronisatie. Corrigeer eerst in je editor.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            SubtitleDraftControls(
+                                options = pinnedSubtitleOptions.copy(
+                                    format = if (pinnedExportFormat == PinnedCaptionFormat.SRT)
+                                        SubtitleDraftFormat.SRT else SubtitleDraftFormat.WEBVTT
+                                ),
+                                onChange = {
+                                    pinnedSubtitleOptions = it
+                                    pinnedExportFormat = if (it.format == SubtitleDraftFormat.SRT)
+                                        PinnedCaptionFormat.SRT else PinnedCaptionFormat.WEBVTT
+                                    pinnedExportNotice = ""
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+                        Text("Controleer de inhoud van de export",
+                            style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            if (computedPreview == null) "Geen geldig document met deze keuzes."
+                            else "Berekende bestandsgrootte: ${computedPreview.size} bytes.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (included.isNotEmpty()) {
+                            val visible = if (pinnedExportShowAll) included else included.take(5)
+                            visible.forEachIndexed { index, record ->
+                                Text(
+                                    "${index + 1}. ${record.caption.sourceCode} → " +
+                                        "${record.caption.targetCode} · ${record.caption.status}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.CSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML)) {
+                                    val originalRow = selection.firstOrNull {
+                                        it.id == record.id
+                                    }?.caption
+                                    val manuallyEdited = originalRow?.let {
+                                        pinnedStudyEdits[record.id]?.appliesTo(it)
+                                    } == true
+                                    Text(if (manuallyEdited)
+                                        "✓ Zelf geschreven studieantwoord"
+                                        else "⚠ Ongeverifieerde modelvertaling",
+                                        style = MaterialTheme.typography.labelSmall)
+                                    val source = (if (pinnedStudyLanguageTags)
+                                        "[${record.caption.sourceCode}] " else "") +
+                                        PrivatePinnedCaptionExport.preview(record.caption.original)
+                                    val meaning = (if (pinnedStudyLanguageTags)
+                                        "[${record.caption.targetCode}] " else "") +
+                                        PrivatePinnedCaptionExport.preview(record.caption.translated)
+                                    val reverse = pinnedStudyDirection ==
+                                        PinnedStudyDirection.TARGET_TO_SOURCE
+                                    val studentCopy = pinnedExportFormat ==
+                                        PinnedCaptionFormat.CLOZE_HTML &&
+                                        pinnedClozeAudience == PinnedClozeAudience.STUDENT_HANDOUT
+                                    val frontCode = if (reverse)
+                                        record.caption.targetCode else record.caption.sourceCode
+                                    val backCode = if (reverse)
+                                        record.caption.sourceCode else record.caption.targetCode
+                                    val frontDirection = if (
+                                        PrivatePinnedCaptionClozeHtml.isRightToLeft(frontCode))
+                                        TextDirection.Rtl else TextDirection.Ltr
+                                    val backDirection = if (
+                                        PrivatePinnedCaptionClozeHtml.isRightToLeft(backCode))
+                                        TextDirection.Rtl else TextDirection.Ltr
+                                    Text(if (studentCopy) "Zichtbare opdrachtzin:"
+                                        else "Voorzijde:",
+                                        style = MaterialTheme.typography.labelSmall)
+                                    Text(if (reverse) meaning else source,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            textDirection = frontDirection))
+                                    if (studentCopy) {
+                                        Text("De volledige achterkant komt NIET in het " +
+                                            "leerlingenbestand of de HTML-bron terecht. " +
+                                            "Alleen de gekozen invulhint wordt getoond.",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        Text("Achterzijde:",
+                                            style = MaterialTheme.typography.labelSmall)
+                                        Text(if (reverse) source else meaning,
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                textDirection = backDirection))
+                                    }
+                                    if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
+                                        Text(if (studentCopy)
+                                            "Ook omgekeerd: opdrachtzin (zonder antwoord)"
+                                        else "Omgekeerde kaart:",
+                                            style = MaterialTheme.typography.labelSmall)
+                                        Text(meaning, style =
+                                            MaterialTheme.typography.bodySmall.copy(
+                                                textDirection = if (
+                                                    PrivatePinnedCaptionClozeHtml.isRightToLeft(
+                                                        record.caption.targetCode))
+                                                    TextDirection.Rtl else TextDirection.Ltr))
+                                        if (!studentCopy) {
+                                            Text(source, style =
+                                                MaterialTheme.typography.bodySmall.copy(
+                                                    textDirection = if (
+                                                        PrivatePinnedCaptionClozeHtml.isRightToLeft(
+                                                            record.caption.sourceCode))
+                                                        TextDirection.Rtl else TextDirection.Ltr))
+                                        }
+                                    }
+                                    if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML) {
+                                        pinnedClozePass.indices.forEach { round ->
+                                            val targetHint = PrivatePinnedCaptionClozeHtml.previewHint(
+                                                if (reverse) record.caption.original
+                                                else record.caption.translated,
+                                                if (!pinnedStudyLanguageTags) null
+                                                else if (reverse) record.caption.sourceCode
+                                                else record.caption.targetCode,
+                                                pinnedClozeDifficulty, pinnedClozeHintMode, round
+                                            )
+                                            Text("Ronde ${round + 1} · aanvulhint:",
+                                                style = MaterialTheme.typography.labelSmall)
+                                            Text(targetHint,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    textDirection = backDirection))
+                                            if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
+                                                Text("Ronde ${round + 1} · omgekeerde aanvulhint:",
+                                                    style = MaterialTheme.typography.labelSmall)
+                                                Text(PrivatePinnedCaptionClozeHtml.previewHint(
+                                                    record.caption.original,
+                                                    if (pinnedStudyLanguageTags)
+                                                        record.caption.sourceCode else null,
+                                                    pinnedClozeDifficulty,
+                                                    pinnedClozeHintMode, round
+                                                ), style = MaterialTheme.typography.bodySmall.copy(
+                                                    textDirection = frontDirection))
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Text(
+                                        PrivatePinnedCaptionExport.preview(record.caption.original),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    if (record.caption.status == "Lokaal vertaald") {
+                                        Text("↳ " + PrivatePinnedCaptionExport.preview(
+                                            record.caption.translated),
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                            if (included.size > 5) {
+                                TextButton(onClick = {
+                                    pinnedExportShowAll = !pinnedExportShowAll
+                                }) {
+                                    Text(if (pinnedExportShowAll) "Toon minder"
+                                    else "Bekijk alle ${included.size} regels")
+                                }
+                            }
+                        }
+                        OutlinedButton(
+                            enabled = computedPreview != null,
+                            onClick = { pinnedExactPreviewOpen = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Bekijk exacte bestandsinhoud…") }
+                        if (pinnedExportNotice.isNotBlank()) {
+                            Text(pinnedExportNotice, color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(
+                            "Er wordt pas geschreven nadat je zelf op bewaren drukt " +
+                                "en een bestand kiest. Een gewijzigde selectie wordt geweigerd.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !listening && selection.isNotEmpty(),
+                        onClick = {
+                            val format = pinnedExportFormat
+                            val options = pinnedSubtitleOptions
+                            val scope = pinnedExportScope
+                            val languagePair = pinnedLanguagePair
+                            val bytes = PrivatePinnedCaptionExport.snapshot(
+                                selection, format, options, scope, languagePair,
+                                pinnedStudyDirection, pinnedStudyEdits.toMap(),
+                                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
+                                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder
+                            )
+                            if (bytes == null) {
+                                pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
+                                    "Controleer voltooide vertalingen en tijdcodes."
+                            } else {
+                                pendingPinnedExport = PendingPinnedCaptionExport(
+                                    generation, selection, format, scope,
+                                    languagePair, pinnedStudyDirection,
+                                    pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
+                                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder,
+                                    options, bytes
+                                )
+                                exportStatus = ""
+                                pinnedExportOpen = false
+                                savePinnedCaptionFile.launch(
+                                    Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                        addCategory(Intent.CATEGORY_OPENABLE)
+                                        type = format.mimeType
+                                        putExtra(Intent.EXTRA_TITLE,
+                                            if (format == PinnedCaptionFormat.CLOZE_HTML &&
+                                                pinnedClozeAudience == PinnedClozeAudience.STUDENT_HANDOUT)
+                                                "Tuddy-leerlingenblad-zonder-antwoorden.html"
+                                            else format.fileName)
+                                    }
+                                )
+                            }
+                        }
+                    ) { Text("Kies opslag…") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        pinnedExportOpen = false
+                        pinnedExactPreviewOpen = false
+                    }) {
+                        Text("Annuleren")
+                    }
+                }
+            )
+        }
+        if (pinnedExportOpen && pinnedExactPreviewOpen) {
+            val exactBytes = PrivatePinnedCaptionExport.snapshot(
+                currentPinnedSelection(), pinnedExportFormat,
+                pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair,
+                pinnedStudyDirection, pinnedStudyEdits.toMap(),
+                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
+                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder
+            )
+            val previewLines = remember(exactBytes?.contentHashCode(),
+                exactBytes?.size
+            ) {
+                exactBytes?.toString(Charsets.UTF_8)?.lineSequence()?.toList()
+                    ?: emptyList()
+            }
+            AlertDialog(
+                onDismissRequest = { pinnedExactPreviewOpen = false },
+                title = { Text("Exact te bewaren document · alleen lezen") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Dit is de ruwe inhoud van het gekozen bestand, " +
+                                "inclusief JSON/HTML-opmaak indien gekozen. " +
+                                "Niets is nog opgeslagen of gedeeld.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (exactBytes == null) {
+                            Text("Selectie gewijzigd of ongeldig; kies opnieuw.",
+                                color = MaterialTheme.colorScheme.error)
+                        } else {
+                            Text("${exactBytes.size} bytes · volledig lokaal",
+                                style = MaterialTheme.typography.labelSmall)
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)
+                            ) {
+                                items(previewLines) { line ->
+                                    Text(line, fontFamily = FontFamily.Monospace,
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { pinnedExactPreviewOpen = false }) {
+                        Text("Terug naar exportkeuze")
+                    }
                 }
             )
         }
@@ -3044,6 +4138,7 @@ private fun TuddyScreen(
                             pendingCaptionShare = null
                             exportStatus = ""
                             captionPins = captionPins - id
+                            pinnedStudyEdits.remove(id)
                             manuallyAssignedSpeakers.remove(id)
                             if (editingCaptionId == id) {
                                 editingCaptionId = null
@@ -3226,6 +4321,8 @@ private fun TuddyScreen(
                     OutlinedButton(onClick = {
                         generation++
                         pendingTranscriptExport = null
+                        pendingPinnedExport = null
+                        pinnedExportOpen = false
                         exportStatus = ""
                         previewArchiveRows = null
                         archiveSearchQuery = ""
@@ -3250,7 +4347,13 @@ private fun TuddyScreen(
                         lines.clear()
                         manuallyAssignedSpeakers.clear()
                         captionPins = emptySet()
+                        pinnedChosenIds = null
+                        pinnedRemovedUndo = emptySet()
+                        pinnedStudyEdits.clear()
+                        pinnedStudyEditId = null
+                        pinnedSearchTerm = ""
                         pinsOpen = false
+                        pinnedExportOpen = false
                         pinsNotice = ""
                         historySearchQuery = ""
                         historySearchOpen = false
@@ -3903,6 +5006,7 @@ private fun TuddyScreen(
                                 val removed = lines.removeAt(0)
                                 manuallyAssignedSpeakers.remove(removed.id)
                                 captionPins = captionPins - removed.id
+                            pinnedStudyEdits.remove(removed.id)
                                 if (editingCaptionId == removed.id) {
                                     editingCaptionId = null
                                     captionCorrectionDraft = ""
@@ -4227,7 +5331,17 @@ private fun TuddyScreen(
                     }
                     TextButton(
                         enabled = captionPins.isNotEmpty(),
-                        onClick = { pinsOpen = true }
+                        onClick = {
+                            pinnedChosenIds = null
+                            pinnedRemovedUndo = emptySet()
+                            pinnedSearchTerm = ""
+                            pinnedManageScope = PinnedCaptionScope.ALL
+                            pinnedManagePair = null
+                            pinnedPairMenuOpen = false
+                            pinnedPracticeOnlyPersonal = false
+                            pinnedNewestFirst = false
+                            pinsOpen = true
+                        }
                     ) { Text("★ ${captionPins.size} gemarkeerd") }
                     val ownMeanings = lines.count { it.personalMeaning != null }
                     TextButton(

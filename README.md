@@ -154,6 +154,225 @@ bestaande aanklikbare woordkaarten te gebruiken.
 
 ---
 
+
+## Privé luisteren: apart leerlingen-CSV zonder antwoorden of brontekst
+
+In **Mijn privé luisteroverzicht → Leerlingenblad** is nu naast het HTML-werkblad ook een **volledige, lokaal voorgestelde leerlingen-CSV** beschikbaar. Elke rij toont alleen een bewust geselecteerd eigen A–B-tijdvak, de gekozen opdracht en een lege antwoordcel. Niet inbegrepen zijn ondertitelregels, luisterbeoordelingen, persoonlijke notities of audio. Privé TXT/CSV/HTML-exportknoppen blijven in de leerlingenmodus gesloten; voor een eigen brontekstrapport kies je bewust **Zelfstudie**. Na Androids bestandskiezer controleert Tuddy opnieuw de volledige bestandsbytes en actuele gebruikerskeuze. [Gebruik en privacygrenzen](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Offline luisteren · eigen opdracht kiezen
+
+Een werkblad kan nu ook **per geselecteerd A–B-fragment** een andere
+oefenopdracht bevatten. De algemene keuze blijft de standaard;
+de gebruiker stelt maximaal vier afwijkende opdrachten bewust
+per fragment in en controleert de export vóór opslaan.
+
+Bij het eigen A–B-luisterwerkblad kun je nu kiezen tussen letterlijk
+uitschrijven, kernwoorden noteren, zelf samenvatten of zelf de betekenis
+opschrijven. De keuze verschijnt in het privé HTML-bestand of
+antwoordvrije leerlingenblad. Transcriptievelden volgen de expliciet
+ingestelde RTL/LTR-ondertiteltaal; er wordt niets automatisch vertaald
+of nagekeken. [Handleiding](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## 21 oktober · volledige bronregels veilig bestuderen en als CSV bewaren
+
+Het zelfgekozen, offline **A–B-luisterwerkblad** toont maximaal 18 regels
+in de kleine vragen-preview, maar zet **alle volledig passende brontekstregels**
+in het afzonderlijke, bewust te openen bronregelblad. Lange regels worden
+alleen in de korte preview ingekort; in het volledige bronregelblad
+wordt te grote input veilig geweigerd in plaats van onvolledig
+gepresenteerd. Zonder print-opt-in blijft dat antwoordblad buiten
+de afdruk; leerlingenbestanden bevatten geen brontekst.
+
+Daarnaast is er **Bekijk volledige bronregel-CSV vóór opslaan**:
+een per 12 rijen doorbladerbaar CSV-document met één rij per
+volledig binnen jouw eigen A–B-tijdvak passende ondertitelregel,
+oorspronkelijke bronregel,
+tijdcodes en eventuele eigen beoordeling/notitie. Via **Bewaar alle
+passende bronregels als CSV…** kies je daarna zelf een Android-provider.
+De bestaande compacte CSV blijft bestaan. Alle bronwaarden zijn
+als tekst beschermd tegen spreadsheetformules; geen automatische
+audio-uitlijning of netwerkfunctie. Bij terugkeer uit de Android-
+bestandskiezer controleert Tuddy opnieuw de exacte goedgekeurde bytes.
+
+[Volledige gebruiksuitleg](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## 21 oktober · volledig luisterbronregelblad en correcte A–B-CSV
+
+In de **offline luisteroefening** geeft de uitklapbare preview nog steeds
+maximaal 18 brontekstregels weer, maar het apart te openen/optioneel
+te printen **volledige bronregelblad** bevat nu alle ondertitelregels
+die geheel binnen het door jou gekozen A–B-fragment liggen. Bij meer
+dan één fragment kun je via de schermlinks direct naar een fragment
+springen. Het antwoordblad wordt standaard **niet** afgedrukt; de
+leerlingenexport bevat nog steeds helemaal geen bronregels. Bij een
+te groot werkblad wordt de volledige export geweigerd, niet afgekapt.
+
+Ook de eigen **CSV-ondertitelvoorbeelden** tonen nu ondertitelregels
+die geheel binnen de zelfgekozen audiogrenzen vallen, zelfs wanneer
+die markeringen niet op exact dezelfde milliseconde als een SRT/VTT-cue
+liggen. De CSV vermeldt hoeveel passende tussenregels zijn weggelaten,
+zonder een echte audio-uitlijning te claimen. Alleen expliciete Android
+SAF-opslag; geen nieuwe netwerkroute of machtiging.
+
+[Handleiding luisterwerkblad](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: schermlezers volgen je zelfgekozen ondertiteltaal in het luisterwerkblad
+
+Wanneer je zelf de taal van je ondertiteltekst kiest, neemt het afdrukbare
+luisterwerkblad die taal mee in de HTML-bronregels. De regels krijgen een
+gevalideerd taalattribuut en passende LTR/RTL-richting, zodat bijvoorbeeld
+Sorani en Pasjtoe niet als Nederlandse tekst worden voorgelezen. Er wordt
+geen taal automatisch herkend; zonder expliciete keuze blijft de richting
+afhankelijk van de tekst.
+
+[Handleiding](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: afdrukken van bronantwoorden vereist nu een bewuste keuze
+
+Een offline **zelfstudie-luisterwerkblad** heeft onder de vragen een
+checkbox **Print ook mijn bronregelblad (bewuste keuze)**.
+De bronregels blijven via bewust openklappen op het scherm beschikbaar,
+maar het complete bronregelblad wordt **niet standaard meegeprint**.
+Ook als je al op de interne knop naar het bronregelblad hebt geklikt,
+blijft het bronregelblad uit het afdrukvoorbeeld zolang de checkbox
+niet is aangevinkt. Met vinkje krijgt de zelfgekozen SRT/VTT-brontekst
+een aparte afdrukpagina voor eigen controle.
+
+De **leerlingenversie zonder bronregels** verandert niet: daarin is
+geen brontekst/privébeoordeling aanwezig en kan een printinstelling
+dus ook geen verborgen antwoord alsnog tonen. Dit is geen garantie
+dat de inhoud van zelfstudie-HTML geheim is; dat bestand bevat
+bronregels en is alleen voor eigen gebruik. Voor delen kies je het
+aparte antwoordvrije leerlingenbestand. Deze verbetering werkt
+scriptvrij en offline, zonder nieuwe Android-machtigingen of
+wijzigingen in het bewaren van de sessie.
+
+---
+
+## Nieuw: zelf invullen of zonder antwoordbronnen delen (luisterwerkblad)
+
+In **Mijn privé luisteroverzicht → Bewaar luisterwerkblad…** kun je nu
+kiezen tussen **Zelfstudie · bronregels zelf onthullen** en
+**Leerlingenblad · zonder bronregels of privébeoordeling**. De keuze werkt
+naast **Alle / Nog oefenen / Nog niet beoordeeld** en verandert je
+bestaande audioroute niet. Er wordt geen audio meegestuurd.
+
+Het zelfstandige offline HTML-luisterwerkblad heeft per geselecteerd
+A–B-fragment een **antwoordveld**, een handmatige keuze **Nog oefenen /
+Ging goed / Makkelijk** en **Wis mijn antwoord en inschatting**.
+Het browserantwoord en de zelfbeoordeling zijn tijdelijk; Tuddy bewaart
+deze niet en controleert geen uitspraak of betekenis. Bij printen
+verschijnen schrijflijnen en lege zelfbeoordelingsvakjes, geen ingevulde
+browserformulieren. De browser kan eventueel zelf eerder getypte velden
+herstellen. Het bestand bevat geen JavaScript of netwerkbronnen.
+
+De **zelfstudieversie** onthult eigen SRT/VTT-bronregels pas via een
+bewuste uitklapactie. Het complete bronregelblad is op het scherm
+aanvankelijk verborgen en wordt pas getoond na **Open compleet
+bronregelblad**; bij afdrukken staat het op een aparte pagina.
+De **leerlingenversie** bevat géén eigen bronregelteks­ten, verborgen
+bronsleutel, privébeoordelingen, eigen oefennotities of selectiefiltertitel
+in de HTML. Alleen gekozen audiotijdvakken, lege invulvelden en lege
+beoordelingsopties komen mee; een gekozen tijdvak of aantal fragmenten
+kan nog persoonlijke context zijn, dus controleer zelf wat je deelt.
+De Android-bestandskiezer suggereert bij de leerlingenversie de naam
+`Tuddy-luister-leerlingenblad-zonder-bronregels.html`.
+
+Het eigen luisteroverzicht is nu ook verticaal scrollbaar op kleine
+Android-schermen. Tijdens een bewuste opslag vergelijkt Tuddy
+**alle actuele exportbytes en zowel selectie als doelgroep** met de
+vooraf goedgekeurde inhoud. Zijn die veranderd, dan wordt de oude
+export geweigerd. Een door de gebruiker gekozen bestandsprovider kan
+een bestand wel synchroniseren. Dit is uitsluitend handmatige
+SRT/VTT-bronstudie met eigen A–B-tijdkeuze, geen geverifieerde
+audio-uitlijning of transcriptie.
+
+---
+
+## Nieuw: exact geselecteerde privé-luister-CSV zonder verborgen regels
+
+De selectie **Alle / Nog oefenen / Nog niet beoordeeld** geldt nu ook
+voor de CSV-export. Android toont de echte geselecteerde rijen en weigert
+de bewaarde versie na een verandering van selectie, zelfs wanneer
+verschillende filters toevallig dezelfde rijen opleveren. De zelfstandige
+HTML-luisterwerkbladexport gebruikt eveneens dezelfde categorie vóór én
+na de bestandskiezer. Een CSV-bronexcerpt meldt exact hoeveel
+tussenliggende regels zijn weggelaten, zonder vermeende audio-uitlijning.
+Ongeldige tijdverschuivingen worden geweigerd en het privé-luisteroverzicht
+kan geen valse cue-koppelingen meer tonen door integer-overloop.
+Geen audio, netwerk, automatische scores of permanente oefenresultaten.
+[Meer uitleg](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: offline luisterwerkblad met ingeklapte bronregels en afdrukversie
+
+Maak in de eigen SRT/VTT-audiospeler maximaal vier A–B-fragmenten en
+kies bij **Mijn privé oefenoverzicht** nu ook **Bewaar luisterwerkblad…**.
+In het scriptvrije HTML-bestand kun je eerst luisteren en notities maken;
+per fragment onthul je pas zelf de bronondertiteltekst. Kies onafhankelijk
+van de afspeelroute **alle**, alleen **nog oefenen**, of **onbeoordeelde**
+fragmenten voor dat bestand. Lege categorieën zijn niet exporteerbaar.
+Bij afdrukken
+staan de vragen met schrijfruimte voorop en de gekozen SRT/VTT-bronregels
+op een aparte zelfcontrolepagina. Lange passages vermelden zichtbaar
+hoeveel tussenliggende regels zijn weggelaten. Eigen beoordeling en
+oefennotitie gaan mee, nooit audio, URI of spraakherkenningsresultaten.
+De bestaande expliciete Android-bestandskeuze en byte-hercontrole
+blijven verplicht. [Details](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+# Tuddy 🎙️
+
+## Nieuw: beter leesbare eigen passages in privé-luisterverslagen
+
+Voor geselecteerde A–B-fragmenten toont Tuddy nu maximaal acht
+bijbehorende originele SRT/VTT-bronregels afzonderlijk met hun
+bronnummers; voor grotere passages worden de niet-getoonde regels
+expliciet geteld. Lange zinnen worden zichtbaar en op hele
+Unicode-tekens ingekort. Dit komt in het privé-overzicht en de
+bewuste HTML/TXT-export, niet als verborgen audio-analyse.
+[Handleiding](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: exacte milliseconden op eigen A–B-luisterkaartjes
+
+Eigen gekozen audiofragmenten behouden nu ook in de HTML-, TXT- en
+CSV-export de volledige **uu:mm:ss.mmm**-precisie. De eerdere weergave
+op hele seconden maakte korte of dichtbije passages lastig van elkaar
+te onderscheiden. De wijziging wijzigt geen audio, ondertitelbestanden,
+opslagrechten of (niet-gevalideerde) bronuitlijning.
+[Uitleg](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: mijn A–B-luisterkaarten als CSV voor eigen overzichten
+
+Naast HTML en TXT heeft het tijdelijke privé-luisteroverzicht nu een
+**volledige CSV-preview** en een afzonderlijke, bewuste **Bewaar CSV…**-keuze.
+De zes kolommen bevatten eigen fragmenttijden, zelfbeoordeling, eigen notities
+en alleen een begrensd ondertitelvoorbeeld, nooit audio of een audio-URI.
+Het UTF-8-bestand is begrensd, spreadsheetformula-veilig, kan door een
+Android-provider gesynchroniseerd worden en wordt na de documentkiezer
+exact opnieuw gecontroleerd op gewijzigde brondata. Het is geen
+automatisch begrip-/uitspraakrapport.
+[Details](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+
 ## Nieuw: mijn offline luisteroefenoverzicht zelf als HTML of TXT bewaren
 
 Bekijk na je eigen SRT/VTT-audiooefening **Mijn privé oefenoverzicht**
@@ -172,6 +391,376 @@ Het privé-overzicht geeft ook een eigen vervolgrondje met eerst de
 door jou als lastig beoordeelde en daarna nog onbeoordeelde fragmenten.
 Oefennotities bewaren Unicode-tekens zonder emoji halverwege af te kappen.
 [Bediening en privacy](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+
+## Offline invuloefeningen: direct naar kaarten en antwoord met vraagcontext
+
+In het zelfstandige **Aanvuloefening · HTML** kun je zonder scripts of internet met **Vorige kaart / Volgende kaart** door een heel oefenboek bladeren. Op het zelfstudie-antwoordblad staan nu **de oorspronkelijke vraag en het volledige antwoord samen**, met overeenkomstig ronde-/kaartnummer en een teruglink naar de vraag. Bij afdrukken verdwijnt de navigatie en blijft het antwoordblad alleen beschikbaar na de bestaande bewuste printkeuze. Een **leerlingenblad** bevat ook nu geen volledige antwoorden. De bestaande expliciete Android-export en maximale uitvoergrootte blijven gehandhaafd. [Details](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+## Nieuw · eigen Unicode-woordgrenzen blijven intact in invulhints
+
+De meerrondige, tweetalige HTML-aanvuloefening herkent nu ook
+niet-afbreekbare spaties en expliciete zero-width-spaties (U+200B)
+als **door de schrijver zelf gekozen woordgrenzen**. Spaties en
+scheidingstekens blijven intact in de opgaven; een tekst zonder
+zulke grenzen wordt niet kunstmatig in woorden opgesplitst.
+Losstaande leestekengroepen zoals `...` of `—` blijven zichtbaar
+en tellen niet mee als te verbergen antwoordwoord; de juiste
+invulpositie verschuift daardoor niet. De Android-hintpreview en
+zelfstandige offline HTML gebruiken dezelfde tokenisering.
+Zonder netwerk, audio-uitlijning of automatische taalbeoordeling.
+
+De native Android-voorbeeldweergave voor kaartvragen, antwoorden
+en invulhints gebruikt nu ook de echte LTR/RTL-schriftrichting,
+los van Nederlandse UI-labels. De offline HTML-export en de
+leerlingenvariant behouden hun bestaande privacygrenzen.
+
+Ook de getypte en afgedrukte **antwoordruimte** volgt voortaan de expliciet gekozen LTR/RTL-antwoordtaal, met HTML-`lang` voor schermlezers. [Uitleg bij de invuloefening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+## RTL-richting en schermlezers in tweetalige HTML-oefenkaarten
+
+Wanneer je taalcodes zoals `[ar]`, `[ps]` of `[ckb]` toont, houdt
+Tuddy het Latijnse label apart van de zin en bepaalt de tekstrichting uit
+de taal-/scriptcode. De daadwerkelijke zin krijgt ook een passend HTML-`lang`
+attribuut, zodat schermlezers de juiste taal kunnen gebruiken. Dit geldt
+voor vragen, invulhints en beide antwoordweergaven, ook als de zichtbare
+taalcodes uit staan.
+
+[Handleiding voor de tweetalige export](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+## Nieuw: afwisselende kaartvolgorde met identieke antwoordnummering
+
+Bij **Aanvuloefening · HTML** kies je voortaan ook de
+**kaartvolgorde**: oorspronkelijke zinsvolgorde of
+**Afwisselende kaartvolgorde per ronde**. Voor dezelfde selectie
+en dezelfde rondes blijft de volgorde volledig reproduceerbaar:
+ronde 1 behoudt de bronvolgorde, ronde 2 draait de kaartvolgorde
+om en ronde 3 begint op een verschoven positie. Bij maar één kaart
+kan de volgorde natuurlijk niet wijzigen. Er worden geen random
+shuffles, nieuwe zinnen of vertalingen gemaakt.
+
+In Android verschijnt de **werkelijke kaartvolgorde per gekozen ronde**
+als de oorspronkelijke kaartposities vóór de bestandskeuze. De
+HTML-generator en de Android-preview gebruiken exact dezelfde
+ordefunctie, zodat het afzonderlijke zelfstudieantwoordblad nog
+steeds bij dezelfde kaartnummers hoort. De volgordekeuze staat
+in de tijdelijk vastgehouden `PendingPinnedCaptionExport` en
+wordt na de Android-documentkiezer vergeleken met de actuele
+keuze en **gehele exportbytes**. Een gewijzigde kaartvolgorde
+wordt dus niet ongemerkt als eerder gekozen bestand opgeslagen.
+
+De optie werkt met één ronde of het volledige drie-ronden-boek,
+met bestaande moeilijkheden, zelfstudie en echt antwoordvrije
+leerlingenbladen. Er zijn geen extra permissies, scripts, cloudcalls
+of leerscore-opslag nodig.
+
+---
+
+## Nieuw: echte schrijflijnen en optioneel antwoordblad bij afdrukken
+
+Een HTML-aanvuloefening levert op papier nu daadwerkelijk **twee of vier
+zichtbare schrijflijnen per vraag** op, ook wanneer de printer geen
+achtergrondafbeeldingen of -kleuren afdrukt. Dat was voorheen slechts
+een hoge lege ruimte met één onderste lijn.
+
+**Zelfstudie-HTML wordt zonder antwoordsleutel afgedrukt totdat je
+zelf expliciet het vakje `Print ook het antwoordblad (bewuste keuze)`
+aanvinkt.** Deze schakelaar staat in het opgeslagen offline
+HTML-bestand onder de vragen. Zonder vinkje verschijnt het
+antwoordblad **niet in de afdruk of afdrukvoorbeeld** — ook niet als
+je het antwoordblad eerder via de browserlink hebt geopend. Met
+vinkje krijgt het volledige antwoordblad een eigen afdrukpagina
+met dezelfde ronde- en kaartnummers. Het blijft op het scherm
+alleen zichtbaar na bewuste navigatie.
+
+Let op: zelfstudie-HTML **bevat** de complete antwoorden ook wanneer
+ze niet worden afgedrukt. Gebruik voor het delen van een bestand
+met leerlingen daarom altijd de aparte optie **Leerlingenblad · geen
+antwoorden in bestand**, niet de zelfstudieversie. Ook andere
+browsers kunnen eerder ingevulde velden soms herstellen. Geen
+JavaScript, netwerkverzoeken, beoordelingsdatabase of nieuwe
+Android-permissie. De Android-exportdialoog meldt nu expliciet
+dat afdrukken van het antwoordblad standaard uit staat.
+
+---
+
+## Nieuw: drie aanvulrondes over dezelfde zelfgekozen tweetalige zinnen
+
+Bij **★ gemarkeerd → Exporteer selectie… → Aanvuloefening · HTML**
+kun je voortaan kiezen tussen **Ronde 1**, **Ronde 2**, **Ronde 3** en
+**Alle drie rondes · volledig oefenboek**. De ronde verandert bewust
+**welke afzonderlijke woorden ontbreken**, niet de bronzinnen,
+eigen correcties, moeilijkheid of gedeelde inhoud. Eén zelfstandig
+offline HTML-bestand kan alle drie de rondes bevatten; iedere ronde
+begint dan op een nieuwe afdrukpagina. Het volledige antwoordblad
+voor een zelfstudieboek blijft apart en is in de browser pas zichtbaar
+na een bewuste actie.
+
+De algoritmen zijn **vast en herhaalbaar**, niet willekeurig.
+Bij *Licht* ontbreekt ongeveer één van drie met per ronde wisselende
+posities; bij *Uitdaging* ongeveer twee van drie; bij *Normaal*
+ongeveer de helft, met een aanvullende derde variant. Erg korte
+zinnen en schriftvormen zonder aangeleverde spaties kunnen niet
+altijd drie verschillende patronen opleveren: Tuddy verzint geen
+woordgrenzen. Bij het tonen van de eerste letter wordt een antwoord
+van maar één teken **niet volledig onthuld**. Dezelfde keuze geldt
+voor **zelfstudie** en het **leerlingenbestand zonder complete antwoorden**.
+
+Het Android-exportvenster toont voor ieder zichtbaar bronpaar
+de **echt gegenereerde hints per gekozen ronde** en het juiste
+totale aantal kaarten. De bestandsbytes bevatten de gekozen
+rondetitel, alle kaarten met zichtbare rondenummers en de bijbehorende
+antwoorden uitsluitend wanneer **Zelfstudie** is gekozen. De
+rondekeuze is opgenomen in `PendingPinnedCaptionExport` en in
+de byte-herberekening wanneer de Android-documentkiezer terugkeert.
+Verandert de ronde tussentijds, dan weigert Tuddy de oude export.
+Geen scripts, opslag van oefenbeoordelingen, automatische taalcontrole,
+netwerk, nieuwe machtigingen of gefabriceerde vertalingen.
+
+---
+
+## Nieuw: veilige leerlingenversie van de tweetalige invuloefening
+
+Bij **★ gemarkeerd → Exporteer selectie… → Aanvuloefening · HTML** kies je
+nu expliciet voor **Zelfstudie · antwoorden na bewuste keuze** of
+**Leerlingenblad · geen antwoorden in bestand**. In de zelfstudieversie
+moet je ieder individueel antwoord openklappen; ook het volledige
+antwoordblad blijft in de browser verborgen totdat je via
+**Open volledige antwoordblad** er bewust naar gaat. Op papier blijft
+het volledige antwoordblad op een aparte pagina aanwezig.
+
+De **leerlingenversie** neemt géén afzonderlijk volledig antwoord,
+openklapantwoord of verborgen HTML-antwoordblad op in het geëxporteerde
+bestand. Ze bevat uitsluitend de gekozen oorspronkelijke vraagtekst,
+de bewust ingestelde onvolledige invulhints, tijdelijke invoervelden
+en de zelfbeoordelingsopties. De werkelijke inhoud van een vraag kan
+vanzelfsprekend tekst bevatten die een docent ook als antwoord zou
+beschouwen; controleer daarom je eigen bronzinnen en de gekozen
+hintmodus voordat je deelt. Tuddy verzint of beoordeelt de vertaling
+niet. De Android-preview meldt nadrukkelijk dat de achterzijde in
+de leerlingenversie ontbreekt. Het voorgestelde bestandslabel is
+**Tuddy-leerlingenblad-zonder-antwoorden.html**, duidelijk verschillend
+van de zelfstudieversie.
+
+De keuze van ontvanger is onderdeel van de tijdelijke exportsnapshot
+en de opnieuw berekende bytes bij terugkeer uit de Android-documentkiezer.
+Als de bestemming, bronselectie, hints, moeilijkheid, correcties of
+schrijfruimte intussen wijzigen, wordt de oorspronkelijke opslag
+geweigerd. Geen extra permissies, JavaScript, netwerkverzoeken,
+automatisch gegenereerde antwoorden of centrale leerscores. Een
+door de gebruiker gekozen Android-bestandsprovider kan het bestand
+wel extern synchroniseren.
+
+---
+
+## Nieuw: zelf beoordelen binnen het zelfstandige offline oefenblad
+
+Iedere kaart in het geëxporteerde **Aanvuloefening · HTML** heeft nu naast
+het eigen antwoordveld de tijdelijke beoordeling **Nog oefenen** of
+**Ik wist het**. Het resultaat wordt niet automatisch berekend, opgeslagen
+als leerscore of teruggeschreven naar Tuddy: je kiest zelf op basis van het
+bewust opengeklapte antwoord. **Wis mijn antwoord en beoordeling** reset
+alleen het antwoord en de keuze van die ene kaart via standaard HTML.
+De rest van het oefenblad en de originele gesprekstekst blijven ongewijzigd.
+
+Bij afdrukken verschijnen in plaats van de tijdelijke radio-knoppen twee
+**lege** keuzevakjes, met schrijfruimte volgens de in Android gekozen
+instelling. Geen browser-JavaScript, netwerk, automatische nakijkfunctie,
+centrale voortgang, scripts of nieuwe permissies. Browsers kunnen zelfstandig
+formulierwaarden herstellen; de bestandsprovider kan een door jou gekozen
+export extern bewaren.
+
+---
+
+## Nieuw: oefenblad hergebruiken en ruime schrijfruimte kiezen
+
+Je kunt in een zelfstandig geëxporteerd **Aanvuloefening · HTML** nu voor
+iedere kaart **Wis mijn antwoord op deze kaart** kiezen. De knop reset alleen
+het ingevulde tekstveld van die kaart via gewone HTML-formuliersemantiek,
+zonder JavaScript, verzenden of netwerktoegang. Het oorspronkelijke antwoord
+blijft apart uitklapbaar; je wijzigt nooit de bronzin of de eigen
+studiecorrectie. Browsers kunnen zelfstandig reeds getypte tekst herstellen.
+
+Kies in de Android-exportdialoog ook **Hoeveel schrijfruimte wil je op papier?**
+met **Normaal · twee schrijflijnen** of **Ruim · vier schrijflijnen**. Deze
+keuze bepaalt de hoogte van de invulvelden in de browser en de lege ruimte
+bij het afdrukken. Bij printen verdwijnen de tekstvakken en de wisknoppen;
+het antwoordblad staat nog steeds op een afzonderlijke pagina. De gekozen
+ruimte wordt op het HTML-document vermeld en hoort bij de exacte
+byte-/toestemmingscontrole na de Android-bestandskiezer: een gewijzigde
+keuze maakt een lopende export ongeldig. Er is geen automatische
+taalcorrectie, leerscore, gedeeld account of app-opslag toegevoegd.
+
+---
+
+## Nieuw: direct invullen en zelfgekozen invulhints zonder internet
+
+De geëxporteerde **Aanvuloefening · HTML** is nu ook op de telefoon of laptop
+als invulwerkblad te gebruiken: typ je eigen antwoord in het tekstvak onder
+elke hint en open alleen wanneer je wilt het volledige antwoord. Er is geen
+automatische nakijkfunctie, JavaScript, formulierverzending, netwerkbron of
+nieuwe app-toestemming. Bij **afdrukken** verdwijnen tekstvakken en verschijnen
+schrijflijnen; het antwoordblad blijft op een aparte pagina. Tuddy bewaart
+getypte browserantwoorden niet, al kan de browser zelf formuliertekst herstellen.
+Een extern gekozen bestandsprovider kan het HTML-bestand wel synchroniseren.
+
+Naast **Licht / Normaal / Uitdaging** kies je in Android voortaan het soort hint:
+**Alleen invulstrepen**, **Eerste teken van verborgen woorden** of
+**Woordlengte als invulstrepen**. Dit zijn uitsluitend hints voor door
+witruimte gescheiden woorden; voor ongesegmenteerde scripts blijft de
+hele antwoordzijde verborgen. Lengtehints tonen maximaal 16 strepen per
+woord, geen automatische taalanalyse. Je ziet de daadwerkelijke hint voor
+het opslaan, in het HTML-bestand staat de gekozen optie vermeld, en
+verandering van de optie tijdens de bestandskiezer blokkeert oude opslag.
+Originele zinnen, eigen correcties, de exacte antwoordteksten en
+selectie-/privacygrenzen blijven ongewijzigd.
+
+---
+
+## Nieuw: lokale tweetalige aanvuloefening met volledig antwoordblad
+
+Kies nu voor **Licht**, **Normaal** of **Uitdaging** om respectievelijk
+ongeveer één derde, de helft of twee derde van de antwoordwoorden
+zelf in te vullen. De keuze is in de native Android-preview te bekijken,
+verschijnt op het oefenblad en wordt opnieuw gecontroleerd bij de
+Android-bestandskiezer. Er worden nooit woorden uit het echte gesprek
+verwijderd; de antwoorden blijven apart beschikbaar.
+
+Maak bij **★ gemarkeerd → Exporteer selectie…** een **Aanvuloefening · HTML**
+uit je eigen selectie van afgeronde tweetalige zinnen. Iedere kaart toont
+de bronzin en een antwoord waarvan om de andere spatiegescheiden term
+tijdelijk is vervangen door een invulstreep. Voor schriftsoorten zonder
+spaties wordt geen kunstmatige woordgrens verzonnen. Het volledige antwoord
+is in de browser pas na een tik zichtbaar; bij printen verschijnt het
+op een **afzonderlijke antwoordpagina**. Bekijk vóór opslaan in de app
+de werkelijke aanvulhints, kaartenteller en exacte bestandspreviews.
+
+De functie werkt in beide taalrichtingen, met eigen tekstcorrecties,
+optionele taalcodes en een limiet op geselecteerde kaarten. Alles
+blijft lokaal, scripts-/netwerkvrij en wordt pas na bewuste
+Android-bestandskeuze opgeslagen. Geen spraakopnames, permanente
+studieresultaten of claims over geverifieerde vertalingen.
+[Handleiding](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+## Nieuw: tweetalige vouwkaartjes op één afdrukzijde
+
+Uit bewust gemarkeerde voltooide vertaalparen kun je naast TSV/CSV
+en het interactieve HTML-oefenblad nu **Vouwkaartjes · HTML** kiezen.
+In het privé-bestand staan vraag en betekenis naast elkaar:
+éénzijdig afdrukken, langs de buitenrand knippen en de rechter
+betekenis achter de linker vraag vouwen. Beide taalrichtingen,
+eigen correcties, taalcodekeuze, ontdubbelen en rechts-naar-links-tekst
+werken via de bestaande selectie; geen scripts, accounts, audio,
+cloud of automatische export.
+[Handleiding](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+# Tuddy 🎙️
+
+## Nieuw: afdrukbaar privé-oefenblad uit eigen tweetalige zinnen
+
+Maak uit de bewust geselecteerde **★ gemarkeerde** gesprekszinnen nu
+ook **Oefenblad · HTML**: een zelfstandig bestand met per vraag een **Toon antwoord**-knop
+via native HTML-details, geheel zonder scripts of netwerk. Op papier
+blijven de antwoorden verborgen bij de vragen en staan ze op een
+afzonderlijke afdrukpagina. Dezelfde keuze voor bron→vertaling, omgekeerde kaarten
+of beide richtingen, optionele taalcodes, alleen persoonlijk
+gecorrigeerde antwoorden en ontdubbeling als bij TSV/CSV blijft intact.
+Alles gebeurt in RAM en pas na expliciete Android-bestandskeuze.
+Geen ongevraagde opslag, netwerk, nieuwe machtigingen of
+geverifieerde vertaalclaims.
+[Handleiding](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+## Nieuw: leerkaartbestand uitsluitend uit handmatig gecorrigeerde antwoorden
+
+Selecteer bij de TSV- of CSV-export **Alleen mijn handmatig gecorrigeerde
+antwoorden** om alle overige modelvertalingen buiten het bestand te
+houden. De selectie, kaartenaantallen en ruwe preview volgen het filter;
+zonder eigen correcties is er geen export. Eigen antwoorden zijn niet
+extern gecontroleerd.
+[Gebruik](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+## Nieuw: corrigeer een modelvertaling alleen voor je eigen studie
+
+Bij **★ gemarkeerd** kun je op **✎ Corrigeer alleen studieantwoord**
+tikken, de modelvertaling vergelijken met je zelf geschreven betekenis
+en maximaal 400 Unicode-tekens invoeren. Alleen tijdelijke oefenkaarten
+en de expliciete TSV-/CSV-leerkaartenexport gebruiken deze eigen correctie;
+het echte gesprek en TXT/JSON/HTML/SRT/WebVTT blijven onveranderd.
+Het antwoord is ongetoetst en wordt bij gewijzigde brontekst of
+modelvertaling niet blind overgenomen. Je kunt een correctie wissen
+en terugkeren naar het oorspronkelijke modelantwoord.
+[Handleiding](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+## Nieuw: bepaal welke gemarkeerde regels je oefent of bewaart
+
+Onder **★ gemarkeerd** kun je zoeken, op voltooiing én exact
+bron-/doeltaalpaar filteren, nieuwste eerst tonen en per zin
+de oefen-/exportselectie aanvinken. Kies uitsluitend de zichtbare zoekresultaten, voeg zichtbare regels toe of
+deselecteer ze zonder andere sterren te verliezen. Verwijder desgewenst
+een losse ster en herstel de laatste verwijderactie zolang het scherm open is. Oefenen en bestandskeuze
+werken alleen met de expliciet gekozen subset. Er wordt niets
+automatisch geüpload of opgeslagen.
+[Bediening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+## Nieuw: oefen gemarkeerde tweetalige zinnen zonder export
+
+Open **★ gemarkeerd** en kies **Oefen ... gekozen vertaalparen**.
+De bestaande lokale oefenkaartjes gebruiken alleen je geselecteerde,
+daadwerkelijk afgeronde lokale modelvertalingen, die niet onafhankelijk
+op inhoud gecontroleerd zijn. Je kunt nu ook **uitsluitend je handmatig
+gecorrigeerde studieantwoorden oefenen** zonder overige modelantwoorden.
+Draai de vraag/antwoordrichting
+om, onthul pas na het nadenken, beoordeel jezelf en oefen moeilijke
+kaarten nogmaals. Alles verdwijnt bij sluiten; er wordt niets
+toegevoegd aan je vaste studieprofiel.
+[Privacy en bediening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
+## Nieuw: exporteer gemarkeerde gesprekszinnen in zeven formaten
+
+Markeer maximaal 80 regels in je tijdelijke live gesprek en bekijk ze
+onder **★ gemarkeerd**. Via **Exporteer N gekozen…** kies je bewust
+voor TXT, een opnieuw importeerbaar privé-JSON-archief, afdrukbaar HTML,
+een ruw SRT/WebVTT-ondertitelconcept met instelbare tijden of UTF-8
+TSV-/CSV-leerkaarten met uitsluitend voltooide, ongeverifieerde lokale
+modelvertalingen. Bij TSV of CSV kies je bron naar vertaling, omgekeerd of
+beide richtingen; gelijke paren worden ontdubbeld. Voor gemengde
+taalrichtingen kun je optioneel `[taalcode]` bij elke kaartzijde
+zetten; de exacte labels zijn vóór opslag zichtbaar.
+Kies expliciet één taalrichting of alle richtingen, en tussen alle
+gemarkeerde regels, alleen afgeronde regels en werkelijk vertaalde
+regels; bekijk vóór het opslaan aantallen, bestandsgrootte en de
+beoogde inhoud. Bekijk desgewenst de
+exacte ruwe bestandsinhoud in een lokaal, scrollbaar leesvenster.
+SRT/WebVTT telt alleen zinnen die werkelijk in dat ondertitelconcept
+terechtkomen.
+Alle niet-gemarkeerde én niet-geselecteerde regels blijven buiten het bestand. De app
+controleert bij terugkeer uit de Android-bestandskiezer of markeringen
+en zinnen nog identiek zijn en schrijft anders niet. Er is geen
+automatische synchronisatie met audio, geen nieuwe spraak- of
+vertaalclaim en geen stilzwijgende opslag.
+[Bediening en privacy](docs/PINNED_CAPTION_MULTI_EXPORT.md).
 
 ---
 

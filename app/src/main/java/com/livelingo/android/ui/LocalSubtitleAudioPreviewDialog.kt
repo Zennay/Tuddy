@@ -145,9 +145,17 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var completedGuidedRoute by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
     var completedGuidedRounds by remember { mutableIntStateOf(0) }
     var practiceReportOpen by remember { mutableStateOf(false) }
-    // Export-only selection: guided audio playback retains its own scope.
+    // The saved worksheet choice is independent of the guided playback queue.
     var worksheetScope by remember { mutableStateOf(PrivatePracticeRouteScope.ALL) }
+    var worksheetAudience by remember { mutableStateOf(PrivateListeningWorksheetAudience.SELF_STUDY) }
+    var worksheetPrompt by remember { mutableStateOf(PrivateListeningWorksheetPrompt.TRANSCRIBE) }
+    var perFragmentPrompts by remember {
+        mutableStateOf<Map<Pair<Long, Long>, PrivateListeningWorksheetPrompt>>(emptyMap())
+    }
+    var editFragmentPrompts by remember { mutableStateOf(false) }
     var practiceCsvPreviewOpen by remember { mutableStateOf(false) }
+    var detailedCsvPreviewOpen by remember { mutableStateOf(false) }
+    var detailedCsvPreviewPage by remember { mutableIntStateOf(0) }
     // An immutable user-approved document lives only while the Android
     // destination chooser is open; never retain the audio URI or audio bytes.
     var pendingPracticeReport by remember {
@@ -197,7 +205,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 PrivatePracticeReportFormat.WORKSHEET_HTML ->
                     PrivateListeningWorksheet.snapshot(
                         cues, subtitleOffsetMs, savedPracticePassages,
-                        passageRatings, passageNotes, worksheetScope
+                        passageRatings, passageNotes, worksheetScope, worksheetAudience,
+                        chosenSubtitleLanguage, worksheetPrompt, perFragmentPrompts
                     )
                 PrivatePracticeReportFormat.TXT ->
                     PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
@@ -206,10 +215,24 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         cues, subtitleOffsetMs, savedPracticePassages,
                         passageRatings, passageNotes, worksheetScope
                     )
+                PrivatePracticeReportFormat.STUDENT_CSV ->
+                    PrivatePrintablePracticeSummary.snapshotStudentCsv(
+                        savedPracticePassages, passageRatings, worksheetScope,
+                        worksheetPrompt, perFragmentPrompts
+                    )
+                PrivatePracticeReportFormat.DETAILED_CSV ->
+                    PrivatePrintablePracticeSummary.snapshotDetailedCsv(
+                        cues, subtitleOffsetMs, savedPracticePassages,
+                        passageRatings, passageNotes, worksheetScope
+                    )
             }
             if (!prepared || savedPracticePassages.isEmpty() ||
                 updatedSummary != pending.summary ||
-                pending.selectionScope != worksheetScope || updatedBytes == null ||
+                pending.selectionScope != worksheetScope ||
+                pending.worksheetAudience != worksheetAudience ||
+                pending.worksheetPrompt != worksheetPrompt ||
+                pending.perFragmentPrompts != perFragmentPrompts ||
+                updatedBytes == null ||
                 !updatedBytes.contentEquals(pending.bytes)
             ) {
                 notice = "Mijn luisteroefening is gewijzigd. Bekijk en bewaar opnieuw."
@@ -230,17 +253,37 @@ internal fun LocalSubtitleAudioPreviewDialog(
 
     fun choosePracticeReport(format: PrivatePracticeReportFormat) {
         if (!prepared || guidedActive || savedPracticePassages.isEmpty()) return
+        // Student mode never emits a private source/notes/ratings report.
+        if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT &&
+            format != PrivatePracticeReportFormat.WORKSHEET_HTML &&
+            format != PrivatePracticeReportFormat.STUDENT_CSV) {
+            notice = "Kies Zelfstudie om een privéverslag te bewaren."
+            return
+        }
+        if (format == PrivatePracticeReportFormat.STUDENT_CSV &&
+            worksheetAudience != PrivateListeningWorksheetAudience.STUDENT_HANDOUT) return
         val report = exportablePracticeSummary()
         val payload = when (format) {
             PrivatePracticeReportFormat.HTML -> PrivatePrintablePracticeSummary.snapshot(report)
             PrivatePracticeReportFormat.WORKSHEET_HTML ->
                 PrivateListeningWorksheet.snapshot(
                     cues, subtitleOffsetMs, savedPracticePassages,
-                    passageRatings, passageNotes, worksheetScope
+                    passageRatings, passageNotes, worksheetScope, worksheetAudience,
+                        chosenSubtitleLanguage, worksheetPrompt, perFragmentPrompts
                 )
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
             PrivatePracticeReportFormat.CSV ->
                 PrivatePrintablePracticeSummary.snapshotCsv(
+                    cues, subtitleOffsetMs, savedPracticePassages,
+                    passageRatings, passageNotes, worksheetScope
+                )
+            PrivatePracticeReportFormat.STUDENT_CSV ->
+                    PrivatePrintablePracticeSummary.snapshotStudentCsv(
+                        savedPracticePassages, passageRatings, worksheetScope,
+                        worksheetPrompt, perFragmentPrompts
+                    )
+                PrivatePracticeReportFormat.DETAILED_CSV ->
+                PrivatePrintablePracticeSummary.snapshotDetailedCsv(
                     cues, subtitleOffsetMs, savedPracticePassages,
                     passageRatings, passageNotes, worksheetScope
                 )
@@ -249,12 +292,17 @@ internal fun LocalSubtitleAudioPreviewDialog(
             notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
         } else {
             pendingPracticeReport = PendingPrivatePracticeReport(
-                report, format, worksheetScope, payload)
+                report, format, worksheetScope, worksheetAudience,
+                worksheetPrompt, perFragmentPrompts.toMap(), payload)
             practiceReportOpen = false
             savePracticeReport.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = format.mime
-                putExtra(Intent.EXTRA_TITLE, format.filename)
+                putExtra(Intent.EXTRA_TITLE,
+                    if (format == PrivatePracticeReportFormat.WORKSHEET_HTML &&
+                        worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                        "Tuddy-luister-leerlingenblad-zonder-bronregels.html"
+                    else format.filename)
             })
         }
     }
@@ -278,9 +326,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
         completedGuidedRoute = emptyList()
         completedGuidedRounds = 0
         practiceReportOpen = false
-        worksheetScope = PrivatePracticeRouteScope.ALL
         practiceCsvPreviewOpen = false
+        detailedCsvPreviewOpen = false
+        detailedCsvPreviewPage = 0
         pendingPracticeReport = null
+        worksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY
+        worksheetPrompt = PrivateListeningWorksheetPrompt.TRANSCRIBE
+        perFragmentPrompts = emptyMap()
+        editFragmentPrompts = false
         guidedActive = false
         guidedQueue = emptyList()
         guidedIndex = 0
@@ -720,9 +773,13 @@ internal fun LocalSubtitleAudioPreviewDialog(
     }
 
     fun clock(millis: Long): String {
-        val wholeSeconds = millis.coerceAtLeast(0L) / 1000L
-        return String.format(Locale.ROOT, "%02d:%02d:%02d",
-            wholeSeconds / 3600L, (wholeSeconds / 60L) % 60L, wholeSeconds % 60L)
+        // Keep the exact user-picked A/B boundary legible even when the
+        // passages begin or end within the same wall-clock second.
+        val safeMs = millis.coerceAtLeast(0L)
+        val wholeSeconds = safeMs / 1000L
+        return String.format(Locale.ROOT, "%02d:%02d:%02d.%03d",
+            wholeSeconds / 3600L, (wholeSeconds / 60L) % 60L,
+            wholeSeconds % 60L, safeMs % 1000L)
     }
 
     // Manual anchors are millisecond-specific; never round away the number
@@ -2088,39 +2145,152 @@ internal fun LocalSubtitleAudioPreviewDialog(
             onDismissRequest = { practiceReportOpen = false },
             title = { Text("Mijn privé luisteroverzicht") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text("Hier staan je eigen ondertitels, tijdvakken en beoordelingen. " +
                         "Selecteer alleen zelf tekst als je die via Android wilt kopiëren; " +
                         "je klembord- of toetsenbord-app kan een kopie dan lezen.",
                         style = MaterialTheme.typography.bodySmall)
                     Text(
-                        "Je kunt het overzicht als afdrukbare HTML, TXT-notitie of " +
-                            "CSV met eigen fragmentbeoordelingen opslaan. Externe Android-opslag kan synchroniseren; " +
-                            "er gaan geen audio-opnamen of audiobestandsnamen mee.",
+                        "Je kunt een afdrukbare HTML-rapportage, een zelfstandig " +
+                            "luisterwerkblad, een TXT-notitie of CSV met eigen beoordelingen " +
+                            "bewaren. Op het luisterwerkblad blijven bronregels tijdens " +
+                            "het oefenen ingeklapt en worden ze op papier alleen " +
+                            "met een expliciet aangevinkt afdrukvakje toegevoegd. " +
+                            "Externe Android-opslag kan synchroniseren; audio of audiobestandsnamen " +
+                            "gaan niet mee.",
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Text("Kies welke eigen fragmenten op mijn luisterwerkblad en CSV staan:",
-                        style = MaterialTheme.typography.titleSmall)
-                    PrivatePracticeRouteScope.entries.forEach { scope ->
-                        val amount = privatePracticeRouteCandidates(
-                            savedPracticePassages, passageRatings, scope
+                    Text(
+                        "Mijn luisterwerkblad bevat alleen de fragmenten in " +
+                            "de hieronder gekozen persoonlijke categorie. " +
+                            "Dit verandert de begeleide afspeelroute niet.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    PrivatePracticeRouteScope.entries.forEach { candidate ->
+                        val candidateCount = privatePracticeRouteCandidates(
+                            savedPracticePassages, passageRatings, candidate
                         ).size
                         TextButton(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = !guidedActive && amount > 0,
-                            onClick = { worksheetScope = scope }
+                            enabled = !guidedActive && candidateCount > 0,
+                            onClick = { worksheetScope = candidate }
                         ) {
-                            Text((if (worksheetScope == scope) "● " else "○ ") +
-                                scope.title + " (" + amount + ")")
+                            Text((if (worksheetScope == candidate) "● " else "○ ") +
+                                candidate.title + " (" + candidateCount + ")")
                         }
                     }
+                    HorizontalDivider()
+                    Text("Voor wie is dit luisterwerkblad?",
+                        style = MaterialTheme.typography.titleSmall)
+                    PrivateListeningWorksheetAudience.entries.forEach { audience ->
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive,
+                            onClick = { worksheetAudience = audience }
+                        ) {
+                            Text((if (worksheetAudience == audience) "● " else "○ ") +
+                                audience.title)
+                        }
+                    }
+                    HorizontalDivider()
+                    Text("Wat wil je per luisterfragment oefenen?",
+                        style = MaterialTheme.typography.titleSmall)
+                    PrivateListeningWorksheetPrompt.entries.forEach { prompt ->
+                        TextButton(modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive,
+                            onClick = { worksheetPrompt = prompt }) {
+                            Text((if (worksheetPrompt == prompt) "● " else "○ ") +
+                                prompt.title)
+                        }
+                    }
+                    Text(worksheetPrompt.instruction +
+                        " Je opdracht staat in het HTML-blad en verandert " +
+                        "geen audio of oorspronkelijke ondertitels.",
+                        style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = {
+                        editFragmentPrompts = !editFragmentPrompts
+                    }, enabled = !guidedActive) {
+                        Text(if (editFragmentPrompts)
+                            "Verberg eigen opdracht per fragment"
+                        else "Kies desgewenst per fragment een andere opdracht…")
+                    }
+                    if (editFragmentPrompts) {
+                        val visiblePassages = privatePracticeRouteCandidates(
+                            savedPracticePassages, passageRatings, worksheetScope)
+                        visiblePassages.forEachIndexed { index, bounds ->
+                            HorizontalDivider()
+                            Text("Fragment ${index + 1} · ${clock(bounds.first)} – " +
+                                clock(bounds.second),
+                                style = MaterialTheme.typography.labelMedium)
+                            val selectedPrompt = perFragmentPrompts[bounds]
+                            Text("Actief: " + (selectedPrompt ?: worksheetPrompt).title,
+                                style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = {
+                                perFragmentPrompts = perFragmentPrompts - bounds
+                            }) { Text((if (selectedPrompt == null) "● " else "○ ") +
+                                "Gebruik algemene opdracht") }
+                            PrivateListeningWorksheetPrompt.entries.forEach { option ->
+                                TextButton(onClick = {
+                                    perFragmentPrompts = perFragmentPrompts +
+                                        (bounds to option)
+                                }) {
+                                    Text((if (selectedPrompt == option) "● " else "○ ") +
+                                        option.title)
+                                }
+                            }
+                        }
+                    }
+                    Text(
+                        if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                            "Leerlingenbestand: bevat alleen de eigen A–B-tijdvakken " +
+                                "en invulvakken, geen bronregels of persoonlijke " +
+                                "notities/beoordelingen. Controleer de fragmenttijden " +
+                                "voordat je het bestand deelt."
+                        else "Zelfstudie: tik expliciet om bronregels te onthullen. " +
+                            "Het bronregelblad wordt uitsluitend op een aparte " +
+                            "pagina afgedrukt als je het afdrukvakje vooraf aanvinkt.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     TextButton(
-                        enabled = !guidedActive &&
+                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive &&
                             privatePracticeRouteCandidates(
                                 savedPracticePassages, passageRatings, worksheetScope
                             ).isNotEmpty(),
-                        onClick = { choosePracticeReport(PrivatePracticeReportFormat.WORKSHEET_HTML) }
-                    ) { Text("Bewaar luisterwerkblad · vragen en aparte bronregels…") }
+                        onClick = {
+                            choosePracticeReport(PrivatePracticeReportFormat.WORKSHEET_HTML)
+                        }
+                    ) {
+                        Text(if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                            "Bewaar leerlingenblad zonder bronregels…"
+                        else "Bewaar luisterwerkblad · vragen en aparte bronregels…")
+                    }
+
+                    if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT) {
+                        Text("Volledige CSV-voorbeeldweergave · uitsluitend fragmenttijden, " +
+                            "zelfgekozen oefenvragen en lege antwoordcellen. Geen bronregels, " +
+                            "notities of beoordelingen.",
+                            style = MaterialTheme.typography.bodySmall)
+                        val studentPreview = PrivatePrintablePracticeSummary.snapshotStudentCsv(
+                            savedPracticePassages, passageRatings, worksheetScope,
+                            worksheetPrompt, perFragmentPrompts
+                        )?.toString(Charsets.UTF_8)
+                        SelectionContainer {
+                            Text(studentPreview ?: "Geen geldig leerlingenblad om te bewaren.",
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 210.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        TextButton(
+                            enabled = !guidedActive && studentPreview != null,
+                            onClick = {
+                                choosePracticeReport(PrivatePracticeReportFormat.STUDENT_CSV)
+                            }
+                        ) { Text("Bewaar leerlingen-CSV zonder bronregels…") }
+                    } else {
                     TextButton(
                         enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.TXT) }
@@ -2157,7 +2327,73 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 savedPracticePassages, passageRatings, worksheetScope
                             ).isNotEmpty(),
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.CSV) }
-                    ) { Text("Bewaar geselecteerde oefenfragmenten als CSV…") }
+                    ) { Text("Bewaar mijn geselecteerde oefenfragmenten als CSV…") }
+                    TextButton(
+                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        onClick = { detailedCsvPreviewOpen = !detailedCsvPreviewOpen }
+                    ) {
+                        Text(if (detailedCsvPreviewOpen)
+                            "Verberg bronregel-CSV" else
+                            "Bekijk volledige bronregel-CSV vóór opslaan")
+                    }
+                    if (detailedCsvPreviewOpen) {
+                        Text(
+                            "Bronregel-CSV · " + worksheetScope.title +
+                                " · alleen volledig binnen eigen A–B-markeringen passende cues.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        val detailPreview = PrivatePrintablePracticeSummary.snapshotDetailedCsv(
+                            cues, subtitleOffsetMs, savedPracticePassages,
+                            passageRatings, passageNotes, worksheetScope
+                        )?.toString(Charsets.UTF_8)
+                        // Each CSV row is one line; user-authored newlines are
+                        // normalized before encoding, so pagination cannot split
+                        // a quoted cell or truncate the bytes actually saved.
+                        val rows = detailPreview?.trimEnd('\r', '\n')?.split("\r\n")
+                        val pageCount = if (rows.isNullOrEmpty()) 0 else
+                            (rows.size + 11) / 12
+                        val currentPage = detailedCsvPreviewPage.coerceIn(
+                            0, (pageCount - 1).coerceAtLeast(0)
+                        )
+                        Text(
+                            if (pageCount > 0)
+                                "Bronregels CSV · pagina ${currentPage + 1} van $pageCount" +
+                                    " · het hele bestand wordt bewaard"
+                            else "Geen veilig exporteerbare bronregel-CSV.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (pageCount > 1) {
+                            Row {
+                                TextButton(
+                                    enabled = currentPage > 0,
+                                    onClick = { detailedCsvPreviewPage = currentPage - 1 }
+                                ) { Text("Vorige CSV-pagina") }
+                                TextButton(
+                                    enabled = currentPage + 1 < pageCount,
+                                    onClick = { detailedCsvPreviewPage = currentPage + 1 }
+                                ) { Text("Volgende CSV-pagina") }
+                            }
+                        }
+                        SelectionContainer {
+                            Text(
+                                rows?.drop(currentPage * 12)?.take(12)?.joinToString("\n")
+                                    ?: "Geen veilig exporteerbare bronregel-CSV.",
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    TextButton(
+                        enabled = !guidedActive &&
+                            privatePracticeRouteCandidates(
+                                savedPracticePassages, passageRatings, worksheetScope
+                            ).isNotEmpty(),
+                        onClick = {
+                            choosePracticeReport(PrivatePracticeReportFormat.DETAILED_CSV)
+                        }
+                    ) { Text("Bewaar alle passende bronregels als CSV…") }
+                    }
                     SelectionContainer {
                         Text(
                             practiceSummaryText,
@@ -2176,7 +2412,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
             },
             dismissButton = {
                 TextButton(
-                    enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                    enabled = savedPracticePassages.isNotEmpty() && !guidedActive &&
+                        worksheetAudience == PrivateListeningWorksheetAudience.SELF_STUDY,
                     onClick = { choosePracticeReport(PrivatePracticeReportFormat.HTML) }
                 ) { Text("Bewaar zelf HTML…") }
             }
