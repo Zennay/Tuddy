@@ -75,8 +75,8 @@ internal object PrivatePrintablePracticeSummary {
             // spreadsheet treating a user-authored field as a formula.
             val firstVisible = readable.firstOrNull { !it.isWhitespace() &&
                 Character.getType(it) != Character.FORMAT.toInt() }
-            return if (firstVisible in listOf('=', '+', '-', '@') ||
-                readable.firstOrNull() in listOf('=', '+', '-', '@')
+            return if ((firstVisible != null && firstVisible in "=+-@") ||
+                (readable.firstOrNull()?.let { it in "=+-@" } == true)
             ) "'" + readable else readable
         }
         fun time(ms: Long): String {
