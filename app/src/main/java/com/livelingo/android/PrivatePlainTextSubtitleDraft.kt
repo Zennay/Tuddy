@@ -7,7 +7,7 @@ import java.util.Locale
  * chosen synthetic durations. These are NOT speech timestamps, word alignment, or translations.
  * Only used after deliberate manual input; no audio, clipboard, or I/O.
  */
-internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS, TIMED_TEXT_COLUMNS, TIMED_PAIRED_COLUMNS, TIMED_TEXT_CSV, TIMED_PAIRED_CSV, PAIRED_TEXTBOXES }
+internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS, PAIRED_CSV, TIMED_TEXT_COLUMNS, TIMED_PAIRED_COLUMNS, TIMED_TEXT_CSV, TIMED_PAIRED_CSV, PAIRED_TEXTBOXES }
 
 internal data class TimedSubtitleInputInspection(
     val rowCount: Int,
@@ -129,6 +129,35 @@ internal object PrivatePlainTextSubtitleDraft {
     fun inspectTimed(raw: String, withMeaning: Boolean, csv: Boolean = false): TimedSubtitleInputInspection =
         timedColumns(raw, withMeaning, csv).second
 
+    /** Two user-written CSV columns, never inferred or machine-translated. */
+    private fun authoredCsvPairs(raw: String): Pair<List<String>?, TimedSubtitleInputInspection> {
+        val rows = pairedRows(raw)
+        fun fail(message: String) = null to TimedSubtitleInputInspection(rows.size, message)
+        if (rows.isEmpty()) return fail("Plak minimaal één eigen CSV-tekstpaar.")
+        if (rows.size > MAX_CUES) return fail("Maximaal 500 eigen tekstparen.")
+        if (raw.toByteArray(Charsets.UTF_8).size > MAX_BYTES)
+            return fail("Invoer is groter dan 256 KiB.")
+        val parsed = ArrayList<String>(rows.size)
+        rows.forEachIndexed { index, row ->
+            val number = index + 1
+            if (row.isBlank()) return fail("Regel ${number} is leeg; corrigeer de CSV.")
+            val fields = PrivateTimedCsvColumns.parseRow(row)
+                ?: return fail("Regel ${number}: ongeldig CSV-aanhalingsteken.")
+            if (fields.size != 2)
+                return fail("Regel ${number}: verwacht precies 2 CSV-velden, kreeg ${fields.size}.")
+            val first = fields[0].trim()
+            val second = fields[1].trim()
+            if (listOf(first, second).any { value ->
+                value.isEmpty() || value.length > 800 ||
+                    "-->" in value || value.any { it.isISOControl() }
+            }) return fail("Regel ${number}: brontekst of betekenis is leeg, te lang of ongeldig.")
+            parsed += first + "\n" + second
+        }
+        return parsed to TimedSubtitleInputInspection(rows.size, null)
+    }
+
+    fun inspectCsvPairs(raw: String): TimedSubtitleInputInspection =
+        authoredCsvPairs(raw).second
     private fun label(milliseconds: Long): String =
         String.format(Locale.ROOT, "%02d:%02d:%02d,%03d",
             milliseconds / 3_600_000L,
@@ -202,6 +231,8 @@ internal object PrivatePlainTextSubtitleDraft {
             PlainSubtitleSplitMode.TIMED_TEXT_CSV -> return null // handled above
             PlainSubtitleSplitMode.TIMED_PAIRED_CSV -> return null // handled above
             PlainSubtitleSplitMode.PAIRED_TEXTBOXES -> return null // handled above
+            PlainSubtitleSplitMode.PAIRED_CSV -> authoredCsvPairs(raw).first
+                ?: return null
             PlainSubtitleSplitMode.PAIRED_COLUMNS -> pairedRows(raw).map { row ->
                     // Reject a blank source row rather than shifting displayed
                     // row numbers relative to the user's spreadsheet.
