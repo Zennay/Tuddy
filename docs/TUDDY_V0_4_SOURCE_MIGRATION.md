@@ -36,3 +36,12 @@ Do not close issue #1 based on this map alone. It records current equivalences a
 ## Archive inspection update — 21 October 2026
 
 The original Library ZIP has now been recovered and extracted for direct inspection; its SHA-256 is unchanged. The exact uncompressed per-file hashes and sizes are recorded in [TUDDY_V0_4_ARCHIVE_INVENTORY.md](TUDDY_V0_4_ARCHIVE_INVENTORY.md). This resolves uncertainty about which files exist in the archive, but does not mean those 23 files have all been copied into the GitHub repository. Current equivalents remain the active implementations; no historical module was blindly overlaid onto the newer privacy/lifecycle architecture. Issue #1 remains open for the remaining source-import work and authorized physical-device acceptance.
+
+## Preserved historical module snapshots — 21 October 2026
+
+The following original v0.4 files are now stored verbatim outside Gradle's active source set, so future comparisons can inspect the old behavior without replacing newer runtime code:
+
+- `archive/v0.4/LiveLingo-Android/app/src/main/java/com/livelingo/android/translation/OfflineTranslator.kt` — source SHA-256 `f1518efb40014395a54518ba71fb0f409bc585a78488db433f732b92699afa5f`.
+- `archive/v0.4/LiveLingo-Android/app/src/main/java/com/livelingo/android/speech/OnDeviceSpeech.kt` — source SHA-256 `6105869988bb1453b9b960e13d1d9bfec059ee113f2c6524e759696e165bf896`.
+
+These are archival references only; they are intentionally not part of the active Gradle source set. The archive's `LiveLingoScreen.kt`, `MainViewModel.kt` and `Languages.kt` still require safe source-by-source preservation or equivalent mapping. Issue #1 also remains open for the authorized physical Android 12+ airplane-mode acceptance; this snapshot does not satisfy that gate.
