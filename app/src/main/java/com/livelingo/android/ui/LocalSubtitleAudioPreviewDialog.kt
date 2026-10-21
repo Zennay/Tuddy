@@ -735,7 +735,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
     ) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(18.dp),
+                modifier = Modifier.fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(),
@@ -1746,7 +1748,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         }
                     }
                     Column(
-                        modifier = Modifier.fillMaxWidth().weight(1f)
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(min = 180.dp, max = 340.dp)
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.Center
                     ) {
