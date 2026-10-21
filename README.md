@@ -29,7 +29,13 @@ chronologische één-op-één koppelingen op basis van werkelijke
 overlappende tijdvakken. De volledige koppelingen zijn te
 beoordelen met hun oorspronkelijke bronregelnummers, volledige
 teksten en overlaptijd. Ook het aantal ongekoppelde regels
-in **beide** sporen staat in de preview.
+in **beide** sporen staat in de preview. Je kunt nu **beide bronzinnen
+doorzoeken**, op het **exacte oorspronkelijke tweede-spoorregelnummer**
+filteren en **alle ongekoppelde originele regels** in beide sporen
+afzonderlijk bekijken (met tekst- en spoorfilters). In de volledige
+resultaatpreview kun je direct naar een resultaatregel springen.
+Voor tweepuntscorrectie kun je per bronspoor ook zoeken, naar originele
+regelnummers springen en lange oorspronkelijke cues volledig uitklappen.
 
 Een voorgestelde inhoudelijk onjuiste koppeling kan de gebruiker
 **handmatig uitsluiten**. Dat werkt per geselecteerd paar, per
