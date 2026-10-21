@@ -4,6 +4,12 @@ package com.livelingo.android
  * Script-free, fully offline bilingual fill-in-the-gap workbook. The source
  * sentence is preserved; blanks are only displayed in the export.
  */
+internal enum class PinnedClozeDifficulty(val title: String) {
+    EASY("Licht · 1 van 3 woorden ontbreekt"),
+    NORMAL("Normaal · ongeveer de helft ontbreekt"),
+    CHALLENGE("Uitdaging · 2 van 3 woorden ontbreken")
+}
+
 internal object PrivatePinnedCaptionClozeHtml {
     private const val MAX_BYTES = 262_144
 
@@ -20,19 +26,29 @@ internal object PrivatePinnedCaptionClozeHtml {
         }
     }
 
-    private fun missingWords(value: String): String {
+    private fun missingWords(value: String, difficulty: PinnedClozeDifficulty): String {
         val words = value.trim().split(Regex("\\s+"))
-        // No invented word boundaries for scripts written without spaces.
+        // Do not invent word boundaries in unsegmented scripts.
         if (words.size < 2) return "________"
         return words.mapIndexed { index, word ->
-            if (index % 2 == 1) "________" else word
+            val hide = if (words.size < 3) index == words.lastIndex
+                else when (difficulty) {
+                    PinnedClozeDifficulty.EASY -> index % 3 == 2
+                    PinnedClozeDifficulty.NORMAL -> index % 2 == 1
+                    PinnedClozeDifficulty.CHALLENGE -> index % 3 != 0
+                }
+            if (hide) "________" else word
         }.joinToString(" ")
     }
 
     /** Same gaps as the exported HTML, for the Android consent preview. */
-    fun previewHint(text: String, languageCode: String? = null): String {
+    fun previewHint(
+        text: String,
+        languageCode: String? = null,
+        difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL
+    ): String {
         val words = missingWords(
-            PrivatePinnedCaptionStudyTsv.field(text, spreadsheetSafe = false)
+            PrivatePinnedCaptionStudyTsv.field(text, spreadsheetSafe = false), difficulty
         )
         return if (languageCode == null) words else "[" + languageCode + "] " + words
     }
@@ -40,7 +56,8 @@ internal object PrivatePinnedCaptionClozeHtml {
     fun snapshot(
         rows: List<TranscriptExportRow>,
         direction: PinnedStudyDirection,
-        showLanguageTags: Boolean = false
+        showLanguageTags: Boolean = false,
+        difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL
     ): ByteArray? {
         // Same exact source-data and language-label validation as TSV.
         // Printed text must not gain spreadsheet formula-safety apostrophes.
@@ -56,10 +73,10 @@ internal object PrivatePinnedCaptionClozeHtml {
             val back = if (showLanguageTags) "[" + row.targetCode + "] " + target else target
             if (direction != PinnedStudyDirection.TARGET_TO_SOURCE)
                 cards.add(Triple(front, back, previewHint(target,
-                    if (showLanguageTags) row.targetCode else null)))
+                    if (showLanguageTags) row.targetCode else null, difficulty)))
             if (direction != PinnedStudyDirection.SOURCE_TO_TARGET)
                 cards.add(Triple(back, front, previewHint(source,
-                    if (showLanguageTags) row.sourceCode else null)))
+                    if (showLanguageTags) row.sourceCode else null, difficulty)))
         }
         if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2) return null
 
@@ -83,7 +100,8 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "@media print{@page{margin:14mm}body{padding:0}" +
                 "details{display:none}.card{break-inside:avoid}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
-                "<p>Vul de ontbrekende woorden in. Dit zijn uitsluitend " +
+                "<p>Moeilijkheid: " + escape(difficulty.title) + ". " +
+                "Vul de ontbrekende woorden in. Dit zijn uitsluitend " +
                 "zelfgekozen lokale zinnen, ongeverifieerde modelvertalingen " +
                 "of eigen correcties. Geen automatische taalcontrole." +
                 " De antwoorden staan op een nieuwe afdrukpagina.</p>" +
