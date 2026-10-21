@@ -74,6 +74,31 @@ internal object PrivateListeningWorksheet {
         })
     }
 
+    private val LANGUAGE_TAG_CODE = Regex("""^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$""")
+    private val RTL_BASE_LANGUAGES =
+        setOf("ar", "ckb", "dv", "fa", "he", "ps", "sd", "ug", "ur", "yi")
+    private val RTL_SCRIPTS = setOf("arab", "hebr", "syrc", "thaa")
+
+    private fun htmlDirection(languageCode: String?): String {
+        if (languageCode == null || !LANGUAGE_TAG_CODE.matches(languageCode)) return "auto"
+        val subtags = languageCode.split('-')
+        val script = subtags.firstOrNull {
+            it.length == 4 && it.all { ch -> ch.isLetter() }
+        }?.lowercase(Locale.ROOT)
+        if (script != null) return if (script in RTL_SCRIPTS) "rtl" else "ltr"
+        return if (subtags.first().lowercase(Locale.ROOT) in RTL_BASE_LANGUAGES)
+            "rtl" else "ltr"
+    }
+
+    private fun htmlLanguageAttribute(languageCode: String?): String {
+        if (languageCode == null || !LANGUAGE_TAG_CODE.matches(languageCode)) return ""
+        return " lang=\"" + html(languageCode) + "\""
+    }
+
+    private fun htmlBidiText(value: String, languageCode: String?): String =
+        "<bdi dir=\"" + htmlDirection(languageCode) + "\"" +
+            htmlLanguageAttribute(languageCode) + ">" + html(value) + "</bdi>"
+
     private fun rating(value: String?): String = when (value) {
         "repeat" -> "Nog oefenen"
         "okay" -> "Gaat goed"
@@ -98,7 +123,8 @@ internal object PrivateListeningWorksheet {
         ratings: Map<Pair<Long, Long>, String>,
         notes: Map<Pair<Long, Long>, String>,
         scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL,
-        audience: PrivateListeningWorksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY
+        audience: PrivateListeningWorksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY,
+        subtitleLanguageCode: String? = null
     ): ByteArray? {
         if (passages.isEmpty() || passages.size > 4 ||
             passages.distinct().size != passages.size ||
@@ -237,8 +263,8 @@ internal object PrivateListeningWorksheet {
             } else {
                 out.append("<ol>")
                 for ((number, line) in part.lines) {
-                    out.append("<li>Bronregel ").append(number).append(": <bdi dir=\"auto\">")
-                        .append(html(line)).append("</bdi></li>")
+                    out.append("<li>Bronregel ").append(number).append(": ")
+                        .append(htmlBidiText(line, subtitleLanguageCode)).append("</li>")
                 }
                 out.append("</ol>")
             }
@@ -272,8 +298,8 @@ internal object PrivateListeningWorksheet {
             else {
                 out.append("<ol>")
                 for ((number, line) in part.lines) out.append("<li>")
-                    .append(number).append(". <bdi dir=\"auto\">")
-                    .append(html(line)).append("</bdi></li>")
+                    .append(number).append(". ")
+                    .append(htmlBidiText(line, subtitleLanguageCode)).append("</li>")
                 out.append("</ol>")
             }
             if (part.omitted > 0) out.append("<p>")
