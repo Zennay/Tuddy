@@ -1711,6 +1711,12 @@ gecorrigeerde start-/eindtijden, springen naar gewijzigde pagina's,
 en vereisen een afzonderlijke bevestiging. De laatste acht bewuste
 tijdacties zijn tijdelijk ongedaan te maken/opnieuw toe te passen.
 
+Voor losse fouten verspreid over een langere eigen tijdlijn is ook een
+**bulkveld met maximaal 32 expliciete `bronnummer=uu:mm:ss.mmm`-correcties**
+beschikbaar, met volledige gecombineerde preview en alles-of-niets
+bevestiging. Dubbele bronregels, tijdcodebotsingen en overschrijden van
+de limiet worden geheel geweigerd.
+
 Alle wijzigingen blijven RAM-only totdat de gebruiker apart de
 bestaande Android-bestandsopslag kiest; de oorspronkelijke gekozen
 providerbron wordt niet overschreven. Onmogelijke tijden, gewijzigde
