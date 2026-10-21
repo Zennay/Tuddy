@@ -25,6 +25,12 @@ internal enum class PinnedClozeAnswerSpace(
     SPACIOUS("Ruim · vier schrijflijnen", 132, 5)
 }
 
+/** An explicit content audience; a student handout must not embed the answer. */
+internal enum class PinnedClozeAudience(val title: String) {
+    SELF_STUDY("Zelfstudie · antwoorden na bewuste keuze"),
+    STUDENT_HANDOUT("Leerlingenblad · geen antwoorden in bestand")
+}
+
 internal object PrivatePinnedCaptionClozeHtml {
     private const val MAX_BYTES = 262_144
 
@@ -117,7 +123,8 @@ internal object PrivatePinnedCaptionClozeHtml {
         showLanguageTags: Boolean = false,
         difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL,
         hintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK,
-        answerSpace: PinnedClozeAnswerSpace = PinnedClozeAnswerSpace.STANDARD
+        answerSpace: PinnedClozeAnswerSpace = PinnedClozeAnswerSpace.STANDARD,
+        audience: PinnedClozeAudience = PinnedClozeAudience.SELF_STUDY
     ): ByteArray? {
         // Same exact source-data and language-label validation as TSV.
         // Printed text must not gain spreadsheet formula-safety apostrophes.
@@ -166,25 +173,36 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "summary{cursor:pointer;padding:8px 0}" +
                 ".write{display:none;border-bottom:1px solid #64748b;" +
                 "min-height:" + answerSpace.printHeightPx + "px;margin-top:12px}" +
-                ".answers{break-before:page;page-break-before:always}" +
+                ".answers{display:none;break-before:page;page-break-before:always}" +
+                ".answers:target{display:block}" +
+                ".answerlink{display:inline-block;margin:12px 0}" +
                 "@media print{@page{margin:14mm}body{padding:0}" +
                 "details,.work,textarea,.reset,.grade{display:none}" +
-                ".write,.printgrade{display:block}" +
+                ".write,.printgrade,.answers{display:block}" +
+                ".answerlink{display:none}" +
                 ".card{break-inside:avoid}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
                 "<p>Moeilijkheid: " + escape(difficulty.title) + ". " +
                 "Invulhint: " + escape(hintMode.title) + ". " +
                 "Schrijfruimte: " + escape(answerSpace.title) + ". " +
+                "Bestemming: " + escape(audience.title) + ". " +
                 "Vul de ontbrekende woorden in. Dit zijn uitsluitend " +
                 "zelfgekozen lokale zinnen, ongeverifieerde modelvertalingen " +
                 "of eigen correcties. Geen automatische taalcontrole." +
                 " Schrijf je antwoord direct in dit offline browserblad " +
                 "(niet automatisch nagekeken of door Tuddy opgeslagen). " +
+                (if (audience == PinnedClozeAudience.SELF_STUDY)
+                    "De eigenlijke antwoorden kun je per kaart bewust openklappen " +
+                        "of met de knop onderaan als compleet antwoordblad openen. "
+                else "Dit leerlingenbestand bevat geen volledige antwoorden " +
+                    "of verborgen antwoordblad. Vraag je docent om de oplossing. ") +
                 "Beoordeel iedere kaart desgewenst zelf; er is geen score " +
                 "of voortgangsopslag. Wissen leegt ook je kaartbeoordeling. " +
                 "Sommige browsers kunnen zelf getypte velden herstellen. " +
-                "De antwoorden staan op een nieuwe afdrukpagina.</p>" +
-                "<section aria-label=\"Oefenvragen\"><h2>Vragen</h2>"
+                (if (audience == PinnedClozeAudience.SELF_STUDY)
+                    "De antwoorden staan op een nieuwe afdrukpagina.</p>"
+                else "Er is geen afdrukantwoordblad.</p>") +
+                "<section id=\"questions\" aria-label=\"Oefenvragen\"><h2>Vragen</h2>"
         )
         cards.forEachIndexed { index, (question, answer, hint) ->
             out.append("<article class=\"card\"><b>Kaart ").append(index + 1)
@@ -211,19 +229,31 @@ internal object PrivatePinnedCaptionClozeHtml {
                 .append("<p class=\"printgrade\">Zelf beoordelen: &#9633; " +
                     "Nog oefenen &nbsp; &#9633; Ik wist het</p>")
                 .append("<div class=\"write\" aria-hidden=\"true\"></div>")
-                .append("<details><summary>Bekijk volledig antwoord</summary>")
-                .append("<p class=\"phrase\"><bdi dir=\"auto\">")
-                .append(escape(answer)).append("</bdi></p></details></article>")
+            if (audience == PinnedClozeAudience.SELF_STUDY) {
+                out.append("<details><summary>Bekijk volledig antwoord</summary>")
+                    .append("<p class=\"phrase\"><bdi dir=\"auto\">")
+                    .append(escape(answer)).append("</bdi></p></details>")
+            }
+            out.append("</article>")
             if (out.length > MAX_BYTES) return null
         }
-        out.append("</section><section class=\"answers\"><h2>Antwoordblad</h2>")
-        cards.forEachIndexed { index, (_, answer, _) ->
-            out.append("<p class=\"phrase\"><b>").append(index + 1)
-                .append(".</b> <bdi dir=\"auto\">").append(escape(answer))
-                .append("</bdi></p>")
-            if (out.length > MAX_BYTES) return null
+        out.append("</section>")
+        if (audience == PinnedClozeAudience.SELF_STUDY) {
+            out.append("<a class=\"answerlink\" href=\"#all-answers\">" +
+                "Open volledige antwoordblad (bewuste keuze)</a>")
+                .append("<section class=\"answers\" id=\"all-answers\">" +
+                    "<h2>Antwoordblad</h2>" +
+                    "<a class=\"answerlink\" href=\"#questions\">" +
+                    "Terug naar vragen</a>")
+            cards.forEachIndexed { index, (_, answer, _) ->
+                out.append("<p class=\"phrase\"><b>").append(index + 1)
+                    .append(".</b> <bdi dir=\"auto\">").append(escape(answer))
+                    .append("</bdi></p>")
+                if (out.length > MAX_BYTES) return null
+            }
+            out.append("</section>")
         }
-        out.append("</section><p>Dit lokale HTML-bestand bevat geen " +
+        out.append("<p>Dit lokale HTML-bestand bevat geen " +
             "scripts, audio of netwerkbronnen. Je gekozen Android-bestandsprovider " +
             "kan het bestand wel extern opslaan of delen.</p></main></body></html>")
         return out.toString().toByteArray(Charsets.UTF_8)
