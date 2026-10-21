@@ -37,6 +37,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -47,6 +52,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleAudioAlignment
 import com.livelingo.android.PrivateSubtitleClip
+import com.livelingo.android.PrivateCueWordProgress
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.TextTarget
 import kotlinx.coroutines.delay
@@ -80,6 +86,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
     var prepared by remember { mutableStateOf(false) }
@@ -90,6 +97,24 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var playbackSpeed by remember { mutableStateOf(1f) }
     // Playback-only calibration. A positive offset shows subtitles later than source timecodes.
     var subtitleOffsetMs by remember { mutableLongStateOf(0L) }
+    // Optional rough reading aid, not measured speech/word alignment.
+    var estimatedWordFollow by remember { mutableStateOf(false) }
+    // Only one opt-in word-sized replay, derived from the current authored cue.
+    var wordReplayBounds by remember { mutableStateOf<Pair<Long, Long>?>(null) }
+    var wordJumpListOpen by remember { mutableStateOf(false) }
+    var wordJumpPage by remember { mutableIntStateOf(0) }
+    var wordJumpNumber by remember { mutableStateOf("") }
+    var wordRangeFrom by remember { mutableStateOf("") }
+    var wordRangeTo by remember { mutableStateOf("") }
+    // Strictly session-only, user-tapped start anchors for visible source words.
+    // Never inferred from the audio or written back to the subtitle provider.
+    var wordTimingMarks by remember(cues, audioUri) {
+        mutableStateOf<Map<Int, Map<Int, Long>>>(emptyMap())
+    }
+    var manualWordNumber by remember { mutableStateOf("") }
+    var manualWordBatchInput by remember { mutableStateOf("") }
+    var manualWordBatchOversized by remember { mutableStateOf(false) }
+    var wordAnchorListOpen by remember { mutableStateOf(false) }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var rangeStartIndex by remember { mutableIntStateOf(-1) }
     var rangeEndIndex by remember { mutableIntStateOf(-1) }
@@ -321,6 +346,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
         bookmarkEndMs = -1L
         bookmarkRepeating = false
         subtitleOffsetMs = 0L
+        estimatedWordFollow = false
+        wordReplayBounds = null
+        wordRangeFrom = ""
+        wordRangeTo = ""
         cuePickerOpen = false
         confirmApplyOpen = false
         confirmClipOpen = false
@@ -465,7 +494,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         if (guidedActive) return guidedQueue.getOrNull(guidedIndex)
         if (bookmarkRepeating) return bookmarkBounds()
         if (rangeRepeating) return rangeBounds()
-        val single = cues.getOrNull(loopCueIndex) ?: return null
+        val single = cues.getOrNull(loopCueIndex) ?: return wordReplayBounds
         if (!cuePlayable(single) || single.endMillis - single.startMillis < 750L)
             return null
         return cueStart(single) to cueEnd(single)
@@ -503,6 +532,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         loopCueIndex = -1
         rangeRepeating = false
         bookmarkRepeating = false
+        wordReplayBounds = null
         pauseAudio()
         notice = "Oefening klaar: ${completedPasses} volledige " +
             (if (completedPasses == 1) "herhaling" else "herhalingen") +
@@ -514,6 +544,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val shifted = (subtitleOffsetMs + deltaMs).coerceIn(-30_000L, 30_000L)
         if (shifted == subtitleOffsetMs) return
         subtitleOffsetMs = shifted
+        // Old marks belong to previous displayed cue clocks.
+        wordTimingMarks = emptyMap()
+        wordReplayBounds = null
         loopCueIndex = -1
         rangeStartIndex = -1
         rangeEndIndex = -1
@@ -538,6 +571,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
             loopCueIndex = -1
             rangeRepeating = false
             bookmarkRepeating = false
+            wordReplayBounds = null
             completedPasses = 0
         }
         runCatching { current.seekTo(target.toInt()) }
@@ -698,6 +732,37 @@ internal fun LocalSubtitleAudioPreviewDialog(
         displayTimeMs >= cueStart(it) && displayTimeMs < cueEnd(it)
     } else -1
     val active = cues.getOrNull(activeIndex)
+    val activeWordMarks = wordTimingMarks[activeIndex].orEmpty()
+    val estimatedCueWord = if (estimatedWordFollow && active != null) {
+        PrivateCueWordProgress.estimate(
+            active.text, cueStart(active), cueEnd(active), displayTimeMs,
+            activeWordMarks
+        )
+    } else null
+    val wordJumpChoices = if (wordJumpListOpen && estimatedCueWord != null &&
+        active != null) {
+        PrivateCueWordProgress.choices(
+            active.text, cueStart(active), cueEnd(active), activeWordMarks
+        )
+    } else null
+    LaunchedEffect(activeIndex, estimatedWordFollow) {
+        wordJumpPage = 0
+        wordJumpNumber = ""
+        wordRangeFrom = ""
+        wordRangeTo = ""
+        manualWordNumber = ""
+        manualWordBatchInput = ""
+        manualWordBatchOversized = false
+        wordAnchorListOpen = false
+        if (!estimatedWordFollow) {
+            wordJumpListOpen = false
+            wordReplayBounds = null
+        }
+    }
+    LaunchedEffect(loopCueIndex, rangeRepeating, bookmarkRepeating, guidedActive) {
+        if (loopCueIndex >= 0 || rangeRepeating || bookmarkRepeating || guidedActive)
+            wordReplayBounds = null
+    }
     val nextIndex = cues.indexOfFirst {
         val start = cueStart(it)
         start > positionMs + 250L && start in 0L until durationMs
@@ -717,6 +782,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
             wholeSeconds % 60L, safeMs % 1000L)
     }
 
+    // Manual anchors are millisecond-specific; never round away the number
+    // that was actually captured when inspecting or editing a word boundary.
+    fun anchorClock(millis: Long): String =
+        clock(millis) + "." + (millis % 1000L).toString().padStart(3, '0')
+
     Dialog(
         onDismissRequest = {
             closeAudio()
@@ -729,7 +799,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
     ) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(18.dp),
+                modifier = Modifier.fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(),
@@ -1360,6 +1432,496 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             " · in audio ${clock(cueStart(active!!))}"
                     else "Geen ondertitel actief op deze audiopositie.",
                         style = MaterialTheme.typography.labelLarge)
+                    OutlinedButton(
+                        enabled = estimatedWordFollow ||
+                            (active != null && active.text.isNotBlank()),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            estimatedWordFollow = !estimatedWordFollow
+                            if (!estimatedWordFollow) wordReplayBounds = null
+                        }
+                    ) {
+                        Text(if (estimatedWordFollow)
+                            "◉ Geschatte woordvolger aan · tik om uit te zetten"
+                        else "○ Geschatte woordvolger proberen")
+                    }
+                    if (estimatedWordFollow) {
+                        Text(
+                            "LET OP · woorden worden tussen eigen tijdankers of " +
+                                "cuegrenzen slechts geschat, niet echt herkend of " +
+                                "met spraak uitgelijnd. Zet uit voor woordkaarten.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (estimatedWordFollow && estimatedCueWord != null && active != null) {
+                        val replayWindow = PrivateCueWordProgress.estimatedWordReplayWindow(
+                            active.text, cueStart(active), cueEnd(active),
+                            estimatedCueWord.index, activeWordMarks
+                        )?.takeIf { it.second <= durationMs }
+                        Text(
+                            "Geschat woord ${estimatedCueWord.index + 1} van ${estimatedCueWord.count}",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = estimatedCueWord.index > 0,
+                                onClick = {
+                                    PrivateCueWordProgress.estimatedWordStart(
+                                        active.text, cueStart(active), cueEnd(active),
+                                        estimatedCueWord.index - 1, activeWordMarks
+                                    )?.let(::seekTo)
+                                }
+                            ) { Text("◀ Vorig woord") }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = { seekTo(estimatedCueWord.estimatedStartMs) }
+                            ) { Text("↻ Woord") }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = estimatedCueWord.index + 1 < estimatedCueWord.count,
+                                onClick = {
+                                    PrivateCueWordProgress.estimatedWordStart(
+                                        active.text, cueStart(active), cueEnd(active),
+                                        estimatedCueWord.index + 1, activeWordMarks
+                                    )?.let(::seekTo)
+                                }
+                            ) { Text("Volgend ▶") }
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive &&
+                                (wordReplayBounds != null || replayWindow != null),
+                            onClick = {
+                                if (wordReplayBounds != null) {
+                                    wordReplayBounds = null
+                                    notice = "Geschatte woordherhaling gestopt."
+                                } else if (replayWindow != null) {
+                                    loopCueIndex = -1
+                                    rangeRepeating = false
+                                    bookmarkRepeating = false
+                                    completedPasses = 0
+                                    lastLoopAtMs = 0L
+                                    wordReplayBounds = replayWindow
+                                    seekTo(replayWindow.first)
+                                    notice = "Geschat woordfragment wordt herhaald. " +
+                                        "Druk op Afspelen als het geluid pauzeert. " +
+                                        "Dit is geen herkende uitspraak."
+                                }
+                            }
+                        ) {
+                            Text(if (wordReplayBounds != null)
+                                "■ Stop geschatte woordherhaling"
+                            else "↻ Herhaal alleen dit geschatte woordfragment")
+                        }
+                        Text("Woordherhaling gebruikt maximaal twee minuten per " +
+                            "geschat woord. Is de geschatte woordduur korter dan 0,75 s, " +
+                            "dan speelt Tuddy 0,75 s met aangrenzende context, binnen " +
+                            "je eigen cuegrenzen. Cues korter dan 0,75 s kunnen niet " +
+                            "in een herhaallus. Dit is geen spraakdetectie of uitlijning.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Text("De woordstappen springen naar geschatte momenten; " +
+                            "ze volgen geen gemeten uitspraak of audioanalyse.",
+                            style = MaterialTheme.typography.labelSmall)
+                        HorizontalDivider()
+                        Text("Handmatige woordankers · alleen deze audiosessie",
+                            style = MaterialTheme.typography.labelLarge)
+                        Text("Kies eerst een woordnummer (2 t/m " +
+                            "${estimatedCueWord.count}) en tik tijdens het luisteren op " +
+                            "Markeer op huidige audiotijd. Woord 1 begint volgens je " +
+                            "eigen cue-tijdcode. Tussen eigen markeringen worden " +
+                            "overige woorden alleen geschat, nooit herkend.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            value = manualWordNumber,
+                            onValueChange = { value ->
+                                if (value.length <= 3 && value.all(Char::isDigit))
+                                    manualWordNumber = value
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Origineel woordnummer voor tijdanker") },
+                            singleLine = true
+                        )
+                        TextButton(onClick = {
+                            manualWordNumber = (estimatedCueWord.index + 1).toString()
+                        }, enabled = estimatedCueWord.index > 0) {
+                            Text("Vul huidig geschat woordnummer in (alleen invoer)")
+                        }
+                        val desiredMark = manualWordNumber.toIntOrNull()?.minus(1)
+                        val markedTimes = if (desiredMark != null &&
+                            activeIndex >= 0 && prepared && dragPositionMs < 0L &&
+                            positionMs >= cueStart(active) &&
+                            positionMs < cueEnd(active)) {
+                            PrivateCueWordProgress.withManualMark(
+                                active.text, cueStart(active), cueEnd(active),
+                                activeWordMarks, desiredMark, positionMs
+                            )
+                        } else null
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive && markedTimes != null,
+                            onClick = {
+                                if (markedTimes != null) {
+                                    wordReplayBounds = null
+                                    wordTimingMarks = wordTimingMarks +
+                                        (activeIndex to markedTimes)
+                                    notice = "Woordanker ${desiredMark!! + 1} vastgelegd op " +
+                                        "${anchorClock(positionMs)} (handmatig, niet gemeten)."
+                                }
+                            }
+                        ) { Text("Markeer dit woord op huidige audiotijd") }
+                        HorizontalDivider()
+                        Text("Handmatige woordankers hergebruiken via eigen tekst",
+                            style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            "Kopieer desgewenst onderstaande tekst met de Android-" +
+                                "selectie; je klembord-app kan de tekst synchroniseren. " +
+                                "Plakken vervangt pas na jouw aparte bevestiging " +
+                                "de ankers van deze ene actieve ondertitel.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        val currentMarkSheet =
+                            PrivateCueWordProgress.formatManualMarkSheet(activeWordMarks)
+                        if (currentMarkSheet != null) {
+                            SelectionContainer {
+                                Text(currentMarkSheet, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(onClick = {
+                                    clipboard.setText(AnnotatedString(currentMarkSheet))
+                                    notice = "Eigen woordankers naar het klembord gekopieerd. " +
+                                        "Een klembordapp kan die tekst synchroniseren."
+                                }) { Text("Kopieer woordankers") }
+                                TextButton(onClick = {
+                                    manualWordBatchInput = currentMarkSheet
+                                    manualWordBatchOversized = false
+                                }) { Text("Vul als invoer in") }
+                            }
+                            val relativeSheet =
+                                PrivateCueWordProgress.formatRelativeManualMarkSheet(
+                                    activeWordMarks, cueStart(active), cueEnd(active))
+                            if (relativeSheet != null) {
+                                Text("Of gebruik relatieve tijden vanaf het begin van " +
+                                    "deze cue, bijvoorbeeld 2=+00:00:01.250. " +
+                                    "Een andere cue accepteert die alleen als alle " +
+                                    "ankers binnen zijn eigen tijdvak passen.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                SelectionContainer {
+                                    Text(relativeSheet,
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(onClick = {
+                                        clipboard.setText(AnnotatedString(relativeSheet))
+                                        notice = "Relatieve woordankers gekopieerd; " +
+                                            "controleer elke andere cue zelf."
+                                    }) { Text("Kopieer relatieve ankers") }
+                                    TextButton(onClick = {
+                                        manualWordBatchInput = relativeSheet
+                                        manualWordBatchOversized = false
+                                    }) { Text("Vul relatieve tijden in") }
+                                }
+                            }
+                        }
+                        OutlinedTextField(
+                            value = manualWordBatchInput,
+                            onValueChange = { value ->
+                                if (value.length <= 512) {
+                                    manualWordBatchInput = value
+                                    manualWordBatchOversized = false
+                                } else {
+                                    // Never accept a previously valid prefix
+                                    // after an oversized clipboard paste.
+                                    manualWordBatchInput = ""
+                                    manualWordBatchOversized = true
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("2=00:00:12.250 of 2=+00:00:01.250") },
+                            minLines = 2,
+                            maxLines = 5
+                        )
+                        TextButton(onClick = {
+                            val pasted = clipboard.getText()?.text
+                            if (pasted == null) {
+                                notice = "Geen tekst op het klembord. Kopieer eerst eigen tijdankers."
+                            } else if (pasted.length > 512) {
+                                manualWordBatchInput = ""
+                                manualWordBatchOversized = true
+                                notice = "Klembordtekst te lang: maximaal 512 tekens; invoer gewist."
+                            } else {
+                                manualWordBatchInput = pasted
+                                manualWordBatchOversized = false
+                                notice = "Klembordtekst geladen. Controleer de volledige voorgestelde set."
+                            }
+                        }) { Text("Plak woordankers uit klembord…") }
+                        val proposedMarkSheet = if (!manualWordBatchOversized) {
+                            PrivateCueWordProgress.parseManualMarkSheet(
+                                manualWordBatchInput, active.text,
+                                cueStart(active), cueEnd(active)
+                            )
+                        } else null
+                        if (manualWordBatchOversized) {
+                            Text("Te veel tekst geplakt: maximaal 512 tekens. " +
+                                "Eerdere invoer is bewust gewist.",
+                                style = MaterialTheme.typography.bodySmall)
+                        } else if (manualWordBatchInput.isNotBlank() &&
+                            proposedMarkSheet == null) {
+                            Text("Ongeldige ankers: gebruik 2=00:00:12.250;" +
+                                 "5=00:00:13.900, of overal +cue-offsets. Maximaal 16 unieke, " +
+                                "strikt oplopende tijden binnen deze ondertitel.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (proposedMarkSheet != null) {
+                            Text(
+                                "Voorstel · vervang alle ankers voor deze regel (" +
+                                    proposedMarkSheet.size + "):",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            SelectionContainer {
+                                Text(
+                                    PrivateCueWordProgress.formatManualMarkSheet(
+                                        proposedMarkSheet
+                                    ).orEmpty(),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive && proposedMarkSheet != null &&
+                                activeIndex >= 0,
+                            onClick = {
+                                if (proposedMarkSheet != null && activeIndex >= 0) {
+                                    wordReplayBounds = null
+                                    wordTimingMarks = wordTimingMarks +
+                                        (activeIndex to proposedMarkSheet)
+                                    manualWordBatchInput = ""
+                                    manualWordBatchOversized = false
+                                    notice = "Mijn " + proposedMarkSheet.size +
+                                        " woordankers bewust vervangen voor deze regel; " +
+                                        "geen echte audio-uitlijning."
+                                }
+                            }
+                        ) { Text("Bevestig en vervang ankers van deze ondertitel") }
+                        if (activeWordMarks.isNotEmpty()) {
+                            Text("${activeWordMarks.size} van maximaal 16 eigen woordankers. " +
+                                "Deze veranderen alleen visuele woordstappen en herhaalpunten.",
+                                style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = {
+                                wordAnchorListOpen = !wordAnchorListOpen
+                            }) {
+                                Text(if (wordAnchorListOpen)
+                                    "Verberg eigen woordtijdmarkeringen"
+                                else "Bekijk of bewerk eigen woordtijdmarkeringen")
+                            }
+                            if (wordAnchorListOpen) {
+                                activeWordMarks.toSortedMap().forEach { (word, atMs) ->
+                                    Row(modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text("Woord ${word + 1}: ${anchorClock(atMs)}",
+                                            modifier = Modifier.weight(1f),
+                                            style = MaterialTheme.typography.bodySmall)
+                                        TextButton(onClick = {
+                                            manualWordNumber = (word + 1).toString()
+                                        }) { Text("Bewerk") }
+                                        TextButton(onClick = {
+                                            wordTimingMarks = wordTimingMarks +
+                                                (activeIndex to (activeWordMarks - word))
+                                            wordReplayBounds = null
+                                            notice = "Eigen tijdanker voor woord ${word + 1} gewist."
+                                        }) { Text("Wis") }
+                                    }
+                                }
+                            }
+                            TextButton(onClick = {
+                                wordTimingMarks = wordTimingMarks - activeIndex
+                                wordReplayBounds = null
+                                wordAnchorListOpen = false
+                                notice = "Eigen woordankers voor deze ondertitel gewist."
+                            }) { Text("Herstel gelijkmatige woordschatting voor deze regel") }
+                        }
+                        TextButton(onClick = {
+                            wordJumpListOpen = !wordJumpListOpen
+                            wordJumpPage = estimatedCueWord.index / 9
+                        }) {
+                            Text(if (wordJumpListOpen)
+                                "Sluit directe woordkeuze"
+                            else "Kies direct een woord uit deze ondertitel")
+                        }
+                        if (wordJumpListOpen && !wordJumpChoices.isNullOrEmpty()) {
+                            val pageCount = (wordJumpChoices.size + 8) / 9
+                            val visiblePage = wordJumpPage.coerceIn(0, pageCount - 1)
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(
+                                    enabled = visiblePage > 0,
+                                    onClick = { wordJumpPage = visiblePage - 1 }
+                                ) { Text("◀") }
+                                Text("Woordenpagina ${visiblePage + 1} / $pageCount",
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.labelMedium)
+                                TextButton(
+                                    enabled = visiblePage + 1 < pageCount,
+                                    onClick = { wordJumpPage = visiblePage + 1 }
+                                ) { Text("▶") }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = wordJumpNumber,
+                                    onValueChange = { value ->
+                                        if (value.length <= 3 && value.all(Char::isDigit)) {
+                                            wordJumpNumber = value
+                                        }
+                                    },
+                                    singleLine = true,
+                                    label = { Text("Woordnummer 1–${wordJumpChoices.size}") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                val chosenNumber = wordJumpNumber.toIntOrNull()
+                                TextButton(
+                                    enabled = chosenNumber != null &&
+                                        chosenNumber in 1..wordJumpChoices.size,
+                                    onClick = {
+                                        val choice = chosenNumber?.let {
+                                            wordJumpChoices.getOrNull(it - 1)
+                                        }
+                                        if (choice != null) {
+                                            wordJumpPage = choice.index / 9
+                                            seekTo(choice.estimatedStartMs)
+                                        }
+                                    }
+                                ) { Text("Ga") }
+                            }
+                            Text(
+                                "Zelf een aaneengesloten woordgroep herhalen · " +
+                                    "alleen een tijdschatting uit deze ondertitel.",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = wordRangeFrom,
+                                    onValueChange = { value ->
+                                        if (value.length <= 3 && value.all(Char::isDigit))
+                                            wordRangeFrom = value
+                                    },
+                                    singleLine = true,
+                                    label = { Text("Van woord") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = wordRangeTo,
+                                    onValueChange = { value ->
+                                        if (value.length <= 3 && value.all(Char::isDigit))
+                                            wordRangeTo = value
+                                    },
+                                    singleLine = true,
+                                    label = { Text("Tot en met") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                TextButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        wordRangeFrom = (estimatedCueWord.index + 1).toString()
+                                    }
+                                ) { Text("Start = huidig woord") }
+                                TextButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        wordRangeTo = (estimatedCueWord.index + 1).toString()
+                                    }
+                                ) { Text("Eind = huidig woord") }
+                            }
+                            val firstWord = wordRangeFrom.toIntOrNull()
+                            val lastWord = wordRangeTo.toIntOrNull()
+                            val phraseWindow = if (firstWord != null && lastWord != null) {
+                                PrivateCueWordProgress.estimatedPhraseReplayWindow(
+                                    active.text, cueStart(active), cueEnd(active),
+                                    firstWord - 1, lastWord - 1, activeWordMarks
+                                )?.takeIf { it.second <= durationMs }
+                            } else null
+                            if (phraseWindow != null) {
+                                val firstSpan = wordJumpChoices[firstWord!! - 1].span
+                                val lastSpan = wordJumpChoices[lastWord!! - 1].span
+                                val chosenText = active.text.substring(
+                                    firstSpan.first, lastSpan.last + 1
+                                )
+                                Text(
+                                    "Je kiest woord $firstWord t/m $lastWord: " +
+                                        chosenText.take(160) +
+                                        if (chosenText.length > 160) "…" else "",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !guidedActive && phraseWindow != null,
+                                onClick = {
+                                    val chosen = phraseWindow
+                                    if (chosen != null) {
+                                        loopCueIndex = -1
+                                        rangeRepeating = false
+                                        bookmarkRepeating = false
+                                        completedPasses = 0
+                                        lastLoopAtMs = 0L
+                                        wordReplayBounds = chosen
+                                        seekTo(chosen.first)
+                                        notice = "Eigen woordgroep $firstWord–$lastWord wordt " +
+                                            "geschat en herhaald. Dit is géén spraakherkenning."
+                                    }
+                                }
+                            ) { Text("↻ Herhaal gekozen woordgroep") }
+                            if (firstWord != null && lastWord != null &&
+                                phraseWindow == null) {
+                                Text(
+                                    "Kies oplopende nummers van 1 t/m " +
+                                        "${wordJumpChoices.size}; een geschat fragment " +
+                                        "moet 0,75–120 seconden duren.",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                            wordJumpChoices.drop(visiblePage * 9).take(9)
+                                .chunked(3).forEach { wordRow ->
+                                    Row(modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        wordRow.forEach { word ->
+                                            TextButton(
+                                                modifier = Modifier.weight(1f),
+                                                onClick = { seekTo(word.estimatedStartMs) }
+                                            ) {
+                                                Text("${word.index + 1}. " +
+                                                    active.text.substring(word.span),
+                                                    maxLines = 2,
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        textDirection = TextDirection.ContentOrRtl
+                                                    ))
+                                            }
+                                        }
+                                    }
+                                }
+                            Text("Woordtijden volgen jouw cuegrenzen en eventueel handmatig " +
+                                "geplaatste ankers; tussenliggende woorden zijn alleen " +
+                                "geschat. Geen woordherkenning, audio-uitlijning of opname.",
+                                style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                     Text("Woordkaarten bij je eigen SRT/VTT: kies zelf de teksttaal. " +
                         "Onbekende talen krijgen geen verzonnen vertaling of woordtiming.",
                         style = MaterialTheme.typography.labelSmall)
@@ -1388,13 +1950,35 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         }
                     }
                     Column(
-                        modifier = Modifier.fillMaxWidth().weight(1f)
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(min = 180.dp, max = 340.dp)
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.Center
                     ) {
                         if (active == null) {
                             Text("Gebruik Vorige/Volgende om naar een ondertitel te springen.",
                                 style = MaterialTheme.typography.headlineMedium)
+                        } else if (estimatedWordFollow) {
+                            // This is a visual approximation from user-supplied
+                            // cue duration, never Android speech-word timestamps.
+                            val range = estimatedCueWord?.span
+                            val primary = MaterialTheme.colorScheme.primary
+                            val highlighted = remember(active.text, range, primary) {
+                                buildAnnotatedString {
+                                    append(active.text)
+                                    if (range != null) addStyle(
+                                        SpanStyle(
+                                            background = primary.copy(alpha = 0.28f),
+                                            fontWeight = FontWeight.Bold
+                                        ), range.first, range.last + 1
+                                    )
+                                }
+                            }
+                            Text(
+                                highlighted,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    textDirection = TextDirection.ContentOrRtl)
+                            )
                         } else {
                             OfflineWordText(
                                 text = active.text,
@@ -1407,7 +1991,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             )
                         }
                     }
-                    Text("Tik op een woord voor de bestaande lokale woordkaart. " +
+                    Text((if (estimatedWordFollow)
+                        "Zet de geschatte woordvolger uit om woordkaarten te openen. "
+                    else "Tik op een woord voor de bestaande lokale woordkaart. ") +
                         "Je eigen betekenis wordt uitsluitend na afzonderlijk Bewaar " +
                         "opgeslagen in Mijn eigen woorden; het audiobestand blijft ongewijzigd.",
                         style = MaterialTheme.typography.labelSmall)

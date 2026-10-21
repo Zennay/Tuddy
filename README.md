@@ -797,6 +797,164 @@ Zie [de LRC-/ondertitelhandleiding](docs/MANUAL_SUBTITLE_PASTE.md).
 verplichte Android CI en de afzonderlijke device/licentie/release-gates
 bepalen of ze naar main kunnen.**
 
+
+## Verbeterde lokale woordherhaling zonder spraakherkenning
+
+De optionele **geschatte woordvolger** kan nu ook korte woorden herhalen: bij een geschatte woordduur onder 0,75 s bevat de herhaling een begrensd stukje naburige audio binnen de zelfgekozen ondertitelcue. Te korte cues en vensters boven twee minuten blijven uitgesloten; handmatige tijdankers blijven leidend. Het Android-scherm maakt duidelijk dat dit alleen een **tijdcode-inschatting** is en de herhaling andere woorden kan omvatten. [Handleiding](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
+## Nieuw · cue-relatieve handmatige woordankers hergebruiken
+
+Naast absolute markeringen accepteert de offline woordvolger nu
+ook `2=+00:00:01.250` als offset vanaf het begin van een cue.
+De gebruiker kan zelf een relatieve ankerreeks kopiëren of in het
+tijdelijke invoerveld zetten. Hergebruik op een andere ondertitel
+vereist opnieuw volledige cue- en tijdcontrole en bewuste bevestiging;
+gemengde absolute/relatieve invoer wordt geweigerd. De gebruiker
+kiest alle tijden zelf: geen audioanalyse, ASR of cloud.
+
+## Nieuw · eigen woordtijdankers terugplakken zonder audioanalyse
+
+De optionele **geschatte woordvolger** kan maximaal 16 expliciet door
+jou gemarkeerde tijdankers van één ondertitel als selecteerbare tekst
+tonen, zoals `2=00:00:12.250;5=00:00:13.900`. Gebruik **Kopieer
+woordankers** voor één-tik kopiëren naar het Android-klembord en
+**Plak woordankers uit klembord…** om die tekst alleen na een
+aparte tik in te lezen. Bewaar of kopieer die tekst zelf en plak hem
+later in de invoer onder
+**Handmatige woordankers** bij de **juiste** actieve cue.
+Tuddy valideert de hele set tegen de huidige tekst en tijdgrenzen,
+toont de exacte voorgestelde waarden en vervangt pas na
+**Bevestig en vervang ankers van deze ondertitel** de tijdelijke
+waarden. Een foutieve/te lange reeks kan nooit deels worden toegepast.
+
+Dit is handmatige, terug te plakken tekst, geen gemeten woordtiming,
+automatische opslag, audioherkenning of cloudfunctie. De bestaande
+woordherhaling, springen en highlighting gebruiken de nieuwe
+handmatige ankers na jouw bevestiging. Klembordapps kunnen tekst
+zelf synchroniseren.
+
+[Handleiding geschatte woordvolger](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
+## Verbeterd: woordstappen respecteren expliciete zero-width-spaties
+
+De geschatte woordvolger gebruikt nu ook bestaande `U+200B`-scheidingstekens
+naast gewone Unicode-witruimte. Er worden geen woordgrenzen afgeleid of
+verzonnen voor tekst die zelf geen scheidingstekens bevat.
+
+[Handleiding](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
+## Nieuw op PR #225: woordvolger met zelf getikte tijdankers
+
+In de bestaande privé-audiospeler kun je naast de gelijkmatig geschatte
+woordpositie nu maximaal **16 zelf gekozen tijdankers per ondertitelregel**
+zetten. Typ een woordnummer (vanaf 2), luister naar je eigen audio en tik
+op **Markeer dit woord op huidige audiotijd**. De lokale woordvolger,
+Vorig/Volgend, woord- en woordgroepherhaling volgen deze eigen ankers;
+tussen de ankers blijft een begrensde, gelijkmatige *schatting* gelden.
+Oplopende ankers, voldoende tijd tussen woorden en de bestaande cuegrenzen
+worden afgedwongen. Je kunt de markeringen per regel wissen; een nieuwe
+audio/ondertitel of verschoven cueklok wist ze ook. Geen ASR, gemeten
+spraakuitlijning, gewijzigde bronbestanden, netwerk of nieuwe rechten.
+[Volledige uitleg](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
+## Nieuw op PR #225: een eigen geschatte woordgroep herhalen
+
+Bij **▶ Eigen audio met tijdcodes afspelen** en de optionele
+**Geschatte woordvolger** kan je nu onder **Kies direct een woord**
+een aaneengesloten woordgroep afbakenen met twee eigen woordnummers,
+of **Start/Eind = huidig woord** aantikken tijdens het luisteren.
+De exacte geselecteerde originele tekst is vooraf zichtbaar.
+**↻ Herhaal gekozen woordgroep** speelt de begrensde ruwe tijdspanne
+van 0,75–120 seconden opnieuw af via de bestaande lokale A–B-herhaling.
+Oplopende, bestaande woordnummers en audio binnen hetzelfde cuevenster
+zijn verplicht; niets wordt opgeslagen of opgenomen.
+
+De woordvolger kan nu ook **tussen twee ondertitelregels** uitgezet
+worden. Al deze tijden zijn uitsluitend gelijkmatig over eigen
+SRT/VTT-regels geschat, niet gemeten of door ASR uitgelijnd.
+Geen nieuwe machtigingen, externe AI of cloud.
+[Bediening en beperkingen](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
+## Nieuw: handmatig geschat woordfragment herhalen en volledig privé-luisterwerkblad
+
+In de eigen SRT/VTT-audiospeler laat de optionele geschatte woordvolger
+nu één zelfgekozen woordpositie **handmatig herhalen** via de bestaande
+A–B-afspeellus. Alleen cue-vensters van minstens 750 ms worden gebruikt;
+dit zijn gelijkmatig geschatte tijden, **geen gemeten of herkende
+woordgrenzen**. De herhaling stopt afzonderlijk of bij uitschakelen
+van de woordvolger, andere afspeelkeuze, gewijzigde tijdverschuiving
+of verlaten van de speler. Er worden geen audiofragmenten gemaakt.
+
+De bestaande PR #225 integreert daarnaast het privé-luisterwerkblad
+en selectie-veilige CSV-export uit PR #224. Kies maximaal vier eigen
+A–B-luisterpassages en exporteer bewust **alle**, **nog oefenen** of
+**nog onbeoordeelde** als afdrukbaar HTML-luisterwerkblad met aparte
+bronpagina, of als controleerbare UTF-8 CSV. Broncode, persoonlijke
+beoordelingen en aantallen weggelaten regels zijn transparant;
+oude gegevens worden niet na een gewijzigde Android-bestandskeuze
+opgeslagen. Geen netwerk, ASR, automatische uitlijning of studieprofiel.
+
+[Handleiding woordherhaling](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md) ·
+[Handleiding luisterexport](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+# Tuddy 🎙️
+
+## Nieuw: tik direct het gewenste woord in je ondertitel aan
+
+In de optionele **geschatte woordvolger** kun je nu een doorbladerbare
+lijst met de woorden van de actieve SRT/VTT-regel openen. Eén tik springt
+naar het bijbehorende *geschatte* woordmoment; vorige/volgende-woord
+blijft werken. Bij lange regels kun je ook direct een **woordnummer**
+invoeren. De pagina en de naar rechts/links lopende woordtekst volgen
+je expliciete keuze. Alles gebruikt uitsluitend de eigen cue-tijdcodes:
+geen spraakherkenning, betrouwbare woordtiming of nieuwe permissies.
+[Handleiding](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
+## Nieuw: privé luisteroverzicht ook als CSV (inclusief woordvolger)
+
+De optionele geschatte ondertitelwoordvolger behoudt nu de nieuwste
+mogelijkheden uit de luisteroefenmodule. Je kunt naast HTML en TXT
+je eigen A–B-fragmenten **bewust als zeskoloms UTF-8 CSV** exporteren,
+na het bekijken van de volledige CSV-inhoud. Fragmentbeoordeling,
+zelfgeschreven vervolgstap, tijdvak en kort ondertitelvoorbeeld blijven
+lokaal tot je expliciet een Android-documentprovider kiest.
+De bytes worden bij terugkomst opnieuw gecontroleerd; geen audio-URI,
+nieuwe permissies, automatische ASR of automatische woorduitlijning.
+[Meer informatie](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+
+## Nieuw: optionele geschatte woordvolger bij eigen audio
+
+In **▶ Eigen audio met tijdcodes afspelen…** kun je nu bewust
+**Geschatte woordvolger proberen** aanzetten. Tuddy markeert dan
+tijdelijk een woord per actieve SRT/VTT-regel volgens een **gelijke
+verdeling van de door jou aangeleverde regeltijd**. Met vorige/huidige/
+volgende woordstappen spring je handmatig naar geschatte audiomomenten. Dit is géén
+gemeten woorduitlijning, echte transcriptie of automatische
+spraakherkenning. De modus is standaard uit, wordt bij audio
+wisselen/afsluiten gewist en kan op ieder moment weer uit om de
+bestaande aanklikbare woordkaarten te gebruiken.
+[Werking en beperkingen](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
+
 ## Privé luisteren: apart leerlingen-CSV zonder antwoorden of brontekst
 
 In **Mijn privé luisteroverzicht → Leerlingenblad** is nu naast het HTML-werkblad ook een **volledige, lokaal voorgestelde leerlingen-CSV** beschikbaar. Elke rij toont alleen een bewust geselecteerd eigen A–B-tijdvak, de gekozen opdracht en een lege antwoordcel. Niet inbegrepen zijn ondertitelregels, luisterbeoordelingen, persoonlijke notities of audio. Privé TXT/CSV/HTML-exportknoppen blijven in de leerlingenmodus gesloten; voor een eigen brontekstrapport kies je bewust **Zelfstudie**. Na Androids bestandskiezer controleert Tuddy opnieuw de volledige bestandsbytes en actuele gebruikerskeuze. [Gebruik en privacygrenzen](docs/PRIVATE_LISTENING_REPORT_HTML.md).
