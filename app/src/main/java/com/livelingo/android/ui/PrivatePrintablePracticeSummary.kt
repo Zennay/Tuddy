@@ -217,7 +217,8 @@ internal object PrivatePrintablePracticeSummary {
             }
             // Quoting CSV alone does not neutralize spreadsheet formulae;
             // also protect fields prefixed with invisible format marks.
-            return if (firstVisible in listOf('='.code, '+'.code, '-'.code, '@'.code))
+            return if (firstVisible != null &&
+                firstVisible in listOf('='.code, '+'.code, '-'.code, '@'.code))
                 "'" + clean else clean
         }
         fun row(vararg cells: String): String = cells.joinToString(",") { cell ->
