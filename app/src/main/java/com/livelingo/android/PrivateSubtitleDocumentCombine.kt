@@ -15,7 +15,9 @@ internal data class SubtitleCombinePreview(
     val adjacentOverlaps: Int,
     val startsAtMillis: Long,
     val pairedCount: Int = 0,
-    val unpairedSecondTrack: Int = 0
+    val unpairedSecondTrack: Int = 0,
+    val unpairedFirstTrack: Int = 0,
+    val pairedLinks: List<SubtitleCuePairingLink> = emptyList()
 )
 
 /**
@@ -60,7 +62,9 @@ internal object PrivateSubtitleDocumentCombine {
                 },
                 startsAtMillis = incoming.first().startMillis,
                 pairedCount = paired.pairedCount,
-                unpairedSecondTrack = paired.unpairedSecondTrack
+                unpairedSecondTrack = paired.unpairedSecondTrack,
+                unpairedFirstTrack = paired.unpairedFirstTrack,
+                pairedLinks = paired.pairedLinks
             )
         }
         val shifted = when (mode) {
