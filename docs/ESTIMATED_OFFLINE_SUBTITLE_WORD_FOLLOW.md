@@ -1,5 +1,15 @@
 # Zelf handmatig woordtijdankers plaatsen (optioneel)
 
+## Expliciete woordgrenzen zonder automatische segmentatie
+
+De woordvolger volgt nu zowel bestaande Unicode-witruimte als expliciete
+zero-width spaces (`U+200B`) in de aangeleverde ondertiteltekst. Dit helpt
+bij tekst waarin zulke scheidingstekens al aanwezig zijn. Tuddy verzint
+geen woordgrenzen: een ongesegmenteerde zin blijft één token en levert
+geen kunstmatig opgesplitste woordstappen op.
+
+---
+
 Als de **Geschatte woordvolger** aan staat, kun je vanaf nu binnen een
 zichtbare ondertitelregel maximaal **16 handmatige woordtijdankers** zetten.
 Typ een **origineel woordnummer** vanaf 2 in het veld onder
