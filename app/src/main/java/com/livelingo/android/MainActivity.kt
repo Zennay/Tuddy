@@ -914,7 +914,7 @@ private fun TuddyScreen(
     }
 
     // User-triggered, privacy-safe diagnostics; never include caption/audio content.
-    fun offlineReadinessReportSnapshot(): ByteArray? {
+    fun offlineReadinessReportSnapshot(): ByteArray? = runCatching {
         val appVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
         val airplaneMode = runCatching {
             Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
@@ -938,8 +938,8 @@ private fun TuddyScreen(
             appendLine("Listening at export: $listening")
             appendLine("Transcript/audio included: no")
         }
-        return report.toByteArray(Charsets.UTF_8).takeIf { it.size in 1..8192 }
-    }
+        report.toByteArray(Charsets.UTF_8).takeIf { it.size in 1..8192 }
+    }.getOrNull()
 
     fun copyOfflineReadinessReport(): Boolean = runCatching {
         val report = offlineReadinessReportSnapshot()
