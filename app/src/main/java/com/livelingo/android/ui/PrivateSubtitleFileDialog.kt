@@ -124,6 +124,7 @@ internal fun PrivateSubtitleFileDialog(
     var batchReviewPage by remember { mutableIntStateOf(0) }
     var batchFirstRow by remember { mutableStateOf("1") }
     var batchLastRow by remember { mutableStateOf("") }
+    var batchExplicitRows by remember { mutableStateOf("") }
     var insertOpen by remember { mutableStateOf(false) }
     var insertStart by remember { mutableStateOf("") }
     var insertEnd by remember { mutableStateOf("") }
@@ -1034,16 +1035,19 @@ internal fun PrivateSubtitleFileDialog(
         // A changed search, translation line, or selected range always starts
         // review at the first actual changed cue, not an old preview page.
         LaunchedEffect(draft, batchFind, batchWith, batchMatchCase,
-            batchField, batchFirstRow, batchLastRow) {
+            batchField, batchFirstRow, batchLastRow, batchExplicitRows) {
             batchReviewPage = 0
         }
         val scopeFrom = batchFirstRow.toIntOrNull()
         val scopeTo = if (batchLastRow.isBlank()) draft.size
             else batchLastRow.toIntOrNull()
-        val proposed = if (scopeFrom != null && scopeTo != null)
+        val explicitBatch = batchExplicitRows.isNotBlank()
+        val proposed = if (explicitBatch || (scopeFrom != null && scopeTo != null))
             PrivateSubtitleBatchReplace.preview(
-                draft, batchFind, batchWith, batchMatchCase, scopeFrom, scopeTo,
-                batchField)
+                draft, batchFind, batchWith, batchMatchCase,
+                if (explicitBatch) 1 else scopeFrom!!,
+                if (explicitBatch) draft.size else scopeTo!!,
+                batchField, batchExplicitRows)
         else null
         val changes = proposed?.updated?.withIndex()?.filter { (i, cue) ->
             cue.text != draft[i].text
@@ -1089,6 +1093,27 @@ internal fun PrivateSubtitleFileDialog(
                             singleLine = true, modifier = Modifier.weight(1f))
                     }
                     OutlinedTextField(
+                        value = batchExplicitRows,
+                        onValueChange = { batchExplicitRows = it.take(2000) },
+                        label = { Text("Losse bronregels (optioneel): 1-3,7,12") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true)
+                    Text("Met losse bronregels worden Van/Tot tijdelijk genegeerd. " +
+                        "Zonder losse bronregels geldt alleen Van/Tot. " +
+                        "Overlapping en onbestaande nummers zijn ongeldig.",
+                        style = MaterialTheme.typography.bodySmall)
+                    val batchFoundExpression =
+                        if (query.isNotBlank() && found.isNotEmpty())
+                            PrivateSubtitleRowSelection.formatSourceRows(
+                                found.map { it.first + 1 }, draft.size)
+                        else null
+                    if (batchFoundExpression != null) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { batchExplicitRows = batchFoundExpression }
+                        ) { Text("Kies ${found.size} gevonden bronregels als bereik") }
+                    }
+                    OutlinedTextField(
                         value = batchFind,
                         onValueChange = { batchFind = it.take(100) },
                         label = { Text("Zoek tekst · max. 100 tekens") },
@@ -1110,7 +1135,8 @@ internal fun PrivateSubtitleFileDialog(
                                 "regelgrenzen en documentlimieten."
                         else "Voorbeeld: ${proposed.replacements} vervangingen " +
                             "in ${proposed.changedCues} regels binnen " +
-                            "${scopeFrom}–${scopeTo}.",
+                            (if (explicitBatch) "losse bronregels $batchExplicitRows."
+                             else "${scopeFrom}–${scopeTo}."),
 
                         style = MaterialTheme.typography.bodyMedium)
                     if (changes.isNotEmpty()) {
@@ -1144,10 +1170,14 @@ internal fun PrivateSubtitleFileDialog(
                     val confirmedFrom = batchFirstRow.toIntOrNull()
                     val confirmedTo = if (batchLastRow.isBlank()) draft.size
                         else batchLastRow.toIntOrNull()
-                    val confirmed = if (confirmedFrom != null && confirmedTo != null)
+                    val explicitConfirmed = batchExplicitRows.isNotBlank()
+                    val confirmed = if (explicitConfirmed ||
+                        (confirmedFrom != null && confirmedTo != null))
                         PrivateSubtitleBatchReplace.preview(
                             draft, batchFind, batchWith, batchMatchCase,
-                            confirmedFrom, confirmedTo, batchField)
+                            if (explicitConfirmed) 1 else confirmedFrom!!,
+                            if (explicitConfirmed) draft.size else confirmedTo!!,
+                            batchField, batchExplicitRows)
                     else null
                     if (confirmed != null) {
                         applyChange(confirmed.updated)
