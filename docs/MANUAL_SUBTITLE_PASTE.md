@@ -502,6 +502,34 @@ controleert de snapshot nogmaals na de bewuste providerkeuze.
 Het origineel blijft ongewijzigd. Een provider die je zelf kiest
 kan extern synchroniseren.
 
+## Bewaar eigen originele bronregels — ook zonder zoekopdracht
+
+Vanuit de tijdelijke editor kies je **Kies zelf bronregels om te bewaren…**.
+Vul een reeks zoals `1-5,9,12-16` in. Je kunt ook op **Alle regels**
+tikken, of vanuit een actieve zoekopdracht **Bewaar gevonden regels als
+SRT, VTT, CSV, TSV of LRC…** kiezen. Die tweede route initialiseert
+de selectie met de oorspronkelijke regelnummers van *alle* zoekhits
+uit het hele document. Binnen beide routes kun je bewust terug naar
+die gevonden selectie of de **overige niet-geselecteerde regels** nemen.
+
+Het venster laat de originele regelnummers, begin-/eindtijden en
+volledige tekst van de gekozen regels in pagina's van zes zien. Een
+losse range wordt begrensd tot 1–500 cues; dubbelingen, overlap,
+omgekeerde of onbestaande nummers zijn een fout, geen stille
+correctie. Alleen een geldige selectie leidt tot een volledige,
+paginagewijze preview van het werkelijke UTF-8-uitvoerbestand.
+Daarna kies je oorspronkelijke tijdcodes of een compact fragment
+en het uitwisselformaat SRT, WebVTT, CSV, TSV of LRC. Formaat-
+specifieke inhouds- en bytegates blijven intact; LRC bevat
+uitsluitend beginmomenten. Elke wijziging van je selectie past
+onmiddellijk de preview aan. Op het moment dat je wilt opslaan
+worden selectie en exacte uitvoerbytes opnieuw berekend; pas
+daarna opent Android de expliciete bestandsprovider.
+
+De bronfile, onbewerkte regels en live transcriptie veranderen niet.
+De gekozen bestandsprovider kan zelf cloudsynchronisatie aanbieden.
+Dit is geen automatische vertaling of gecontroleerde audio-uitlijning.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
