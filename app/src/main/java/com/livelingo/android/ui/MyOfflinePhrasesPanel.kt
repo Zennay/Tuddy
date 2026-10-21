@@ -31,6 +31,7 @@ import java.io.ByteArrayOutputStream
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivatePhraseDeck
+import com.livelingo.android.PrivatePhraseTextPolicy
 import com.livelingo.android.PrivatePhraseTopics
 import com.livelingo.android.PrivatePrintablePhrasebook
 
@@ -562,7 +563,10 @@ internal fun MyOfflinePhrasesPanel(
                     }
                 }
                 OutlinedTextField(
-                    value = phrase, onValueChange = { phrase = it.take(120) },
+                    value = phrase, onValueChange = {
+                        if (it.length <= 120 && PrivatePhraseTextPolicy.wellFormed(it))
+                            phrase = it.take(120)
+                    },
                     label = { Text("Eigen zin in ${labels[language]}") },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3,
@@ -581,7 +585,10 @@ internal fun MyOfflinePhrasesPanel(
                     }
                 }
                 OutlinedTextField(
-                    value = meaning, onValueChange = { meaning = it.take(180) },
+                    value = meaning, onValueChange = {
+                        if (it.length <= 180 && PrivatePhraseTextPolicy.wellFormed(it))
+                            meaning = it.take(180)
+                    },
                     label = { Text("Je eigen betekenis (geen automatische vertaling)") },
                     modifier = Modifier.fillMaxWidth(), maxLines = 3,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(

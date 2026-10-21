@@ -37,14 +37,8 @@ internal class PrivatePhraseDeck(context: Context) {
         val MEANING_LANGUAGES = setOf("nl", "en")
     }
 
-    private fun humanText(value: String, max: Int): Boolean {
-        if (value.isBlank() || value.length > max || value != value.trim()) return false
-        return value.none { ch ->
-            Character.isISOControl(ch) ||
-                (Character.getType(ch) == Character.FORMAT.toInt() && ch != '\u200C') ||
-                Character.isSurrogate(ch) || ch == '\u2028' || ch == '\u2029'
-        }
-    }
+    private fun humanText(value: String, max: Int): Boolean =
+        PrivatePhraseTextPolicy.valid(value, max)
 
     private fun valid(record: PersonalPhrase): Boolean =
         record.language in LANGUAGES &&

@@ -49,6 +49,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.livelingo.android.PrivatePhraseTextPolicy
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleAudioAlignment
 import com.livelingo.android.PrivateSubtitleClip
@@ -2022,21 +2023,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
 
     val activePhraseLanguage = phraseDraftLanguage
     if (activePhraseLanguage != null) {
-        val validPhraseText = phraseDraftText.isNotBlank() &&
-            phraseDraftText.length <= 120 && phraseDraftText == phraseDraftText.trim() &&
-            phraseDraftText.none { char ->
-                Character.isISOControl(char) || Character.isSurrogate(char) ||
-                    (Character.getType(char) == Character.FORMAT.toInt() && char != '\u200C') ||
-                    char == '\u2028' || char == '\u2029'
-            }
-        val validPhraseMeaning = phraseDraftMeaning.isNotBlank() &&
-            phraseDraftMeaning.length <= 180 &&
-            phraseDraftMeaning == phraseDraftMeaning.trim() &&
-            phraseDraftMeaning.none { char ->
-                Character.isISOControl(char) || Character.isSurrogate(char) ||
-                    (Character.getType(char) == Character.FORMAT.toInt() && char != '\u200C') ||
-                    char == '\u2028' || char == '\u2029'
-            }
+        val validPhraseText = PrivatePhraseTextPolicy.valid(phraseDraftText, 120)
+        val validPhraseMeaning = PrivatePhraseTextPolicy.valid(phraseDraftMeaning, 180)
         AlertDialog(
             onDismissRequest = { phraseDraftLanguage = null },
             title = { Text("Mijn eigen zin bewust bewaren?") },
@@ -2055,7 +2043,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     OutlinedTextField(
                         value = phraseDraftText,
                         onValueChange = {
-                            phraseDraftText = it.take(400)
+                            if (it.length <= 400 && PrivatePhraseTextPolicy.wellFormed(it))
+                                phraseDraftText = it
                             phraseDraftApproved = false
                             phraseDraftNotice = ""
                         },
@@ -2085,7 +2074,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     OutlinedTextField(
                         value = phraseDraftMeaning,
                         onValueChange = {
-                            phraseDraftMeaning = it.take(180)
+                            if (it.length <= 180 && PrivatePhraseTextPolicy.wellFormed(it))
+                                phraseDraftMeaning = it
                             phraseDraftApproved = false
                             phraseDraftNotice = ""
                         },
