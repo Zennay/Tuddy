@@ -19,6 +19,21 @@ split is één tijdelijke Undo/Redo-bewerking. Het oorspronkelijke bestand
 wordt nooit overschreven en er wordt geen audio geanalyseerd of automatisch
 gesynchroniseerd.
 
+## Voor je twee ondertitelregels samenvoegt: controleer het tijdgat
+
+Kies bij een regel **Samenvoegen** om een volledige preview van beide
+oorspronkelijke teksten en tijdcodes te zien, plus het voorgestelde resultaat.
+Tuddy toont expliciet of de cues direct aansluiten, elkaar overlappen of
+een tijdgat bevatten. Bij een tijdgat waarschuwt de preview dat één
+samengevoegde cue beide regels gedurende het hele interval zichtbaar maakt;
+de afzonderlijke tijdscheiding verdwijnt. Controleer daarom het resultaat
+vóór **Voeg samen in tijdelijk concept**.
+
+De bevestiging verandert alleen het RAM-concept en is met **Herstel**
+ongedaan te maken. Te lange tekst of een ongeldige volledige tijdlijn
+schakelt samenvoegen uit. Er wordt nooit automatisch opgeslagen en het
+oorspronkelijke SRT/VTT-bestand blijft intact.
+
 
 ## Eigen bestanden rechtstreeks kiezen via Android (SRT, VTT, LRC, CSV, TSV, TXT)
 
