@@ -1,7 +1,11 @@
 ## Eigen woordankers hergebruiken met kopieerbare tijdcodetekst
 
 Bij **Handmatige woordankers** kun je de huidige set nu als gewone
-selecteerbare tekst bekijken en eventueel met Android kopiëren. Bijvoorbeeld:
+selecteerbare tekst bekijken. Gebruik **Kopieer woordankers** om de
+tijdcodetekst met één expliciete tik naar het Android-klembord te sturen.
+Met **Plak woordankers uit klembord…** lees je klembordtekst pas na een
+aparte gebruikersactie in; de invoer wordt op 512 tekens begrensd.
+De bestaande tekstselectie blijft ook beschikbaar. Bijvoorbeeld:
 `2=00:00:12.250;5=00:00:13.900`. Dit bevat uitsluitend eigen
 woordnummers en de handmatig aangebrachte **absolute** tijdcodes:
 geen audio, transcriptietekst, account of verborgen woordenkaartdata.
