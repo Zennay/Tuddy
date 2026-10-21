@@ -443,7 +443,12 @@ in de lijst van **gekoppelde** paren.
 Via **Inspecteer niet-gekoppelde bronregels** kun je nu daarnaast
 **alle losse originele regels uit beide sporen**, met hun werkelijke
 1-gebaseerde bronnummers, volledige teksten en oorspronkelijke
-begin-/eindtijden, vijf per pagina inspecteren. Ook handmatig
+begin-/eindtijden, vijf per pagina inspecteren. De aparte
+**Zoek in losse originele brontekst**-invoer en de keuzeknoppen
+**Beide / Spoor 1 / Spoor 2** filteren uitsluitend wat op het
+scherm staat. Met **Ga naar resultaatregel** spring je in de
+complete samengevoegde tijdlijn direct naar een regel (1–500)
+zonder honderd keer op Volgende te hoeven tikken. Ook handmatig
 uitgesloten tweede-spoorregels blijven hier vindbaar. Een
 tijdsverschuiving of tweepuntscorrectie maakt de **bron** niet
 anders: de daadwerkelijk toegepaste tijden blijven apart
