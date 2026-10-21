@@ -29,7 +29,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun OfflineReadinessFileExportAction(
     enabled: Boolean,
-    snapshot: () -> ByteArray?
+    snapshot: () -> ByteArray?,
+    onPickerStarted: () -> Unit,
+    onPickerFinished: () -> Unit
 ) {
     val context = LocalContext.current
     var preview by remember { mutableStateOf<ByteArray?>(null) }
@@ -39,6 +41,7 @@ internal fun OfflineReadinessFileExportAction(
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/plain")
     ) { uri ->
+        onPickerFinished()
         val selected = pending
         pending = null
         if (uri != null && selected != null) {
@@ -117,7 +120,14 @@ internal fun OfflineReadinessFileExportAction(
                 TextButton(onClick = {
                     pending = shown.copyOf()
                     preview = null
-                    saveFile.launch("Tuddy-offline-apparaatrapport.txt")
+                    onPickerStarted()
+                    runCatching {
+                        saveFile.launch("Tuddy-offline-apparaatrapport.txt")
+                    }.onFailure {
+                        pending = null
+                        onPickerFinished()
+                        message = "Android-bestandskiezer kon niet worden gestart."
+                    }
                 }) { Text("Ik begrijp dit, kies opslag…") }
             },
             dismissButton = {
