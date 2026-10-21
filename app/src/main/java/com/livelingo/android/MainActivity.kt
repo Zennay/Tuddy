@@ -116,6 +116,13 @@ private data class PendingManualSubtitleDocument(
     val secondDraft: List<PrivateSubtitleCue>?
 )
 
+/** Explicit save of the original authored LRC syntax, including its headers. */
+private data class PendingAuthoredLrcSourceSave(
+    val session: Int,
+    val previous: SubtitlePasteFileContent,
+    val bytes: ByteArray
+)
+
 /** One explicit HTML worksheet save handoff; never persisted by Tuddy. */
 private data class PendingSubtitleWorksheetSave(
     val session: Int,
@@ -349,6 +356,9 @@ private fun TuddyScreen(
     var subtitlePasteOpen by remember { mutableStateOf(false) }
     var pendingManualSubtitleDocument by remember {
         mutableStateOf<PendingManualSubtitleDocument?>(null)
+    }
+    var pendingAuthoredLrcSourceSave by remember {
+        mutableStateOf<PendingAuthoredLrcSourceSave?>(null)
     }
     var readyFirstPasteDocument by remember {
         mutableStateOf<SubtitlePasteFileContent?>(null)
@@ -1496,6 +1506,43 @@ private fun TuddyScreen(
         }
     }
 
+    // CreateDocument, unlike OpenDocument, asks the user where a NEW
+    // complete LRC source copy should be written. The immutable authorized
+    // source survives DocumentsUI ON_STOP only until this picker returns.
+    val saveAuthoredLrcSource = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingAuthoredLrcSourceSave
+        pendingAuthoredLrcSourceSave = null
+        if (pending != null && pending.session == generation) {
+            val fresh = PrivateLrcSubtitleDraft.authoredSourceBytes(pending.previous.text)
+            val message = when {
+                !pending.previous.format.lrcMode || pending.previous.format.plainLines ||
+                    fresh == null || !fresh.contentEquals(pending.bytes) ->
+                    "LRC-bronopslag geweigerd: de oorspronkelijke momentopname is ongeldig."
+                uri == null ->
+                    "LRC-bestandskeuze geannuleerd; je tijdelijke invoer is heropend."
+                uri.scheme != "content" ->
+                    "Ongeldige Android-locatie; geen LRC geschreven."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { output ->
+                            output.write(pending.bytes)
+                            output.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved)
+                        "Document lokaal als nieuwe volledige LRC-kopie opgeslagen; metadata behouden."
+                    else
+                        "Nieuwe LRC-kopie kon niet worden bewaard; eigen tekst heropend."
+                }
+            }
+            readyFirstPasteDocument = pending.previous.copy(notice = message)
+            subtitlePasteOpen = true
+        }
+    }
+
     val openTranscriptArchive = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -2145,6 +2192,24 @@ private fun TuddyScreen(
                     subtitlePasteOpen = false
                     readyFirstPasteDocument = null
                     openManualSubtitleDocument.launch(arrayOf("*/*"))
+                },
+                onSaveEditedLrcSource = { request ->
+                    val bytes = if (!request.format.plainLines && request.format.lrcMode)
+                        PrivateLrcSubtitleDraft.authoredSourceBytes(request.text)
+                    else null
+                    if (bytes == null) {
+                        readyFirstPasteDocument = request.copy(
+                            notice = "Ongeldige LRC-bron: geen bestand bewaard."
+                        )
+                        subtitlePasteOpen = true
+                    } else {
+                        pendingAuthoredLrcSourceSave = PendingAuthoredLrcSourceSave(
+                            generation, request, bytes
+                        )
+                        subtitlePasteOpen = false
+                        readyFirstPasteDocument = null
+                        saveAuthoredLrcSource.launch("Tuddy-gecorrigeerde-eigen-bron.lrc")
+                    }
                 },
                 onDismiss = {
                     subtitlePasteOpen = false
@@ -3465,6 +3530,7 @@ private fun TuddyScreen(
                         // A conscious conversation wipe also discards snapshots
                         // held solely for a pending external document picker.
                         pendingManualSubtitleDocument = null
+                        pendingAuthoredLrcSourceSave = null
                         readyFirstPasteDocument = null
                         readySecondPasteDocument = null
                         pendingTimedSubtitleSheet = null
