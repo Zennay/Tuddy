@@ -190,6 +190,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         cues, subtitleOffsetMs, savedPracticePassages,
                         passageRatings, passageNotes, worksheetScope
                     )
+                PrivatePracticeReportFormat.STUDENT_CSV ->
+                    PrivatePrintablePracticeSummary.snapshotStudentCsv(
+                        savedPracticePassages, passageRatings, worksheetScope,
+                        worksheetPrompt, perFragmentPrompts
+                    )
                 PrivatePracticeReportFormat.DETAILED_CSV ->
                     PrivatePrintablePracticeSummary.snapshotDetailedCsv(
                         cues, subtitleOffsetMs, savedPracticePassages,
@@ -223,6 +228,15 @@ internal fun LocalSubtitleAudioPreviewDialog(
 
     fun choosePracticeReport(format: PrivatePracticeReportFormat) {
         if (!prepared || guidedActive || savedPracticePassages.isEmpty()) return
+        // Student mode never emits a private source/notes/ratings report.
+        if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT &&
+            format != PrivatePracticeReportFormat.WORKSHEET_HTML &&
+            format != PrivatePracticeReportFormat.STUDENT_CSV) {
+            notice = "Kies Zelfstudie om een privéverslag te bewaren."
+            return
+        }
+        if (format == PrivatePracticeReportFormat.STUDENT_CSV &&
+            worksheetAudience != PrivateListeningWorksheetAudience.STUDENT_HANDOUT) return
         val report = exportablePracticeSummary()
         val payload = when (format) {
             PrivatePracticeReportFormat.HTML -> PrivatePrintablePracticeSummary.snapshot(report)
@@ -238,7 +252,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     cues, subtitleOffsetMs, savedPracticePassages,
                     passageRatings, passageNotes, worksheetScope
                 )
-            PrivatePracticeReportFormat.DETAILED_CSV ->
+            PrivatePracticeReportFormat.STUDENT_CSV ->
+                    PrivatePrintablePracticeSummary.snapshotStudentCsv(
+                        savedPracticePassages, passageRatings, worksheetScope,
+                        worksheetPrompt, perFragmentPrompts
+                    )
+                PrivatePracticeReportFormat.DETAILED_CSV ->
                 PrivatePrintablePracticeSummary.snapshotDetailedCsv(
                     cues, subtitleOffsetMs, savedPracticePassages,
                     passageRatings, passageNotes, worksheetScope
@@ -1663,6 +1682,29 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             "Bewaar leerlingenblad zonder bronregels…"
                         else "Bewaar luisterwerkblad · vragen en aparte bronregels…")
                     }
+
+                    if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT) {
+                        Text("Volledige CSV-voorbeeldweergave · uitsluitend fragmenttijden, " +
+                            "zelfgekozen oefenvragen en lege antwoordcellen. Geen bronregels, " +
+                            "notities of beoordelingen.",
+                            style = MaterialTheme.typography.bodySmall)
+                        val studentPreview = PrivatePrintablePracticeSummary.snapshotStudentCsv(
+                            savedPracticePassages, passageRatings, worksheetScope,
+                            worksheetPrompt, perFragmentPrompts
+                        )?.toString(Charsets.UTF_8)
+                        SelectionContainer {
+                            Text(studentPreview ?: "Geen geldig leerlingenblad om te bewaren.",
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 210.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        TextButton(
+                            enabled = !guidedActive && studentPreview != null,
+                            onClick = {
+                                choosePracticeReport(PrivatePracticeReportFormat.STUDENT_CSV)
+                            }
+                        ) { Text("Bewaar leerlingen-CSV zonder bronregels…") }
+                    } else {
                     TextButton(
                         enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.TXT) }
@@ -1765,6 +1807,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             choosePracticeReport(PrivatePracticeReportFormat.DETAILED_CSV)
                         }
                     ) { Text("Bewaar alle passende bronregels als CSV…") }
+                    }
                     SelectionContainer {
                         Text(
                             practiceSummaryText,
@@ -1783,7 +1826,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
             },
             dismissButton = {
                 TextButton(
-                    enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                    enabled = savedPracticePassages.isNotEmpty() && !guidedActive &&
+                        worksheetAudience == PrivateListeningWorksheetAudience.SELF_STUDY,
                     onClick = { choosePracticeReport(PrivatePracticeReportFormat.HTML) }
                 ) { Text("Bewaar zelf HTML…") }
             }
