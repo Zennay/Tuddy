@@ -1,3 +1,7 @@
+## Nieuw: taalondersteuning zonder valse offlineclaims
+
+Open **Taal- en modelinstellingen → Bekijk alle taalondersteuning** voor één doorzoekbaar overzicht van ML Kit-tekstdoelen, Android-spraaklocale-kandidaten en talen die alleen een beperkte woordenpreview hebben of nog geen vrij offline model. De lijst onderscheidt taalkeuze van daadwerkelijk geïnstalleerde modellen; hij claimt geen toestelondersteuning of vertaalnauwkeurigheid. [Details](docs/LANGUAGE_SUPPORT_GUIDE.md).
+
 ## Android Delen → Tuddy: ook LRC-lyrics met eigen tijdcodes
 
 Naast complete SRT/WebVTT-tekst kun je nu eigen **LRC** met geldige `[mm:ss.xx]`- of `[mm:ss.xxx]`-markeringen als **platte tekst** delen. Tuddy opent de bestaande LRC-bewerkroute met een expliciete, tijdelijke preview; foutieve of te grote broninhoud wordt niet stilzwijgend geïmporteerd. LRC geeft alleen zelf vastgelegde begintijden; afgeleide eindtijden zijn niet met audio gemeten. Geen bijlagen, cloud, automatische vertaling of schrijfacties. [Meer uitleg](docs/MANUAL_SUBTITLE_PASTE.md).
