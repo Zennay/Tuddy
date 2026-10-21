@@ -387,13 +387,19 @@ permissie. Een door jou gekozen externe Android-documentprovider kan
 wel bestanden synchroniseren. Dit is een *handmatige uitwisselroute*,
 geen bewijs van automatische vertaling of echte audiowoordtiming.
 
-## Tweede spoor plakken en samenvoegen
+## Tweede spoor plakken, handmatig uitlijnen en samenvoegen
 
-1. Open een SRT/VTT-concept, vanuit een document of de plakroute.
-2. Kies in de editor **Tweede ondertitelspoor zelf plakken…**.
-3. Plak een tweede compleet document en beoordeel de korte preview.
-4. Kies in de bestaande samenvoegpreview tussen **aansluiten**, **originele tijden behouden** of **overlappende tekstparen** (met optionele handmatige tijdsverschuiving).
-5. Controleer het voorgestelde resultaat en geef apart toestemming om de samenvoeging alleen in het tijdelijke concept toe te passen. Undo/redo blijft bruikbaar.
+1. Open een SRT/VTT-concept vanuit een document of de plakroute.
+2. Kies in de editor **Tweede ondertitelspoor zelf plakken…** of selecteer via de bestaande expliciete Android-documentkiezer een tweede SRT/VTT.
+3. Kies **aansluiten**, **originele tijden behouden** of **combineer twee teksten bij overlappende tijdcodes**. Voor het laatste zijn drie handmatige uitlijnroutes:
+   - De bestaande presets van -10, -5, -2, 0, +2, +5 of +10 seconden.
+   - **Eigen seconden tweede spoor**: typ bijvoorbeeld `-7,250` of `+12.125`. Punt en komma zijn toegestaan, met maximaal drie decimalen, maximaal **±600 seconden** (0 mag). De offset wordt exact in milliseconden berekend; bij ongeldige invoer wordt **toevoegen** uitgeschakeld in plaats van op de oude preset terug te vallen.
+   - **Twee eigen startankers**: vul één **origineel 1-gebaseerd regelnummer** uit het huidige spoor en één uit het tweede spoor in. Tuddy toont het verschil tussen hun eigen **cue-begintijden**. Kies dan bewust **Neem deze twee startmomenten als verschuiving**; wijzigen van de rijnummers verandert de eerder gekozen tijdcorrectie niet ongemerkt. Alleen bestaande 1–500-regelnummers en verschillen binnen ±600 seconden zijn geldig.
+4. Bekijk de **volledige voorgestelde gecombineerde lijst** met starttijd, eindtijd en eigen tekst, in pagina's van vijf regels. Ook niet-gekoppelde regels en eventuele **identieke tekst in beide sporen** blijven zichtbaar; er wordt geen tweede eigen tekst stilzwijgend weggelaten. Een kandidaat wordt alleen aan één origineel gekoppeld wanneer de eigen tijdsintervallen minstens de helft van de kortste duur werkelijk overlappen. Dit is geen bewijs dat beide teksten bij dezelfde zin horen.
+5. Bevestig expliciet **Voeg alleen toe aan tijdelijk concept**. Tuddy herberekent het exacte resultaat vanuit de huidige bron, offset en importkeuze; ongeldig tijdverloop, negatieve starttijden, meer dan 500 resulterende cues of niet-exporteerbare SRT/VTT worden geweigerd. Undo/Redo blijft bruikbaar.
+6. Een bestand wordt **pas** geschreven na een latere bewuste **Bewaar kopie…**-actie in Android SAF, nooit door synchroniseren of een preview. Een zelfgekozen Android-provider kan wel synchroniseren.
+
+Het uitlijnen gebeurt **uitsluitend op zelf aangewezen ondertitelbeginwaarden**, zonder audioanalyse, spraakherkenning, modelvertaling, woordtiming, toegangsuitbreiding of automatische bestandsopslag. De originele eerste en tweede documenten blijven intact.
 
 ## Meerdere ondertitelregels bewust verwijderen (tijdelijke editor)
 
