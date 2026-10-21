@@ -22,6 +22,21 @@ synchroniseert of slaat zonder aparte toestemming op.
 
 # Tuddy 🎙️
 
+## Nieuw: eigen transcript met begin/eindtijden direct plakken
+
+In de tijdelijke ondertiteleditor kun je nu ook **drie eigen
+tabgescheiden kolommen** importeren: begintijd, eindtijd en één
+zelfgeschreven transcriptzin. Tuddy bewaart jouw timing exact en
+verzint geen ontbrekende vertaling. De bestaande vierkoloms-import
+(bron plus handmatige betekenis) en deze drie-kolomsvariant melden
+nu **de precieze oorspronkelijke foutregel** bij ongeldige tijden,
+lege rijen of een verkeerde kolomindeling. Je kunt alles vooraf
+doorzoeken en enkel een expliciet geselecteerd deel openen.
+[Werkwijze en privacy](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
+
+
 ## Nieuw: bewaar zelf gekozen ondertitelzinnen als privé-oefenzin
 
 In de eigen SRT/VTT-audiospeler kun je een actieve Kurmanji-, Sorani-
