@@ -1,6 +1,18 @@
-# SRT/WebVTT plakken zonder bestand
+# SRT/WebVTT, eigen tekst en documenten importeren
 
 Tuddy laat je handmatig een volledig SRT- of WebVTT-document plakken, zonder dat de app zelf je Android-klembord uitleest.
+
+## Eigen bestanden rechtstreeks kiezen via Android (SRT, VTT, CSV, TSV, TXT)
+
+Je hoeft een eigen bestand niet eerst met een andere app te openen en te kopiëren:
+
+1. Open **Plak eigen SRT/WebVTT-tekst…** of **Tweede ondertitelspoor zelf plakken…**. Kies onder de bestandsknop **SRT/VTT** voor een volledige ondertitel, of **Gewone zinnen** en de exacte CSV-/tabkolom- of tekstindeling van je bestand.
+2. Tik op **📂 Kies eigen UTF-8 SRT, VTT, CSV, TSV of TXT-document…**. Android opent de systeemeigen documentkiezer. Jij kiest welk document en welke bestandsprovider je wilt gebruiken; Tuddy leest niet automatisch je bestanden of het klembord.
+3. Na de keuze leest Tuddy **maximaal 256 KiB** in het tijdelijke geheugen. De bestandsinhoud **vervangt het huidige eerste tekstvak**; eventueel eerder ingevulde losse betekenissen, oude zoekterm, selectie en paginapositie worden bewust gereset. Een afgebroken of geweigerde keuze behoudt je bestaande invoer.
+4. Controleer eerst de invoermodus en alle getoonde fouten, het exacte bronregelbereik en de doorzoekbare preview. Het gekozen bestand wordt alleen geaccepteerd door **dezelfde volledige parser en bestaande exportgrenzen** als bij handmatig plakken. Er wordt nog geen concept toegepast totdat je **Open gekozen regels** bevestigt.
+5. De code weigert onleesbare, lege, te grote, binaire of ongeldige UTF-8-documenten, inclusief verboden controletekens, zonder de huidige invoer te vervangen. Vervolgens gelden ongewijzigd de maximaal 500 cues, veilige tijden en SRT-/WebVTT-exportcontrole.
+
+Er worden geen leesrechten langdurig bewaard, geen bestand automatisch weggeschreven en geen nieuwe opslagpermissies aangevraagd. **Let op:** de door jou gekozen Android-bestandsprovider kan externe/cloudopslag gebruiken; Tuddy kan niet garanderen dat een gekozen provider offline blijft. De app verwerkt de geleverde tekst verder lokaal en vraagt geen eigen netwerkverbinding voor deze import. CSV met nieuwe regels **binnen een veld** wordt nog steeds geweigerd. Bestandsimport geeft geen ASR, automatische vertaling of echte audiotiming.
 
 ## Direct openen
 
@@ -230,7 +242,7 @@ Ook bij tweetalige kaarten bepaalt Tuddy **niet** welke taal de eerste of tweede
 
 ## Grenzen en privacy
 
-- Geen automatische clipboard-lezing, netwerk, ASR, vertaling, cloud of extra permissies.
+- Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
 - Maximaal 256 KiB UTF-8 en 500 cues per bron; misvormde tijdcodes en niet-ondersteunde inhoud worden geweigerd. In de plattetekstroute zijn per cue maximaal 800 tekens toegestaan, en de resulterende SRT én WebVTT moeten binnen de exportlimiet passen.
 - Een te grote plakactie wordt expliciet geweigerd, niet stilzwijgend afgekapt of vervangen door eerder geldige invoer. Handmatige paren mogen elk maximaal 800 tekens per kolom bevatten; lege/extra kolommen worden niet omgezet in een onjuiste betekenis.
 - De geplakte inhoud blijft alleen in de geopende UI-sessie en verdwijnt bij sluiten of achtergrond. Geen automatische opslag.
