@@ -34,10 +34,14 @@ internal fun SpeechPackBrowserDialog(
     currentTag: String,
     receipts: Map<String, SpeechPackReceipt>,
     scanning: Boolean,
+    downloadTag: String?,
     scannedCount: Int,
     speechServiceAvailable: Boolean,
     onScan: () -> Unit,
     onStopScan: () -> Unit,
+    onPrepare: (String) -> Unit,
+    onCancelFollow: () -> Unit,
+    onCheckOne: (String) -> Unit,
     onCopyCatalog: () -> Boolean,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
@@ -45,6 +49,7 @@ internal fun SpeechPackBrowserDialog(
     var query by remember { mutableStateOf("") }
     var onlyReady by remember { mutableStateOf(false) }
     var copyNotice by remember { mutableStateOf("") }
+    var confirmTag by remember { mutableStateOf<String?>(null) }
     val visibleOptions = options.filter { option ->
         (!onlyReady || receipts[option.tag]?.stage == SpeechPackStage.READY) &&
             (query.isBlank() || option.label.contains(query, ignoreCase = true) ||
@@ -52,6 +57,29 @@ internal fun SpeechPackBrowserDialog(
     }
     val ready = options.count { receipts[it.tag]?.stage == SpeechPackStage.READY }
     val offered = options.count { receipts[it.tag]?.stage == SpeechPackStage.DOWNLOADABLE }
+    val offeredTag = confirmTag
+    if (offeredTag != null) {
+        val offeredName = options.firstOrNull { it.tag == offeredTag }?.label ?: offeredTag
+        AlertDialog(
+            onDismissRequest = { confirmTag = null },
+            title = { Text("Vraag offline spraakpakket aan?") },
+            text = { Text("Alleen het Android-spraakpakket voor " + offeredName +
+                " (" + offeredTag + ") wordt op jouw verzoek via wifi aangevraagd. " +
+                "Android beheert de download. Geen automatische bulkdownloads, " +
+                "geen microfoon, geen cloudspraak. Een download is pas bruikbaar " +
+                "wanneer Android na afloop een lokaal geïnstalleerd pakket meldt.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmTag = null
+                    onPrepare(offeredTag)
+                }) { Text("Via wifi aanvragen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmTag = null }) { Text("Annuleren") }
+            }
+        )
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Offline spreektaalpakketten") },
@@ -82,10 +110,15 @@ internal fun SpeechPackBrowserDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = onScan,
-                        enabled = speechServiceAvailable && !scanning
+                        enabled = speechServiceAvailable && !scanning && downloadTag == null
                     ) { Text("Controleer alle talen") }
                     if (scanning) {
                         OutlinedButton(onClick = onStopScan) { Text("Stop controle") }
+                    }
+                    if (downloadTag != null) {
+                        OutlinedButton(onClick = onCancelFollow) {
+                            Text("Stop controle of voortgang volgen")
+                        }
                     }
                 }
                 OutlinedTextField(
@@ -133,6 +166,21 @@ internal fun SpeechPackBrowserDialog(
                         SpeechPackStage.ERROR, SpeechPackStage.UNKNOWN -> "Status onbekend"
                     }
                     Text(state, style = MaterialTheme.typography.bodySmall)
+                    if (receipt?.stage == SpeechPackStage.DOWNLOADABLE &&
+                        !scanning && downloadTag == null && speechServiceAvailable) {
+                        OutlinedButton(onClick = { confirmTag = option.tag },
+                            modifier = Modifier.fillMaxWidth()) {
+                            Text("Vraag lokaal spraakpakket via wifi aan…")
+                        }
+                    }
+                    if (receipt?.stage in setOf(
+                            SpeechPackStage.PENDING, SpeechPackStage.REQUESTED,
+                            SpeechPackStage.UNKNOWN, SpeechPackStage.ERROR
+                        ) && !scanning && downloadTag == null && speechServiceAvailable) {
+                        TextButton(onClick = { onCheckOne(option.tag) }) {
+                            Text("Controleer pakket opnieuw")
+                        }
+                    }
                     if (receipt != null && receipt.detail.isNotBlank()) {
                         Text(receipt.detail, style = MaterialTheme.typography.labelSmall)
                     }
@@ -143,9 +191,11 @@ internal fun SpeechPackBrowserDialog(
                     }
                 }
                 Text(
-                    "Kiezen activeert geen microfoon. Gebruik daarna 'Offline startcheck' " +
-                        "voor jouw gekozen taal en afzonderlijk het tekstmodel. " +
-                        "Kurmanji, Sorani en Pasjtoe hebben nog geen complete offline ASR.",
+                    "Pakketinstallatie gebeurt uitsluitend na je toestemming en wifi. " +
+                        "Stop volgen beëindigt alleen de waarneming; Android kan een " +
+                        "ingeplande download nog afronden. Kiezen activeert geen microfoon. " +
+                        "Controleer daarna het afzonderlijke tekstmodel. Kurmanji, " +
+                        "Sorani en Pasjtoe hebben nog geen complete offline ASR.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
