@@ -86,6 +86,7 @@ import java.util.Date
 /** Explicitly authored SRT/VTT copy while Android document chooser takes focus. */
 private data class PendingEditedSubtitleSave(
     val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
     val cues: List<PrivateSubtitleCue>,
     val format: SubtitleDraftFormat,
     val bytes: ByteArray
@@ -94,6 +95,7 @@ private data class PendingEditedSubtitleSave(
 /** An exact user-selected LRC start-timestamp snapshot for a SAF handoff. */
 private data class PendingLrcSubtitleSave(
     val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
     val cues: List<PrivateSubtitleCue>,
     val bytes: ByteArray
 )
@@ -101,6 +103,7 @@ private data class PendingLrcSubtitleSave(
 /** Exact user-consented timed spreadsheet saved after Android's provider choice. */
 private data class PendingTimedSubtitleSheetSave(
     val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
     val cues: List<PrivateSubtitleCue>,
     val format: TimedSubtitleSheetFormat,
     val bytes: ByteArray
@@ -1406,7 +1409,7 @@ private fun TuddyScreen(
         if (pending != null && pending.session == generation) {
             // Android closed the editor while DocumentsUI selected a location.
             // Reopen only the exact user-authored temporary draft.
-            subtitleFileCues = pending.cues
+            subtitleFileCues = pending.editorDraft
             val fresh = PrivateSubtitleDraftEditor.snapshot(pending.cues, pending.format)
             editedSubtitleSaveNotice = when {
                 fresh == null || !fresh.contentEquals(pending.bytes) ->
@@ -1434,7 +1437,7 @@ private fun TuddyScreen(
         if (pending != null && pending.session == generation) {
             // The editor closes on Android ON_STOP; preserve only this
             // user-approved bounded snapshot across the external picker.
-            subtitleFileCues = pending.cues
+            subtitleFileCues = pending.editorDraft
             val current = PrivateTimedSubtitleSheet.snapshot(pending.cues, pending.format)
             editedSubtitleSaveNotice = when {
                 current == null || !current.contentEquals(pending.bytes) ->
@@ -1471,7 +1474,7 @@ private fun TuddyScreen(
         val pending = pendingLrcSubtitleSave
         pendingLrcSubtitleSave = null
         if (pending != null && pending.session == generation) {
-            subtitleFileCues = pending.cues
+            subtitleFileCues = pending.editorDraft
             val current = PrivateLrcSubtitleExport.snapshot(pending.cues)
             editedSubtitleSaveNotice = when {
                 current == null || !current.contentEquals(pending.bytes) ->
@@ -2202,37 +2205,39 @@ private fun TuddyScreen(
                         saveSubtitleWorksheet.launch("Tuddy-ondertitels-oefenblad.html")
                     }
                 },
-                onSaveCopy = { editedCues, format ->
-                    val snapshot = PrivateSubtitleDraftEditor.snapshot(editedCues, format)
+                onSaveCopy = { editorDraft, exportCues, format ->
+                    val snapshot = PrivateSubtitleDraftEditor.snapshot(exportCues, format)
                     if (snapshot == null) {
                         error = "Kan geen veilige nieuwe ondertitelkopie maken."
                     } else {
                         pendingSubtitleDraft = PendingEditedSubtitleSave(
-                            generation, editedCues.toList(), format, snapshot
+                            generation, editorDraft.toList(), exportCues.toList(),
+                            format, snapshot
                         )
                         saveEditedSubtitle.launch(if (format == SubtitleDraftFormat.WEBVTT)
                             "Tuddy-handmatig-ondertitelconcept.vtt"
                         else "Tuddy-handmatig-ondertitelconcept.srt")
                     }
                 },
-                onSaveLrc = { editedCues ->
-                    val bytes = PrivateLrcSubtitleExport.snapshot(editedCues)
+                onSaveLrc = { editorDraft, exportCues ->
+                    val bytes = PrivateLrcSubtitleExport.snapshot(exportCues)
                     if (bytes == null) {
                         error = "Ongeldig LRC-concept: bewaar volledige tijden als SRT/VTT."
                     } else {
                         pendingLrcSubtitleSave = PendingLrcSubtitleSave(
-                            generation, editedCues.toList(), bytes
+                            generation, editorDraft.toList(), exportCues.toList(), bytes
                         )
                         saveLrcSubtitle.launch("Tuddy-eigen-begintijden.lrc")
                     }
                 },
-                onSaveTimedSheet = { editedCues, format ->
-                    val bytes = PrivateTimedSubtitleSheet.snapshot(editedCues, format)
+                onSaveTimedSheet = { editorDraft, exportCues, format ->
+                    val bytes = PrivateTimedSubtitleSheet.snapshot(exportCues, format)
                     if (bytes == null) {
                         error = "Geen veilige volledige CSV/TSV-kopie mogelijk."
                     } else {
                         pendingTimedSubtitleSheet = PendingTimedSubtitleSheetSave(
-                            generation, editedCues.toList(), format, bytes
+                            generation, editorDraft.toList(), exportCues.toList(),
+                            format, bytes
                         )
                         if (format == TimedSubtitleSheetFormat.CSV)
                             saveTimedSubtitleCsv.launch("Tuddy-eigen-tijdcodes.csv")
