@@ -585,8 +585,8 @@ internal fun SubtitlePasteDialog(
                         else if (lrcMode) "Ongeldig LRC: gebruik 1–16 aaneengesloten " +
                             "[mm:ss.xx]-tijden vóór dezelfde tekst. Maximaal 500 " +
                             "afzonderlijke cues, 800 teksttekens per regel; " +
-                            "dubbele tijden, onbekende offsets of ongeldige " +
-                            "tekst worden geweigerd."
+                            "dubbele tijden, ongeldige of te grote offsets " +
+                            "en ongeldige tekst worden geweigerd."
                         else "Geen volledig geldig SRT/WebVTT-document: " +
                             "controleer tijdcodes en maximaal 500 regels.",
                         color = MaterialTheme.colorScheme.error,
@@ -606,10 +606,24 @@ internal fun SubtitlePasteDialog(
                                 "Tijdcodes zijn volledig geschat."
                              else if (lrcMode) "Elke LRC-cue heeft een expliciet " +
                                  "bronbegin; eindtijden volgen uit het volgende " +
-                                 "begin (laatste +3 s, geschat)."
+                                 "begin (laatste +3 s, geschat). Eventuele " +
+                                 "zelf opgegeven offset is verwerkt."
                              else "Tijdcodes komen uit de zelf geplakte bron."),
                         style = MaterialTheme.typography.titleSmall
                     )
+                    if (lrcMode) {
+                        val declaredOffset = PrivateLrcSubtitleDraft.declaredOffsetMillis(raw)
+                        Text(
+                            if (declaredOffset == null)
+                                "Geen [offset:] opgegeven; oorspronkelijke tijden gebruikt."
+                            else "Expliciete LRC-offset verwerkt: " +
+                                (if (declaredOffset >= 0L) "+" else "") +
+                                declaredOffset + " ms op iedere cue. Positief = later, " +
+                                "negatief = eerder. Deze aangepaste tijden " +
+                                "staan in de volledige preview.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = firstRow,
