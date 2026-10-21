@@ -46,8 +46,12 @@ gecorrigeerde antwoorden** om alle andere regels weg te laten.
 
 Vooraf zie je dezelfde kaartteller en voor-/achterkanttekst als bij
 TSV en CSV. Kies pas daarna een Android-bestandslocatie. Het lokale
-HTML-document begint met alle **vragen en schrijflijnen**; de
-**antwoorden** staan in een afzonderlijk afdrukgedeelte met pagina-einde.
+HTML-document is tegelijk een **oefenkaartenset in de browser**: iedere
+vraag toont zijn antwoord pas na bewust openen van **Toon antwoord**
+(zonder scripts, internet of automatische onthulling). Bij **afdrukken**
+verdwijnen deze openklapbare antwoorden uit het vragenblad; daar
+verschijnen schrijflijnen en de **antwoorden** staan in een
+afzonderlijk afdrukgedeelte met pagina-einde.
 Zo kun je de vragen uitdelen zonder de antwoorden op de eerste pagina.
 Het bestand heeft geen JavaScript, externe bronnen, gekoppelde
 audiobestanden of netwerkaanvragen.
