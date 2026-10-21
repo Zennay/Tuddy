@@ -33,18 +33,43 @@ internal object PrivatePinnedCaptionClozeHtml {
         }
     }
 
-    private fun hiddenWord(word: String, hintMode: PinnedClozeHintMode): String =
-        when (hintMode) {
+    private fun partOfTerm(codePoint: Int): Boolean =
+        Character.isLetterOrDigit(codePoint) || when (Character.getType(codePoint)) {
+            Character.NON_SPACING_MARK.toInt(),
+            Character.COMBINING_SPACING_MARK.toInt(),
+            Character.ENCLOSING_MARK.toInt() -> true
+            else -> false
+        }
+
+    /** Keep authored surrounding punctuation visible, but never reveal the answer term. */
+    private fun hiddenWord(word: String, hintMode: PinnedClozeHintMode): String {
+        var begin = 0
+        while (begin < word.length) {
+            val point = word.codePointAt(begin)
+            if (partOfTerm(point)) break
+            begin += Character.charCount(point)
+        }
+        var end = word.length
+        while (end > begin) {
+            val point = word.codePointBefore(end)
+            if (partOfTerm(point)) break
+            end -= Character.charCount(point)
+        }
+        if (begin >= end) return "________"
+        val term = word.substring(begin, end)
+        val replacement = when (hintMode) {
             PinnedClozeHintMode.BLANK -> "________"
             PinnedClozeHintMode.FIRST_LETTER -> {
-                val first = word.codePointAt(0)
+                val first = term.codePointAt(0)
                 if (Character.isLetterOrDigit(first))
                     String(Character.toChars(first)) + "____"
                 else "________"
             }
             PinnedClozeHintMode.LENGTH ->
-                "_".repeat(word.codePointCount(0, word.length).coerceIn(1, 16))
+                "_".repeat(term.codePointCount(0, term.length).coerceIn(1, 16))
         }
+        return word.substring(0, begin) + replacement + word.substring(end)
+    }
 
     private fun missingWords(
         value: String,
