@@ -42,6 +42,21 @@ gekozen tekst; bij LRC worden eindtijden nog altijd afgeleid.
 Dit pad gebruikt **geen bijlagen of URI's**: kies voor echte bestanden
 de aparte Android-knop **Open ondertitelbestand…**.
 
+## YouTube/SBV-tekst delen
+
+Ook volledige, geldige **YouTube/SubViewer SBV** met
+`H:MM:SS.mmm,H:MM:SS.mmm` en door lege regels gescheiden captions kan
+expliciet als `text/plain` gedeeld worden. De bestaande strikt begrensde
+SBV-lezer controleert alle tijden en teksten voordat de preview opent.
+Een SBV is alleen een gebruiker aangeleverde ondertitel, geen YouTube-link,
+audioherkenning of bewijs van correcte synchronisatie. De gebruiker
+bekijkt de oorspronkelijke regels in de bestaande tijdelijke
+ondertiteldialoog en bevestigt afzonderlijk. Afwijzen wist de
+ontvangen tijdelijke inhoud zonder nieuw bestand of vertaling te maken.
+Na bewuste bewerking is een **nieuwe SBV-kopie met begin- én eindtijden**
+ook beschikbaar via de private ondertitel-editor en Androids
+opslagkiezer; zie [PRIVATE_OFFLINE_SUBTITLE_READER.md](PRIVATE_OFFLINE_SUBTITLE_READER.md).
+
 ## Grenzen en privacy
 
 - **Geen automatische vertaling, opslag, export, microfoonactivatie of serverupload** bij binnenkomst van een deelverzoek.

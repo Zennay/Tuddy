@@ -64,6 +64,7 @@ import com.livelingo.android.PrivateSubtitleDriftSelection
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateLrcSubtitleExport
+import com.livelingo.android.PrivateSbvSubtitleExport
 import com.livelingo.android.PrivateTimedSubtitleSheet
 import com.livelingo.android.TimedSubtitleSheetFormat
 import com.livelingo.android.PrivateSubtitleTimelineNavigation
@@ -95,6 +96,7 @@ internal fun PrivateSubtitleFileDialog(
     onSaveCopy: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     onSaveTimedSheet: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
     onSaveLrc: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
+    onSaveSbv: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     incomingSecondPaste: SubtitlePasteFileContent?,
     onChoosePasteDocument: (List<PrivateSubtitleCue>, SubtitlePasteFileContent) -> Unit,
     onSecondPasteConsumed: () -> Unit
@@ -125,6 +127,7 @@ internal fun PrivateSubtitleFileDialog(
     var requestSave by remember { mutableStateOf<SubtitleDraftFormat?>(null) }
     var requestTimedSheet by remember { mutableStateOf<TimedSubtitleSheetFormat?>(null) }
     var requestLrcSave by remember { mutableStateOf(false) }
+    var requestSbvSave by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
     var removeOpen by remember { mutableStateOf(false) }
@@ -539,6 +542,10 @@ internal fun PrivateSubtitleFileDialog(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { requestLrcSave = true }
                 ) { Text("Bewaar eigen begintijden als LRC…") }
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    onClick = { requestSbvSave = true }) {
+                    Text("Bewaar exacte tijdvakken als YouTube SBV…")
+                }
                 if (notice.isNotBlank()) Text(notice,
                     style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
@@ -2818,6 +2825,54 @@ internal fun PrivateSubtitleFileDialog(
     }
 
 
+    if (requestSbvSave) {
+        val exactSbv = PrivateSbvSubtitleExport.snapshot(draft)
+        AlertDialog(
+            onDismissRequest = { requestSbvSave = false },
+            title = { Text("Eigen tijdvakken als YouTube SBV bewaren?") },
+            text = {
+                Column(modifier = Modifier.heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("SBV bewaart de begin- én eindtijd van elke eigen cue, " +
+                        "plus de letterlijke tekst. Dit is geen audio- of " +
+                        "spraakherkenning. Er worden geen video-URL's gebruikt.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (exactSbv == null) {
+                        Text("Niet alle cues kunnen veilig als SBV worden " +
+                            "bewaard. Controleer tijdvolgorde, niet-lege " +
+                            "tekstregels en documentgrenzen; het huidige " +
+                            "concept blijft ongewijzigd.",
+                            color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text("${draft.size} cues · ${exactSbv.size} UTF-8 bytes. " +
+                            "Controleer de exacte inhoud op deze pagina's:",
+                            style = MaterialTheme.typography.titleSmall)
+                        PrivateSubtitlePagedExportPreview(exactSbv)
+                    }
+                    Text("Alleen na deze bevestiging vraagt Android waar " +
+                        "een NIEUWE kopie opgeslagen wordt. Een gekozen " +
+                        "provider kan deze buiten Tuddy synchroniseren.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = exactSbv != null, onClick = {
+                    val current = PrivateSbvSubtitleExport.snapshot(draft)
+                    if (exactSbv == null || current == null ||
+                        !current.contentEquals(exactSbv))
+                        notice = "Tijdlijn veranderd; open de SBV-preview opnieuw."
+                    else onSaveSbv(draft.toList(), draft.toList())
+                    requestSbvSave = false
+                }) { Text("Kies opslaglocatie…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { requestSbvSave = false }) {
+                    Text("Annuleren")
+                }
+            }
+        )
+    }
     if (requestLrcSave) {
         val exactLrc = PrivateLrcSubtitleExport.snapshot(draft)
         AlertDialog(
