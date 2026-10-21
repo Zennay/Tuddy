@@ -79,6 +79,8 @@ import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
+import com.livelingo.android.ui.SpeechPackBrowserDialog
+import com.livelingo.android.ui.SpeechPackBrowserOption
 import com.livelingo.android.ui.LanguageSupportDialog
 import com.livelingo.android.ui.TwoWayTypedConversationDialog
 import com.livelingo.android.ui.TypedConversationLine
@@ -593,6 +595,14 @@ private fun TuddyScreen(
         mutableStateOf(SpeechPackReceipt(spoken[0].speechCode, SpeechPackStage.UNCHECKED,
             "Controleer afzonderlijk of Android het gekozen offline spraakpakket bezit."))
     }
+    // A second recognizer controller is used only for read-only browsing;
+    // the active source and its download receipt must never be overwritten by a scan.
+    val speechCatalogController = remember(context) { OnDeviceSpeechPackController(context) }
+    val speechCatalogReceipts = remember { mutableStateMapOf<String, SpeechPackReceipt>() }
+    var speechCatalogOpen by remember { mutableStateOf(false) }
+    var speechCatalogBusy by remember { mutableStateOf(false) }
+    var speechCatalogScanned by remember { mutableIntStateOf(0) }
+    var speechCatalogEpoch by remember { mutableIntStateOf(0) }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
@@ -1136,6 +1146,71 @@ private fun TuddyScreen(
         if (active != null) SpeechCleanupPolicy.release(active::cancel, active::destroy)
         listening = false
         partial = ""
+    }
+
+    fun closeSpeechCatalog() {
+        speechCatalogEpoch++
+        speechCatalogController.cancel()
+        speechCatalogBusy = false
+        speechCatalogOpen = false
+        speechCatalogReceipts.clear()
+        speechCatalogScanned = 0
+    }
+
+    fun scanSpeechCatalog() {
+        if (!speechCatalogOpen || speechCatalogBusy || listening || !offlineAvailable) return
+        speechCatalogController.cancel()
+        speechCatalogEpoch++
+        val scanEpoch = speechCatalogEpoch
+        speechCatalogReceipts.clear()
+        speechCatalogScanned = 0
+        speechCatalogBusy = true
+
+        // One transient on-device recognizer at a time; no parallel service calls,
+        // microphone captures, system model requests, downloads or network access.
+        fun next(index: Int) {
+            if (scanEpoch != speechCatalogEpoch || !speechCatalogOpen ||
+                !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
+            if (index >= spoken.size) {
+                speechCatalogBusy = false
+                return
+            }
+            val tag = spoken[index].speechCode
+            speechCatalogController.check(tag) { receipt ->
+                if (scanEpoch != speechCatalogEpoch || !speechCatalogOpen ||
+                    !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return@check
+                speechCatalogReceipts[tag] = receipt
+                if (receipt.stage != SpeechPackStage.CHECKING) {
+                    speechCatalogScanned = index + 1
+                    next(index + 1)
+                }
+            }
+        }
+        next(0)
+    }
+
+    fun selectBrowserSpeechSource(tag: String) {
+        val nextSource = spoken.firstOrNull { it.speechCode == tag } ?: return
+        closeSpeechCatalog()
+        stop()
+        modelStorage.invalidate()
+        installedTextModels = null
+        source = nextSource
+        sourceQuery = ""
+        sourceOpen = false
+        val saved = runCatching {
+            languageSettings.edit()
+                .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, tag)
+                .commit()
+        }.getOrDefault(false)
+        offlineModelStatus = ""
+        textReceipt = OfflineTextReceipt(nextSource.translateCode, target.translateCode,
+            OfflineTextStage.UNCHECKED, "Spreektaal gewijzigd: controleer het tekstmodel.")
+        speechPackReceipt = SpeechPackReceipt(tag, SpeechPackStage.UNCHECKED,
+            "Controleer dit lokale spraakpakket opnieuw voordat je begint.")
+        error = if (saved) "" else
+            "Spreektaal alleen voor deze sessie gekozen; opslaan op het toestel lukte niet."
+        offlineReadinessOpen = true
     }
 
     fun start(forceRestart: Boolean = false) {
@@ -2116,7 +2191,10 @@ private fun TuddyScreen(
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) stop()
+            if (event == Lifecycle.Event.ON_STOP) {
+                closeSpeechCatalog()
+                stop()
+            }
             if (event == Lifecycle.Event.ON_STOP) {
                 localTranslatorPool.invalidate()
                 modelStorage.invalidate()
@@ -2366,6 +2444,24 @@ private fun TuddyScreen(
                 onDismiss = { languageSupportOpen = false }
             )
         }
+        if (speechCatalogOpen && !listening) {
+            SpeechPackBrowserDialog(
+                options = spoken.map { SpeechPackBrowserOption(it.label, it.speechCode) },
+                currentTag = source.speechCode,
+                receipts = speechCatalogReceipts,
+                scanning = speechCatalogBusy,
+                scannedCount = speechCatalogScanned,
+                speechServiceAvailable = offlineAvailable,
+                onScan = { scanSpeechCatalog() },
+                onStopScan = {
+                    speechCatalogEpoch++
+                    speechCatalogController.cancel()
+                    speechCatalogBusy = false
+                },
+                onSelect = { tag -> selectBrowserSpeechSource(tag) },
+                onDismiss = { closeSpeechCatalog() }
+            )
+        }
         if (offlineReadinessOpen) {
             OfflineReadinessDialog(
                 spokenLabel = source.label,
@@ -2388,6 +2484,10 @@ private fun TuddyScreen(
                 onDownloadSpeech = { downloadSpeechPackNow() },
                 onCancelSpeech = { cancelSpeechPackFollow() },
                 onOpenSpeechSettings = { openSpeechSettings() },
+                onBrowseSpeechPacks = {
+                    offlineReadinessOpen = false
+                    speechCatalogOpen = true
+                },
                 onCopyDiagnostics = { copyOfflineReadinessReport() },
                 onCheckText = { checkTextPair() },
                 onPrepareText = { prepareOfflinePair() },
@@ -5615,20 +5715,8 @@ private fun TuddyScreen(
                             }
                             matchingSpoken.forEach {
                                 DropdownMenuItem(text = { Text(it.label) }, onClick = {
-                                    stop()
-                                    modelStorage.invalidate()
-                                    installedTextModels = null
-                                    source = it
-                                    sourceQuery = ""
-                                    languageSettings.edit()
-                                        .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, it.speechCode)
-                                        .apply()
-                                    offlineModelStatus = ""
-                                    textReceipt = OfflineTextReceipt(it.translateCode, target.translateCode,
-                                        OfflineTextStage.UNCHECKED, "Spreektaal veranderd: controleer tekstmodel opnieuw.")
-                                    speechPackReceipt = SpeechPackReceipt(it.speechCode, SpeechPackStage.UNCHECKED,
-                                        "Voor deze spreektaal is nog geen lokale pakketcontrole uitgevoerd.")
-                                    sourceOpen = false
+                                    selectBrowserSpeechSource(it.speechCode)
+                                    offlineReadinessOpen = false
                                 })
                             }
                         }
