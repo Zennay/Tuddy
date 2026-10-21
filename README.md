@@ -1,3 +1,24 @@
+## Nieuw: eigen ondertitel- en spreadsheetbestanden kiezen op Android
+
+De bestaande offline concepteditor ondersteunt nu naast plakken ook een
+**expliciete Android-documentkeuze**. Kies in het importvenster de passende
+SRT/VTT-, CSV-, TSV- of gewone-tekstmodus, tik op **📂 Kies eigen UTF-8
+SRT, VTT, CSV, TSV of TXT-document…** en selecteer zelf je bestand.
+Tuddy leest maximaal **256 KiB UTF-8** op een achtergrondthread en houdt
+de tekst alleen tijdelijk in het geheugen. Ongeldige/binaire/te grote
+documenten laten je vorige invoer intact. Na een geldige keuze kun je de
+volledige inhoud, tijdcodes, geselecteerde bronregels en zoekpreview
+controleren en apart besluiten het concept te openen. Ook de bestaande
+route voor een tweede handmatig gecombineerd spoor ondersteunt dit.
+
+Er zijn geen permanente URI-rechten, extra permissies, automatische
+cloudverwerking of stille schrijfopdrachten. Een **door de gebruiker
+gekozen Android-documentprovider kan zelf online/cloudgesynchroniseerd
+zijn**; de app zelf leest en verwerkt lokaal. De bestaande exportgrenzen,
+veiligheidscontroles en expliciete toestemming blijven behouden. Geen
+spraakherkenning, taalvalidatie of daadwerkelijke audiowoorduitlijning.
+[Details](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: SRT/WebVTT en gewone tekst handmatig plakken
 
 Kopieer je eigen SRT/WebVTT-tekst naar de tijdelijke ondertiteleditor
