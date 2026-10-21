@@ -1056,7 +1056,8 @@ internal fun SubtitlePasteDialog(
                             )
                         }
                         if (lrcBatchInput.isNotBlank()) {
-                            if (lrcBatchProposal == null || lrcBatchAfter == null) {
+                            if (lrcBatchTooLarge ||
+                                lrcBatchProposal == null || lrcBatchAfter == null) {
                                 Text(
                                     "Nog geen geldige multi-cuecorrectie. " +
                                         "Gebruik unieke bestaande bronnummers, maximaal " +
