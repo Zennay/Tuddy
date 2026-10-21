@@ -483,6 +483,84 @@ internal class PrivatePhraseDeck(context: Context) {
         } catch (_: RuntimeException) { false }
     }
 
+    /**
+     * Non-destructive offline import. Existing user-written meanings, themes,
+     * favorite pins and spaced-repetition dates always win. Only unseen
+     * language+phrase identities and safely mapped new topics are added.
+     * A single SharedPreferences transaction writes both groups or neither.
+     */
+    @Synchronized
+    fun mergeArchiveIfUnchanged(
+        context: Context,
+        candidate: PrivatePhraseArchive,
+        expectedNotes: List<PersonalPhrase>?,
+        expectedThemes: ByteArray?
+    ): Boolean {
+        if (expectedNotes == null || entries() != expectedNotes) return false
+        val themeDeck = PrivatePhraseTopics(context)
+        val currentThemes = themeDeck.exportSnapshot()
+        if ((currentThemes == null) != (expectedThemes == null) ||
+            currentThemes != null && expectedThemes != null &&
+            !currentThemes.contentEquals(expectedThemes)) return false
+
+        // Reject any synthetic or stale caller input, not just files from the UI.
+        val bytes = (archiveObject(candidate).toString() + "\n")
+            .toByteArray(Charsets.UTF_8)
+        if (bytes.size > 70_000 || previewArchiveImport(bytes) != candidate) return false
+        val current = decode() ?: return false
+        fun identity(note: PersonalPhrase) =
+            note.language + "|" + note.phrase.lowercase(Locale.ROOT)
+        val owned = current.map(::identity).toSet()
+        val additions = candidate.notes.filterNot { identity(it) in owned }
+        val combined = current + additions
+        if (combined.size > MAX_ROWS) return false
+        val serialized = toJson(combined).toString()
+        if (serialized.length > MAX_JSON) return false
+
+        // A topic with the same name ignoring case is one existing local topic.
+        // Preserve its exact local spelling; never rename local categories.
+        val localNames = themeDeck.topics()
+        val canonical = mutableMapOf<String, String>()
+        localNames.forEach { canonical[it.lowercase(Locale.ROOT)] = it }
+        val names = localNames.toMutableList()
+        candidate.topics.forEach { name ->
+            val key = name.lowercase(Locale.ROOT)
+            if (key !in canonical) {
+                if (names.size >= PrivatePhraseTopics.MAX_TOPICS) return false
+                names.add(name)
+                canonical[key] = name
+            }
+        }
+
+        // Exports are generated from checked topic records, not free text.
+        // Existing phrase-topic associations always have priority.
+        val linked = mutableMapOf<String, String>()
+        if (currentThemes != null) {
+            val document = runCatching {
+                JSONObject(currentThemes.toString(Charsets.UTF_8))
+            }.getOrNull() ?: return false
+            val records = document.optJSONArray("assignments") ?: return false
+            for (i in 0 until records.length()) {
+                val record = records.optJSONObject(i) ?: return false
+                linked[record.optString("identity")] = record.optString("topic")
+            }
+        }
+        for (note in additions) {
+            val hash = PrivatePhraseShortcuts.fingerprint(note)
+            val chosen = candidate.assignments[hash] ?: continue
+            linked[hash] = canonical[chosen.lowercase(Locale.ROOT)] ?: return false
+        }
+        if (linked.size > MAX_ROWS) return false
+        val rows = linked.map { (hash, topic) -> "$hash|$topic" }.toSet()
+        return try {
+            prefs.edit().putString(KEY, serialized)
+                .putStringSet(PrivatePhraseTopics.TOPICS_KEY, names.toSet())
+                .putStringSet(PrivatePhraseTopics.ASSIGNMENTS_KEY, rows)
+                // Do not touch pinned notes or review schedule when merging.
+                .commit()
+        } catch (_: RuntimeException) { false }
+    }
+
     /** User-chosen Storage Access Framework export; never background/silent. */
     @Synchronized
     fun exportSnapshot(): ByteArray? {
