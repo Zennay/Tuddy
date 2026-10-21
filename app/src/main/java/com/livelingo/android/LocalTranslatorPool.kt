@@ -18,8 +18,18 @@ internal class LocalTranslatorPool {
         var closeWhenIdle: Boolean = false
     )
 
-    internal class Lease internal constructor(internal val entry: Entry) {
-        val translator: Translator get() = entry.translator
+    internal inner class Lease internal constructor(internal val entry: Entry) {
+        private var released = false
+
+        fun translate(text: String) = entry.translator.translate(text)
+
+        // Closing a lease releases its slot; the pooled translator remains warm
+        // unless it was evicted, invalidated, or the screen has been disposed.
+        fun close() {
+            if (released) return
+            released = true
+            release(this)
+        }
     }
 
     private companion object {
@@ -41,7 +51,7 @@ internal class LocalTranslatorPool {
         return Lease(entry)
     }
 
-    fun release(lease: Lease) {
+    private fun release(lease: Lease) {
         val entry = lease.entry
         if (entry.inFlight > 0) entry.inFlight--
         if (entry.inFlight == 0 && entry.closeWhenIdle) {
