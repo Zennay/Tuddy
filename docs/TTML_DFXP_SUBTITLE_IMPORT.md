@@ -35,3 +35,9 @@ De twee cues krijgen uitsluitend de zelf aangeleverde timestamps; TTML-import be
 ## Bewust nieuw TTML-bestand bewaren
 
 In de privé-ondertiteleditor is ook **Bewaar exacte tijdvakken als TTML…** beschikbaar. Na een volledige, apart bevestigde paginapreview vraagt Android waar de nieuwe `.ttml`-kopie moet komen. De auteurstijden worden in milliseconden bewaard; `<`, `>` en `&` worden XML-veilig escaped, echte tekstregelovergangen als `<br/>`. Als het nieuwe bestand niet opnieuw kan worden gelezen zonder verlies van tekst of tijdcodes, wordt bewaren geheel geweigerd. Na terugkomst uit Android wordt de bevestigde bytekopie nogmaals tegen het bewaarde concept gecontroleerd. Er is geen automatische overschrijving, netwerksynchronisatie door Tuddy of opname van audio.
+
+## Alleen gekozen tijdvakken als TTML bewaren of delen
+
+In de privé-ondertiteleditor open je **Selecteer regels en bewaar…**. Selecteer één of meer eigen oorspronkelijke bronregelnummers of tijdvensters en kies **TTML**. Je kunt exacte oorspronkelijke tijdcodes behouden of bewust een compact fragment vanaf nul maken; compacting is tekstbewerking, **geen** audio-uitlijning. Tuddy toont de volledige werkelijk geproduceerde TTML-XML-tekst per pagina, inclusief de door jou gekozen tijdcodes. Kies daarna zelf een NIEUWE Android-opslaglocatie. De volledige originele bron, ongeslecteerde regels, transcripties en eventuele audio blijven ongemoeid.
+
+Ook **Deel selectie…** ondersteunt nu bewust gekozen TTML-*tekst*: maximaal 24 geselecteerde cues en 16 KiB. Dat is gewone `text/plain` XML in het Android-deelmenu, **geen** bijlage, bestands-URI of permissiegrant. De gekozen ontvangende app kan de gedeelde tekst extern opslaan/synchroniseren. Dezelfde verliesvrije TTML-parser wordt gebruikt voor deze kleine selectie, niet voor ruwe bron-XML met onbekende tags.

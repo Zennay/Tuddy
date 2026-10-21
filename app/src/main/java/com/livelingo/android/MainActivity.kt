@@ -2779,6 +2779,29 @@ private fun TuddyScreen(
                         saveTtmlSubtitle.launch("Tuddy-eigen-tijdvakken.ttml")
                     }
                 },
+                onShareTtmlExcerpt = { selectedCues ->
+                    // Literal XML text only, never a source-file URI, grant,
+                    // recording, account identifier or entire live transcript.
+                    val payload = PrivateSubtitleOutgoingShare.ttmlText(selectedCues)
+                    if (payload == null) {
+                        error = "TTML-delen geweigerd: kies maximaal 24 veilige regels " +
+                            "van samen maximaal 16 KiB."
+                    } else {
+                        val outbound = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, payload)
+                        }
+                        val chooser = Intent.createChooser(
+                            outbound, "Deel geselecteerde eigen TTML-tekst"
+                        )
+                        if (!runCatching {
+                                context.startActivity(chooser)
+                                true
+                            }.getOrDefault(false)) {
+                            error = "Android kan geen deelmenu openen; niets gedeeld."
+                        }
+                    }
+                },
                 onShareExcerpt = { selectedCues, format ->
                     // Explicitly chosen original rows from the private editor.
                     // No URI, audio or complete live conversation is transferred.
