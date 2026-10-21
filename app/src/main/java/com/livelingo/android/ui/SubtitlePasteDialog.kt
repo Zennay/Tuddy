@@ -1585,6 +1585,7 @@ internal fun SubtitlePasteDialog(
                     )
                 else if (lrcMode) PrivateLrcSubtitleDraft.preview(raw)
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
+                    ?: PrivateAssSubtitleReader.read(raw)
                     ?: PrivateSbvSubtitleReader.read(raw)
                     ?: PrivateYoutubeJson3SubtitleReader.read(raw.takeIf { it.length <= 65_536 } ?: "")
                 if (confirmed == null) return@TextButton
