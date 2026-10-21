@@ -1,3 +1,22 @@
+## Nieuw: zelf beoordelen binnen het zelfstandige offline oefenblad
+
+Iedere kaart in het geëxporteerde **Aanvuloefening · HTML** heeft nu naast
+het eigen antwoordveld de tijdelijke beoordeling **Nog oefenen** of
+**Ik wist het**. Het resultaat wordt niet automatisch berekend, opgeslagen
+als leerscore of teruggeschreven naar Tuddy: je kiest zelf op basis van het
+bewust opengeklapte antwoord. **Wis mijn antwoord en beoordeling** reset
+alleen het antwoord en de keuze van die ene kaart via standaard HTML.
+De rest van het oefenblad en de originele gesprekstekst blijven ongewijzigd.
+
+Bij afdrukken verschijnen in plaats van de tijdelijke radio-knoppen twee
+**lege** keuzevakjes, met schrijfruimte volgens de in Android gekozen
+instelling. Geen browser-JavaScript, netwerk, automatische nakijkfunctie,
+centrale voortgang, scripts of nieuwe permissies. Browsers kunnen zelfstandig
+formulierwaarden herstellen; de bestandsprovider kan een door jou gekozen
+export extern bewaren.
+
+---
+
 ## Nieuw: oefenblad hergebruiken en ruime schrijfruimte kiezen
 
 Je kunt in een zelfstandig geëxporteerd **Aanvuloefening · HTML** nu voor
