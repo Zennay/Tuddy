@@ -128,6 +128,8 @@ internal fun PrivateSubtitleFileDialog(
     var batchFirstRow by remember { mutableStateOf("1") }
     var batchLastRow by remember { mutableStateOf("") }
     var batchExplicitRows by remember { mutableStateOf("") }
+    var batchWindowStart by remember { mutableStateOf("") }
+    var batchWindowEnd by remember { mutableStateOf("") }
     var insertOpen by remember { mutableStateOf(false) }
     var insertStart by remember { mutableStateOf("") }
     var insertEnd by remember { mutableStateOf("") }
@@ -1184,6 +1186,29 @@ internal fun PrivateSubtitleFileDialog(
                             onClick = { batchExplicitRows = batchFoundExpression }
                         ) { Text("Kies ${found.size} gevonden bronregels als bereik") }
                     }
+                    Text("Of kies bewust alle complete cues die een tijdvenster " +
+                        "overlappen als bereik voor deze correctie.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(value = batchWindowStart,
+                            onValueChange = { batchWindowStart = it.take(13) },
+                            label = { Text("Vanaf mm:ss") },
+                            modifier = Modifier.weight(1f), singleLine = true)
+                        OutlinedTextField(value = batchWindowEnd,
+                            onValueChange = { batchWindowEnd = it.take(13) },
+                            label = { Text("Tot mm:ss") },
+                            modifier = Modifier.weight(1f), singleLine = true)
+                    }
+                    val windowBatchRows = PrivateSubtitleTimeWindowRows.expression(
+                        draft, batchWindowStart, batchWindowEnd)
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = windowBatchRows != null,
+                        onClick = {
+                            if (windowBatchRows != null)
+                                batchExplicitRows = windowBatchRows
+                        }) { Text("Kies overlappende tijdvensterregels") }
                     OutlinedTextField(
                         value = batchFind,
                         onValueChange = { batchFind = it.take(100) },
