@@ -1,3 +1,34 @@
+## Nieuw: dezelfde gerichte CSV- en oefenbladselectie
+
+De keuze **Alle fragmenten / Nog oefenen / Nog niet beoordeeld** geldt
+voortaan zowel voor het afzonderlijke HTML-luisterwerkblad **als** voor
+de privé-CSV. De knop **Bekijk mijn volledige CSV vóór opslaan** vermeldt
+de gekozen categorie en toont exact de CSV-rijen die voor die categorie
+zullen worden aangeboden. Categorieën zonder bijpassende eigen fragmenten
+kunnen niet als CSV of werkblad worden geëxporteerd. De afzonderlijke
+gewone HTML-/TXT-overzichten behouden juist hun bestaande complete
+sessie-inhoud. Dit filter verandert de begeleide afspeelroute niet.
+
+Wanneer je de categorie tijdens de Android-bestandskiezer verandert,
+weigert Tuddy altijd de eerdere export, zelfs als twee categorieën
+toevallig dezelfde fragmenten bevatten. Ook wijzigen van fragment,
+beoordeling, zelfgeschreven notitie of berekende bytes blokkeert
+de oude keuze. Er wordt nooit stilzwijgend een CSV zonder deze selectie
+opgeslagen.
+
+Een compact CSV-ondertitelvoorbeeld geeft bij meer dan twee bronregels
+nu het **exacte aantal weggelaten tussenregels** aan; het pretendeert
+geen volledige transcriptie. Bij een bron zonder geldige exacte
+ondertitel-/tijdkoppeling blijft de melding over een puur handmatig
+audiotijdvak zichtbaar. De generator en het privé-overzicht gebruiken
+begrenste rekenkundige tijdverschuivingen: integer-overloop kan geen
+vals gelijklopende ondertitelregels opleveren. CSV bevat alleen je
+eigen geselecteerde tijden, beoordelingen, notities en expliciet
+beperkte eigen SRT/VTT-brontekst. Geen automatische audio- of
+spraakherkenning, nieuwe permissies, account, profiel of cloud-backup.
+
+---
+
 ## Nieuw: mijn afdrukbare luisterwerkblad met bronregels als zelfcontrole
 
 Na het maken van één tot vier eigen A–B-fragmenten kies je **Mijn privé
