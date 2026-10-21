@@ -31,6 +31,7 @@ import com.livelingo.android.UnavailableTextLanguageCatalog
 @Composable
 internal fun LanguageSupportDialog(
     spokenCandidates: List<String>,
+    onPreviewLanguage: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
@@ -128,6 +129,13 @@ internal fun LanguageSupportDialog(
                                     "Alleen vijf vaste basiswoorden; geen vrije zinsvertaling of bewezen ASR.",
                                     style = MaterialTheme.typography.bodySmall
                                 )
+                                if (item.code in setOf("kmr", "ckb", "ps")) {
+                                    TextButton(
+                                        onClick = { onPreviewLanguage(item.code) }
+                                    ) {
+                                        Text("Open vijfwoordenpreview")
+                                    }
+                                }
                             }
                         }
                     }
