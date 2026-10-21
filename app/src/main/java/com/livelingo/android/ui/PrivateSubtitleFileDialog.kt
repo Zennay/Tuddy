@@ -209,6 +209,11 @@ internal fun PrivateSubtitleFileDialog(
                 pairReviewOpen = false
                 unmatchedReviewOpen = false
                 unmatchedReviewPage = 0
+                pairReviewQuery = ""
+                pairReviewSecondaryRow = ""
+                unmatchedReviewQuery = ""
+                unmatchedReviewTrack = 0
+                resultPreviewJump = ""
                 notice = ""
             } else {
                 notice = "Het concept veranderde tijdens de bestandskeuze. Kies opnieuw."
@@ -740,6 +745,11 @@ internal fun PrivateSubtitleFileDialog(
                 pairReviewOpen = false
                 unmatchedReviewOpen = false
                 unmatchedReviewPage = 0
+                pairReviewQuery = ""
+                pairReviewSecondaryRow = ""
+                unmatchedReviewQuery = ""
+                unmatchedReviewTrack = 0
+                resultPreviewJump = ""
                 notice = ""
                 pasteSecondOpen = false
                 onSecondPasteConsumed()
