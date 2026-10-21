@@ -1513,7 +1513,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
             onDismissRequest = { practiceReportOpen = false },
             title = { Text("Mijn privé luisteroverzicht") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text("Hier staan je eigen ondertitels, tijdvakken en beoordelingen. " +
                         "Selecteer alleen zelf tekst als je die via Android wilt kopiëren; " +
                         "je klembord- of toetsenbord-app kan een kopie dan lezen.",
