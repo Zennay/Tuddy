@@ -85,6 +85,13 @@ internal object SharedPlainTextIntent {
                     bytes.size <= 65_536 &&
                     PrivateYoutubeJson3SubtitleReader.read(candidate) != null)
                     return IncomingSharedText(null, null, candidate)
+                // An invalid or oversized structured JSON3 share is not a
+                // normal sentence. Refuse instead of offering it for translation.
+                if (candidate.trimStart().startsWith("{") &&
+                    candidate.contains("\"events\""))
+                    return IncomingSharedText(null,
+                        "Geen geldig gedeeld JSON3-ondertitelblok (maximaal 64 KiB). " +
+                            "Gebruik Open ondertitelbestand… voor een groot JSON3-bestand.")
                 val timed = PrivateTimedSubtitleSheet.readAuthored(candidate)
                 if (timed != null) {
                     val paired = timed.first().text.contains('\n')
