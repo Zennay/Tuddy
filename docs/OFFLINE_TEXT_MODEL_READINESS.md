@@ -43,15 +43,17 @@ recognition and not proof that a source/target translation pair is ready.
 
 ## Reusing local translation clients
 
-The live caption pipeline keeps a small access-ordered cache of at most four
+The final-caption pipeline keeps a small access-ordered cache of at most four
 source/target translator clients after the app has independently confirmed
 that the exact pair's models are installed. This avoids creating and closing
-an ML Kit translator for every caption. Only idle clients can be evicted;
-clients with translations in flight close when they become idle or when the
-screen is disposed. The pool is invalidated after model download/removal and
-when the app leaves the foreground, so cached clients cannot outlive a model
-inventory change. Model downloads remain explicit and Wi-Fi-gated, and the
-pool stores no transcript or translation text.
+an ML Kit translator for every finalized caption. Provisional captions retain
+their short-lived translator client and close it after each attempt; that path
+never calls model download. Only idle cached clients can be evicted; clients
+with translations in flight close when they become idle or when the screen is
+disposed. The pool is invalidated after model download/removal and when the app
+leaves the foreground, so cached clients cannot outlive a model inventory
+change. Model downloads remain explicit and Wi-Fi-gated, and the pool stores
+no transcript or translation text.
 
 ## Speech recognition: Android on-device packs
 
