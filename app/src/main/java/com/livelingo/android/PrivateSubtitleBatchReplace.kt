@@ -66,33 +66,8 @@ internal object PrivateSubtitleBatchReplace {
             var matches = 0
             while (matcher.find()) matches++
             if (matches == 0) return@mapIndexed cue
-            // Quote replacement text so authored '            val edited = when (field) {
-                SubtitleReplaceField.ALL_TEXT -> substituted
-                SubtitleReplaceField.FIRST_LINE ->
-                    (listOf(substituted) + lines.drop(1)).joinToString("\n")
-                SubtitleReplaceField.SECOND_LINE ->
-                    (listOf(lines.first(), substituted) + lines.drop(2))
-                        .joinToString("\n")
-            }
-            if (edited == cue.text) return@mapIndexed cue
-            if (edited != edited.trim() ||
-                edited.isBlank() ||
-                edited.length > 2400 ||
-                edited.lines().size > 8 ||
-                edited.lines().any { it.length > 800 }) return null
-            affected++
-            occurrences += matches
-            cue.copy(text = edited)
-        }
-        if (affected == 0 ||
-            PrivateSubtitleDraftEditor.snapshot(draft, SubtitleDraftFormat.SRT) == null ||
-            PrivateSubtitleDraftEditor.snapshot(draft, SubtitleDraftFormat.WEBVTT) == null)
-            return null
-        return SubtitleBatchPreview(draft, affected, occurrences)
-    }
-}
- and backslashes are
-            // inserted literally rather than interpreted as group references.
+            // Quote replacement text so authored dollar signs and backslashes
+            // remain literal characters, never regex substitution tokens.
             val substituted = pattern.matcher(chosen)
                 .replaceAll(Matcher.quoteReplacement(replacement))
             val edited = when (field) {
