@@ -32,8 +32,11 @@ show `unknown`, never invent installed coverage.
    trusting a progress receipt. Android 13 can request download but cannot
    track completion in this API; use **Controleer spraak** again.
 6. Android 12 and any service not implementing the API remain
-   unknown/unsupported rather than falsely installed. The microphone path
-   remains on-device-only and subject to the device's own speech service.
+   unknown/unsupported rather than falsely installed. On Android 12 the offline
+   startcheck offers **Open Android spraakinstellingen** so users can inspect or
+   install the system speech service's offline packs; return to Tuddy and retry
+   the check. This action does not prove that a pack is installed. The microphone
+   path remains on-device-only and subject to the device's own speech service.
 7. On source change, Stop, Activity background, or screen disposal,
    stale callbacks from the manager are invalidated and the manager-owned
    recognizer destroyed. No microphone samples, transcript, model contents,
