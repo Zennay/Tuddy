@@ -10,6 +10,7 @@ internal enum class PrivatePracticeReportFormat(
     val mime: String, val filename: String, val title: String
 ) {
     HTML("text/html", "Tuddy-mijn-luisteroefening.html", "HTML"),
+    WORKSHEET_HTML("text/html", "Tuddy-mijn-luisterwerkblad.html", "HTML-oefenblad"),
     TXT("text/plain", "Tuddy-mijn-luisteroefening.txt", "TXT"),
     CSV("text/csv", "Tuddy-mijn-luisteroefening.csv", "CSV")
 }
