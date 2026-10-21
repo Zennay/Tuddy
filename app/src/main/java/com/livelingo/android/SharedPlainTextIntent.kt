@@ -11,7 +11,7 @@ import android.content.Intent
 internal data class IncomingSharedText(
     val draft: String?,
     val notice: String?,
-    // Validated SRT/VTT/LRC/timed CSV/TSV from user-shared text; preview only.
+    // Validated SRT/VTT/ASS/SSA/LRC/timed CSV/TSV from user-shared text; preview only.
     val subtitleDraft: String? = null,
     val subtitleIsLrc: Boolean = false,
     val subtitleTimedSheetMode: PlainSubtitleSplitMode? = null
