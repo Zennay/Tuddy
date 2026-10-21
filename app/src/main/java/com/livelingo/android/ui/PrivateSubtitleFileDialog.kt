@@ -804,8 +804,18 @@ internal fun PrivateSubtitleFileDialog(
                     it.lastPrimaryRow, it.lastSecondaryRow)
             }
         }
+        val multiDrift = remember(draft, stagedImport.imported,
+            selectedMultiAnchors, importMode, stillCurrent) {
+            selectedMultiAnchors?.takeIf {
+                importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES && stillCurrent
+            }?.let {
+                PrivateSubtitleTrackMultiAnchorAlignment.preview(
+                    draft, stagedImport.imported, it)
+            }
+        }
         val selectedPairOffset = when {
             importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES -> secondTrackOffsetMs
+            selectedMultiAnchors != null -> if (multiDrift != null) 0L else null
             selectedDrift != null -> if (drift != null) 0L else null
             anchorSelectionNeedsApply -> null
             secondTrackCustomOffset.isBlank() -> secondTrackOffsetMs
@@ -813,8 +823,12 @@ internal fun PrivateSubtitleFileDialog(
                 secondTrackCustomOffset, allowZero = true)
         }
         val proposedIncoming = if (
-            selectedDrift != null && importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
-        ) drift?.adjustedSecondary else stagedImport.imported
+            importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
+        ) stagedImport.imported else when {
+            selectedMultiAnchors != null -> multiDrift?.adjustedSecondary
+            selectedDrift != null -> drift?.adjustedSecondary
+            else -> stagedImport.imported
+        }
         val proposed = remember(draft, proposedIncoming,
             importMode, selectedPairOffset, stillCurrent, excludedSecondRows,
             manualPairs) {
