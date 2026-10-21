@@ -7,6 +7,12 @@ ondertitel**. Een doorbladerbare lijst toont maximaal negen opeenvolgende
 woorden per pagina, met de originele tokenvolgorde en woordnummers.
 Tik op een woord om direct naar het uit de originele cue-tijd geschatte
 moment te springen, zonder eerst alle eerdere woorden langs te gaan.
+Bij een lange ondertitel kun je ook een **oorspronkelijk woordnummer**
+van 1 t/m het zichtbare totale aantal invoeren en op **Ga** tikken.
+Tuddy bladert naar de betreffende woordpagina en springt naar dezelfde
+geschatte tijdpositie. Het getal is begrensd en wordt gewist wanneer
+de actieve ondertitel verandert. De woordlijst ondersteunt ook
+rechts-naar-links-tekst in Sorani en Pasjtoe.
 De lijst is begrensd op maximaal 300 woorden per ondertitel en wordt
 bij een andere regel opnieuw vanaf de eerste pagina getoond.
 
