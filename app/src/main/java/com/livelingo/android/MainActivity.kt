@@ -1245,7 +1245,7 @@ private fun TuddyScreen(
                 currentSelection, pending.format, pending.subtitleOptions, pending.scope,
                 pending.languagePair, pending.studyDirection,
                 pinnedStudyEdits.toMap(), pending.onlyPersonallyCorrected,
-                pending.showLanguageTags
+                pending.showLanguageTags, pending.clozeDifficulty
             )
             if (pending.generation != generation || listening ||
                 pending.format != pinnedExportFormat ||
@@ -1255,6 +1255,7 @@ private fun TuddyScreen(
                 pending.studyEdits != pinnedStudyEdits.toMap() ||
                 pending.onlyPersonallyCorrected != pinnedOnlyPersonalStudy ||
                 pending.showLanguageTags != pinnedStudyLanguageTags ||
+                pending.clozeDifficulty != pinnedClozeDifficulty ||
                 pending.subtitleOptions != pinnedSubtitleOptions ||
                 currentSelection != pending.selection || currentBytes == null ||
                 !currentBytes.contentEquals(pending.bytes)
@@ -3446,7 +3447,7 @@ private fun TuddyScreen(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
                     pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection,
                     pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
-                    pinnedStudyLanguageTags
+                    pinnedStudyLanguageTags, pinnedClozeDifficulty
                 )
             }
             AlertDialog(
@@ -3724,7 +3725,8 @@ private fun TuddyScreen(
                                             else record.caption.translated,
                                             if (!pinnedStudyLanguageTags) null
                                             else if (reverse) record.caption.sourceCode
-                                            else record.caption.targetCode
+                                            else record.caption.targetCode,
+                                            pinnedClozeDifficulty
                                         )
                                         Text("Aanvulhint (niet het antwoord): " + targetHint,
                                             style = MaterialTheme.typography.bodySmall)
@@ -3733,7 +3735,8 @@ private fun TuddyScreen(
                                                 PrivatePinnedCaptionClozeHtml.previewHint(
                                                     record.caption.original,
                                                     if (pinnedStudyLanguageTags)
-                                                        record.caption.sourceCode else null
+                                                        record.caption.sourceCode else null,
+                                                    pinnedClozeDifficulty
                                                 ), style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
@@ -3785,7 +3788,8 @@ private fun TuddyScreen(
                             val bytes = PrivatePinnedCaptionExport.snapshot(
                                 selection, format, options, scope, languagePair,
                                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
-                                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags
+                                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
+                                pinnedClozeDifficulty
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
@@ -3795,7 +3799,8 @@ private fun TuddyScreen(
                                     generation, selection, format, scope,
                                     languagePair, pinnedStudyDirection,
                                     pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
-                                    pinnedStudyLanguageTags, options, bytes
+                                    pinnedStudyLanguageTags, pinnedClozeDifficulty,
+                                    options, bytes
                                 )
                                 exportStatus = ""
                                 pinnedExportOpen = false
@@ -3825,7 +3830,8 @@ private fun TuddyScreen(
                 currentPinnedSelection(), pinnedExportFormat,
                 pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
-                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags
+                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
+                pinnedClozeDifficulty
             )
             val previewLines = remember(exactBytes?.contentHashCode(),
                 exactBytes?.size
