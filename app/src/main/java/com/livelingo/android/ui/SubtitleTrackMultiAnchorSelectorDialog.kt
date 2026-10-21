@@ -62,18 +62,30 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
             }
         } else anchors + pair).sortedBy { it.primaryRow }
     }
-    val additionalPreview = if (candidateAnchors != null &&
-        candidateAnchors.size <= PrivateSubtitleTrackMultiAnchorAlignment.MAX_ANCHORS
-    ) PrivateSubtitleTrackMultiAnchorAlignment.preview(
-        primary, secondary, candidateAnchors) else null
-    val preview = PrivateSubtitleTrackMultiAnchorAlignment.preview(
-        primary, secondary, anchors)
-    val mappedBulkRows = PrivateSubtitleManualPairSelection.parse(
-        anchorExpression, primary.size, secondary.size)
-        ?.takeIf { it.size in 2..PrivateSubtitleTrackMultiAnchorAlignment.MAX_ANCHORS }
-        ?.map { PrivateSubtitleMultiAnchor(it.primaryRow, it.secondaryRow) }
-    val bulkPreview = mappedBulkRows?.let {
-        PrivateSubtitleTrackMultiAnchorAlignment.preview(primary, secondary, it)
+    // The full 500-cue dual-format snapshots should never be recomputed
+    // just because the user scrolls, opens a source row or pages results.
+    val additionalPreview = remember(primary, secondary, candidateAnchors) {
+        if (candidateAnchors != null &&
+            candidateAnchors.size <= PrivateSubtitleTrackMultiAnchorAlignment.MAX_ANCHORS
+        ) PrivateSubtitleTrackMultiAnchorAlignment.preview(
+            primary, secondary, candidateAnchors) else null
+    }
+    val preview = remember(primary, secondary, anchors) {
+        PrivateSubtitleTrackMultiAnchorAlignment.preview(
+            primary, secondary, anchors)
+    }
+    val mappedBulkRows = remember(anchorExpression, primary.size, secondary.size) {
+        PrivateSubtitleManualPairSelection.parse(
+            anchorExpression, primary.size, secondary.size)
+            ?.takeIf {
+                it.size in 2..PrivateSubtitleTrackMultiAnchorAlignment.MAX_ANCHORS
+            }
+            ?.map { PrivateSubtitleMultiAnchor(it.primaryRow, it.secondaryRow) }
+    }
+    val bulkPreview = remember(primary, secondary, mappedBulkRows) {
+        mappedBulkRows?.let {
+            PrivateSubtitleTrackMultiAnchorAlignment.preview(primary, secondary, it)
+        }
     }
 
     AlertDialog(
