@@ -991,36 +991,35 @@ private fun TuddyScreen(
                 return@Runnable
             }
             interimTranslationBusy = true
-            // Do not call downloadModelIfNeeded: no per-word model traffic.
-            val lease = try {
-                localTranslatorPool.acquire(sourceCode, targetCode)
+            val translator = try {
+                Translation.getClient(TranslatorOptions.Builder()
+                    .setSourceLanguage(sourceCode)
+                    .setTargetLanguage(targetCode)
+                    .build())
             } catch (_: Exception) {
                 return@Runnable
             }
-            val translator = lease.translator
             interimTranslationBusy = true
             try {
+                // Do not call downloadModelIfNeeded: no per-word model traffic.
                 translator.translate(text)
                     .addOnSuccessListener { translated ->
-                        try {
-                            if (InterimTranslationPolicy.mayPublish(
-                                    revision, partialRevision, token, generation,
-                                    voiceSessions.isCurrent(voiceToken), listening)) {
-                                partialTranslation = translated
-                            }
-                        } finally {
-                            localTranslatorPool.release(lease)
-                            interimTranslationBusy = false
+                        if (InterimTranslationPolicy.mayPublish(
+                                revision, partialRevision, token, generation,
+                                voiceSessions.isCurrent(voiceToken), listening)) {
+                            partialTranslation = translated
                         }
+                        translator.close()
+                        interimTranslationBusy = false
                     }
                     .addOnFailureListener {
                         // A missing local model leaves the preview untranslated.
                         // Never display raw ML Kit error text or attempt cloud STT.
-                        localTranslatorPool.release(lease)
+                        translator.close()
                         interimTranslationBusy = false
                     }
             } catch (_: Exception) {
-                localTranslatorPool.release(lease)
+                translator.close()
                 interimTranslationBusy = false
             }
         }
