@@ -98,6 +98,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var estimatedWordFollow by remember { mutableStateOf(false) }
     var wordJumpListOpen by remember { mutableStateOf(false) }
     var wordJumpPage by remember { mutableIntStateOf(0) }
+    var wordJumpNumber by remember { mutableStateOf("") }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var rangeStartIndex by remember { mutableIntStateOf(-1) }
     var rangeEndIndex by remember { mutableIntStateOf(-1) }
@@ -650,6 +651,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     } else null
     LaunchedEffect(activeIndex, estimatedWordFollow) {
         wordJumpPage = 0
+        wordJumpNumber = ""
         if (!estimatedWordFollow) wordJumpListOpen = false
     }
     val nextIndex = cues.indexOfFirst {
@@ -1390,6 +1392,36 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     onClick = { wordJumpPage = visiblePage + 1 }
                                 ) { Text("▶") }
                             }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = wordJumpNumber,
+                                    onValueChange = { value ->
+                                        if (value.length <= 3 && value.all(Char::isDigit)) {
+                                            wordJumpNumber = value
+                                        }
+                                    },
+                                    singleLine = true,
+                                    label = { Text("Woordnummer 1–${wordJumpChoices.size}") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                val chosenNumber = wordJumpNumber.toIntOrNull()
+                                TextButton(
+                                    enabled = chosenNumber != null &&
+                                        chosenNumber in 1..wordJumpChoices.size,
+                                    onClick = {
+                                        val choice = chosenNumber?.let {
+                                            wordJumpChoices.getOrNull(it - 1)
+                                        }
+                                        if (choice != null) {
+                                            wordJumpPage = choice.index / 9
+                                            seekTo(choice.estimatedStartMs)
+                                        }
+                                    }
+                                ) { Text("Ga") }
+                            }
                             wordJumpChoices.drop(visiblePage * 9).take(9)
                                 .chunked(3).forEach { wordRow ->
                                     Row(modifier = Modifier.fillMaxWidth(),
@@ -1401,7 +1433,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                             ) {
                                                 Text("${word.index + 1}. " +
                                                     active.text.substring(word.span),
-                                                    maxLines = 2)
+                                                    maxLines = 2,
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        textDirection = TextDirection.ContentOrRtl
+                                                    ))
                                             }
                                         }
                                     }
