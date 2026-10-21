@@ -90,11 +90,14 @@ beoordeling, zelfgeschreven notitie of berekende bytes blokkeert
 de oude keuze. Er wordt nooit stilzwijgend een CSV zonder deze selectie
 opgeslagen.
 
-Een compact CSV-ondertitelvoorbeeld geeft bij meer dan twee bronregels
-nu het **exacte aantal weggelaten tussenregels** aan; het pretendeert
-geen volledige transcriptie. Bij een bron zonder geldige exacte
-ondertitel-/tijdkoppeling blijft de melding over een puur handmatig
-audiotijdvak zichtbaar. De generator en het privé-overzicht gebruiken
+Een compact CSV-ondertitelvoorbeeld telt nu de **volledig binnen het
+eigen A–B-tijdvak passende ondertitelregels**, ook wanneer de handmatig
+gekozen audiomarkeringen niet precies op een ondertitelgrens liggen.
+Bij meerdere regels toont de CSV de eerste en laatste volledig passende
+bronregel en het **exacte aantal overgeslagen passende middenregels**;
+het pretendeert geen volledige transcriptie. Zonder volledig passende
+ondertitelregels blijft de melding over een puur handmatig audiotijdvak
+zichtbaar. Er is nooit sprake van automatische audio-uitlijning. De generator en het privé-overzicht gebruiken
 begrenste rekenkundige tijdverschuivingen: integer-overloop kan geen
 vals gelijklopende ondertitelregels opleveren. CSV bevat alleen je
 eigen geselecteerde tijden, beoordelingen, notities en expliciet
@@ -133,12 +136,18 @@ netwerkverzoeken of accountgegevens.
 Bij **afdrukken** blijven de bronregels verborgen op het vragenblad.
 De eigen SRT/VTT-bronregels verschijnen afzonderlijk in
 **Bronregels voor zelfcontrole** op een nieuwe afdrukpagina. Per passage
-worden maximaal **18 regels** getoond (bij lange passages de eerste
-negen en laatste negen), met het **exacte aantal niet-getoonde
-tussenregels**. Lange brontekst wordt zichtbaar en Unicode-veilig
-ingekort; rechts-naar-links-tekst heeft een eigen tekstrichting.
-Het is een oefenblad, niet een onvolledige bron die stilzwijgend als
-volledig wordt gepresenteerd.
+toont de **korte uitklap-preview** maximaal 18 regels (de eerste negen
+en laatste negen), met het **exacte aantal overgeslagen middenregels**.
+Het afzonderlijke **Bronregels voor zelfcontrole** neemt nu juist
+**alle volledig binnen de gekozen A–B-markeringen vallende ondertitelregels**
+op, ook de tussenliggende. Een te groot HTML-document wordt geheel
+geweigerd bij de bestaande 128 KiB-uitvoergrens; er wordt geen
+stilzwijgend afgekapt antwoordblad als compleet aangeboden.
+Lange individuele brontekst wordt zichtbaar en Unicode-veilig ingekort;
+de broninhoud blijft ongewijzigd en rechts-naar-links-tekst behoudt
+een passende tekstrichting. Bij meerdere luisterfragmenten kun je met
+de links boven het werkblad direct naar een fragment springen; die
+schermnavigatie verschijnt niet op de afdruk.
 
 Ook bij deze export vergelijkt Tuddy bij terugkeer uit de
 Android-documentkiezer de **complete actuele bestandsbytes** met de
