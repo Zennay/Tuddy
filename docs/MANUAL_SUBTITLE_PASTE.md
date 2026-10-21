@@ -1108,6 +1108,19 @@ overschrijving of verkapte fallback. De toekomstig opgeslagen
 SRT/VTT-eindtijden volgen nog steeds uit het volgende LRC-begin
 (laatste eindtijd blijft geschat), niet uit opgenomen audio.
 
+## Compact kiezen tussen vier LRC-correctiegereedschappen
+
+De invoer toont na het kiezen van **LRC** niet meer alle grote
+correctiepanelen tegelijk. Kies bewust één optie:
+**Verschuif selectie**, **Meerdere exacte tijden**,
+**Eén exact tijdstip** of **Twee tijdankers**.
+Alleen het gekozen formulier en zijn huidige voor/na-preview
+worden getoond. De gebruiker kan op elk moment wisselen zonder
+de eigen brontekst of de nog niet toegepaste conceptinvoer
+van een ander gereedschap stilzwijgend te verwijderen.
+De afzonderlijke expliciete bevestigingen en de bestaande
+ongedaan/opnieuwgeschiedenis blijven ongewijzigd.
+
 ## Gecorrigeerde LRC-bron mét metadata als nieuw bestand bewaren
 
 In de primaire **Plak eigen SRT/WebVTT-tekst → LRC**-dialoog
