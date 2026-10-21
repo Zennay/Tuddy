@@ -1,3 +1,31 @@
+## Nieuw: afwisselende kaartvolgorde met identieke antwoordnummering
+
+Bij **Aanvuloefening · HTML** kies je voortaan ook de
+**kaartvolgorde**: oorspronkelijke zinsvolgorde of
+**Afwisselende kaartvolgorde per ronde**. Voor dezelfde selectie
+en dezelfde rondes blijft de volgorde volledig reproduceerbaar:
+ronde 1 behoudt de bronvolgorde, ronde 2 draait de kaartvolgorde
+om en ronde 3 begint op een verschoven positie. Bij maar één kaart
+kan de volgorde natuurlijk niet wijzigen. Er worden geen random
+shuffles, nieuwe zinnen of vertalingen gemaakt.
+
+In Android verschijnt de **werkelijke kaartvolgorde per gekozen ronde**
+als de oorspronkelijke kaartposities vóór de bestandskeuze. De
+HTML-generator en de Android-preview gebruiken exact dezelfde
+ordefunctie, zodat het afzonderlijke zelfstudieantwoordblad nog
+steeds bij dezelfde kaartnummers hoort. De volgordekeuze staat
+in de tijdelijk vastgehouden `PendingPinnedCaptionExport` en
+wordt na de Android-documentkiezer vergeleken met de actuele
+keuze en **gehele exportbytes**. Een gewijzigde kaartvolgorde
+wordt dus niet ongemerkt als eerder gekozen bestand opgeslagen.
+
+De optie werkt met één ronde of het volledige drie-ronden-boek,
+met bestaande moeilijkheden, zelfstudie en echt antwoordvrije
+leerlingenbladen. Er zijn geen extra permissies, scripts, cloudcalls
+of leerscore-opslag nodig.
+
+---
+
 ## Nieuw: echte schrijflijnen en optioneel antwoordblad bij afdrukken
 
 Een HTML-aanvuloefening levert op papier nu daadwerkelijk **twee of vier
