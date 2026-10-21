@@ -1,3 +1,15 @@
+## Correcte RTL-richting in tweetalige HTML-oefenkaarten
+
+Wanneer je taalcodes zoals `[ar]`, `[ps]` of `[ckb]` toont, bepaalt
+Tuddy de tekstrichting uit de taal-/scriptcode in plaats van het Latijnse
+label als eerste tekst te laten beslissen. Dat houdt Arabisch schrift in
+vragen, invulhints en antwoordbladen rechts-naar-links. Zonder taallabel
+blijft de richting automatisch afhankelijk van de tekst.
+
+[Handleiding voor de tweetalige export](docs/PINNED_CAPTION_MULTI_EXPORT.md).
+
+---
+
 ## Nieuw: afwisselende kaartvolgorde met identieke antwoordnummering
 
 Bij **Aanvuloefening · HTML** kies je voortaan ook de
