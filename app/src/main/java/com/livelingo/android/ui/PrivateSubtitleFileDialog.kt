@@ -51,6 +51,7 @@ import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDocumentCombine
 import com.livelingo.android.SubtitleManualPair
+import com.livelingo.android.PrivateSubtitleManualPairSelection
 import com.livelingo.android.PrivateSubtitleOffset
 import com.livelingo.android.PrivateSubtitleTrackAnchorOffset
 import com.livelingo.android.PrivateSubtitleTrackDriftAlignment
@@ -178,6 +179,8 @@ internal fun PrivateSubtitleFileDialog(
     var manualFirstRow by remember { mutableStateOf("") }
     var manualSecondRow by remember { mutableStateOf("") }
     var manualReviewPage by remember { mutableIntStateOf(0) }
+    var manualBulkExpression by remember { mutableStateOf("") }
+    var manualBulkPage by remember { mutableIntStateOf(0) }
     var excludeRowExpression by remember { mutableStateOf("") }
     var excludeWindowExpression by remember { mutableStateOf("") }
     var driftSelectorOpen by remember { mutableStateOf(false) }
@@ -211,6 +214,8 @@ internal fun PrivateSubtitleFileDialog(
                 manualFirstRow = ""
                 manualSecondRow = ""
                 manualReviewPage = 0
+                manualBulkExpression = ""
+                manualBulkPage = 0
                 excludeRowExpression = ""
                 excludeWindowExpression = ""
                 excludedReviewPage = 0
@@ -751,6 +756,8 @@ internal fun PrivateSubtitleFileDialog(
                 manualFirstRow = ""
                 manualSecondRow = ""
                 manualReviewPage = 0
+                manualBulkExpression = ""
+                manualBulkPage = 0
                 excludeRowExpression = ""
                 excludeWindowExpression = ""
                 excludedReviewPage = 0
@@ -1149,6 +1156,102 @@ internal fun PrivateSubtitleFileDialog(
                                 }
                             }
                         ) { Text("Voeg dit exacte eigen bronpaar toe aan het voorstel") }
+                        Text("Of voeg meerdere exact gekozen bronparen toe: " +
+                            "1:2,3-5:7-9 koppelt regel 1 aan 2 en regels 3–5 " +
+                            "aan 7–9. Alleen even lange, strikt oplopende " +
+                            "bereiken in beide oorspronkelijke sporen.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = manualBulkExpression,
+                            onValueChange = {
+                                manualBulkExpression = it.take(
+                                    PrivateSubtitleManualPairSelection.MAX_EXPRESSION_LENGTH)
+                                manualBulkPage = 0
+                            },
+                            label = { Text("Bronpaarreeksen, bv. 1:2,3-5:7-9") },
+                            minLines = 1, maxLines = 3
+                        )
+                        val bulkManualPairs = remember(manualBulkExpression,
+                            draft.size, stagedImport.imported.size) {
+                            PrivateSubtitleManualPairSelection.parse(
+                                manualBulkExpression, draft.size,
+                                stagedImport.imported.size)
+                        }
+                        val bulkProposal = remember(bulkManualPairs, manualPairs,
+                            proposedIncoming, selectedPairOffset, stillCurrent,
+                            excludedSecondRows, draft) {
+                            if (bulkManualPairs != null &&
+                                selectedPairOffset != null && proposedIncoming != null &&
+                                stillCurrent
+                            ) PrivateSubtitleDocumentCombine.preview(
+                                draft, proposedIncoming,
+                                SubtitleCombineMode.PAIR_OVERLAPPING_TIMES,
+                                selectedPairOffset, excludedSecondRows,
+                                manualPairs + bulkManualPairs
+                            ) else null
+                        }
+                        if (manualBulkExpression.isNotBlank()) {
+                            Text(if (bulkProposal == null)
+                                "Geen geldige bundel: controleer originele " +
+                                    "bronnummers, oplopende volgorde, unieke " +
+                                    "paarregels, bestaande uitsluitingen en " +
+                                    "de volledige SRT/VTT-exportgrenzen."
+                                else "${bulkManualPairs?.size ?: 0} nieuwe " +
+                                    "handmatige paren, volledig gecontroleerd " +
+                                    "tegen alle huidige keuzes.",
+                                color = if (bulkProposal == null)
+                                    MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (bulkProposal != null && bulkManualPairs != null) {
+                            val pages = maxOf(1, (bulkManualPairs.size + 3) / 4)
+                            val page = manualBulkPage.coerceIn(0, pages - 1)
+                            Text("Eigen bronpaar-bundel · pagina ${page + 1}/$pages. " +
+                                "Bekijk alle volledige originele zinnen vóór toepassen.",
+                                style = MaterialTheme.typography.titleSmall)
+                            bulkManualPairs.drop(page * 4).take(4).forEach { pin ->
+                                val firstCue = draft[pin.primaryRow - 1]
+                                val secondCue =
+                                    stagedImport.imported[pin.secondaryRow - 1]
+                                Text("Spoor 1 · bronregel ${pin.primaryRow} · " +
+                                    "${firstCue.startLabel}\n" + firstCue.text +
+                                    "\nSpoor 2 · bronregel ${pin.secondaryRow} · " +
+                                    "${secondCue.startLabel}\n" + secondCue.text,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween) {
+                                TextButton(enabled = page > 0,
+                                    onClick = { manualBulkPage = page - 1 }) {
+                                    Text("← Vorige bundel")
+                                }
+                                TextButton(enabled = page < pages - 1,
+                                    onClick = { manualBulkPage = page + 1 }) {
+                                    Text("Volgende bundel →")
+                                }
+                            }
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = bulkProposal != null,
+                            onClick = {
+                                val current = PrivateSubtitleManualPairSelection.parse(
+                                    manualBulkExpression, draft.size,
+                                    stagedImport.imported.size)
+                                if (current != null && current == bulkManualPairs &&
+                                    bulkProposal != null
+                                ) {
+                                    manualPairs = manualPairs + current
+                                    manualBulkExpression = ""
+                                    manualBulkPage = 0
+                                    manualReviewPage = 0
+                                    pairReviewPage = 0
+                                    secondTrackPreviewPage = 0
+                                }
+                            }
+                        ) { Text("Neem hele gecontroleerde bronpaar-bundel over") }
                         if (manualPairs.isNotEmpty()) {
                             val orderedPins = manualPairs.sortedBy { it.primaryRow }
                             val pageCount = maxOf(1, (orderedPins.size + 3) / 4)
