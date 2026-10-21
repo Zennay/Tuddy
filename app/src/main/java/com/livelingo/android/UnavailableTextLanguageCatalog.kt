@@ -35,6 +35,28 @@ internal object UnavailableTextLanguageCatalog {
             "commercieel gebruik uit; dit is geen goedgekeurd Tuddy-downloadpakket."
     )
 
+    private val kurmanjiCompactResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "amedcj/kurmanji-asr-model",
+        url = "https://huggingface.co/amedcj/kurmanji-asr-model",
+        declaredLicense = "MIT volgens modelkaart",
+        footprint = "94,4M parameters; bestandsgrootte niet gepubliceerd",
+        limitation = "Modelkaart bevat nog placeholderbeschrijving en geen bruikbare dataset- of evaluatiegegevens. " +
+            "Datasetherkomst, dialectdekking, latency, geheugen en Android-runtime zijn niet onafhankelijk gecontroleerd. " +
+            "Niet geïntegreerd of op Android getest."
+    )
+
+    private val soraniTinyResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "RevgeAI/vekol-stt-ckb-tiny",
+        url = "https://huggingface.co/RevgeAI/vekol-stt-ckb-tiny",
+        declaredLicense = "CC-BY-NC-4.0 (niet-commercieel)",
+        footprint = "18 MB int4 / 37 MB int8 volgens modelkaart",
+        limitation = "Modelkaart meldt zelfgerapporteerd WER 35,0% en CER 9,85% op Common Voice 25. " +
+            "Niet onafhankelijk herhaald of op Android gevalideerd; de niet-commerciële licentie sluit " +
+            "commercieel gebruik uit zonder aparte toestemming. Niet geïntegreerd of geactiveerd."
+    )
+
     private val madladResearchCandidate = OfflineLanguageModelCandidate(
         category = "Tekstvertaling",
         title = "Google MADLAD-400-3B-MT",
@@ -64,7 +86,8 @@ internal object UnavailableTextLanguageCatalog {
                     footprint = "modelbestand circa 967 MB",
                     limitation = "Niet geïntegreerd of op Android getest. Trainingsdatarechten, " +
                         "dialectnauwkeurigheid, latency en geheugenbeslag zijn niet geverifieerd."
-                )
+                ),
+                kurmanjiCompactResearchCandidate
             ),
             translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
@@ -85,7 +108,8 @@ internal object UnavailableTextLanguageCatalog {
                     footprint = "modelbestand circa 967 MB",
                     limitation = "Niet geïntegreerd of op Android getest. Trainingsdatarechten, " +
                         "Sorani-variantdekking, latency en geheugenbeslag zijn niet geverifieerd."
-                )
+                ),
+                soraniTinyResearchCandidate
             ),
             translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
@@ -103,10 +127,10 @@ internal object UnavailableTextLanguageCatalog {
                     title = "Sabtain-Dev/STT-Whisper-Pashto",
                     url = "https://huggingface.co/Sabtain-Dev/STT-Whisper-Pashto",
                     declaredLicense = "MIT volgens modelkaart",
-                    footprint = "grootte van het modelbestand nog niet vastgesteld",
-                    limitation = "Niet geïntegreerd of op Android getest. Dataset- en " +
-                        "gewichtenherkomst, dialectdekking, latency en geheugenbeslag " +
-                        "zijn niet onafhankelijk geverifieerd."
+                    footprint = "0,2B parameters; bestandsgrootte niet vastgesteld",
+                    limitation = "Modelkaart rapporteert zelf WER 43,83% op de eigen Pashto-ASR-dataset; dit is niet onafhankelijk herhaald. " +
+                        "Datasetlicentie, splitsing, gewichtenherkomst, dialectdekking en Android-prestaties zijn niet geverifieerd. " +
+                        "Niet geïntegreerd of op Android getest."
                 )
             ),
             translationCandidates = listOf(
