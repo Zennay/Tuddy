@@ -78,7 +78,10 @@ internal fun PrivateSubtitleFileDialog(
     onSaveCopyNoticeRead: () -> Unit,
     onSaveWorksheetCopy: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
-    onSaveTimedSheet: (List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit
+    onSaveTimedSheet: (List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
+    incomingSecondPaste: SubtitlePasteFileContent?,
+    onChoosePasteDocument: (List<PrivateSubtitleCue>, SubtitlePasteFileContent) -> Unit,
+    onSecondPasteConsumed: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     var jumpToTime by remember { mutableStateOf("") }
@@ -590,16 +593,26 @@ internal fun PrivateSubtitleFileDialog(
         )
     }
 
-    if (pasteSecondOpen) {
+    if (pasteSecondOpen || incomingSecondPaste != null) {
         SubtitlePasteDialog(
             title = "Tweede SRT/VTT-spoor zelf plakken",
-            onDismiss = { pasteSecondOpen = false },
+            initialDocument = incomingSecondPaste,
+            onChooseDocument = { request ->
+                onChoosePasteDocument(draft.toList(), request)
+                pasteSecondOpen = false
+                onSecondPasteConsumed()
+            },
+            onDismiss = {
+                pasteSecondOpen = false
+                onSecondPasteConsumed()
+            },
             onAccept = { imported ->
                 pendingImport = PendingSubtitleImport(draft.toList(), imported.toList())
                 importMode = SubtitleCombineMode.APPEND_AFTER_LAST
                 secondTrackOffsetMs = 0L
                 notice = ""
                 pasteSecondOpen = false
+                onSecondPasteConsumed()
             }
         )
     }

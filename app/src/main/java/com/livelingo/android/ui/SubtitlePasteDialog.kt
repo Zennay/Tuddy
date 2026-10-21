@@ -1,8 +1,5 @@
 package com.livelingo.android.ui
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,27 +31,49 @@ import com.livelingo.android.PrivateLrcSubtitleDraft
 import com.livelingo.android.PrivatePlainTextSubtitleDraft
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
-import com.livelingo.android.PrivateSubtitleImportDocument
 import com.livelingo.android.PrivateSubtitleRowSelection
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
- * Intentional manual paste only. No clipboard reads, IO, cloud, transcript
- * edits or persistence. Plain-line timestamps are explicitly synthetic.
+ * Exact bounded editor input returned by the Activity-owned Android picker.
+ * Preserved in RAM only across that explicit provider choice; never persisted.
+ */
+internal data class SubtitlePasteFormat(
+    val plainLines: Boolean,
+    val lrcMode: Boolean,
+    val splitMode: PlainSubtitleSplitMode
+)
+internal data class SubtitlePasteFileContent(
+    val text: String,
+    val format: SubtitlePasteFormat,
+    val ownMeaning: String = "",
+    val notice: String = ""
+)
+
+/**
+ * Intentional manual paste. No automatic clipboard reads, URI rights,
+ * conversation mutation or persistence. Plain-line times are estimates.
  */
 @Composable
 internal fun SubtitlePasteDialog(
     title: String,
     onDismiss: () -> Unit,
-    onAccept: (List<PrivateSubtitleCue>) -> Unit
+    onAccept: (List<PrivateSubtitleCue>) -> Unit,
+    onChooseDocument: (SubtitlePasteFileContent) -> Unit,
+    initialDocument: SubtitlePasteFileContent? = null
 ) {
-    var raw by remember { mutableStateOf("") }
-    var ownMeaning by remember { mutableStateOf("") }
-    var plainLines by remember { mutableStateOf(false) }
-    var lrcMode by remember { mutableStateOf(false) }
-    var splitMode by remember { mutableStateOf(PlainSubtitleSplitMode.LINES) }
+    var raw by remember(initialDocument) { mutableStateOf(initialDocument?.text.orEmpty()) }
+    var ownMeaning by remember(initialDocument) {
+        mutableStateOf(initialDocument?.ownMeaning.orEmpty())
+    }
+    var plainLines by remember(initialDocument) {
+        mutableStateOf(initialDocument?.format?.plainLines ?: false)
+    }
+    var lrcMode by remember(initialDocument) {
+        mutableStateOf(initialDocument?.format?.lrcMode ?: false)
+    }
+    var splitMode by remember(initialDocument) {
+        mutableStateOf(initialDocument?.format?.splitMode ?: PlainSubtitleSplitMode.LINES)
+    }
     var startMs by remember { mutableStateOf(0L) }
     var durationMs by remember { mutableStateOf(3_500L) }
     var manualTiming by remember { mutableStateOf(false) }
@@ -68,60 +87,8 @@ internal fun SubtitlePasteDialog(
     var lastRow by remember { mutableStateOf("") }
     var explicitRows by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
-    val context = LocalContext.current
-    var documentNotice by remember { mutableStateOf("") }
-    val importScope = rememberCoroutineScope()
-    var importRequestId by remember { mutableIntStateOf(0) }
-    var importReading by remember { mutableStateOf(false) }
-    // Document providers may be remote: never block Android's UI thread while
-    // reading, and ignore a result if the input or mode was changed meanwhile.
-    val openDocument = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { selected ->
-        if (selected == null) {
-            importReading = false
-            documentNotice = "Bestandskeuze geannuleerd; bestaande invoer behouden."
-        } else {
-            val request = importRequestId
-            val beforeRaw = raw
-            val beforeMeaning = ownMeaning
-            val beforeMode = splitMode
-            val beforePlain = plainLines
-            val beforeLrc = lrcMode
-            importScope.launch {
-                importReading = true
-                val imported = withContext(Dispatchers.IO) {
-                    PrivateSubtitleImportDocument.read(context.contentResolver, selected)
-                }
-                if (request != importRequestId || raw != beforeRaw ||
-                    ownMeaning != beforeMeaning || splitMode != beforeMode ||
-                    plainLines != beforePlain || lrcMode != beforeLrc) {
-                    importReading = false
-                    documentNotice = "Invoer of formaat is ondertussen veranderd: " +
-                        "het document is niet overgenomen."
-                    return@launch
-                }
-                importReading = false
-                when (imported) {
-                    is PrivateSubtitleImportDocument.Result.Ready -> {
-                        raw = imported.text
-                        ownMeaning = ""
-                        firstRow = "1"
-                        lastRow = ""
-                        explicitRows = ""
-                        search = ""
-                        page = 0
-                        inputTooLarge = false
-                        documentNotice = "Document lokaal ingelezen (${imported.sizeBytes} bytes). " +
-                            "Controleer de gekozen invoermodus, alle regels en het voorbeeld. " +
-                            "Er is nog niets toegepast."
-                    }
-                    is PrivateSubtitleImportDocument.Result.Rejected -> {
-                        documentNotice = imported.reason + " De vorige invoer is behouden."
-                    }
-                }
-            }
-        }
+    var documentNotice by remember(initialDocument) {
+        mutableStateOf(initialDocument?.notice.orEmpty())
     }
     val timedInspection = remember(raw, plainLines, splitMode) {
         if (plainLines && splitMode in setOf(
@@ -224,11 +191,12 @@ internal fun SubtitlePasteDialog(
                 )
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !importReading,
                     onClick = {
-                        importRequestId += 1
-                        documentNotice = ""
-                        openDocument.launch(arrayOf("*/*"))
+                        onChooseDocument(SubtitlePasteFileContent(
+                            raw,
+                            SubtitlePasteFormat(plainLines, lrcMode, splitMode),
+                            ownMeaning
+                        ))
                     }
                 ) { Text("📂 Kies eigen UTF-8 SRT, VTT, LRC, CSV, TSV of TXT-document…") }
                 Text(
@@ -239,10 +207,6 @@ internal fun SubtitlePasteDialog(
                         "kan zelf online of gesynchroniseerd zijn.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                if (importReading) {
-                    Text("Gekozen document begrensd aan het inlezen…",
-                        style = MaterialTheme.typography.bodySmall)
-                }
                 if (documentNotice.isNotBlank()) {
                     Text(documentNotice, style = MaterialTheme.typography.bodySmall,
                         color = if (documentNotice.startsWith("Document lokaal"))
@@ -724,7 +688,7 @@ internal fun SubtitlePasteDialog(
         },
         confirmButton = {
             TextButton(enabled = parsed != null && chosenIndices != null &&
-                !inputTooLarge && !importReading, onClick = {
+                !inputTooLarge, onClick = {
                 if (inputTooLarge) return@TextButton
                 // Fresh full parse, row range and exact selected cue snapshot
                 // at consent, independent of the search query and page.

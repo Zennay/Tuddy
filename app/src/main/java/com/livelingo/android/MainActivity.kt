@@ -49,7 +49,9 @@ import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
 import com.livelingo.android.ui.DailyStudyHub
@@ -61,6 +63,7 @@ import com.livelingo.android.ui.SessionMeaningIndexDialog
 import com.livelingo.android.ui.SessionMeaningRow
 import com.livelingo.android.ui.PrivateSubtitleFileDialog
 import com.livelingo.android.ui.SubtitlePasteDialog
+import com.livelingo.android.ui.SubtitlePasteFileContent
 import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
@@ -94,6 +97,13 @@ private data class PendingTimedSubtitleSheetSave(
     val cues: List<PrivateSubtitleCue>,
     val format: TimedSubtitleSheetFormat,
     val bytes: ByteArray
+)
+
+/** Explicit Android file selection with a RAM-only draft recovery point. */
+private data class PendingManualSubtitleDocument(
+    val session: Int,
+    val previous: SubtitlePasteFileContent,
+    val secondDraft: List<PrivateSubtitleCue>?
 )
 
 /** One explicit HTML worksheet save handoff; never persisted by Tuddy. */
@@ -327,6 +337,15 @@ private fun TuddyScreen(
     var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
     var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var subtitlePasteOpen by remember { mutableStateOf(false) }
+    var pendingManualSubtitleDocument by remember {
+        mutableStateOf<PendingManualSubtitleDocument?>(null)
+    }
+    var readyFirstPasteDocument by remember {
+        mutableStateOf<SubtitlePasteFileContent?>(null)
+    }
+    var readySecondPasteDocument by remember {
+        mutableStateOf<SubtitlePasteFileContent?>(null)
+    }
     // Second SRT/VTT picker: one explicit RAM-only document pair, never disk.
     var pendingSecondSubtitle by remember {
         mutableStateOf<Pair<Int, List<PrivateSubtitleCue>>?>(null)
@@ -1508,6 +1527,50 @@ private fun TuddyScreen(
         }
     }
 
+    // Picker MUST be Activity-owned: ON_STOP dismisses all private dialogs.
+    // Recovery is restricted to the exact user-selected bounded UTF-8 input.
+    val openManualSubtitleDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val pending = pendingManualSubtitleDocument
+        pendingManualSubtitleDocument = null
+        if (pending != null && pending.session == generation) {
+            coroutineScope.launch {
+                val result = if (uri == null) {
+                    pending.previous.copy(notice =
+                        "Bestandskeuze geannuleerd; je eerdere invoer is heropend.")
+                } else if (uri.scheme != "content") {
+                    pending.previous.copy(notice =
+                        "Ongeldige Android-bestandslocatie; je eerdere invoer is behouden.")
+                } else {
+                    val loaded = withContext(Dispatchers.IO) {
+                        PrivateSubtitleImportDocument.read(context.contentResolver, uri)
+                    }
+                    when (loaded) {
+                        is PrivateSubtitleImportDocument.Result.Ready ->
+                            SubtitlePasteFileContent(
+                                loaded.text, pending.previous.format,
+                                notice = "Document lokaal ingelezen (${loaded.sizeBytes} bytes). " +
+                                    "Controleer eerst alle regels; niets is toegepast."
+                            )
+                        is PrivateSubtitleImportDocument.Result.Rejected ->
+                            pending.previous.copy(notice =
+                                loaded.reason + " Je eerdere invoer is behouden.")
+                    }
+                }
+                if (pending.session != generation ||
+                    pendingManualSubtitleDocument != null) return@launch
+                if (pending.secondDraft != null) {
+                    subtitleFileCues = pending.secondDraft.toList()
+                    readySecondPasteDocument = result
+                } else {
+                    readyFirstPasteDocument = result
+                    subtitlePasteOpen = true
+                }
+            }
+        }
+    }
+
     val openSecondSubtitleFile = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1622,6 +1685,8 @@ private fun TuddyScreen(
                 previewArchiveRows = null
                 subtitleFileCues = null
                 subtitlePasteOpen = false
+                readyFirstPasteDocument = null
+                readySecondPasteDocument = null
                 importedSecondSubtitle = null
                 secondSubtitleError = null
                 subtitleWorksheetNotice = null
@@ -1666,6 +1731,9 @@ private fun TuddyScreen(
             previewArchiveRows = null
             subtitleFileCues = null
             subtitlePasteOpen = false
+            pendingManualSubtitleDocument = null
+            readyFirstPasteDocument = null
+            readySecondPasteDocument = null
             pendingSecondSubtitle = null
             importedSecondSubtitle = null
             secondSubtitleError = null
@@ -2013,9 +2081,22 @@ private fun TuddyScreen(
         if (subtitlePasteOpen) {
             SubtitlePasteDialog(
                 title = "Eigen SRT/WebVTT-tekst plakken",
-                onDismiss = { subtitlePasteOpen = false },
+                initialDocument = readyFirstPasteDocument,
+                onChooseDocument = { request ->
+                    pendingManualSubtitleDocument = PendingManualSubtitleDocument(
+                        generation, request, null
+                    )
+                    subtitlePasteOpen = false
+                    readyFirstPasteDocument = null
+                    openManualSubtitleDocument.launch(arrayOf("*/*"))
+                },
+                onDismiss = {
+                    subtitlePasteOpen = false
+                    readyFirstPasteDocument = null
+                },
                 onAccept = { imported ->
                     subtitlePasteOpen = false
+                    readyFirstPasteDocument = null
                     subtitleFileCues = imported.toList()
                     error = ""
                 }
@@ -2036,6 +2117,16 @@ private fun TuddyScreen(
                     // SAF providers do not agree on SRT/VTT MIME types.
                     openSecondSubtitleFile.launch(arrayOf("*/*"))
                 },
+                incomingSecondPaste = readySecondPasteDocument,
+                onChoosePasteDocument = { draftCues, request ->
+                    pendingManualSubtitleDocument = PendingManualSubtitleDocument(
+                        generation, request, draftCues.toList()
+                    )
+                    readySecondPasteDocument = null
+                    subtitleFileCues = null
+                    openManualSubtitleDocument.launch(arrayOf("*/*"))
+                },
+                onSecondPasteConsumed = { readySecondPasteDocument = null },
                 pendingSecondFile = importedSecondSubtitle,
                 secondFileError = secondSubtitleError,
                 onSecondFileReceived = {
