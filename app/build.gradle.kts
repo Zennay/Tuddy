@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// GitHub Actions supplies these values; local builds stay explicitly marked as local.
+val tuddySourceSha = System.getenv("GITHUB_SHA") ?: "local"
+val tuddyBuildRunId = System.getenv("GITHUB_RUN_ID") ?: "local"
+
 android {
     namespace = "com.livelingo.android"
     compileSdk = 35
@@ -12,13 +17,18 @@ android {
         targetSdk = 35
         versionCode = 4
         versionName = "0.4.0"
+        buildConfigField("String", "TUDDY_SOURCE_SHA", "\"$tuddySourceSha\"")
+        buildConfigField("String", "TUDDY_BUILD_RUN_ID", "\"$tuddyBuildRunId\"")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 dependencies {
     val bom = platform("androidx.compose:compose-bom:2025.04.01")
