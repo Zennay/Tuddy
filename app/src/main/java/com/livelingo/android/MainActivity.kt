@@ -295,9 +295,6 @@ private fun TuddyScreen(
     // Reuse ML Kit's bundled on-device language detector across live captions;
     // callbacks are invalidated when the screen leaves composition.
     val localLanguageDetector = remember { LocalLanguageDetector() }
-    DisposableEffect(localLanguageDetector) {
-        onDispose { localLanguageDetector.close() }
-    }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
         mutableStateOf(PrivateScreenShield.enabled(context))
@@ -2118,6 +2115,7 @@ private fun TuddyScreen(
             pendingSingleCaptionDelete = null
             pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
+            localLanguageDetector.close()
             captionSpeaker.close()
         }
     }
