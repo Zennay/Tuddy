@@ -1,3 +1,9 @@
+## Verbeterde lokale woordherhaling zonder spraakherkenning
+
+De optionele **geschatte woordvolger** kan nu ook korte woorden herhalen: bij een geschatte woordduur onder 0,75 s bevat de herhaling een begrensd stukje naburige audio binnen de zelfgekozen ondertitelcue. Te korte cues en vensters boven twee minuten blijven uitgesloten; handmatige tijdankers blijven leidend. Het Android-scherm maakt duidelijk dat dit alleen een **tijdcode-inschatting** is en de herhaling andere woorden kan omvatten. [Handleiding](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
 ## Nieuw · cue-relatieve handmatige woordankers hergebruiken
 
 Naast absolute markeringen accepteert de offline woordvolger nu
