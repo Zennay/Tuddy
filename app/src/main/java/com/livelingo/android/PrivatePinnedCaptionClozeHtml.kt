@@ -29,6 +29,10 @@ internal object PrivatePinnedCaptionClozeHtml {
         }.joinToString(" ")
     }
 
+    /** Same gaps as the exported HTML, for the Android consent preview. */
+    fun previewHint(text: String): String =
+        missingWords(PrivatePinnedCaptionStudyTsv.field(text, spreadsheetSafe = false))
+
     fun snapshot(
         rows: List<TranscriptExportRow>,
         direction: PinnedStudyDirection,
