@@ -71,3 +71,27 @@ beweerd dat iets geleerd is.
 Een eigen oefennotitie heeft maximaal 240 Unicode-tekens: ook
 emoji tellen als één zichtbaar teken en worden niet halverwege
 afgekapt. Bij bewuste export wordt de inhoud opnieuw gecontroleerd.
+
+
+## Mijn eigen A–B-beoordelingen als CSV
+
+In hetzelfde **Mijn privé luisteroverzicht** kun je nu **Bekijk mijn volledige
+CSV vóór opslaan** gebruiken: je ziet alle rijen, exact zoals Tuddy ze naar
+UTF-8 schrijft. Met **Bewaar mijn oefenfragmenten als CSV…** kies je daarna
+zelf in Android een documentprovider. Het CSV-bestand bevat voor maximaal vier
+fragmenten zes kolommen: volgnummer, eigen begin- en eindtijd, eigen
+beoordeling, zelfgeschreven volgende oefenstap en een kort herkenbaar
+ondertitelvoorbeeld (of een melding dat er geen exacte brontekstmatch is).
+Tijden zijn eigen markeringen/gecorrigeerde SRT/VTT-tijden, geen door
+spraakherkenning gevalideerde woordtiming. Het CSV-formaat gebruikt expliciet
+dubbel gequote velden en CRLF-rijen; spreadsheetformules uit gebruikersinvoer
+worden niet uitgevoerd doordat een gevaarlijke beginwaarde als tekst wordt
+gemarkeerd. Geldige emoji blijven behouden. De CSV bevat geen audio-URI,
+geluidsbytes, accountgegevens of externe netwerkverzoeken.
+
+Dezelfde veilige opslagregels gelden als voor HTML en TXT. Tuddy bewaart
+het bestand nooit vanzelf en controleert het exacte CSV-bytebeeld opnieuw
+na de Android-bestandskiezer; bij gewijzigde fragmenten, correcties of
+beoordelingen moet je opnieuw beginnen. Een gekozen externe provider kan
+natuurlijk wel synchroniseren. Je kunt de ruwe CSV vooraf ook zelf selecteren,
+waarbij Androids eigen klembordapp de selectie kan verwerken.
