@@ -122,6 +122,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var practiceReportOpen by remember { mutableStateOf(false) }
     // The saved worksheet choice is independent of the guided playback queue.
     var worksheetScope by remember { mutableStateOf(PrivatePracticeRouteScope.ALL) }
+    var worksheetAudience by remember { mutableStateOf(PrivateListeningWorksheetAudience.SELF_STUDY) }
     var practiceCsvPreviewOpen by remember { mutableStateOf(false) }
     // An immutable user-approved document lives only while the Android
     // destination chooser is open; never retain the audio URI or audio bytes.
@@ -172,7 +173,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 PrivatePracticeReportFormat.WORKSHEET_HTML ->
                     PrivateListeningWorksheet.snapshot(
                         cues, subtitleOffsetMs, savedPracticePassages,
-                        passageRatings, passageNotes, worksheetScope
+                        passageRatings, passageNotes, worksheetScope, worksheetAudience
                     )
                 PrivatePracticeReportFormat.TXT ->
                     PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
@@ -184,7 +185,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
             }
             if (!prepared || savedPracticePassages.isEmpty() ||
                 updatedSummary != pending.summary ||
-                pending.selectionScope != worksheetScope || updatedBytes == null ||
+                pending.selectionScope != worksheetScope ||
+                pending.worksheetAudience != worksheetAudience ||
+                updatedBytes == null ||
                 !updatedBytes.contentEquals(pending.bytes)
             ) {
                 notice = "Mijn luisteroefening is gewijzigd. Bekijk en bewaar opnieuw."
@@ -211,7 +214,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
             PrivatePracticeReportFormat.WORKSHEET_HTML ->
                 PrivateListeningWorksheet.snapshot(
                     cues, subtitleOffsetMs, savedPracticePassages,
-                    passageRatings, passageNotes, worksheetScope
+                    passageRatings, passageNotes, worksheetScope, worksheetAudience
                 )
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
             PrivatePracticeReportFormat.CSV ->
@@ -224,12 +227,16 @@ internal fun LocalSubtitleAudioPreviewDialog(
             notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
         } else {
             pendingPracticeReport = PendingPrivatePracticeReport(
-                report, format, worksheetScope, payload)
+                report, format, worksheetScope, worksheetAudience, payload)
             practiceReportOpen = false
             savePracticeReport.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = format.mime
-                putExtra(Intent.EXTRA_TITLE, format.filename)
+                putExtra(Intent.EXTRA_TITLE,
+                    if (format == PrivatePracticeReportFormat.WORKSHEET_HTML &&
+                        worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                        "Tuddy-luister-leerlingenblad-zonder-bronregels.html"
+                    else format.filename)
             })
         }
     }
@@ -255,6 +262,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         practiceReportOpen = false
         practiceCsvPreviewOpen = false
         pendingPracticeReport = null
+        worksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY
         guidedActive = false
         guidedQueue = emptyList()
         guidedIndex = 0
@@ -1538,6 +1546,29 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 candidate.title + " (" + candidateCount + ")")
                         }
                     }
+                    HorizontalDivider()
+                    Text("Voor wie is dit luisterwerkblad?",
+                        style = MaterialTheme.typography.titleSmall)
+                    PrivateListeningWorksheetAudience.entries.forEach { audience ->
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive,
+                            onClick = { worksheetAudience = audience }
+                        ) {
+                            Text((if (worksheetAudience == audience) "● " else "○ ") +
+                                audience.title)
+                        }
+                    }
+                    Text(
+                        if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                            "Leerlingenbestand: bevat alleen de eigen A–B-tijdvakken " +
+                                "en invulvakken, geen bronregels of persoonlijke " +
+                                "notities/beoordelingen. Controleer de fragmenttijden " +
+                                "voordat je het bestand deelt."
+                        else "Zelfstudie: tik expliciet om bronregels te onthullen. " +
+                            "De bronregels worden op een aparte pagina afgedrukt.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     TextButton(
                         enabled = savedPracticePassages.isNotEmpty() && !guidedActive &&
                             privatePracticeRouteCandidates(
@@ -1546,7 +1577,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         onClick = {
                             choosePracticeReport(PrivatePracticeReportFormat.WORKSHEET_HTML)
                         }
-                    ) { Text("Bewaar luisterwerkblad · vragen en aparte bronregels…") }
+                    ) {
+                        Text(if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
+                            "Bewaar leerlingenblad zonder bronregels…"
+                        else "Bewaar luisterwerkblad · vragen en aparte bronregels…")
+                    }
                     TextButton(
                         enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.TXT) }
