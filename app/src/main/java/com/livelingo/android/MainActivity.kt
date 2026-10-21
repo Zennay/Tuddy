@@ -1532,35 +1532,53 @@ private fun TuddyScreen(
         }
     }
 
+    // The external Android provider can be backed by network storage.
+    // Bounded IO and SRT/VTT parsing never run on the UI thread.
+    suspend fun readSelectedSubtitle(uri: Uri): Pair<List<PrivateSubtitleCue>?, String> {
+        if (uri.scheme != "content") return null to
+            "Geen geldige Android-documentprovider; bestaande ondertitels behouden."
+        return withContext(Dispatchers.IO) {
+            when (val selected = PrivateSubtitleImportDocument.read(
+                context.contentResolver, uri
+            )) {
+                is PrivateSubtitleImportDocument.Result.Rejected ->
+                    null to selected.reason
+                is PrivateSubtitleImportDocument.Result.Ready -> {
+                    val parsed = PrivateSubtitleFileReader.read(
+                        selected.text.toByteArray(Charsets.UTF_8)
+                    )
+                    if (parsed == null)
+                        null to "Geen geldig SRT/WebVTT-document: controleer " +
+                            "tijdcodes, tekstregels en maximaal 500 cues."
+                    else parsed to ""
+                }
+            }
+        }
+    }
+
     val openSubtitleFile = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         val expected = pendingSubtitleOpenGeneration
         pendingSubtitleOpenGeneration = null
-        if (uri != null && expected != null && expected == generation) {
-            val loaded = runCatching {
-                val input = context.contentResolver.openInputStream(uri)
-                    ?: throw IllegalArgumentException("Unreadable subtitle document")
-                val bytes = input.use { stream ->
-                    val collected = ByteArrayOutputStream()
-                    val buffer = ByteArray(8192)
-                    while (true) {
-                        val count = stream.read(buffer)
-                        if (count < 0) break
-                        if (count == 0) continue
-                        if (collected.size() + count > PrivateSubtitleFileReader.MAX_BYTES)
-                            throw IllegalArgumentException("Oversized subtitle document")
-                        collected.write(buffer, 0, count)
-                    }
-                    collected.toByteArray()
+        if (expected != null && expected == generation) {
+            when {
+                uri == null -> {
+                    // Android cancellation leaves the current live session alone.
+                    error = "Bestandskeuze geannuleerd; er is niets geopend."
                 }
-                PrivateSubtitleFileReader.read(bytes)
-            }.getOrNull()
-            subtitleFileCues = loaded
-            if (loaded == null) {
-                error = "Ongeldig of te groot SRT/WebVTT-bestand; gesprek ongewijzigd."
-            } else {
-                error = ""
+                else -> coroutineScope.launch {
+                    val (loaded, reason) = readSelectedSubtitle(uri)
+                    // A newer picker or erased session supersedes this read.
+                    if (expected != generation ||
+                        pendingSubtitleOpenGeneration != null) return@launch
+                    if (loaded == null) {
+                        error = reason + " Het huidige gesprek blijft ongewijzigd."
+                    } else {
+                        subtitleFileCues = loaded.toList()
+                        error = ""
+                    }
+                }
             }
         }
     }
@@ -1620,30 +1638,21 @@ private fun TuddyScreen(
         val pending = pendingSecondSubtitle
         pendingSecondSubtitle = null
         if (pending != null && pending.first == generation) {
-            subtitleFileCues = pending.second // recover only explicit temporary draft
+            // The existing editor was intentionally dismissed while Android
+            // took focus. Reopen exactly that RAM-only snapshot.
+            subtitleFileCues = pending.second.toList()
             importedSecondSubtitle = null
             secondSubtitleError = null
-            if (uri != null) {
-                val loaded = if (uri.scheme != "content") null else runCatching {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        val collected = ByteArrayOutputStream()
-                        val buffer = ByteArray(8192)
-                        while (true) {
-                            val count = input.read(buffer)
-                            if (count < 0) break
-                            if (count == 0) continue
-                            if (collected.size() + count > PrivateSubtitleFileReader.MAX_BYTES)
-                                throw IllegalArgumentException("Subtitle exceeds size limit")
-                            collected.write(buffer, 0, count)
-                        }
-                        PrivateSubtitleFileReader.read(collected.toByteArray())
-                    }
-                }.getOrNull()
-                if (loaded != null) {
-                    importedSecondSubtitle = pending.second to loaded
+            if (uri != null) coroutineScope.launch {
+                val (loaded, reason) = readSelectedSubtitle(uri)
+                if (pending.first != generation ||
+                    pendingSecondSubtitle != null) return@launch
+                // A user could edit/replace the draft while the provider reads.
+                if (subtitleFileCues != pending.second) return@launch
+                if (loaded == null) {
+                    secondSubtitleError = reason + " Het bestaande concept is behouden."
                 } else {
-                    secondSubtitleError = "Tweede bestand geweigerd: kies een geldig UTF-8 " +
-                        "SRT/VTT-bestand van maximaal 256 KiB en 500 regels."
+                    importedSecondSubtitle = pending.second.toList() to loaded.toList()
                 }
             }
         }
