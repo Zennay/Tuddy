@@ -1,3 +1,31 @@
+## Nieuw · gedetailleerde bronregel-CSV voor eigen A–B-luisterfragmenten
+
+Naast de bestaande compacte CSV kun je in **Mijn privé luisteroverzicht**
+de knop **Bekijk volledige bronregel-CSV vóór opslaan** gebruiken.
+Deze toont de werkelijk te bewaren CSV-rijen, met één aparte rij voor
+elke eigen SRT/VTT-ondertitelregel die **helemaal** binnen een bewust
+gemarkeerd A–B-fragment valt. De bronregelnummers blijven 1-gebaseerd,
+met begin en einde op de eigen huidige milliseconde-tijdlijn. Elke rij
+vermeldt ook het gekozen luisterfragment, diens begin/eind, de eigen
+beoordeling en je optionele eigen volgende oefenstap. Zonder passende
+regel schrijft de export een expliciete afwezigheidsmelding in plaats
+van ten onrechte audioherkenning te suggereren. Dit is geen echte
+audio-/ondertiteluitlijning en er wordt niets voorspeld of vertaald.
+
+Met **Bewaar alle passende bronregels als CSV…** start pas de
+expliciete Android-documentkeuze. Het bestand krijgt een andere
+voorgestelde naam dan de compacte CSV. De output is strikt UTF-8,
+altijd CSV-gequote, tegen formuleprefixen beschermd en begrensd op
+128 KiB; te lange of ongeldige broninhoud laat de gehele export
+veilig mislukken in plaats van bronregels stilzwijgend af te kappen.
+Tijdens terugkeer uit de Android-bestandskiezer herberekent Tuddy
+de gehele bytevolgorde en vergelijkt die met het goedgekeurde
+RAM-concept. De bestaande selectiefilter (alle, nog oefenen of
+onbeoordeeld) blijft van toepassing. De gekozen externe Android-
+bestandsprovider kan je eigen tekst wel elders synchroniseren.
+
+---
+
 ## Toegankelijke bronregels voor je zelfgekozen ondertiteltaal
 
 Als je vóór het bewaren zelf een taal kiest bij de eigen ondertiteltekst,
@@ -143,9 +171,13 @@ Het afzonderlijke **Bronregels voor zelfcontrole** neemt nu juist
 op, ook de tussenliggende. Een te groot HTML-document wordt geheel
 geweigerd bij de bestaande 128 KiB-uitvoergrens; er wordt geen
 stilzwijgend afgekapt antwoordblad als compleet aangeboden.
-Lange individuele brontekst wordt zichtbaar en Unicode-veilig ingekort;
-de broninhoud blijft ongewijzigd en rechts-naar-links-tekst behoudt
-een passende tekstrichting. Bij meerdere luisterfragmenten kun je met
+Alleen de **korte uitklap-preview** kort lange individuele regels
+zichtbaar en Unicode-veilig in. Het volledige bronregelblad bewaart de
+complete geschoonde tekst per passende bronregel (tot 8.192 tekens per
+ingelezen regel); als de bron- of HTML-bestandsgrens wordt overschreden,
+wordt de uitvoer geweigerd in plaats van stilzwijgend een onvolledig
+antwoordblad te maken. De broninhoud in de sessie blijft ongewijzigd
+en rechts-naar-links-tekst behoudt een passende tekstrichting. Bij meerdere luisterfragmenten kun je met
 de links boven het werkblad direct naar een fragment springen; die
 schermnavigatie verschijnt niet op de afdruk.
 
