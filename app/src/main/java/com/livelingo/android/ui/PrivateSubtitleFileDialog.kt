@@ -702,6 +702,9 @@ internal fun PrivateSubtitleFileDialog(
             onSaveLrc = { exportCues ->
                 onSaveLrc(draft.toList(), exportCues.toList())
             },
+            onSaveSbv = { exportCues ->
+                onSaveSbv(draft.toList(), exportCues.toList())
+            },
             onShareExcerpt = { exportCues, format ->
                 onShareExcerpt(exportCues.toList(), format)
             },
