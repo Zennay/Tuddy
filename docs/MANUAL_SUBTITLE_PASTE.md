@@ -1108,6 +1108,28 @@ overschrijving of verkapte fallback. De toekomstig opgeslagen
 SRT/VTT-eindtijden volgen nog steeds uit het volgende LRC-begin
 (laatste eindtijd blijft geschat), niet uit opgenomen audio.
 
+## Eén oorspronkelijk LRC-begin exact corrigeren
+
+Wie slechts één verkeerd LRC-tijdstempel heeft, hoeft niet langer
+alle geselecteerde cues met dezelfde offset te verschuiven:
+**Corrigeer één foutief LRC-begin exact** biedt een afzonderlijke
+1-gebaseerde originele **bronregel** en gewenste absolute
+**uu:mm:ss.mmm-begintijd**. Met **Vul eerste geselecteerde cue en
+zijn huidige tijd in** wordt eerst uitsluitend een uitgangspunt
+ingevuld, zonder direct iets te veranderen. Een correctie van
+minuten kan hiermee ook wanneer de ±30-seconden-groepscorrectie
+niet geschikt is.
+
+De volledige voor/na-preview toont ook de mogelijk veranderde
+**eindtijd van de onmiddellijk voorgaande cue**; je kunt
+naar de eerste of volgende gewijzigde pagina springen en alle
+bronregels bekijken. Pas **Bevestig deze ene exacte LRC-tijdcorrectie**
+wijzigt het tijdelijke concept. Dezelfde bounded Undo/Redo-functie
+geldt. De actie wordt geheel geweigerd bij gelijke oude/nieuwe
+tijd, niet-bestaand bronnummer, dubbele of omgekeerde tijdstempel,
+negatieve tijd, ongeldige metadata of niet-exporteerbare volledige
+SRT/VTT. Het bestand bij de gekozen provider blijft intact.
+
 ## Tweepuntscorrectie van een eigen LRC-ondertitelreeks
 
 Naast een constante verschuiving kunnen twee **expliciet door jou
