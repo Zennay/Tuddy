@@ -1,3 +1,9 @@
+## Android Delen → Tuddy: ook LRC-lyrics met eigen tijdcodes
+
+Naast complete SRT/WebVTT-tekst kun je nu eigen **LRC** met geldige `[mm:ss.xx]`- of `[mm:ss.xxx]`-markeringen als **platte tekst** delen. Tuddy opent de bestaande LRC-bewerkroute met een expliciete, tijdelijke preview; foutieve of te grote broninhoud wordt niet stilzwijgend geïmporteerd. LRC geeft alleen zelf vastgelegde begintijden; afgeleide eindtijden zijn niet met audio gemeten. Geen bijlagen, cloud, automatische vertaling of schrijfacties. [Meer uitleg](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
+
 ## Nieuw · gedeelde ondertitels rechtstreeks als lokaal editorconcept
 
 Deel vanuit een Android-app een complete **SRT/WebVTT als platte tekst** met **Delen → Tuddy**. De app controleert het volledige bericht lokaal met de bestaande strikte ondertitelparser en opent het alleen ter **bewuste controle en bevestiging** in de ondertiteleditor. Ongeldige of te grote inhoud (maximaal 256 KiB / 500 cues) wordt geen ondertitelconcept. Een al geopend ondertitelconcept wordt niet stilzwijgend overschreven. Gewone gedeelde tekst blijft beschikbaar via de bestaande snelle typtekstfunctie. Geen bijlagen, HTML, URI-bestanden, automatische vertaling, opslag of netwerkfallback. [Volledige handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
