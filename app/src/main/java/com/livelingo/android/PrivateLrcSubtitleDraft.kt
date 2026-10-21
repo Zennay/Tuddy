@@ -253,6 +253,25 @@ internal object PrivateLrcSubtitleDraft {
         return proposal
     }
 
+    /**
+     * Save the user's exact UTF-8 LRC SOURCE (not reconstructed cue text)
+     * after explicit Android CreateDocument consent. This retains optional
+     * offset and permitted metadata that cue-only LRC export omits.
+     * No automatic provider write, overwrite or sound access happens here.
+     */
+    fun authoredSourceBytes(raw: String): ByteArray? {
+        if (preview(raw) == null) return null
+        val encoded = runCatching {
+            StandardCharsets.UTF_8.newEncoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .encode(CharBuffer.wrap(raw))
+        }.getOrNull() ?: return null
+        if (encoded.remaining() == 0 ||
+            encoded.remaining() > PrivateSubtitleFileReader.MAX_BYTES) return null
+        return ByteArray(encoded.remaining()).also { encoded.get(it) }
+    }
+
     fun preview(raw: String): List<PrivateSubtitleCue>? {
         val bytes = runCatching {
             StandardCharsets.UTF_8.newEncoder()
