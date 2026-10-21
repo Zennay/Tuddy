@@ -21,6 +21,25 @@ snapshots bij voor het volledige editorconcept en de gekozen
 exportbytes; originele files en live gesprek worden niet gewijzigd.
 [Privacy en details](docs/MANUAL_SUBTITLE_PASTE.md).
 
+## Nieuw: twee handmatige spraaksporen nauwkeurig synchroniseren
+
+Bij het toevoegen van een **tweede, eigen SRT/VTT-spoor** kan Tuddy
+naast de vaste ±2/5/10-secondenpresets nu een **zelf ingetypte
+milliseconde-offset** van maximaal ±600 seconden toepassen.
+Als alternatief kiest de gebruiker **één beginregel in elk spoor**:
+de app toont het verschil tussen de bestaande begintijden, en neemt
+dat uitsluitend na een expliciete tik over. Er wordt geen media
+geanalyseerd, geen taal herkend en geen vertaling gegenereerd.
+
+De volledige samengevoegde ondertitellijst is **vijf cues per
+pagina** te bekijken, met begin/eindtijden, gekoppelde tekst en
+losstaande ongekoppelde regels. Identieke zelfgeschreven regels uit
+twee sporen blijven allebei zichtbaar. Wijziging van ankerregels
+vereist hernieuwde toestemming voor de verschuiving; een
+ongeldige tijdlijn kan niet worden toegepast. Alles blijft tijdelijk
+in RAM, met bestaande Undo/Redo en afzonderlijke Android SAF-save.
+[Uitgebreide handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: zelf instelbare tijdverschuiving in de ondertiteleditor
 
 Naast vaste verschuivingen kan de gebruiker nu zelf een positieve
