@@ -135,7 +135,7 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = anchorExpression,
-                    onValueChange = { anchorExpression = it.take(201) },
+                    onValueChange = { anchorExpression = it.take(513) },
                     label = { Text("Vervang ankerreeks · spoor1:spoor2, …") },
                     minLines = 1, maxLines = 3
                 )
@@ -167,8 +167,8 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
                         onClick = {
                             val freshRows = PrivateSubtitleManualPairSelection.parse(
                                 anchorExpression, primary.size, secondary.size)
-                                ?.takeIf {
-                                    it.size in 2..
+                                ?.takeIf { rows ->
+                                    rows.size in 2..
                                         PrivateSubtitleTrackMultiAnchorAlignment.MAX_ANCHORS
                                 }
                                 ?.map {
