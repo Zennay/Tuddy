@@ -10,10 +10,22 @@ import java.util.Locale
  * cues without a sufficiently overlapping primary cue remain visible as standalone
  * rows, rather than silently disappearing. Original source files are untouched.
  */
+internal data class SubtitleCuePairingLink(
+    val primarySourceRow: Int,
+    val secondarySourceRow: Int,
+    val primaryStart: String,
+    val secondaryStart: String,
+    val overlapMillis: Long,
+    val primaryText: String,
+    val secondaryText: String
+)
+
 internal data class SubtitleTrackPairingPreview(
     val cues: List<PrivateSubtitleCue>,
     val pairedCount: Int,
-    val unpairedSecondTrack: Int
+    val unpairedSecondTrack: Int,
+    val unpairedFirstTrack: Int,
+    val pairedLinks: List<SubtitleCuePairingLink>
 )
 
 internal object PrivateSubtitleTrackPairing {
@@ -112,6 +124,7 @@ internal object PrivateSubtitleTrackPairing {
         }
 
         val matched = arrayOfNulls<String>(n)
+        val links = ArrayList<SubtitleCuePairingLink>()
         val leftovers = ArrayList<PrivateSubtitleCue>()
         var paired = 0
         var primaryIndex = 0
@@ -119,7 +132,19 @@ internal object PrivateSubtitleTrackPairing {
         while (primaryIndex < n && secondaryIndex < m) {
             when (moves[primaryIndex * width + secondaryIndex].toInt()) {
                 3 -> {
-                    matched[primaryIndex] = adjusted[secondaryIndex].text
+                    val source = primary[primaryIndex]
+                    val candidate = adjusted[secondaryIndex]
+                    val overlap = pairOverlap(source, candidate)
+                    links += SubtitleCuePairingLink(
+                        primarySourceRow = primaryIndex + 1,
+                        secondarySourceRow = secondaryIndex + 1,
+                        primaryStart = source.startLabel,
+                        secondaryStart = candidate.startLabel,
+                        overlapMillis = overlap,
+                        primaryText = source.text,
+                        secondaryText = candidate.text
+                    )
+                    matched[primaryIndex] = candidate.text
                     paired++
                     primaryIndex++
                     secondaryIndex++
@@ -152,7 +177,9 @@ internal object PrivateSubtitleTrackPairing {
         return SubtitleTrackPairingPreview(
             cues = rows,
             pairedCount = paired,
-            unpairedSecondTrack = leftovers.size
+            unpairedSecondTrack = leftovers.size,
+            unpairedFirstTrack = n - paired,
+            pairedLinks = links.toList()
         )
     }
 }
