@@ -50,6 +50,7 @@ import com.livelingo.android.PrivateSubtitleLineWrap
 import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDocumentCombine
+import com.livelingo.android.SubtitleManualPair
 import com.livelingo.android.PrivateSubtitleOffset
 import com.livelingo.android.PrivateSubtitleTrackAnchorOffset
 import com.livelingo.android.PrivateSubtitleTrackDriftAlignment
@@ -173,6 +174,9 @@ internal fun PrivateSubtitleFileDialog(
     var pairReviewQuery by remember { mutableStateOf("") }
     var pairReviewSecondaryRow by remember { mutableStateOf("") }
     var excludedSecondRows by remember { mutableStateOf(setOf<Int>()) }
+    var manualPairs by remember { mutableStateOf<List<SubtitleManualPair>>(emptyList()) }
+    var manualFirstRow by remember { mutableStateOf("") }
+    var manualSecondRow by remember { mutableStateOf("") }
     var excludeRowExpression by remember { mutableStateOf("") }
     var excludeWindowExpression by remember { mutableStateOf("") }
     var driftSelectorOpen by remember { mutableStateOf(false) }
@@ -202,6 +206,9 @@ internal fun PrivateSubtitleFileDialog(
                 driftSelectorOpen = false
                 selectedDrift = null
                 excludedSecondRows = emptySet()
+                manualPairs = emptyList()
+                manualFirstRow = ""
+                manualSecondRow = ""
                 excludeRowExpression = ""
                 excludeWindowExpression = ""
                 excludedReviewPage = 0
@@ -738,6 +745,9 @@ internal fun PrivateSubtitleFileDialog(
                 driftSelectorOpen = false
                 selectedDrift = null
                 excludedSecondRows = emptySet()
+                manualPairs = emptyList()
+                manualFirstRow = ""
+                manualSecondRow = ""
                 excludeRowExpression = ""
                 excludeWindowExpression = ""
                 excludedReviewPage = 0
@@ -786,12 +796,13 @@ internal fun PrivateSubtitleFileDialog(
             selectedDrift != null && importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
         ) drift?.adjustedSecondary else stagedImport.imported
         val proposed = remember(draft, proposedIncoming,
-            importMode, selectedPairOffset, stillCurrent, excludedSecondRows) {
+            importMode, selectedPairOffset, stillCurrent, excludedSecondRows,
+            manualPairs) {
             if (stillCurrent && selectedPairOffset != null &&
                 proposedIncoming != null
             ) PrivateSubtitleDocumentCombine.preview(
                 draft, proposedIncoming, importMode,
-                selectedPairOffset, excludedSecondRows
+                selectedPairOffset, excludedSecondRows, manualPairs
             ) else null
         }
         val previewRows = proposed?.cues.orEmpty()
@@ -1406,7 +1417,7 @@ internal fun PrivateSubtitleFileDialog(
                     val updated = if (latestOffset != null && latestIncoming != null)
                         PrivateSubtitleDocumentCombine.preview(
                             draft, latestIncoming, importMode, latestOffset,
-                            excludedSecondRows)
+                            excludedSecondRows, manualPairs)
                     else null
                     if (draft != stagedImport.existing || updated == null ||
                         proposed == null || updated.cues != proposed.cues ||
