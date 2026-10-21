@@ -1,3 +1,24 @@
+## Nieuw: oefenblad hergebruiken en ruime schrijfruimte kiezen
+
+Je kunt in een zelfstandig geëxporteerd **Aanvuloefening · HTML** nu voor
+iedere kaart **Wis mijn antwoord op deze kaart** kiezen. De knop reset alleen
+het ingevulde tekstveld van die kaart via gewone HTML-formuliersemantiek,
+zonder JavaScript, verzenden of netwerktoegang. Het oorspronkelijke antwoord
+blijft apart uitklapbaar; je wijzigt nooit de bronzin of de eigen
+studiecorrectie. Browsers kunnen zelfstandig reeds getypte tekst herstellen.
+
+Kies in de Android-exportdialoog ook **Hoeveel schrijfruimte wil je op papier?**
+met **Normaal · twee schrijflijnen** of **Ruim · vier schrijflijnen**. Deze
+keuze bepaalt de hoogte van de invulvelden in de browser en de lege ruimte
+bij het afdrukken. Bij printen verdwijnen de tekstvakken en de wisknoppen;
+het antwoordblad staat nog steeds op een afzonderlijke pagina. De gekozen
+ruimte wordt op het HTML-document vermeld en hoort bij de exacte
+byte-/toestemmingscontrole na de Android-bestandskiezer: een gewijzigde
+keuze maakt een lopende export ongeldig. Er is geen automatische
+taalcorrectie, leerscore, gedeeld account of app-opslag toegevoegd.
+
+---
+
 ## Nieuw: direct invullen en zelfgekozen invulhints zonder internet
 
 De geëxporteerde **Aanvuloefening · HTML** is nu ook op de telefoon of laptop
