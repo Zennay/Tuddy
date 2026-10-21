@@ -864,6 +864,14 @@ private fun TuddyScreen(
         }
     }
 
+    // Stop only Tuddy's observer. Android may continue a system-owned queued download.
+    fun cancelSpeechPackFollow() {
+        val tag = speechPackReceipt.tag
+        speechPacks.cancel()
+        speechPackReceipt = SpeechPackReceipt(tag, SpeechPackStage.UNKNOWN,
+            "Tuddy is gestopt met volgen. Android kan een ingeplande download nog afronden; controleer later opnieuw.")
+    }
+
     fun checkTextPair() {
         val from = source.translateCode
         val to = target.translateCode
@@ -2331,6 +2339,7 @@ private fun TuddyScreen(
                 },
                 onCheckSpeech = { checkSpeechPackNow() },
                 onDownloadSpeech = { downloadSpeechPackNow() },
+                onCancelSpeech = { cancelSpeechPackFollow() },
                 onCheckText = { checkTextPair() },
                 onPrepareText = { prepareOfflinePair() },
                 onEditLanguages = {
