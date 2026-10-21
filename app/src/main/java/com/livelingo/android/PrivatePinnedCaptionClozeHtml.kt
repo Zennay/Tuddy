@@ -230,7 +230,7 @@ internal object PrivatePinnedCaptionClozeHtml {
                     }
                 if (hide) hiddenWord(textPart, hintMode) else textPart
             }
-        }
+        }.joinToString("")
     }
 
     /** Same gaps as the exported HTML, for the Android consent preview. */
