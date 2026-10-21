@@ -395,6 +395,39 @@ geen bewijs van automatische vertaling of echte audiowoordtiming.
 4. Kies in de bestaande samenvoegpreview tussen **aansluiten**, **originele tijden behouden** of **overlappende tekstparen** (met optionele handmatige tijdsverschuiving).
 5. Controleer het voorgestelde resultaat en geef apart toestemming om de samenvoeging alleen in het tijdelijke concept toe te passen. Undo/redo blijft bruikbaar.
 
+## Meerdere ondertitelregels bewust verwijderen (tijdelijke editor)
+
+Bij een lange eigen SRT/VTT, LRC, CSV/TSV of geplakte tekst hoef je niet
+langer ieder ongewenst segment afzonderlijk te openen en te wissen:
+
+1. Open het eigen ondertitelconcept in de bestaande editor en kies
+   **✂ Meerdere eigen ondertitelregels verwijderen…**.
+2. Typ de **oorspronkelijke 1-gebaseerde regelnummers** in, bijvoorbeeld
+   `2-4,7,12`. Die nummers horen bij de *huidige volledige tijdelijke
+   lijst*, niet bij de zoekresultaten of de volgorde na eerdere deleties.
+   Als je eerder op tekst zocht, kun je bewust **Neem gevonden regels als
+   verwijderselectie** kiezen; alleen de volledige set van gevonden
+   oorspronkelijke rijnummers wordt dan overgenomen.
+3. Bekijk vóór bevestiging elke gekozen regel met originele tijdcodes
+   en volledige tekst, in overzichtelijke pagina's van vijf. De preview
+   vermeldt ook hoeveel ondertitels blijven staan. De zoekfunctie
+   verandert de selectie nooit ongemerkt.
+4. Kies **Verwijder gekozen regels tijdelijk**. De overige eigen
+   tijdcodes en tekst blijven gelijk. Met **Terug** herstel je deze hele
+   bewerking in één keer en met **Opnieuw** pas je hem opnieuw toe.
+5. Alleen een latere **Bewaar kopie…** via de expliciete Android-
+   bestandskiezer schrijft een nieuw document; het bestaande origineel
+   en het live gesprek blijven ongewijzigd.
+
+De selectie is strikt begrensd tot maximaal 500 cues, staat geen
+dubbele/overlappende of omgekeerde intervallen toe, en kan nooit de
+laatste cue verwijderen. Tuddy valideert de overblijvende volledige
+tijdlijn opnieuw als exporteerbare SRT én WebVTT en berekent de exacte
+geselecteerde regels bij bevestiging opnieuw. De actie doet geen
+automatische inhoudsanalyse, vertaling, bestandsschrijfactie of netwerk-
+aanroep. Bewerkte bestanden blijven uitsluitend in het tijdelijke RAM-
+concept tot de gebruiker zelf opslag kiest.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
