@@ -486,8 +486,13 @@ tijdverloop…**.
 1. Kies een **vroeg** overeenkomend cuepaar: één oorspronkelijk
    regelnummer uit het eerste en één uit het tweede spoor. Kies daarna
    een **later** overeenkomend cuepaar. Je kunt de vier regels intypen
-   of in beide sporen **drie regels per pagina doorbladeren** en bij een
-   eigen cue bewust **Kies vroeg** of **Kies later** aantikken. De knop **Vul eerste en laatste
+   of per spoor **op originele tekst zoeken** (letterlijke, niet-hoofdlettergevoelige
+   filter; tot 100 tekens), **naar een oorspronkelijk bronregelnummer springen**
+   of **drie gefilterde regels per pagina doorbladeren**. Met **Lees volledige regel**
+   kun je lange of meerregelige brontekst uitklappen voordat je bewust **Kies vroeg**
+   of **Kies later** aantikt. De keuze blijft altijd gekoppeld aan het originele
+   1-gebaseerde bronregelnummer; zoeken, springen, uitklappen en bladeren
+   wijzigen nooit zelf een ankerpaar. De knop **Vul eerste en laatste
    regel per spoor in** is slechts een suggestie: controleer zelf of
    beide bronzinnen echt corresponderen.
 2. De app toont van **alle vier de expliciet gekozen broncues** de
