@@ -23,6 +23,7 @@ internal data class PendingPrivatePracticeReport(
     val selectionScope: PrivatePracticeRouteScope,
     val worksheetAudience: PrivateListeningWorksheetAudience,
     val worksheetPrompt: PrivateListeningWorksheetPrompt,
+    val perFragmentPrompts: Map<Pair<Long, Long>, PrivateListeningWorksheetPrompt>,
     val bytes: ByteArray
 )
 

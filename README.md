@@ -1,5 +1,10 @@
 ## Offline luisteren · eigen opdracht kiezen
 
+Een werkblad kan nu ook **per geselecteerd A–B-fragment** een andere
+oefenopdracht bevatten. De algemene keuze blijft de standaard;
+de gebruiker stelt maximaal vier afwijkende opdrachten bewust
+per fragment in en controleert de export vóór opslaan.
+
 Bij het eigen A–B-luisterwerkblad kun je nu kiezen tussen letterlijk
 uitschrijven, kernwoorden noteren, zelf samenvatten of zelf de betekenis
 opschrijven. De keuze verschijnt in het privé HTML-bestand of

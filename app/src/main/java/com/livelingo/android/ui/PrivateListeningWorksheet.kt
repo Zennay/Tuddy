@@ -124,6 +124,7 @@ internal object PrivateListeningWorksheet {
         val end: Long,
         val rating: String,
         val note: String,
+        val prompt: PrivateListeningWorksheetPrompt,
         val lines: List<Pair<Int, String>>,
         val fullLines: List<Pair<Int, String>>,
         val omitted: Int
@@ -138,7 +139,9 @@ internal object PrivateListeningWorksheet {
         scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL,
         audience: PrivateListeningWorksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY,
         subtitleLanguageCode: String? = null,
-        prompt: PrivateListeningWorksheetPrompt = PrivateListeningWorksheetPrompt.TRANSCRIBE
+        prompt: PrivateListeningWorksheetPrompt = PrivateListeningWorksheetPrompt.TRANSCRIBE,
+        perFragmentPrompts: Map<Pair<Long, Long>, PrivateListeningWorksheetPrompt> =
+            emptyMap()
     ): ByteArray? {
         if (passages.isEmpty() || passages.size > 4 ||
             passages.distinct().size != passages.size ||
@@ -192,6 +195,7 @@ internal object PrivateListeningWorksheet {
             sections.add(Passage(
                 number = index + 1, start = start, end = end,
                 rating = rating(ratings[bounds]), note = note,
+                prompt = perFragmentPrompts[bounds] ?: prompt,
                 lines = visible,
                 fullLines = allLines,
                 omitted = allLines.size - visible.size
@@ -256,7 +260,7 @@ internal object PrivateListeningWorksheet {
                         selected.size + " van " + passages.size + " eigen fragmenten).</p>"
                 else "<p>Oefenfragmenten: " + selected.size + ".</p>") +
                 "<p>Bestemming: " + html(audience.title) + ".</p>" +
-                "<p>Zelfgekozen opdracht: " + html(prompt.title) + ".</p>"
+                "<p>Algemene opdracht: " + html(prompt.title) + ".</p>"
         )
         if (sections.size > 1) {
             out.append("<nav class=\"fragment-nav\" aria-label=\"Ga naar luisterfragment\">" +
@@ -274,10 +278,11 @@ internal object PrivateListeningWorksheet {
                 out.append("<p>Eigen inschatting: ").append(html(part.rating)).append("</p>")
             }
             val answerLanguage = if (
-                prompt == PrivateListeningWorksheetPrompt.TRANSCRIBE ||
-                prompt == PrivateListeningWorksheetPrompt.KEYWORDS
+                part.prompt == PrivateListeningWorksheetPrompt.TRANSCRIBE ||
+                part.prompt == PrivateListeningWorksheetPrompt.KEYWORDS
             ) subtitleLanguageCode else null
-            out.append("<p>").append(html(prompt.instruction)).append("</p>")
+            out.append("<p>Opdracht: ").append(html(part.prompt.title)).append("</p>")
+                .append("<p>").append(html(part.prompt.instruction)).append("</p>")
                 .append("<form autocomplete=\"off\"><label for=\"answer-")
                 .append(part.number).append("\">Mijn eigen antwoord (alleen deze browser)</label>")
                 .append("<textarea id=\"answer-").append(part.number)

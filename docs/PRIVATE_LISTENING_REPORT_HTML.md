@@ -10,6 +10,17 @@ privébeoordelingen; zelfstudiebestanden houden hun bewust te
 openen bronregelblad. Er is geen automatische inhoudscontrole,
 spraakherkenning of modelvertaling.
 
+Wil je een gemengd werkblad maken, open dan **Kies desgewenst per
+fragment een andere opdracht…**. Per geselecteerd A–B-tijdvak
+(maximaal vier) kan je de algemene opdracht behouden of één van
+de vier beschikbare eigen opdrachten kiezen. Het HTML-bestand
+vermeldt de daadwerkelijke opdracht bij ieder fragment, inclusief
+de bijbehorende schrijfvelden. Zonder afwijkende fragmentkeuze
+blijft de algemene opdracht overal gelden. Andere selectie- of
+luisterinstellingen worden niet gewijzigd. De Android-bestandskiezer
+weigert de opslag als de afzonderlijke fragmentkeuzes na terugkeer
+niet meer exact overeenkomen met de eerder bevestigde inhoud.
+
 De invoervakken voor letterlijk uitschrijven en kernwoorden volgen
 de expliciet gekozen SRT/VTT-taalrichting en taalcode, bijvoorbeeld
 rechts-naar-links bij Pasjtoe/Sorani. Samenvatting en eigen

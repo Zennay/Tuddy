@@ -124,6 +124,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var worksheetScope by remember { mutableStateOf(PrivatePracticeRouteScope.ALL) }
     var worksheetAudience by remember { mutableStateOf(PrivateListeningWorksheetAudience.SELF_STUDY) }
     var worksheetPrompt by remember { mutableStateOf(PrivateListeningWorksheetPrompt.TRANSCRIBE) }
+    var perFragmentPrompts by remember {
+        mutableStateOf<Map<Pair<Long, Long>, PrivateListeningWorksheetPrompt>>(emptyMap())
+    }
+    var editFragmentPrompts by remember { mutableStateOf(false) }
     var practiceCsvPreviewOpen by remember { mutableStateOf(false) }
     var detailedCsvPreviewOpen by remember { mutableStateOf(false) }
     var detailedCsvPreviewPage by remember { mutableIntStateOf(0) }
@@ -177,7 +181,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     PrivateListeningWorksheet.snapshot(
                         cues, subtitleOffsetMs, savedPracticePassages,
                         passageRatings, passageNotes, worksheetScope, worksheetAudience,
-                        chosenSubtitleLanguage, worksheetPrompt
+                        chosenSubtitleLanguage, worksheetPrompt, perFragmentPrompts
                     )
                 PrivatePracticeReportFormat.TXT ->
                     PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
@@ -197,6 +201,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 pending.selectionScope != worksheetScope ||
                 pending.worksheetAudience != worksheetAudience ||
                 pending.worksheetPrompt != worksheetPrompt ||
+                pending.perFragmentPrompts != perFragmentPrompts ||
                 updatedBytes == null ||
                 !updatedBytes.contentEquals(pending.bytes)
             ) {
@@ -225,7 +230,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 PrivateListeningWorksheet.snapshot(
                     cues, subtitleOffsetMs, savedPracticePassages,
                     passageRatings, passageNotes, worksheetScope, worksheetAudience,
-                        chosenSubtitleLanguage, worksheetPrompt
+                        chosenSubtitleLanguage, worksheetPrompt, perFragmentPrompts
                 )
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
             PrivatePracticeReportFormat.CSV ->
@@ -244,7 +249,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         } else {
             pendingPracticeReport = PendingPrivatePracticeReport(
                 report, format, worksheetScope, worksheetAudience,
-                worksheetPrompt, payload)
+                worksheetPrompt, perFragmentPrompts.toMap(), payload)
             practiceReportOpen = false
             savePracticeReport.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
@@ -283,6 +288,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         pendingPracticeReport = null
         worksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY
         worksheetPrompt = PrivateListeningWorksheetPrompt.TRANSCRIBE
+        perFragmentPrompts = emptyMap()
+        editFragmentPrompts = false
         guidedActive = false
         guidedQueue = emptyList()
         guidedIndex = 0
@@ -1599,6 +1606,39 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         " Je opdracht staat in het HTML-blad en verandert " +
                         "geen audio of oorspronkelijke ondertitels.",
                         style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = {
+                        editFragmentPrompts = !editFragmentPrompts
+                    }, enabled = !guidedActive) {
+                        Text(if (editFragmentPrompts)
+                            "Verberg eigen opdracht per fragment"
+                        else "Kies desgewenst per fragment een andere opdracht…")
+                    }
+                    if (editFragmentPrompts) {
+                        val visiblePassages = privatePracticeRouteCandidates(
+                            savedPracticePassages, passageRatings, worksheetScope)
+                        visiblePassages.forEachIndexed { index, bounds ->
+                            HorizontalDivider()
+                            Text("Fragment ${index + 1} · ${anchorClock(bounds.first)} – " +
+                                anchorClock(bounds.second),
+                                style = MaterialTheme.typography.labelMedium)
+                            val selectedPrompt = perFragmentPrompts[bounds]
+                            Text("Actief: " + (selectedPrompt ?: worksheetPrompt).title,
+                                style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = {
+                                perFragmentPrompts = perFragmentPrompts - bounds
+                            }) { Text((if (selectedPrompt == null) "● " else "○ ") +
+                                "Gebruik algemene opdracht") }
+                            PrivateListeningWorksheetPrompt.entries.forEach { option ->
+                                TextButton(onClick = {
+                                    perFragmentPrompts = perFragmentPrompts +
+                                        (bounds to option)
+                                }) {
+                                    Text((if (selectedPrompt == option) "● " else "○ ") +
+                                        option.title)
+                                }
+                            }
+                        }
+                    }
                     Text(
                         if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
                             "Leerlingenbestand: bevat alleen de eigen A–B-tijdvakken " +
