@@ -84,6 +84,27 @@ Heb je zelf nauwkeurige begin- en eindtijdcodes naast je tweetalige zinnen, dan 
 
 Deze eigen tijdcodes zijn **niet bewezen** aan een audio- of videobestand gesynchroniseerd; Tuddy kopieert uitsluitend de tijdcodes die je zelf invoert.
 
+## Twee eigen tekstkolommen uit CSV zonder tijdcodes
+
+Heb je een eigen CSV-bestand met uitsluitend twee kolommen (bronzin en
+een door jou zelf geschreven betekenis), kies dan **Gewone zinnen →
+CSV: brontekst, eigen betekenis (tijden geschat)**. Iedere fysieke rij
+levert precies één tweetalige ondertitelkaart op. Gebruik het gewone
+CSV-formaat: komma als scheidingsteken, quotes rondom tekst met komma's
+en dubbele quotes voor een ingesloten aanhalingsteken.
+
+```csv
+"Goedemorgen, allemaal","Good morning, everyone"
+"Een ""eigen"" voorbeeld","An ""original"" example"
+```
+
+Er mag geen kopregel in het fragment staan. Beide kolommen zijn verplicht;
+lege rijen, onjuiste quotes en te lange tekstvelden melden het originele
+regelnummer, zonder regels ongemerkt op te schuiven. Tijden komen
+**uitsluitend** uit de apart handmatig gekozen begin- en duurinstellingen.
+Tuddy vertaalt niets, herkent geen taal en synchroniseert geen audio.
+Gebruik drie of vier CSV-kolommen wanneer je zelf tijdcodes aanlevert.
+De volledige preview en gerichte bronregelselectie blijven beschikbaar.
 ## Bestaande transcript-tijden uit een CSV-spreadsheet plakken
 
 Naast tabgescheiden drie- en vierkolomsinvoer ondersteunt **Plak zelf tekst**
