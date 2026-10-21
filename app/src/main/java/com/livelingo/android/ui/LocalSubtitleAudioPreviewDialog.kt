@@ -1524,6 +1524,23 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     modifier = Modifier.weight(1f)
                                 )
                             }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                TextButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        wordRangeFrom = (estimatedCueWord.index + 1).toString()
+                                    }
+                                ) { Text("Start = huidig woord") }
+                                TextButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        wordRangeTo = (estimatedCueWord.index + 1).toString()
+                                    }
+                                ) { Text("Eind = huidig woord") }
+                            }
                             val firstWord = wordRangeFrom.toIntOrNull()
                             val lastWord = wordRangeTo.toIntOrNull()
                             val phraseWindow = if (firstWord != null && lastWord != null) {
@@ -1532,6 +1549,19 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                     firstWord - 1, lastWord - 1
                                 )?.takeIf { it.second <= durationMs }
                             } else null
+                            if (phraseWindow != null) {
+                                val firstSpan = wordJumpChoices[firstWord!! - 1].span
+                                val lastSpan = wordJumpChoices[lastWord!! - 1].span
+                                val chosenText = active.text.substring(
+                                    firstSpan.first, lastSpan.last + 1
+                                )
+                                Text(
+                                    "Je kiest woord $firstWord t/m $lastWord: " +
+                                        chosenText.take(160) +
+                                        if (chosenText.length > 160) "…" else "",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                             OutlinedButton(
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = !guidedActive && phraseWindow != null,
