@@ -498,6 +498,46 @@ uit audio afgeleide timing, machinevertaling of taalherkenning.
    bladeren. De volledige resultaatpreview houdt vijf cues per
    pagina én de bestaande directe sprong naar een resultaatregel.
 
+### Meerdere zelfgekozen bronparen in één invoer
+
+Gebruik bij dezelfde handmatige samenvoeging **Bronpaarreeksen** voor
+een zorgvuldig gecontroleerde bundel. Bijvoorbeeld:
+
+```text
+1:2,3-5:7-9,10:12
+```
+
+Dit betekent letterlijk: broneerste spoor **1→2**, **3→7**,
+**4→8**, **5→9** en **10→12** in het tweede spoor. Een enkele
+notatie heeft steeds links **eerste-spoor-rij: tweede-spoor-rij**;
+bij een bereik moeten **beide delen exact evenveel originele regels**
+omvatten. Met maximaal 512 tekens en maximaal 32 nieuwe én
+al toegevoegde paren wordt nooit een onjuist ontbrekend rijdeel
+bijgemaakt. De rijnummers moeten in **beide bronbestanden strikt
+oplopen**; nul, dubbele, overlappende, omgekeerde, buiten-bestandse
+of met bestaande handmatige koppelingen conflicterende keuzes
+worden volledig geweigerd.
+
+Wanneer de bundel geldig is, bekijk je alle **volledige originele
+teksten met hun oorspronkelijke begintijden**, per vier voorgestelde
+paren, vóór **Neem hele gecontroleerde bronpaar-bundel over**.
+De knop is alleen beschikbaar als óók de huidige uitgesloten
+regels, eerder gekozen handmatige paren, oorspronkelijke
+chronologische regelvolgordes en hele SRT/VTT-uitvoer akkoord zijn.
+De bundel wordt in één keer aan het **tijdelijke** voorstel
+toegevoegd; hij wordt niet vanzelf als bestand opgeslagen. Per
+paar kan hij daarna worden hersteld; **Herstel de tijdmatcher voor
+alle handmatige paren** wist in één bewuste actie alle vastgezette
+paren, niet de oorspronkelijke ondertitels of uitsluitingskeuzes.
+
+**Modus wisselen:** handmatige paren en uitsluitingen gelden
+alleen binnen de modus **Combineer twee teksten bij overlappende
+tijdcodes**. Als je bewust overschakelt naar aansluiten of
+originele tijdcodes naast elkaar behouden, worden deze
+niet-relevante instellingen niet op de andere modus toegepast;
+een terugkeer naar de overlapmodus kan je keuzes binnen
+de huidige tijdelijke import opnieuw gebruiken.
+
 **Definitieve toepassing blijft afzonderlijk:** de laatste
 **Voeg alleen toe aan tijdelijk concept**-actie herberekent alle
 handmatige paren, tijdcorrecties, uitsluitingen, oorspronkelijke
