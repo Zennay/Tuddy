@@ -34,10 +34,14 @@ internal fun SpeechPackBrowserDialog(
     currentTag: String,
     receipts: Map<String, SpeechPackReceipt>,
     scanning: Boolean,
+    downloadTag: String?,
     scannedCount: Int,
     speechServiceAvailable: Boolean,
     onScan: () -> Unit,
     onStopScan: () -> Unit,
+    onPrepare: (String) -> Unit,
+    onCancelFollow: () -> Unit,
+    onCheckOne: (String) -> Unit,
     onCopyCatalog: () -> Boolean,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
@@ -45,6 +49,7 @@ internal fun SpeechPackBrowserDialog(
     var query by remember { mutableStateOf("") }
     var onlyReady by remember { mutableStateOf(false) }
     var copyNotice by remember { mutableStateOf("") }
+    var confirmTag by remember { mutableStateOf<String?>(null) }
     val visibleOptions = options.filter { option ->
         (!onlyReady || receipts[option.tag]?.stage == SpeechPackStage.READY) &&
             (query.isBlank() || option.label.contains(query, ignoreCase = true) ||
@@ -82,7 +87,7 @@ internal fun SpeechPackBrowserDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = onScan,
-                        enabled = speechServiceAvailable && !scanning
+                        enabled = speechServiceAvailable && !scanning && downloadTag == null
                     ) { Text("Controleer alle talen") }
                     if (scanning) {
                         OutlinedButton(onClick = onStopScan) { Text("Stop controle") }
