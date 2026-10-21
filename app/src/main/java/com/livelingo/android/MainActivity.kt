@@ -223,6 +223,7 @@ private fun TuddyScreen(
     var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
     var pinnedStudyDirection by remember { mutableStateOf(PinnedStudyDirection.SOURCE_TO_TARGET) }
     var pinnedClozeDifficulty by remember { mutableStateOf(PinnedClozeDifficulty.NORMAL) }
+    var pinnedClozeHintMode by remember { mutableStateOf(PinnedClozeHintMode.BLANK) }
     var pinnedOnlyPersonalStudy by remember { mutableStateOf(false) }
     var pinnedStudyLanguageTags by remember { mutableStateOf(false) }
     var pinnedLanguagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -1245,7 +1246,7 @@ private fun TuddyScreen(
                 currentSelection, pending.format, pending.subtitleOptions, pending.scope,
                 pending.languagePair, pending.studyDirection,
                 pinnedStudyEdits.toMap(), pending.onlyPersonallyCorrected,
-                pending.showLanguageTags, pending.clozeDifficulty
+                pending.showLanguageTags, pending.clozeDifficulty, pending.clozeHintMode
             )
             if (pending.generation != generation || listening ||
                 pending.format != pinnedExportFormat ||
@@ -1256,6 +1257,7 @@ private fun TuddyScreen(
                 pending.onlyPersonallyCorrected != pinnedOnlyPersonalStudy ||
                 pending.showLanguageTags != pinnedStudyLanguageTags ||
                 pending.clozeDifficulty != pinnedClozeDifficulty ||
+                pending.clozeHintMode != pinnedClozeHintMode ||
                 pending.subtitleOptions != pinnedSubtitleOptions ||
                 currentSelection != pending.selection || currentBytes == null ||
                 !currentBytes.contentEquals(pending.bytes)
@@ -3441,13 +3443,13 @@ private fun TuddyScreen(
             val computedPreview = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
-                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags, pinnedClozeDifficulty
+                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode
             ) {
                 PrivatePinnedCaptionExport.snapshot(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
                     pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection,
                     pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
-                    pinnedStudyLanguageTags, pinnedClozeDifficulty
+                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode
                 )
             }
             AlertDialog(
@@ -3506,6 +3508,17 @@ private fun TuddyScreen(
                                     }) {
                                         Text((if (pinnedClozeDifficulty == difficulty) "● "
                                             else "○ ") + difficulty.title)
+                                    }
+                                }
+                                Text("Hoeveel hulp bieden de verborgen woorden?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozeHintMode.entries.forEach { hintMode ->
+                                    TextButton(onClick = {
+                                        pinnedClozeHintMode = hintMode
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozeHintMode == hintMode) "● "
+                                            else "○ ") + hintMode.title)
                                     }
                                 }
                                 Text("De gekozen moeilijkheid en exacte invulhints " +
@@ -3630,7 +3643,8 @@ private fun TuddyScreen(
                                         PinnedCaptionFormat.FOLD_HTML ->
                                             " met linker vragen en rechter vouwantwoorden. "
                                         PinnedCaptionFormat.CLOZE_HTML ->
-                                            " (" + pinnedClozeDifficulty.title + ") met invulwoorden " +
+                                            " (" + pinnedClozeDifficulty.title + "; " +
+                                                pinnedClozeHintMode.title + ") met invulwoorden " +
                                                 "en apart antwoordblad. "
                                         else -> " met twee tekstkolommen. "
                                     }) +
@@ -3726,7 +3740,7 @@ private fun TuddyScreen(
                                             if (!pinnedStudyLanguageTags) null
                                             else if (reverse) record.caption.sourceCode
                                             else record.caption.targetCode,
-                                            pinnedClozeDifficulty
+                                            pinnedClozeDifficulty, pinnedClozeHintMode
                                         )
                                         Text("Aanvulhint (niet het antwoord): " + targetHint,
                                             style = MaterialTheme.typography.bodySmall)
@@ -3736,7 +3750,7 @@ private fun TuddyScreen(
                                                     record.caption.original,
                                                     if (pinnedStudyLanguageTags)
                                                         record.caption.sourceCode else null,
-                                                    pinnedClozeDifficulty
+                                                    pinnedClozeDifficulty, pinnedClozeHintMode
                                                 ), style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
@@ -3789,7 +3803,7 @@ private fun TuddyScreen(
                                 selection, format, options, scope, languagePair,
                                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
                                 pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
-                                pinnedClozeDifficulty
+                                pinnedClozeDifficulty, pinnedClozeHintMode
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
@@ -3799,7 +3813,7 @@ private fun TuddyScreen(
                                     generation, selection, format, scope,
                                     languagePair, pinnedStudyDirection,
                                     pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
-                                    pinnedStudyLanguageTags, pinnedClozeDifficulty,
+                                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode,
                                     options, bytes
                                 )
                                 exportStatus = ""
@@ -3831,7 +3845,7 @@ private fun TuddyScreen(
                 pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
                 pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
-                pinnedClozeDifficulty
+                pinnedClozeDifficulty, pinnedClozeHintMode
             )
             val previewLines = remember(exactBytes?.contentHashCode(),
                 exactBytes?.size
