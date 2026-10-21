@@ -885,7 +885,27 @@ internal fun PrivateSubtitleFileDialog(
                             Text((if (selectedDrift != null) "✓ " else "") +
                                 "Twee cueparen: corrigeer geleidelijk tijdverloop…")
                         }
-                        if (selectedDrift != null) {
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                            onClick = { multiAnchorSelectorOpen = true }) {
+                            Text((if (selectedMultiAnchors != null) "✓ " else "") +
+                                "Meerdere tijdankers: corrigeer 2–8 bronparen…")
+                        }
+                        if (selectedMultiAnchors != null) {
+                            Text(
+                                if (multiDrift == null)
+                                    "De gekozen meerpuntscorrectie is ongeldig " +
+                                        "voor deze huidige originele tijdlijnen."
+                                else "${selectedMultiAnchors?.size ?: 0} " +
+                                    "handmatig gekozen tijdankers actief. " +
+                                    "Alle segmenten en niet-gekoppelde bronregels " +
+                                    "staan in de complete preview hieronder.",
+                                style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    selectedMultiAnchors = null
+                                    secondTrackPreviewPage = 0
+                                }) { Text("Stop meerpuntscorrectie, gebruik één offset") }
+                        } else if (selectedDrift != null) {
                             val selected = selectedDrift
                             Text(
                                 if (drift == null)
@@ -1792,6 +1812,31 @@ internal fun PrivateSubtitleFileDialog(
                 TextButton(onClick = { pendingImport = null }) { Text("Annuleren") }
             }
         )
+        if (multiAnchorSelectorOpen) {
+            SubtitleTrackMultiAnchorSelectorDialog(
+                primary = draft,
+                secondary = stagedImport.imported,
+                initial = selectedMultiAnchors ?: selectedDrift?.let {
+                    listOfNotNull(
+                        PrivateSubtitleMultiAnchor(
+                            it.firstPrimaryRow.toIntOrNull() ?: 0,
+                            it.firstSecondaryRow.toIntOrNull() ?: 0
+                        ),
+                        PrivateSubtitleMultiAnchor(
+                            it.lastPrimaryRow.toIntOrNull() ?: 0,
+                            it.lastSecondaryRow.toIntOrNull() ?: 0
+                        )
+                    )
+                },
+                onChoose = { selection ->
+                    selectedMultiAnchors = selection
+                    selectedDrift = null
+                    multiAnchorSelectorOpen = false
+                    secondTrackPreviewPage = 0
+                },
+                onDismiss = { multiAnchorSelectorOpen = false }
+            )
+        }
         if (driftSelectorOpen) {
             SubtitleTrackDriftSelectorDialog(
                 primary = draft,
@@ -1799,6 +1844,7 @@ internal fun PrivateSubtitleFileDialog(
                 initial = selectedDrift,
                 onChoose = { selection ->
                     selectedDrift = selection
+                    selectedMultiAnchors = null
                     driftSelectorOpen = false
                     secondTrackPreviewPage = 0
                 },
