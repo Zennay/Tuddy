@@ -5487,7 +5487,8 @@ private fun TuddyScreen(
                             val matchingTargets = TargetCatalog.search(targetQuery).take(35)
                             if (matchingTargets.isEmpty()) {
                                 Text(
-                                    "Geen vertaaltaal gevonden.",
+                                    CommunityLanguageAvailabilityHint.forQuery(targetQuery)
+                                        ?: "Geen vertaaltaal gevonden.",
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                     style = MaterialTheme.typography.bodySmall
                                 )
