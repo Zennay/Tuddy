@@ -179,8 +179,13 @@ internal object PrivatePinnedCaptionClozeHtml {
         roundIndex: Int
     ): String {
         val words = value.trim().split(Regex("\\s+"))
-        // Do not invent word boundaries in unsegmented scripts.
-        if (words.size < 2) return "________"
+        // Do not invent word boundaries in unsegmented scripts. Even for a
+        // one-token line, hide the complete token but preserve its authored
+        // punctuation (e.g. "Hello!" becomes "________!"). Do not expose a
+        // first-letter/length hint when there is no reliable word boundary.
+        if (words.size < 2) return words.singleOrNull()?.let {
+            hiddenWord(it, PinnedClozeHintMode.BLANK)
+        } ?: "________"
         val pass = roundIndex.coerceIn(0, 2)
         return words.mapIndexed { index, word ->
             val hide = if (words.size < 3) index == (1 - pass % 2)
