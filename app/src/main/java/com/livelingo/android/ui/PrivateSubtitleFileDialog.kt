@@ -55,6 +55,8 @@ import com.livelingo.android.PrivateSubtitleManualPairSelection
 import com.livelingo.android.PrivateSubtitleOffset
 import com.livelingo.android.PrivateSubtitleTrackAnchorOffset
 import com.livelingo.android.PrivateSubtitleTrackDriftAlignment
+import com.livelingo.android.PrivateSubtitleTrackMultiAnchorAlignment
+import com.livelingo.android.PrivateSubtitleMultiAnchor
 import com.livelingo.android.PrivateSubtitleDriftSelection
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
@@ -185,6 +187,10 @@ internal fun PrivateSubtitleFileDialog(
     var excludeWindowExpression by remember { mutableStateOf("") }
     var driftSelectorOpen by remember { mutableStateOf(false) }
     var selectedDrift by remember { mutableStateOf<PrivateSubtitleDriftSelection?>(null) }
+    var multiAnchorSelectorOpen by remember { mutableStateOf(false) }
+    var selectedMultiAnchors by remember {
+        mutableStateOf<List<PrivateSubtitleMultiAnchor>?>(null)
+    }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
     val found = draft.mapIndexed { idx, row -> idx to row }
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
@@ -209,6 +215,8 @@ internal fun PrivateSubtitleFileDialog(
                 secondTrackPreviewPage = 0
                 driftSelectorOpen = false
                 selectedDrift = null
+                multiAnchorSelectorOpen = false
+                selectedMultiAnchors = null
                 excludedSecondRows = emptySet()
                 manualPairs = emptyList()
                 manualFirstRow = ""
@@ -751,6 +759,8 @@ internal fun PrivateSubtitleFileDialog(
                 secondTrackPreviewPage = 0
                 driftSelectorOpen = false
                 selectedDrift = null
+                multiAnchorSelectorOpen = false
+                selectedMultiAnchors = null
                 excludedSecondRows = emptySet()
                 manualPairs = emptyList()
                 manualFirstRow = ""
