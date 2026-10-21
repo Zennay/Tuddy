@@ -113,6 +113,7 @@ internal object PrivateListeningWorksheet {
         val rating: String,
         val note: String,
         val lines: List<Pair<Int, String>>,
+        val fullLines: List<Pair<Int, String>>,
         val omitted: Int
     )
 
@@ -166,6 +167,7 @@ internal object PrivateListeningWorksheet {
                 number = index + 1, start = start, end = end,
                 rating = rating(ratings[bounds]), note = note,
                 lines = visible,
+                fullLines = allLines,
                 omitted = allLines.size - visible.size
             ))
         }
@@ -199,7 +201,9 @@ internal object PrivateListeningWorksheet {
                     "cursor:pointer}.printkey{vertical-align:middle;margin-right:8px}" +
                 ".line{display:none;border-bottom:1px solid #555;height:24px}" +
                 "p{overflow-wrap:anywhere}" +
-                "@media print{body{padding:0}details,form,.answerlink," +
+                ".fragment-nav a{display:inline-block;margin:0 12px 8px 0;" +
+                    "padding:6px 12px;border:1px solid #777;border-radius:6px}" +
+                "@media print{body{padding:0}details,form,.answerlink,.fragment-nav," +
                     ".printkey,.printcontrol{display:none}" +
                 ".print-rating{display:block}" +
                 ".line{display:block}" +
@@ -227,8 +231,16 @@ internal object PrivateListeningWorksheet {
                 else "<p>Oefenfragmenten: " + selected.size + ".</p>") +
                 "<p>Bestemming: " + html(audience.title) + ".</p>"
         )
+        if (sections.size > 1) {
+            out.append("<nav class=\"fragment-nav\" aria-label=\"Ga naar luisterfragment\">" +
+                "<p>Ga direct naar fragment: ")
+            for (part in sections) out.append("<a href=\"#fragment-")
+                .append(part.number).append("\">").append(part.number).append("</a> ")
+            out.append("</p></nav>")
+        }
         for (part in sections) {
-            out.append("<article><h2>Fragment ").append(part.number).append("</h2><p>")
+            out.append("<article id=\"fragment-").append(part.number)
+                .append("\"><h2>Fragment ").append(part.number).append("</h2><p>")
                 .append(time(part.start)).append(" – ").append(time(part.end))
                 .append("</p>")
             if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
@@ -255,8 +267,9 @@ internal object PrivateListeningWorksheet {
                     "&#9633; Makkelijk</p>")
                 .append("<div class=\"line\"></div><div class=\"line\"></div>")
             if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
-                out.append("<details><summary>Toon zelf gekozen bronregels (")
-                    .append(part.lines.size).append(" getoond)</summary>")
+                out.append("<details><summary>Toon eigen bronregels (")
+                    .append(part.lines.size).append(" van ")
+                    .append(part.fullLines.size).append(" in korte preview)</summary>")
             if (part.lines.isEmpty()) {
                 out.append("<p>Geen volledig passende ondertitelregel; " +
                     "dit is alleen mijn handmatig gekozen audiotijdvak.</p>")
@@ -294,16 +307,17 @@ internal object PrivateListeningWorksheet {
         for (part in sections) {
             out.append("<h3>Fragment ").append(part.number).append(" · ")
                 .append(time(part.start)).append(" – ").append(time(part.end)).append("</h3>")
-            if (part.lines.isEmpty()) out.append("<p>Geen exacte cue-koppeling.</p>")
+            if (part.fullLines.isEmpty()) out.append("<p>Geen exacte cue-koppeling.</p>")
             else {
                 out.append("<ol>")
-                for ((number, line) in part.lines) out.append("<li>")
+                for ((number, line) in part.fullLines) out.append("<li>")
                     .append(number).append(". ")
                     .append(htmlBidiText(line, subtitleLanguageCode)).append("</li>")
                 out.append("</ol>")
             }
-            if (part.omitted > 0) out.append("<p>")
-                .append(part.omitted).append(" middenregels overgeslagen.</p>")
+            // The answer key is genuinely complete; only the in-card peek
+            // is abbreviated. Oversized output fails closed rather than
+            // falsely presenting a truncated transcript as complete.
             if (out.length > MAX_BYTES) return null
         }
             out.append("</section>")
