@@ -2489,9 +2489,12 @@ internal fun PrivateSubtitleFileDialog(
                     } else {
                         applyChange(next)
                         shownIndex = -1
-                        notice = if (splitAtMillis == null)
+                        val splitLabel = splitAtMillis?.let {
+                            PrivateSubtitleTimelineNavigation.formatTimestamp(it) ?: "${it} ms"
+                        }
+                        notice = if (splitLabel == null)
                             "Regel op het exacte midden in twee tijdelijke cues gesplitst."
-                        else "Regel op ${splitAtMillis} ms in twee tijdelijke cues gesplitst."
+                        else "Regel op ${splitLabel} in twee tijdelijke cues gesplitst."
                         splitIndex = null
                         splitAtTime = ""
                         splitError = ""
