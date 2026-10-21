@@ -84,6 +84,32 @@ Heb je zelf nauwkeurige begin- en eindtijdcodes naast je tweetalige zinnen, dan 
 
 Deze eigen tijdcodes zijn **niet bewezen** aan een audio- of videobestand gesynchroniseerd; Tuddy kopieert uitsluitend de tijdcodes die je zelf invoert.
 
+## Meer dan één los bronregelbereik importeren
+
+De plakpreview ondersteunt nu **Losse regels (optioneel)** voor bewust
+gekozen niet-aaneengesloten originele bronregels. Bijvoorbeeld:
+
+```text
+1-5,8,12-16
+```
+
+Dit opent precies de oorspronkelijke rijen 1 t/m 5, 8 en 12 t/m 16
+(in bronvolgorde) uit het **volledig opnieuw ingelezen** geldige document.
+Een enkel nummer zoals `17` is ook toegestaan. Gebruik gewone
+komma's en het minteken `-`, zonder impliciete jokertekens. Wanneer je
+dit extra veld invult, vervangt het de eerdere **Van/Tot**-keuze;
+wis het veld om weer alleen Van/Tot te gebruiken. Negatieve getallen,
+nul, te hoge nummers, omgekeerde bereiken, een lege komma-groep of
+overlappende/dubbele bronregels worden expliciet geweigerd.
+De preview laat alle geselecteerde regels met **oorspronkelijke**
+bronnummers en echte SRT/VTT-tijden zien; een zoekterm filtert alleen
+wat je bekijkt en verandert de gekozen importregels nooit. Tuddy
+herberekent de selectie op het actuele, volledige bronbestand bij
+**Open gekozen regels**, zodat een eerdere preview geen onbedoeld
+andere tekst laat binnenkomen. Ook wanneer er gaten in de gekozen
+bronregels zijn, blijven de originele bron-tijdcodes behouden;
+er is geen automatische tijdherverdeling, vertaling of netwerkverzoek.
+
 ## Een geselecteerd bereik uit een grote tekst openen
 
 - Na het plakken toont Tuddy hoeveel geldige regels de complete bron bevat.
