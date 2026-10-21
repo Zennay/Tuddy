@@ -1,3 +1,15 @@
+## Verbeterd: rechtstreeks SRT/VTT uit Android-bestandsproviders openen
+
+De bestaande **Open SRT/WebVTT…**-actie en **Tweede SRT/VTT-document
+toevoegen…** lezen sinds deze versie ook via de veilige 256-KiB-reader
+op een IO-thread. De interface blijft bruikbaar terwijl een
+geselecteerde Android-provider een document levert. Een ongeldig
+tweede document vervangt nooit je huidige bewerkbare concept; alleen
+geldige brondata gaan naar de bestaande samenvoeg-preview. Ook
+providers die SRT/VTT niet als text/plain markeren worden ondersteund,
+zonder de bestaande strikte parser, toestemming of privacygrenzen
+te versoepelen. [Handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: handmatige LRC-begintijden weer opslaan
 
 Tuddy kan bestaande `.lrc`-tekst met eigen beginmomenten niet alleen
