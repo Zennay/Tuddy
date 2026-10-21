@@ -1,3 +1,13 @@
+## Verbeterd: woordstappen respecteren expliciete zero-width-spaties
+
+De geschatte woordvolger gebruikt nu ook bestaande `U+200B`-scheidingstekens
+naast gewone Unicode-witruimte. Er worden geen woordgrenzen afgeleid of
+verzonnen voor tekst die zelf geen scheidingstekens bevat.
+
+[Handleiding](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
 ## Nieuw op PR #225: woordvolger met zelf getikte tijdankers
 
 In de bestaande privé-audiospeler kun je naast de gelijkmatig geschatte
