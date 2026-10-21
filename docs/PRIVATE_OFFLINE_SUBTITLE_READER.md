@@ -136,6 +136,18 @@ ondertitel-editor; correcties en nieuwe SRT/VTT-kopieën zijn afzonderlijke
 gebruikeracties. Geen video, geluid, model, import-URL of automatische
 netwerkactie. De oorspronkelijke JSON3 blijft onaangeroerd.
 
+## JSON3 zonder document plakken of delen
+
+Ook complete door de gebruiker aangeleverde JSON3-tekst kan nu via de
+handmatige ondertitel-editor of Androids `text/plain`-deelmenu als
+tijdelijk, bevestigingsplichtig ondertitelconcept worden geopend.
+In die directe UI-route geldt **64 KiB** als grens; de asynchrone
+Android-bestandskiezer behoudt de 256-KiB-documentgrens. Alle
+aangeleverde tijden blijven oorspronkelijk. De gebruiker kan een
+geldige JSON3 kopiëren, eerst privé inspecteren en daarna expliciet
+als nieuwe SRT/VTT-kopie bewaren. Ongeldige JSON3 wordt niet tot
+gewone automatische gesprekstranscriptie of vertaling gedegradeerd.
+
 ## Veiligheid en privacy
 
 Dit is uitsluitend het bewust gekozen document, nooit de actuele

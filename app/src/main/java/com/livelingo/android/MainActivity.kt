@@ -132,7 +132,8 @@ private fun detectedSubtitlePasteFormat(raw: String): SubtitlePasteFormat? {
         return SubtitlePasteFormat(false, false, PlainSubtitleSplitMode.LINES)
     if (raw.contains('[') && PrivateLrcSubtitleDraft.preview(raw) != null)
         return SubtitlePasteFormat(false, true, PlainSubtitleSplitMode.LINES)
-    if (PrivateSbvSubtitleReader.read(raw) != null)
+    if (PrivateSbvSubtitleReader.read(raw) != null ||
+        PrivateYoutubeJson3SubtitleReader.read(raw) != null)
         return SubtitlePasteFormat(false, false, PlainSubtitleSplitMode.LINES)
     val timed = PrivateTimedSubtitleSheet.readAuthored(raw) ?: return null
     val paired = timed.firstOrNull()?.text?.contains('\n') == true
@@ -2119,7 +2120,7 @@ private fun TuddyScreen(
                             shared.subtitleTimedSheetMode != null ->
                                 "Gedeelde CSV/TSV heeft expliciete begin- en eindtijden; " +
                                     "een tweede tekstkolom is geen geverifieerde vertaling. "
-                            else -> "Gedeelde SRT/WebVTT/SBV is alleen een tijdelijk voorstel. "
+                            else -> "Gedeelde SRT/WebVTT/SBV/JSON3 is alleen een tijdelijk voorstel. "
                         }) + "Controleer inhoud en tijdcodes en bevestig apart; " +
                             "er wordt niets automatisch opgeslagen of vertaald."
                     )
