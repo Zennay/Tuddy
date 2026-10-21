@@ -1,3 +1,33 @@
+# Zelf handmatig woordtijdankers plaatsen (optioneel)
+
+Als de **Geschatte woordvolger** aan staat, kun je vanaf nu binnen een
+zichtbare ondertitelregel maximaal **16 handmatige woordtijdankers** zetten.
+Typ een **origineel woordnummer** vanaf 2 in het veld onder
+**Handmatige woordankers**. Zet het geluid aan, ga naar de gewenste
+positie en tik op **Markeer dit woord op huidige audiotijd**. Als je een
+nummer opnieuw markeert, vervangt het nieuwe moment jouw vorige keuze.
+Woord 1 blijft bewust gekoppeld aan het begin van de oorspronkelijke cue.
+
+Tuddy gebruikt deze **zelf gekozen** posities voor de visuele woordvolger,
+**Vorig/Volgend**, direct springen en het herhalen van één woord of
+woordgroep. Tussen jouw ankers worden tussenliggende woorden nog steeds
+**gelijkmatig geschat**; vóór het eerste of na het laatste anker ook.
+Markeringen moeten binnen de huidige cue liggen, in strikt oplopende
+woord- én tijdvolgorde passen en minimaal één milliseconde per woord
+overlaten. Bij een ongeldige keuze blijft de bestaande set behouden.
+Je kunt alle ankers voor de actieve regel via **Herstel gelijkmatige
+woordschatting voor deze regel** wissen. Een gewijzigde ondertitel-offset
+wist alle handmatige ankers omdat ze dan niet meer bij dezelfde tijdcodes
+horen. Ander audio- of ondertitelmateriaal en sluiten verwijderen de
+sessiemarkeringen eveneens.
+
+**Geen automatische alignering:** een tik tijdens het luisteren is een
+menselijke tijdinschatting, géén bewezen begin van het uitgesproken woord.
+De app analyseert of verstuurt geen audio; er zijn geen nieuwe permissies,
+geen gewijzigde originele SRT/VTT en geen automatische opslag.
+
+---
+
 ## Nieuw: aaneengesloten woordgroep bewust als één fragment herhalen
 
 Open **Kies direct een woord uit deze ondertitel** terwijl de optionele
