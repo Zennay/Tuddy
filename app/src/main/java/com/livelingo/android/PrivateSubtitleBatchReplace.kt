@@ -21,7 +21,8 @@ internal object PrivateSubtitleBatchReplace {
         matchCase: Boolean,
         fromRow: Int = 1,
         throughRow: Int = cues.size,
-        field: SubtitleReplaceField = SubtitleReplaceField.ALL_TEXT
+        field: SubtitleReplaceField = SubtitleReplaceField.ALL_TEXT,
+        explicitRows: String = ""
     ): SubtitleBatchPreview? {
         if (cues.isEmpty() || cues.size > 500 ||
             fromRow !in 1..cues.size || throughRow !in fromRow..cues.size ||
@@ -29,6 +30,12 @@ internal object PrivateSubtitleBatchReplace {
             replacement.length > 200 ||
             (search + replacement).any { it == '\u0000' || it == '\r' ||
                 it == '\n' || it.isISOControl() }) return null
+        // A deliberate disjoint selection takes precedence over Van/Tot;
+        // never substitute displayed search-result positions for source rows.
+        val selectedRows = if (explicitRows.isNotBlank())
+            PrivateSubtitleRowSelection.parse(explicitRows, cues.size)?.toSet()
+                ?: return null
+        else null
         val pattern = Regex(
             Regex.escape(search),
             if (matchCase) emptySet() else setOf(RegexOption.IGNORE_CASE)
@@ -37,7 +44,9 @@ internal object PrivateSubtitleBatchReplace {
         var occurrences = 0
         val draft = cues.mapIndexed { index, cue ->
             // Never touch a subtitle outside the explicitly selected 1-based range.
-            if (index + 1 !in fromRow..throughRow) return@mapIndexed cue
+            if (selectedRows != null) {
+                if (index !in selectedRows) return@mapIndexed cue
+            } else if (index + 1 !in fromRow..throughRow) return@mapIndexed cue
             // For manually paired bilingual cues, restrict changes to the
             // first or second line. Other lines remain byte-for-byte text
             // identical. Never infer which language a line represents.
