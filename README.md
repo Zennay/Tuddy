@@ -1,3 +1,37 @@
+## Nieuw: veilige leerlingenversie van de tweetalige invuloefening
+
+Bij **★ gemarkeerd → Exporteer selectie… → Aanvuloefening · HTML** kies je
+nu expliciet voor **Zelfstudie · antwoorden na bewuste keuze** of
+**Leerlingenblad · geen antwoorden in bestand**. In de zelfstudieversie
+moet je ieder individueel antwoord openklappen; ook het volledige
+antwoordblad blijft in de browser verborgen totdat je via
+**Open volledige antwoordblad** er bewust naar gaat. Op papier blijft
+het volledige antwoordblad op een aparte pagina aanwezig.
+
+De **leerlingenversie** neemt géén afzonderlijk volledig antwoord,
+openklapantwoord of verborgen HTML-antwoordblad op in het geëxporteerde
+bestand. Ze bevat uitsluitend de gekozen oorspronkelijke vraagtekst,
+de bewust ingestelde onvolledige invulhints, tijdelijke invoervelden
+en de zelfbeoordelingsopties. De werkelijke inhoud van een vraag kan
+vanzelfsprekend tekst bevatten die een docent ook als antwoord zou
+beschouwen; controleer daarom je eigen bronzinnen en de gekozen
+hintmodus voordat je deelt. Tuddy verzint of beoordeelt de vertaling
+niet. De Android-preview meldt nadrukkelijk dat de achterzijde in
+de leerlingenversie ontbreekt. Het voorgestelde bestandslabel is
+**Tuddy-leerlingenblad-zonder-antwoorden.html**, duidelijk verschillend
+van de zelfstudieversie.
+
+De keuze van ontvanger is onderdeel van de tijdelijke exportsnapshot
+en de opnieuw berekende bytes bij terugkeer uit de Android-documentkiezer.
+Als de bestemming, bronselectie, hints, moeilijkheid, correcties of
+schrijfruimte intussen wijzigen, wordt de oorspronkelijke opslag
+geweigerd. Geen extra permissies, JavaScript, netwerkverzoeken,
+automatisch gegenereerde antwoorden of centrale leerscores. Een
+door de gebruiker gekozen Android-bestandsprovider kan het bestand
+wel extern synchroniseren.
+
+---
+
 ## Nieuw: zelf beoordelen binnen het zelfstandige offline oefenblad
 
 Iedere kaart in het geëxporteerde **Aanvuloefening · HTML** heeft nu naast
