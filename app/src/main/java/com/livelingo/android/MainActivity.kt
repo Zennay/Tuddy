@@ -5489,7 +5489,7 @@ private fun TuddyScreen(
                             Text("Naar: ${target.label}", maxLines = 1)
                         }
                         DropdownMenu(expanded = targetOpen, onDismissRequest = { targetOpen = false }) {
-                            Text("59 talen · offline tekstmodellen", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                            Text("59 vertaaltalen · offline na modelvoorbereiding", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
                             OutlinedTextField(
                                 value = targetQuery,
                                 onValueChange = { targetQuery = it },
@@ -5497,7 +5497,15 @@ private fun TuddyScreen(
                                 modifier = Modifier.width(310.dp).padding(horizontal = 10.dp),
                                 singleLine = true
                             )
-                            TargetCatalog.search(targetQuery).take(35).forEach { choice ->
+                            val matchingTargets = TargetCatalog.search(targetQuery).take(35)
+                            if (matchingTargets.isEmpty()) {
+                                Text(
+                                    "Geen vertaaltaal gevonden.",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            matchingTargets.forEach { choice ->
                                 DropdownMenuItem(text = { Text(choice.title) }, onClick = {
                                     stop()
                                     modelStorage.invalidate()
