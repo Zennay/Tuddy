@@ -101,6 +101,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var wordJumpListOpen by remember { mutableStateOf(false) }
     var wordJumpPage by remember { mutableIntStateOf(0) }
     var wordJumpNumber by remember { mutableStateOf("") }
+    var wordRangeFrom by remember { mutableStateOf("") }
+    var wordRangeTo by remember { mutableStateOf("") }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var rangeStartIndex by remember { mutableIntStateOf(-1) }
     var rangeEndIndex by remember { mutableIntStateOf(-1) }
@@ -281,6 +283,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         subtitleOffsetMs = 0L
         estimatedWordFollow = false
         wordReplayBounds = null
+        wordRangeFrom = ""
+        wordRangeTo = ""
         cuePickerOpen = false
         confirmApplyOpen = false
         confirmClipOpen = false
@@ -673,6 +677,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     LaunchedEffect(activeIndex, estimatedWordFollow) {
         wordJumpPage = 0
         wordJumpNumber = ""
+        wordRangeFrom = ""
+        wordRangeTo = ""
         if (!estimatedWordFollow) {
             wordJumpListOpen = false
             wordReplayBounds = null
@@ -1486,6 +1492,71 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         }
                                     }
                                 ) { Text("Ga") }
+                            }
+                            Text(
+                                "Zelf een aaneengesloten woordgroep herhalen · " +
+                                    "alleen een tijdschatting uit deze ondertitel.",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = wordRangeFrom,
+                                    onValueChange = { value ->
+                                        if (value.length <= 3 && value.all(Char::isDigit))
+                                            wordRangeFrom = value
+                                    },
+                                    singleLine = true,
+                                    label = { Text("Van woord") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = wordRangeTo,
+                                    onValueChange = { value ->
+                                        if (value.length <= 3 && value.all(Char::isDigit))
+                                            wordRangeTo = value
+                                    },
+                                    singleLine = true,
+                                    label = { Text("Tot en met") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            val firstWord = wordRangeFrom.toIntOrNull()
+                            val lastWord = wordRangeTo.toIntOrNull()
+                            val phraseWindow = if (firstWord != null && lastWord != null) {
+                                PrivateCueWordProgress.estimatedPhraseReplayWindow(
+                                    active.text, cueStart(active), cueEnd(active),
+                                    firstWord - 1, lastWord - 1
+                                )?.takeIf { it.second <= durationMs }
+                            } else null
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !guidedActive && phraseWindow != null,
+                                onClick = {
+                                    val chosen = phraseWindow
+                                    if (chosen != null) {
+                                        loopCueIndex = -1
+                                        rangeRepeating = false
+                                        bookmarkRepeating = false
+                                        completedPasses = 0
+                                        lastLoopAtMs = 0L
+                                        wordReplayBounds = chosen
+                                        seekTo(chosen.first)
+                                        notice = "Eigen woordgroep $firstWord–$lastWord wordt " +
+                                            "geschat en herhaald. Dit is géén spraakherkenning."
+                                    }
+                                }
+                            ) { Text("↻ Herhaal gekozen woordgroep") }
+                            if (firstWord != null && lastWord != null &&
+                                phraseWindow == null) {
+                                Text(
+                                    "Kies oplopende nummers van 1 t/m " +
+                                        "${wordJumpChoices.size}; een geschat fragment " +
+                                        "moet 0,75–120 seconden duren.",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
                             }
                             wordJumpChoices.drop(visiblePage * 9).take(9)
                                 .chunked(3).forEach { wordRow ->
