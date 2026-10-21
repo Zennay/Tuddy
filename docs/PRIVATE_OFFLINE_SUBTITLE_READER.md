@@ -197,6 +197,25 @@ blijven via de bestaande aparte Android-opslagroute beschikbaar.
 Het concept en de originele bron blijven ongewijzigd. Wanneer
 geen deeldoel beschikbaar is, krijgt de gebruiker een foutmelding.
 
+## Een gekozen bronregelselectie als SBV bewaren
+
+In **Kies zelf bronregels om te bewaren…** kun je naast SRT/VTT,
+CSV/TSV en LRC nu ook **SBV** als formaat kiezen. Dat kan voor de
+oorspronkelijke geselecteerde rijen, gevonden tekstregels of zelf
+gekozen tijdvensters. Desgewenst maak je eerst een **compact
+fragment vanaf 00:00**; dit verschuift bewust de tijdcodes, maar
+is geen gemeten audio-uitlijning. Met **Behoud oorspronkelijke tijdcodes**
+blijven de originele begin- én eindtijden van de selectie intact.
+
+Het volledige, exact te exporteren SBV-fragment verschijnt in de
+bestaande preview. Tuddy herberekent de bronselectie en de strikte
+UTF-8 SBV-snapshot bij de bevestiging. Daarna vraagt Android
+apart om een opslaglocatie voor een **nieuwe kopie**. Niet-geschikte
+meerregelige inhoud, tijdstempels of te lange documenten worden
+zonder tekstverlies of stille herindeling geweigerd.
+De oorspronkelijke bron en alle niet-geselecteerde cues blijven
+intact; de editor kan na de bestandskiezer verder.
+
 ## Veiligheid en privacy
 
 Dit is uitsluitend het bewust gekozen document, nooit de actuele
