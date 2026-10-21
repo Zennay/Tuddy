@@ -14,6 +14,35 @@ Je hoeft een eigen bestand niet eerst met een andere app te openen en te kopiër
 
 De tijdelijke keuze en eerdere conceptinvoer verdwijnen wanneer de gebruiker de import afsluit; bij een ongeldig gemaakte sessie wordt een laat aangekomen documentresultaat genegeerd. Er worden geen leesrechten langdurig bewaard, geen bestand automatisch weggeschreven en geen nieuwe opslagpermissies aangevraagd. **Let op:** de door jou gekozen Android-bestandsprovider kan externe/cloudopslag gebruiken; Tuddy kan niet garanderen dat een gekozen provider offline blijft. De app verwerkt de geleverde tekst verder lokaal en vraagt geen eigen netwerkverbinding voor deze import. CSV met nieuwe regels **binnen een veld** wordt nog steeds geweigerd. Bestandsimport geeft geen ASR, automatische vertaling of echte audiotiming.
 
+
+## SRT/WebVTT-bestanden rechtstreeks openen zonder de editor vast te zetten
+
+Naast de handmatige bestandskeuze in de plakroute bestaan ook de
+bestaande Android-knoppen **Open SRT/WebVTT…** en **Tweede
+SRT/VTT-document toevoegen…**. Beide routes gebruiken nu dezelfde
+streng begrensde, UTF-8-controlerende documentlezer als de eigen
+plakimport. Android kan via een externe bestandsprovider trager zijn,
+maar het inlezen en parsen gebeurt buiten de UI-thread; de live
+microfoon of het live gesprek worden niet automatisch gestart of
+aangepast.
+
+- De eerste SRT/VTT-openactie accepteert expliciet een door jou
+  gekozen bestand onafhankelijk van hoe de Android-provider het
+  MIME-type rapporteert. De volledige inhoud moet alsnog aan de
+  bestaande SRT/VTT-parserlimieten voldoen.
+- Voor **het tweede spoor** keert eerst je oude tijdelijke
+  ondertitelconcept terug. Pas als het nieuwe volledige document
+  geldig is, biedt Tuddy de bestaande **samenvoeg-preview** aan.
+  Bij annuleren of weigering blijft het eerdere concept ongewijzigd.
+- In beide gevallen worden te grote bestanden (meer dan 256 KiB),
+  ongeldige UTF-8, verboden controletekens en onvolledige SRT/VTT-cues
+  geweigerd. Als je het gesprek wist, de editor wijzigt of een nieuw
+  document kiest tijdens het laden, wordt een achterhaald resultaat
+  niet meer toegepast.
+- Dit is alleen **bewust gekozen lokale documentverwerking**.
+  Android-documentproviders kunnen zelf externe/cloudopslag gebruiken.
+  Tuddy vraagt geen blijvende URI-rechten of nieuwe permissies.
+
 ## Eigen LRC-lyrics-tijdcodes omzetten naar een ondertitelconcept
 
 Selecteer **LRC: eigen begintijden per regel**. Typ/plak je eigen LRC-tekst,
