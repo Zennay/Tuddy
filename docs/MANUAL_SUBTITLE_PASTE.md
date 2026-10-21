@@ -90,8 +90,17 @@ tijdstempels (ook op andere regels), ongeldige chronologie na
 samenvoegen, ontbrekende teksten en te veel items worden **volledig
 geweigerd**; niet stilzwijgend overgeslagen. Lege regels worden
 genegeerd. Informatieve LRC-metadata vóór de eerste cue (`ar`, `ti`,
-`al`, `by`, `length`) worden genegeerd; onbekende directives en
-`offset`-verschuivingen worden nog steeds niet geïnterpreteerd. Het
+`al`, `by`, `length`) worden genegeerd; onbekende directives worden
+geweigerd. Optioneel kan **precies één eigen `[offset:+500]` of
+`[offset:-250]`-header vóór de eerste tekstregel** staan. Deze waarden
+zijn letterlijke **milliseconden**, geen seconden: positief verschuift
+alle eigen begintijden **later** en negatief **eerder**. Alleen een
+gehele waarde tussen **-30000 en +30000** wordt geaccepteerd.
+Een resulterende negatieve of buiten-limiet tijd, meerdere offsetregels,
+ongeldige syntax of een offset ná een tekstregel weigert het hele
+document. In de Android-voorbeeldweergave staat de daadwerkelijk
+verwerkte, expliciete offset naast de tijdcodes; er wordt niets uit
+audio afgeleid en geen stille verschuiving uitgevoerd. Het
 resultaat moet veilig als volledige SRT **én** WebVTT exporteerbaar zijn.
 Volledige preview, zoeken, eigen cue-selectie en bewuste Android-keuze
 blijven vereist. Tijdcodes zijn aangeleverd, **niet gemeten**, en
