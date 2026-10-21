@@ -52,6 +52,8 @@ import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDocumentCombine
 import com.livelingo.android.PrivateSubtitleOffset
 import com.livelingo.android.PrivateSubtitleTrackAnchorOffset
+import com.livelingo.android.PrivateSubtitleTrackDriftAlignment
+import com.livelingo.android.PrivateSubtitleDriftSelection
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateLrcSubtitleExport
@@ -160,6 +162,8 @@ internal fun PrivateSubtitleFileDialog(
     var secondaryAnchorPage by remember { mutableIntStateOf(0) }
     var anchorSelectionNeedsApply by remember { mutableStateOf(false) }
     var secondTrackPreviewPage by remember { mutableIntStateOf(0) }
+    var driftSelectorOpen by remember { mutableStateOf(false) }
+    var selectedDrift by remember { mutableStateOf<PrivateSubtitleDriftSelection?>(null) }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
     val found = draft.mapIndexed { idx, row -> idx to row }
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
@@ -182,6 +186,8 @@ internal fun PrivateSubtitleFileDialog(
                 secondaryAnchorPage = 0
                 anchorSelectionNeedsApply = false
                 secondTrackPreviewPage = 0
+                driftSelectorOpen = false
+                selectedDrift = null
                 notice = ""
             } else {
                 notice = "Het concept veranderde tijdens de bestandskeuze. Kies opnieuw."
@@ -703,6 +709,8 @@ internal fun PrivateSubtitleFileDialog(
                 secondaryAnchorPage = 0
                 anchorSelectionNeedsApply = false
                 secondTrackPreviewPage = 0
+                driftSelectorOpen = false
+                selectedDrift = null
                 notice = ""
                 pasteSecondOpen = false
                 onSecondPasteConsumed()
@@ -712,18 +720,30 @@ internal fun PrivateSubtitleFileDialog(
     val stagedImport = pendingImport
     if (stagedImport != null) {
         val stillCurrent = draft == stagedImport.existing
+        val drift = selectedDrift?.takeIf {
+            importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES && stillCurrent
+        }?.let {
+            PrivateSubtitleTrackDriftAlignment.preview(
+                draft, stagedImport.imported,
+                it.firstPrimaryRow, it.firstSecondaryRow,
+                it.lastPrimaryRow, it.lastSecondaryRow)
+        }
         val selectedPairOffset = when {
-            importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES ->
-                secondTrackOffsetMs
+            importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES -> secondTrackOffsetMs
+            selectedDrift != null -> if (drift != null) 0L else null
             anchorSelectionNeedsApply -> null
             secondTrackCustomOffset.isBlank() -> secondTrackOffsetMs
             else -> PrivateSubtitleOffset.parseSeconds(
                 secondTrackCustomOffset, allowZero = true)
         }
-        val proposed = if (stillCurrent && selectedPairOffset != null)
-            PrivateSubtitleDocumentCombine.preview(
-                draft, stagedImport.imported, importMode, selectedPairOffset
-            ) else null
+        val proposedIncoming = if (
+            selectedDrift != null && importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
+        ) drift?.adjustedSecondary else stagedImport.imported
+        val proposed = if (stillCurrent && selectedPairOffset != null &&
+            proposedIncoming != null
+        ) PrivateSubtitleDocumentCombine.preview(
+            draft, proposedIncoming, importMode, selectedPairOffset
+        ) else null
         val previewRows = proposed?.cues.orEmpty()
         val previewPages = maxOf(1, (previewRows.size + 4) / 5)
         val shownPairPage = secondTrackPreviewPage.coerceIn(0, previewPages - 1)
@@ -980,18 +1000,31 @@ internal fun PrivateSubtitleFileDialog(
             },
             confirmButton = {
                 TextButton(enabled = proposed != null && stillCurrent, onClick = {
+                    val latestDrift = selectedDrift?.takeIf {
+                        importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
+                    }?.let {
+                        PrivateSubtitleTrackDriftAlignment.preview(
+                            draft, stagedImport.imported,
+                            it.firstPrimaryRow, it.firstSecondaryRow,
+                            it.lastPrimaryRow, it.lastSecondaryRow)
+                    }
                     val latestOffset = when {
                         importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES ->
                             secondTrackOffsetMs
+                        selectedDrift != null -> if (latestDrift != null) 0L else null
                         anchorSelectionNeedsApply -> null
                         secondTrackCustomOffset.isBlank() -> secondTrackOffsetMs
                         else -> PrivateSubtitleOffset.parseSeconds(
                             secondTrackCustomOffset, allowZero = true)
                     }
-                    val updated = latestOffset?.let {
+                    val latestIncoming = if (
+                        selectedDrift != null &&
+                        importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
+                    ) latestDrift?.adjustedSecondary else stagedImport.imported
+                    val updated = if (latestOffset != null && latestIncoming != null)
                         PrivateSubtitleDocumentCombine.preview(
-                            draft, stagedImport.imported, importMode, it)
-                    }
+                            draft, latestIncoming, importMode, latestOffset)
+                    else null
                     if (draft != stagedImport.existing || updated == null ||
                         proposed == null || updated.cues != proposed.cues ||
                         updated.pairedCount != proposed.pairedCount) {
