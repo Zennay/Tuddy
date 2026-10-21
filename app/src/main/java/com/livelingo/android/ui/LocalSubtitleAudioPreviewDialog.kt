@@ -1461,9 +1461,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 "■ Stop geschatte woordherhaling"
                             else "↻ Herhaal alleen dit geschatte woordfragment")
                         }
-                        Text("Herhaalbaar alleen bij geschatte vensters van minstens " +
-                            "0,75 s. Alleen je ondertiteltijdcodes en eventuele eigen " +
-                            "tijdankers bepalen de grenzen; geen woorddetectie of audioanalyse.",
+                        Text("Woordherhaling gebruikt maximaal twee minuten per " +
+                            "geschat woord. Is de geschatte woordduur korter dan 0,75 s, " +
+                            "dan speelt Tuddy 0,75 s met aangrenzende context, binnen " +
+                            "je eigen cuegrenzen. Cues korter dan 0,75 s kunnen niet " +
+                            "in een herhaallus. Dit is geen spraakdetectie of uitlijning.",
                             style = MaterialTheme.typography.bodySmall)
                         Text("De woordstappen springen naar geschatte momenten; " +
                             "ze volgen geen gemeten uitspraak of audioanalyse.",
