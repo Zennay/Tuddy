@@ -33,6 +33,35 @@ en verdwijnen zodra je sluit. De knop is uitgeschakeld tijdens microfoon-
 opname of wanneer er geen bruikbare tweetalige markeringen zijn.
 Dit verandert je markeringen, eigen archief of woordenschat niet.
 
+## Zelf een afdrukbaar vragen- en antwoordenblad maken
+
+Kies bij **★ gemarkeerd → Exporteer selectie…** het nieuwe formaat
+**Oefenblad · HTML**. Net als voor TSV en CSV gaan uitsluitend echt
+afgeronde, niet-lege tweetalige regels mee. Het bestaande zoek-/taalfilter,
+de bewuste selectie, het ontdubbelen van identieke paren en de keuze
+voor bron→vertaling, omgekeerd of beide richtingen blijven gelden.
+Zelf geschreven studiecorrecties verschijnen waar ze exact bij de
+huidige regel horen; kies desgewenst **Alleen mijn handmatig
+gecorrigeerde antwoorden** om alle andere regels weg te laten.
+
+Vooraf zie je dezelfde kaartteller en voor-/achterkanttekst als bij
+TSV en CSV. Kies pas daarna een Android-bestandslocatie. Het lokale
+HTML-document begint met alle **vragen en schrijflijnen**; de
+**antwoorden** staan in een afzonderlijk afdrukgedeelte met pagina-einde.
+Zo kun je de vragen uitdelen zonder de antwoorden op de eerste pagina.
+Het bestand heeft geen JavaScript, externe bronnen, gekoppelde
+audiobestanden of netwerkaanvragen. De app bewaart geen nieuwe
+studieresultaten en wijzigt de oorspronkelijke transcriptie niet.
+
+De export is een volledig zelfstandige, maximaal 256 KiB grote
+HTML-pagina met ge-escapete Unicode-teksten. Identieke studiekaarten
+worden maar één keer meegenomen; bij twee richtingen verschijnen
+beide vragen/antwoorden. Ongeldige/te grote documenten worden
+volledig geweigerd. Een externe Android-bestandsprovider kan de
+expliciet opgeslagen informatie alsnog synchroniseren of delen.
+De antwoorden blijven ongeverifieerde modelvertalingen of
+zelfgeschreven correcties, geen erkende vertalingen.
+
 ## Alleen mijn gekozen markeringen gebruiken
 
 In **★ gemarkeerd** kun je nu maximaal 80 tijdelijke markeringen
@@ -146,6 +175,9 @@ Selecteer daarna precies één uitvoerformaat:
   of taalcontrole. Het zijn modelantwoorden, niet jouw zelfgeschreven
   of door moedertaalsprekers geverifieerde betekenissen. Je leerkaarten blijven ook zonder verdere
   toestemming *niet* als app-privé studiekaarten opgeslagen.
+- **HTML-oefenblad**: afzonderlijke vraag- en antwoordpagina's van uitsluitend
+  je gekozen tweetalige leerkaarten, met dezelfde richting, correcties,
+  taalcodekeuze en begrenzing als TSV/CSV. Bewuste SAF-opslag.
 - **JSON**: dezelfde beperkte selectie in Tuddy's bestaande
   privéarchief-formaat, opnieuw te openen in de read-only archieflezer.
   Niet voltooide vertalingen blijven expliciet leeg.
