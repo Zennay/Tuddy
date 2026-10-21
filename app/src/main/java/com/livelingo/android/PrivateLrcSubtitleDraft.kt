@@ -67,10 +67,10 @@ internal object PrivateLrcSubtitleDraft {
     }
 
     /**
-     * Retimes only explicitly selected, chronological 0-based LRC cues.
-     * Multiple timestamp tags on one physical lyric line are edited separately.
-     * Metadata, all lyric text and the optional global [offset:] stay intact.
-     * An edit that would reorder or overlap cues is rejected completely.
+     * Shift only explicitly chosen chronological LRC cues, in milliseconds.
+     * Multiple tags on one physical refrain remain separate authored starts.
+     * Fail closed rather than silently moving a different lyric or rewriting
+     * any music metadata, free text or the optional global [offset:] header.
      */
     fun withShiftedRows(
         raw: String,
@@ -80,79 +80,129 @@ internal object PrivateLrcSubtitleDraft {
         if (deltaMillis !in -30_000L..30_000L || deltaMillis == 0L) return null
         val before = preview(raw) ?: return null
         if (sourceIndices.isEmpty() || sourceIndices.size > before.size ||
-            sourceIndices.toSet().size != sourceIndices.size ||
+            sourceIndices.distinct().size != sourceIndices.size ||
             sourceIndices.any { it !in before.indices }) return null
+        val desired = sourceIndices.associateWith { index ->
+            before[index].startMillis + deltaMillis
+        }
+        return withExactStarts(raw, before, desired)
+    }
 
+    /**
+     * Exact two-point correction of a CONTIGUOUS authored cue interval.
+     * The user picks the first and last original cue plus two intended
+     * timestamps; intermediate cue starts are interpolated only from those
+     * explicit anchors, not from sound or speech recognition.
+     *
+     * The scale is intentionally limited to 0.5..2x, and cues outside the
+     * interval are never modified. An inversion, duplicate or impossible
+     * resulting SRT/VTT document rejects the entire proposal.
+     */
+    fun withRangeAnchors(
+        raw: String,
+        firstIndex: Int,
+        lastIndex: Int,
+        targetFirstMillis: Long,
+        targetLastMillis: Long
+    ): String? {
+        val before = preview(raw) ?: return null
+        if (firstIndex !in before.indices ||
+            lastIndex !in before.indices || firstIndex >= lastIndex) return null
+        val oldFirst = before[firstIndex].startMillis
+        val oldLast = before[lastIndex].startMillis
+        val oldSpan = oldLast - oldFirst
+        val newSpan = targetLastMillis - targetFirstMillis
+        if (oldSpan <= 0L || newSpan <= 0L ||
+            newSpan * 2L < oldSpan || newSpan > oldSpan * 2L ||
+            targetFirstMillis !in 0L until MAX_TIME_MS ||
+            targetLastMillis !in 0L until MAX_TIME_MS) return null
+        val desired = (firstIndex..lastIndex).associateWith { index ->
+            val distance = before[index].startMillis - oldFirst
+            targetFirstMillis + (distance * newSpan + oldSpan / 2L) / oldSpan
+        }
+        // Preserve the originally chosen anchor timestamps exactly.
+        if (desired[firstIndex] != targetFirstMillis ||
+            desired[lastIndex] != targetLastMillis) return null
+        if ((firstIndex..lastIndex).all { index ->
+                desired[index] == before[index].startMillis
+            }) return null
+        return withExactStarts(raw, before, desired)
+    }
+
+    /** Shared lossless rewrite of timestamp TAGS, never entire lyric rows. */
+    private fun withExactStarts(
+        raw: String,
+        before: List<PrivateSubtitleCue>,
+        desired: Map<Int, Long>
+    ): String? {
+        if (desired.isEmpty() || desired.size > before.size ||
+            desired.keys.any { it !in before.indices } ||
+            desired.values.any { it !in 0L until MAX_TIME_MS }) return null
         val normalized = raw.removePrefix("\uFEFF")
             .replace("\r\n", "\n").replace('\r', '\n')
         val lines = normalized.split('\n').toMutableList()
         val globalOffset = declaredOffsetMillis(raw) ?: 0L
-        data class TimestampLocation(
+        data class TagLocation(
             val absoluteStart: Long,
             val lineIndex: Int,
             val from: Int,
-            val until: Int,
-            val authoredStart: Long
+            val until: Int
         )
-        val locations = ArrayList<TimestampLocation>(before.size)
-        lines.forEachIndexed { lineIndex, originalLine ->
-            val line = originalLine.trim()
+        val tags = ArrayList<TagLocation>(before.size)
+        lines.forEachIndexed { lineIndex, source ->
+            val line = source.trim()
             if (line.isEmpty() || metadata.matches(line) ||
                 offsetHeader.matches(line)) return@forEachIndexed
-            val prefix = originalLine.indexOf(line)
+            val leading = source.indexOf(line)
             var cursor = 0
             while (cursor < line.length && line[cursor] == '[') {
-                val tag = timestampTag.find(line, cursor)
+                val match = timestampTag.find(line, cursor)
                     ?.takeIf { it.range.first == cursor } ?: break
-                val authored = tag.groupValues[1].toLong() * 60_000L +
-                    tag.groupValues[2].toLong() * 1_000L +
-                    tag.groupValues[3].padEnd(3, '0').toLong()
-                locations += TimestampLocation(
+                val authored = match.groupValues[1].toLong() * 60_000L +
+                    match.groupValues[2].toLong() * 1_000L +
+                    match.groupValues[3].padEnd(3, '0').toLong()
+                tags += TagLocation(
                     authored + globalOffset, lineIndex,
-                    prefix + tag.range.first, prefix + tag.range.last + 1,
-                    authored
+                    leading + match.range.first, leading + match.range.last + 1
                 )
-                cursor = tag.range.last + 1
+                cursor = match.range.last + 1
             }
         }
-        if (locations.size != before.size) return null
-        val chronological = locations.sortedBy { it.absoluteStart }
-        if (chronological.indices.any { i ->
-                chronological[i].absoluteStart != before[i].startMillis
+        if (tags.size != before.size) return null
+        val chronology = tags.sortedBy { it.absoluteStart }
+        if (chronology.indices.any { index ->
+                chronology[index].absoluteStart != before[index].startMillis
             }) return null
-        val selected = sourceIndices.toSet()
-        val changes = HashMap<Int, MutableList<Pair<TimestampLocation, String>>>()
-        chronological.forEachIndexed { index, position ->
-            if (index !in selected) return@forEachIndexed
-            val newAuthored = position.authoredStart + deltaMillis
-            val newAbsolute = position.absoluteStart + deltaMillis
-            if (newAuthored < 0L || newAuthored / 60_000L > 999L ||
-                newAbsolute !in 0L until MAX_TIME_MS) return null
-            val tag = String.format(
+
+        val replacements = HashMap<Int, MutableList<Pair<TagLocation, String>>>()
+        for ((index, newAbsolute) in desired) {
+            val original = chronology[index]
+            val authored = newAbsolute - globalOffset
+            if (authored < 0L || authored / 60_000L > 999L) return null
+            val newTag = String.format(
                 Locale.ROOT, "[%02d:%02d.%03d]",
-                newAuthored / 60_000L,
-                (newAuthored / 1_000L) % 60L,
-                newAuthored % 1_000L
+                authored / 60_000L, (authored / 1_000L) % 60L, authored % 1_000L
             )
-            changes.getOrPut(position.lineIndex) { mutableListOf() }
-                .add(position to tag)
+            replacements.getOrPut(original.lineIndex) { mutableListOf() }
+                .add(original to newTag)
         }
-        for ((lineIndex, edits) in changes) {
-            var line = lines[lineIndex]
-            for ((position, tag) in edits.sortedByDescending { it.first.from }) {
-                line = line.replaceRange(position.from, position.until, tag)
+        for ((lineIndex, edits) in replacements) {
+            var current = lines[lineIndex]
+            for ((location, tag) in edits.sortedByDescending { it.first.from }) {
+                current = current.replaceRange(location.from, location.until, tag)
             }
-            lines[lineIndex] = line
+            lines[lineIndex] = current
         }
-        val updatedText = lines.joinToString("\n")
-        val after = preview(updatedText) ?: return null
-        // Do not accept a successful parse that silently changed row identity.
+        val proposal = lines.joinToString("\n")
+        val after = preview(proposal) ?: return null
+        // Reject any hidden cue rearrangement; every unchanged original cue
+        // must still be at its own index with exactly the original words.
         if (after.size != before.size || before.indices.any { index ->
                 after[index].text != before[index].text ||
-                    after[index].startMillis != before[index].startMillis +
-                        (if (index in selected) deltaMillis else 0L)
+                    after[index].startMillis !=
+                        (desired[index] ?: before[index].startMillis)
             }) return null
-        return updatedText
+        return proposal
     }
 
     fun preview(raw: String): List<PrivateSubtitleCue>? {
