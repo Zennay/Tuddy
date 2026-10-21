@@ -455,6 +455,57 @@ anders: de daadwerkelijk toegepaste tijden blijven apart
 zichtbaar in de volledige resultaatpreview. Deze inspectie
 schrijft, vertaalt of verwijdert niets.
 
+### Zelf twee oorspronkelijke bronregels bewust koppelen
+
+Wanneer twee eigen SRT-/WebVTT-sporen inhoudelijk bij elkaar horen,
+maar weinig of helemaal geen overlappende tijdstempels hebben, kan
+de gebruiker nu **exacte oorspronkelijke bronnummers in beide
+sporen** kiezen. Dit is **handmatige inhoudelijke koppeling**, geen
+uit audio afgeleide timing, machinevertaling of taalherkenning.
+
+1. Open bij **Combineer twee teksten bij overlappende tijdcodes**
+   het gedeelte **Koppel zelf twee volledige oorspronkelijke bronregels**.
+   Vul een eerste-spoor- en een tweede-spoor-bronregelnummer in.
+   Vanuit **Inspecteer niet-gekoppelde bronregels** kun je bij een
+   losse cue ook **Neem originele regel over voor handmatig koppelen**
+   aantikken. Vanuit **Controleer elke bronregel-koppeling** kunnen
+   de twee bronnummers van een automatisch voorgesteld paar samen
+   worden overgenomen. Geen van deze knoppen past al een paar toe.
+2. Lees beide **volledige eigen bronteksten** met hun echte originele
+   begin-/eindtijden. Alleen **Voeg dit exacte eigen bronpaar toe aan
+   het voorstel** verankert dat paar in het tijdelijke voorstel.
+   De brontekst van spoor 1 krijgt dan de tekst van spoor 2 als
+   tweede regel; de tijdcodes van **spoor 1** bepalen bewust de
+   tijdcodes van de samengevoegde cue. De originele tweede-spoortijd
+   blijft zichtbaar bij broninspectie en wordt niet als gemeten
+   synchronisatie voorgesteld.
+3. Je kunt **maximaal 32** handmatige paren kiezen. Elk oorspronkelijk
+   bronnummer mag hoogstens één keer voorkomen; in beide sporen moet
+   de oorspronkelijke chronologische regelvolgorde overeenkomen.
+   Hetzelfde tweede-spoor-nummer kan niet tegelijk bewust uitgesloten
+   en handmatig gekoppeld zijn. De app weigert ongeldige keuzes of
+   niet volledig exporteerbare documenten, zonder de bestaande
+   geldige voorstellen te verliezen.
+4. Voor **alle overige** bronregels blijft de begrensde documentbrede
+   één-op-één-tijdmatcher actief. Zijn keuzes worden rond de bewust
+   vastgezette paren opnieuw bepaald; niet-gekoppelde regels blijven
+   geheel zichtbaar in het overzicht van losse bronregels.
+5. Via de vier-paren-paginareview of de aparte lijst van handmatige
+   koppelingen kun je zo'n verankering met **Herstel automatische
+   koppeling voor dit paar** weer wissen. Daarna kan de tijdmatcher
+   opnieuw een eventueel andere combinatie voorstellen. Ook
+   maximaal 32 vastgezette paren zijn met vier per pagina door te
+   bladeren. De volledige resultaatpreview houdt vijf cues per
+   pagina én de bestaande directe sprong naar een resultaatregel.
+
+**Definitieve toepassing blijft afzonderlijk:** de laatste
+**Voeg alleen toe aan tijdelijk concept**-actie herberekent alle
+handmatige paren, tijdcorrecties, uitsluitingen, oorspronkelijke
+bronrijen, koppelingen en volledige exportlimieten vanaf de huidige
+tijdelijke documenten. Een mismatch wordt geweigerd. Undo/Redo
+en de los gekozen Android SAF-bestandslocatie blijven nodig;
+originele bronbestanden worden nooit stilzwijgend gewijzigd.
+
 ### Een verkeerd voorgestelde koppeling handmatig afwijzen
 
 Open in dezelfde tijdelijke samenvoegpreview **Controleer elke
