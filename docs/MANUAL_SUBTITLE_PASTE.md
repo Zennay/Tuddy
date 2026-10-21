@@ -438,6 +438,19 @@ De uitgesloten regel **blijft compleet aanwezig** met eigen
 tekst en tijdcodes, nu als zelfstandige cue; er wordt niets verwijderd.
 Dit werkt ook als twee eigen teksten identiek zijn.
 
+Je kunt meerdere originele regels ineens behouden als losse cues:
+vul bijvoorbeeld `2-5,9,12-15` in bij **Bronregels tweede spoor**
+en tik daarna op **Houd deze bronregels los, zonder tekstverlies**.
+Dezelfde expliciete actie werkt met **maximaal 16 niet-overlappende
+zelf getypte tijdvensters** zoals
+`00:10-00:20;01:30-01:45`: eerst **Neem volledige bronregels uit
+tijdvensters**, controleer daarna de getoonde rijnummers en bevestig
+pas dan het uitsluiten. De selectie gebruikt de oorspronkelijke
+1-gebaseerde bronregelnummers van uitsluitend het tweede eigen
+spoor, niet de eventuele zoekresultaten of reeds gekoppelde lijst.
+Ongeldige, dubbele en overlappende rijbereiken zijn verboden.
+Geen enkele invoer leest audio of verwijdert tekst.
+
 Bij één of meer uitsluitingen verschijnt een aparte doorbladerbare
 lijst met vier oorspronkelijke cueverwijzingen per pagina. Gebruik
 **Sta koppeling van regel weer toe** om één uitsluiting terug te draaien
