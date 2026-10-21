@@ -401,6 +401,50 @@ geen bewijs van automatische vertaling of echte audiowoordtiming.
 
 Het uitlijnen gebeurt **uitsluitend op zelf aangewezen ondertitelbeginwaarden**, zonder audioanalyse, spraakherkenning, modelvertaling, woordtiming, toegangsuitbreiding of automatische bestandsopslag. De originele eerste en tweede documenten blijven intact.
 
+### Tijdverloop corrigeren met twee handmatig gekozen ankerparen
+
+Als twee ondertitelsporen **aan het begin samenvallen maar verderop
+geleidelijk uit elkaar lopen**, is een constante tijdverschuiving
+ontoereikend. Kies in **Combineer twee teksten bij overlappende
+tijdcodes** de aparte knop **Twee cueparen: corrigeer geleidelijk
+tijdverloop…**.
+
+1. Vul een **vroeg** overeenkomend cuepaar in: één oorspronkelijk
+   regelnummer uit het eerste en één uit het tweede spoor. Vul daarna
+   een **later** overeenkomend cuepaar in. De knop **Vul eerste en laatste
+   regel per spoor in** is slechts een suggestie: controleer zelf of
+   beide bronzinnen echt corresponderen.
+2. De app toont van **alle vier de expliciet gekozen broncues** de
+   volledige tekst en begintijd. Daarnaast zie je de originele
+   tijdafstand en de gewenste afstand van de twee gekozen ankerparen.
+   Dit is géén automatisch vastgestelde inhoudsrelatie.
+3. Met **Neem twee ankerparen over** accepteer je slechts de gekozen
+   configuratie; de app verandert op dat moment nog niets in je
+   tijdelijke ondertitelconcept.
+4. In de bestaande samenvoegpreview blader je daarna door de
+   **volledige resulterende tijdlijn**, vijf regels per pagina,
+   inclusief niet-gekoppelde cues. Pas **Voeg alleen toe aan tijdelijk
+   concept** past deze gecontroleerde versie als één herstelbare
+   Undo/Redo-stap toe. Voor een nieuwe bestandskopie blijft een aparte
+   Android SAF-save nodig.
+
+De tweede tijdlijn wordt **evenredig uitgerekt of samengedrukt** op
+basis van twee expliciet gekozen startmomentparen. Bijbehorende
+eindtijden schuiven mee; een klein verschil in framesnelheid kan zo
+handmatig worden gecorrigeerd. Buiten de twee ankers wordt dezelfde
+lineaire functie toegepast, zonder werkelijke audio- of woorduitlijning
+te claimen.
+
+Vereisten: minstens twee chronologisch verschillende bronregels in
+beide sporen; per anker maximaal **600 seconden** verschil tussen
+eigen beginmomenten; tijdschaal tussen **0,5× en 2×**; alle
+resulterende tijden, tekst en complete SRT **én** WebVTT moeten binnen
+de bestaande bestandsgrenzen blijven. Ongeldige, niet-chronologische
+of buiten de grenzen liggende resultaten worden geweigerd. Je kunt
+altijd bewust terugkeren naar **één constante verschuiving**.
+Geen automatische opslag, cloudspraak, taalidentificatie of
+bestandswijziging van de oorspronkelijk gekozen bronnen.
+
 ## Meerdere ondertitelregels bewust verwijderen (tijdelijke editor)
 
 Bij een lange eigen SRT/VTT, LRC, CSV/TSV of geplakte tekst hoef je niet
