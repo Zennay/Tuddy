@@ -33,6 +33,7 @@ internal fun SpeechPackBrowserDialog(
     options: List<SpeechPackBrowserOption>,
     currentTag: String,
     receipts: Map<String, SpeechPackReceipt>,
+    requestedAttempts: Map<String, Long>,
     scanning: Boolean,
     downloadTag: String?,
     scannedCount: Int,
@@ -42,6 +43,7 @@ internal fun SpeechPackBrowserDialog(
     onPrepare: (String) -> Unit,
     onCancelFollow: () -> Unit,
     onCheckOne: (String) -> Unit,
+    onForgetRequest: (String) -> Unit,
     onCopyCatalog: () -> Boolean,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
@@ -107,6 +109,14 @@ internal fun SpeechPackBrowserDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
+                if (requestedAttempts.isNotEmpty()) {
+                    Text(
+                        "Eerdere lokale pakketaanvragen: ${requestedAttempts.size}. " +
+                            "Dit zijn alleen onthouden pogingen, niet geïnstalleerde talen. " +
+                            "Vraag Android opnieuw naar de status voordat je gaat luisteren.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = onScan,
@@ -183,6 +193,26 @@ internal fun SpeechPackBrowserDialog(
                     }
                     if (receipt != null && receipt.detail.isNotBlank()) {
                         Text(receipt.detail, style = MaterialTheme.typography.labelSmall)
+                    }
+                    if (option.tag in requestedAttempts) {
+                        Text(
+                            if (receipt?.stage == SpeechPackStage.READY)
+                                "Eerder aangevraagd; Android bevestigt NU het exact lokale taalpakket."
+                            else "Eerder expliciet via wifi aangevraagd. " +
+                                "Installatie is hiermee NIET bevestigd.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (receipt == null || receipt.stage == SpeechPackStage.UNCHECKED) {
+                            TextButton(
+                                enabled = !scanning && downloadTag == null &&
+                                    speechServiceAvailable,
+                                onClick = { onCheckOne(option.tag) }
+                            ) { Text("Controleer eerdere aanvraag opnieuw") }
+                        }
+                        TextButton(
+                            enabled = !scanning && downloadTag == null,
+                            onClick = { onForgetRequest(option.tag) }
+                        ) { Text("Vergeet deze aanvraagpoging") }
                     }
                     if (option.tag != currentTag) {
                         TextButton(onClick = { onSelect(option.tag) }) {

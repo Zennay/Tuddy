@@ -609,6 +609,14 @@ private fun TuddyScreen(
     // A second recognizer controller is used only for read-only browsing;
     // the active source and its download receipt must never be overwritten by a scan.
     val speechCatalogController = remember(context) { OnDeviceSpeechPackController(context) }
+    val speechRequestHistory = remember(context) {
+        PrivateSpeechPackRequests(context, spoken.map { it.speechCode }.toSet())
+    }
+    val speechRequestedAttempts = remember(context) {
+        mutableStateMapOf<String, Long>().apply {
+            putAll(speechRequestHistory.entries())
+        }
+    }
     val speechCatalogTimeoutHandler = remember { Handler(Looper.getMainLooper()) }
     val speechCatalogReceipts = remember { mutableStateMapOf<String, SpeechPackReceipt>() }
     var speechCatalogOpen by remember { mutableStateOf(false) }
@@ -1241,6 +1249,7 @@ private fun TuddyScreen(
         speechCatalogEpoch++
         val token = speechCatalogEpoch
         speechCatalogDownloadTag = tag
+        var attemptRecorded = false
         // OnDeviceSpeechPackController enforces active Wi-Fi and uses Android's
         // on-device recognizer; never a network recognizer or app-hosted URL.
         speechCatalogController.download(tag) { receipt ->
@@ -1249,6 +1258,15 @@ private fun TuddyScreen(
                 !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
                 return@download
             speechCatalogReceipts[tag] = receipt
+            // DOWNLOADING is emitted only after the device passed the Wi-Fi gate.
+            // Remember a *request attempt*, never an installed-model claim.
+            if (!attemptRecorded && receipt.stage == SpeechPackStage.DOWNLOADING) {
+                attemptRecorded = true
+                if (speechRequestHistory.recordAttempt(tag)) {
+                    speechRequestedAttempts.clear()
+                    speechRequestedAttempts.putAll(speechRequestHistory.entries())
+                }
+            }
             if (receipt.stage !in setOf(
                     SpeechPackStage.CHECKING, SpeechPackStage.DOWNLOADING
                 )) {
@@ -2634,6 +2652,7 @@ private fun TuddyScreen(
                 options = spoken.map { SpeechPackBrowserOption(it.label, it.speechCode) },
                 currentTag = source.speechCode,
                 receipts = speechCatalogReceipts,
+                requestedAttempts = speechRequestedAttempts,
                 scanning = speechCatalogBusy,
                 downloadTag = speechCatalogDownloadTag,
                 scannedCount = speechCatalogScanned,
@@ -2655,6 +2674,11 @@ private fun TuddyScreen(
                 onPrepare = { tag -> downloadCatalogSpeechPack(tag) },
                 onCancelFollow = { cancelCatalogDownloadFollow() },
                 onCheckOne = { tag -> checkCatalogSpeechPack(tag) },
+                onForgetRequest = { tag ->
+                    if (speechRequestHistory.forget(tag)) {
+                        speechRequestedAttempts.remove(tag)
+                    }
+                },
                 onCopyCatalog = { copySpeechCatalogReport() },
                 onSelect = { tag -> selectBrowserSpeechSource(tag) },
                 onDismiss = { closeSpeechCatalog() }
