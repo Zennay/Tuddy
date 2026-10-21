@@ -1,5 +1,7 @@
 # Android offline speech language-pack setup (source delivery)
 
+Voor een doorzoekbaar overzicht van tekstdoelen, spraaklocale-kandidaten en niet-ondersteunde taalverzoeken, zie [de taalondersteuningsgids](LANGUAGE_SUPPORT_GUIDE.md).
+
 **Scope:** On Android 13+ Tuddy can now ask the device's **on-device**
 `SpeechRecognizer` about the actual installed, pending, supported and
 online-only languages for the selected **spoken source**. It can request a
