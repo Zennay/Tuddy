@@ -1,3 +1,7 @@
+## Nieuw: TTML/DFXP-ondertitels lokaal openen
+
+Tuddy kan nu TTML/DFXP-tekstondertitels met expliciete `<p begin/end>`-tijden uit de Android-bestandenkiezer of een bewust gedeelde tekst/URI verwerken. De tijdelijke preview bevat alleen leesbare tekst, `<span>` en `<br/>`, en kan via de bestaande editor als nieuwe SRT/VTT-kopie worden bewaard. Externe XML-entiteiten, relatieve timing, scripts en andere media worden geweigerd. Geen cloudvertaling of bronwijziging. [Handleiding en beperkingen](docs/TTML_DFXP_SUBTITLE_IMPORT.md).
+
 ## Nieuw: eigen ASS/SSA-ondertitels lokaal openen
 
 Open een zelf gekozen .ass- of .ssa-bestand via **Open ondertitelbestand…**, deel geldige platte tekst met Tuddy of plak het in de ondertitelbewerker. Tuddy haalt alleen getimede Dialogue-tekst uit de [Events]-sectie; styling, animatie, scripts, geluid en vector-tekeningen worden niet uitgevoerd. Bekijk en bevestig de tijdelijke preview voordat je een nieuwe SRT/WebVTT-kopie maakt. [Formaatgrenzen en details](docs/ASS_SSA_SUBTITLE_IMPORT.md).
