@@ -207,18 +207,22 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "min-height:" + answerSpace.printHeightPx + "px;margin-top:12px}" +
                 ".answers{display:none;break-before:page;page-break-before:always}" +
                 ".answers:target{display:block}" +
+                ".roundheading{border-bottom:2px solid #64748b;padding:9px 0}" +
                 ".answerlink{display:inline-block;margin:12px 0}" +
                 "@media print{@page{margin:14mm}body{padding:0}" +
                 "details,.work,textarea,.reset,.grade{display:none}" +
                 ".write,.printgrade,.answers{display:block}" +
                 ".answerlink{display:none}" +
-                ".card{break-inside:avoid}}" +
+                ".card{break-inside:avoid}.roundheading.newpage{" +
+                    "break-before:page;page-break-before:always}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
                 "<p>Moeilijkheid: " + escape(difficulty.title) + ". " +
                 "Invulhint: " + escape(hintMode.title) + ". " +
                 "Schrijfruimte: " + escape(answerSpace.title) + ". " +
                 "Bestemming: " + escape(audience.title) + ". " +
                 "Oefenrondes: " + escape(pass.title) + ". " +
+                "Elke ronde heeft nieuwe gaten in dezelfde eigen zinnen; " +
+                "bij erg korte of ongesegmenteerde zinnen kunnen gaten gelijk blijven. " +
                 "Vul de ontbrekende woorden in. Dit zijn uitsluitend " +
                 "zelfgekozen lokale zinnen, ongeverifieerde modelvertalingen " +
                 "of eigen correcties. Geen automatische taalcontrole." +
@@ -239,6 +243,11 @@ internal object PrivatePinnedCaptionClozeHtml {
         )
         cards.forEachIndexed { index, card ->
             val (question, answer, hint, roundIndex) = card
+            if (index == 0 || cards[index - 1].roundIndex != roundIndex) {
+                out.append("<h2 class=\"roundheading")
+                if (index != 0) out.append(" newpage")
+                out.append("\">Oefenronde ").append(roundIndex + 1).append("</h2>")
+            }
             out.append("<article class=\"card\"><b>Ronde ").append(roundIndex + 1)
                 .append(" · kaart ").append(index + 1)
                 .append("</b><p class=\"phrase\"><bdi dir=\"auto\">")
