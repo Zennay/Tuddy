@@ -33,14 +33,33 @@ internal class PrivateOwnWordDeck(context: Context) {
         private fun cleanCode(raw: String): String =
             raw.trim().replace('_', '-').substringBefore('-').lowercase(Locale.ROOT)
 
-        private fun safe(value: String, max: Int, allowSpaces: Boolean): Boolean =
-            value.isNotBlank() && value.length <= max && value == value.trim() &&
-                (allowSpaces || value.none { it.isWhitespace() }) &&
-                value.none { ch ->
-                    Character.isISOControl(ch) || Character.isSurrogate(ch) ||
-                        (Character.getType(ch) == Character.FORMAT.toInt() && ch != '\u200C') ||
-                        ch == '\u2028' || ch == '\u2029'
-                }
+        /** Reject broken UTF-16 and bidi controls, not valid supplementary letters. */
+        private fun safe(value: String, max: Int, allowSpaces: Boolean): Boolean {
+            if (value.isBlank() || value.length > max || value != value.trim())
+                return false
+            var offset = 0
+            while (offset < value.length) {
+                val unit = value[offset]
+                if (Character.isHighSurrogate(unit)) {
+                    if (offset + 1 == value.length ||
+                        !Character.isLowSurrogate(value[offset + 1])) return false
+                } else if (Character.isLowSurrogate(unit)) return false
+                val cp = Character.codePointAt(value, offset)
+                val kind = Character.getType(cp)
+                if (Character.isISOControl(cp) ||
+                    (!allowSpaces && Character.isWhitespace(cp)) ||
+                    (kind == Character.FORMAT.toInt() && cp != 0x200C &&
+                        !(cp == 0x200D && !allowSpaces)) ||
+                    cp == 0x2028 || cp == 0x2029) return false
+                // A joiner must be internal to a word, never an invisible
+                // standalone prefix/suffix or invisible-only entry.
+                if (!allowSpaces && (cp == 0x200C || cp == 0x200D) &&
+                    (offset == 0 || offset + Character.charCount(cp) == value.length))
+                    return false
+                offset += Character.charCount(cp)
+            }
+            return true
+        }
 
         private fun valid(value: OwnWord): Boolean =
             value.language in SUPPORTED_CODES &&
