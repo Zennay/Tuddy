@@ -263,6 +263,50 @@ In de tijdelijke ondertiteleditor open je **Zoek en vervang** (via het documentm
 
 Ook bij tweetalige kaarten bepaalt Tuddy **niet** welke taal de eerste of tweede regel werkelijk bevat; de volgorde blijft de verantwoordelijkheid van de gebruiker. Alle uitgaven blijven onder de bestaande 500-cue- en 256-KiB-limieten.
 
+## CSV/TSV met eigen tijdcodes weer opslaan en opnieuw importeren
+
+Na bewerken van een tijdelijke ondertiteltijdlijn kun je nu naast SRT
+en WebVTT ook **Bewaar tijdcodes als CSV…** of **Bewaar tijdcodes als TSV…**
+kiezen in de bestaande editor. Dit is bedoeld voor eigen spreadsheet-
+bewerkingen en weer importeren in Tuddy; er worden geen nieuwe betekenissen,
+vertalingen of audiosynchronisatie gegenereerd.
+
+1. Bewerk of voeg een ondertitelconcept toe via een bestaande SRT/VTT,
+   handmatige CSV/TSV, LRC- of plakinvoerroute.
+2. Kies **Bewaar tijdcodes als CSV…** (komma's, alle velden gequote) of
+   **Bewaar tijdcodes als TSV…** (tabgescheiden). Het exportvenster
+   toont **de volledige exacte UTF-8-inhoud**, alle bronregels, kolomaantal
+   en bytegrootte vóór de Android-documentkiezer.
+3. Wanneer **alle cues precies één tekstregel** bevatten, produceert
+   Tuddy drie kolommen: `begin,einde,eigen tekst`. Wanneer **alle cues
+   precies twee tekstregels** bevatten, krijgt elke cue vier kolommen:
+   `begin,einde,eigen bron,eigen betekenis`. De tijdstempels worden
+   exact in milliseconden geformatteerd. **Geen kopregel** wordt toegevoegd:
+   het bestand past direct terug in de bestaande CSV/TSV-tijdimport.
+4. Gemengde één-/tweeregelige fragmenten of tekst met meer dan twee
+   regels worden geweigerd voor spreadsheetexport, niet stilzwijgend
+   ingekort. SRT/VTT blijft beschikbaar voor volledige meerregelige cues.
+   Tekst die een spreadsheet als formule kan uitvoeren (beginnend met
+   `=`, `+`, `-` of `@`), verborgen Unicode-stuurtekens, tabs in
+   een tekstveld of ongeldige Unicode leidt ook tot weigering: Tuddy
+   verandert zulke bronnen **niet heimelijk** en biedt SRT/VTT als alternatief.
+5. Bevestig de exacte preview en kies bewust je Android-opslagprovider.
+   Na terugkeer controleert Tuddy opnieuw of de geëxporteerde bytes
+   identiek zijn aan de vooraf bevestigde tijdelijke inhoud. Het
+   oorspronkelijke ondertitelbestand wordt niet gewijzigd.
+6. Importeer later met **Gewone zinnen → CSV: begintijd, eindtijd,
+   eigen tekst** of **CSV: begintijd, eindtijd, bron, betekenis**,
+   respectievelijk de bestaande drie- of vierkoloms tabopties voor TSV.
+   De bestaande volledige preview en selectie bepalen afzonderlijk
+   welke rijen als nieuw tijdelijk concept worden geopend.
+
+Beide formaten zijn maximaal **256 KiB** en **500 cues**; de volledige
+inhoud moet daarnaast exporteerbaar blijven als geldige SRT én WebVTT.
+Er is geen automatische opslag, externe transcriptanalyse of extra
+permissie. Een door jou gekozen externe Android-documentprovider kan
+wel bestanden synchroniseren. Dit is een *handmatige uitwisselroute*,
+geen bewijs van automatische vertaling of echte audiowoordtiming.
+
 ## Tweede spoor plakken en samenvoegen
 
 1. Open een SRT/VTT-concept, vanuit een document of de plakroute.
