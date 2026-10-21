@@ -19,3 +19,21 @@ De app voert geen automatische cloudspraakfallback uit. Het overzicht downloadt 
 - Volledige Kurmanji/Sorani/Pasjtoe-ondersteuning vereist een geschikt gelicentieerd on-device model, native-speakerbeoordeling en fysieke vliegtuigmodusacceptatie.
 
 De gids is informatief en doorzoekbaar; zij vervangt geen toestelcontrole, modellicentiecontrole of native-speakerbeoordeling.
+
+## Modelonderzoek: concrete kandidaten, nog geen ondersteuning
+
+De taalondersteuningdialoog toont nu externe modelkaarten voor drie ASR-kandidaten. Ze zijn **niet** ingebouwd, gedownload of op Android gevalideerd:
+
+| Taal | ASR-onderzoekskandidaat | Modelbestand / licentie volgens kaart | Open punt |
+|---|---|---|---|
+| Kurmanji | [amedcj/whisper-kurmanji](https://huggingface.co/amedcj/whisper-kurmanji) | circa 967 MB; Apache-2.0 vermeld | Trainingsdatarechten, dialectnauwkeurigheid, Android-runtime en geheugen nog niet geverifieerd |
+| Sorani | [roshna-omer/whisper-small-Kurdish-Sorani](https://huggingface.co/roshna-omer/whisper-small-Kurdish-Sorani) | circa 967 MB; Apache-2.0 vermeld | Trainingsdatarechten, Sorani-variantdekking, Android-runtime en geheugen nog niet geverifieerd |
+| Pasjtoe | [Sabtain-Dev/STT-Whisper-Pashto](https://huggingface.co/Sabtain-Dev/STT-Whisper-Pashto) | MIT vermeld; bestandsgrootte nog niet vastgesteld | Dataset-/gewichtenherkomst, dialectdekking en Android-runtime nog niet geverifieerd |
+
+### Waarom de vertaalroute nog geblokkeerd is
+
+- [Meta NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-distilled-600M) dekt de relevante taalcodefamilies, maar de gepubliceerde gewichten zijn circa 2,46 GB en de licentie is **CC-BY-NC-4.0**. Dat is geen vrijgaveklare kandidaat voor commercieel gebruik of een kleine Android-pack.
+- De [ZamAI Pashto-English translator](https://huggingface.co/tasal9/ZamAI-Pashto-Translator-FacebookNLB-ps-en) vermeldt Apache-2.0 voor de afgeleide repository, maar noemt NLLB-200 3.3B als basismodel; de [upstream modelkaart](https://huggingface.co/facebook/nllb-200-3.3B) vermeldt CC-BY-NC-4.0. Licentiecompatibiliteit moet eerst worden opgelost.
+- Een licentielabel van een modelkaart is geen onafhankelijke audit van de dataset, gewichten, tokenizer en alle upstreamcomponenten. Er is geen modeldownload of externe runtime in Tuddy toegevoegd.
+
+**Volgende productgate:** selecteer per dialect een model met controleerbare herkomst en geschikte licentie, maak een realistische gequantiseerde Android-pack, integreer echte lokale ASR én MT, en pas daarna native-speakerreview en geautoriseerde fysieke vliegtuigmodusacceptatie toe. Tot dat moment blijft de app de drie talen als preview-only markeren.
