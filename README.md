@@ -42,6 +42,18 @@ als CSV-invoer niet klopt.
 
 ---
 
+## Nieuw: van gevonden ondertiteltekst naar een exacte importselectie
+
+Zoek in een eigen geplakte SRT/VTT- of transcriptbron en kies
+**Gebruik gevonden regels als selectie**. Tuddy zet alle gevonden
+originele bronregels om in een leesbaar en bewerkbaar bereik,
+bijvoorbeeld `1-3,7,9-11`. Je kunt expliciet herstellen naar
+**Doorzoek opnieuw alle bronregels**. De zoekfunctie bewaart niets
+en bevestigt geen import namens jou; de bestaande aparte bevestiging
+blijft nodig. Dit werkt ook met de nieuwe CSV-import.
+[Meer uitleg](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
 ## Nieuw: meerdere losse ondertitelbereiken in één import
 
 In **Plak zelf tekst…** kun je nu met **Losse regels (optioneel)**
