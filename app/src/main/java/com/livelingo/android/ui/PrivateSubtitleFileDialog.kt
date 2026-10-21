@@ -33,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -98,6 +100,7 @@ internal fun PrivateSubtitleFileDialog(
     onChoosePasteDocument: (List<PrivateSubtitleCue>, SubtitlePasteFileContent) -> Unit,
     onSecondPasteConsumed: () -> Unit
 ) {
+    val clipboard = LocalClipboardManager.current
     var query by remember { mutableStateOf("") }
     var jumpToTime by remember { mutableStateOf("") }
     var shownIndex by remember { mutableIntStateOf(-1) }
@@ -139,6 +142,7 @@ internal fun PrivateSubtitleFileDialog(
     var batchWholeWords by remember { mutableStateOf(false) }
     var batchUseScript by remember { mutableStateOf(false) }
     var batchScript by remember { mutableStateOf("") }
+    var batchScriptOversized by remember { mutableStateOf(false) }
     var batchField by remember { mutableStateOf(SubtitleReplaceField.ALL_TEXT) }
     var batchReviewPage by remember { mutableIntStateOf(0) }
     var batchFirstRow by remember { mutableStateOf("1") }
@@ -2339,10 +2343,51 @@ internal fun PrivateSubtitleFileDialog(
                             style = MaterialTheme.typography.bodySmall)
                         OutlinedTextField(
                             value = batchScript,
-                            onValueChange = { batchScript = it.take(4097) },
+                            onValueChange = { value ->
+                                if (value.length <= 4096) {
+                                    batchScript = value
+                                    batchScriptOversized = false
+                                } else {
+                                    batchScript = ""
+                                    batchScriptOversized = true
+                                }
+                            },
                             label = { Text("Correctieregels · één per regel") },
                             minLines = 3, maxLines = 8,
                             modifier = Modifier.fillMaxWidth())
+                        if (batchScriptOversized) Text(
+                            "Te veel tekst: maximaal 4096 tekens. " +
+                                "Eerdere invoer is bewust gewist.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(
+                                enabled = PrivateSubtitleCorrectionScript.parse(
+                                    batchScript) != null,
+                                onClick = {
+                                    clipboard.setText(AnnotatedString(batchScript))
+                                    notice = "Eigen correctieregels bewust gekopieerd. " +
+                                        "Klembordapps kunnen tekst synchroniseren."
+                                }) { Text("Kopieer correctieregels") }
+                            TextButton(onClick = {
+                                val pasted = clipboard.getText()?.text
+                                if (pasted == null) {
+                                    notice = "Geen correctietekst op het klembord."
+                                } else if (pasted.length > 4096) {
+                                    batchScript = ""
+                                    batchScriptOversized = true
+                                    notice = "Te grote plaktekst geweigerd; invoer gewist."
+                                } else {
+                                    batchScript = pasted
+                                    batchScriptOversized = false
+                                    notice = "Correcties geplakt. Controleer de hele preview."
+                                }
+                            }) { Text("Plak correctieregels") }
+                        }
+                        Text("Kopiëren en klembordlezen gebeuren uitsluitend " +
+                            "na je eigen tik. Er is geen automatisch clipboard- " +
+                            "of netwerkgebruik door Tuddy.",
+                            style = MaterialTheme.typography.bodySmall)
                     } else {
                         OutlinedTextField(
                             value = batchFind,

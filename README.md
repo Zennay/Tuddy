@@ -2008,6 +2008,11 @@ providerbron wordt niet overschreven. Onmogelijke tijden, gewijzigde
 chronologische cue-identiteit en niet als SRT én VTT exporteerbare
 uitkomsten worden volledig geweigerd. Er wordt geen audio gelezen,
 spraak herkend, automatisch vertaald of cloudfallback gestart.
+Eigen correctiereeksen kunnen nu ook via aparte **Kopieer**- en
+**Plak**-knoppen op het Android-klembord worden hergebruikt.
+Niets wordt automatisch gelezen; externe klembordapps kunnen
+expliciet gekopieerde tekst wel synchroniseren.
+
 De lokale ondertiteleditor ondersteunt daarnaast tot **twaalf
 expliciete tekstcorrecties** in één tijdelijke handeling via
 `oude tekst => nieuwe tekst` per regel. De bestaande bronregelselectie,

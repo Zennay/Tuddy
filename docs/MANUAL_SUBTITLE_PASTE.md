@@ -403,6 +403,16 @@ zoektekens en 200 vervangtekens per regel. Een lege vervanging is
 toegestaan zolang het hele ondertitelbestand geldig blijft.
 Windows-regeleinden en één afsluitende regeleinde zijn toegestaan.
 
+In dezelfde dialoog kun je je eigen regels met **Kopieer correctieregels**
+expliciet naar het Android-klembord sturen en met **Plak
+correctieregels** expliciet teruglezen. Tuddy leest het klembord niet
+uit zichzelf en schrijft geen correcties naar een bestand. Een externe
+klembordapp kan de tekst wél synchroniseren. Een plakactie boven de
+4.096 tekens wist de tijdelijke invoer in plaats van onbedoeld
+een geldig oud begin van de tekst over te nemen. Iedere geplakte reeks
+vereist opnieuw volledige validatie, een bladerbare preview en aparte
+bevestiging.
+
 **Van/Tot**, expliciete oorspronkelijke bronregels of geselecteerde
 tijdvensters, **alleen eerste/tweede tekstregel**, hoofdlettergevoeligheid
 en **Alleen volledige woorden** gelden voor álle ingevoerde regels.
