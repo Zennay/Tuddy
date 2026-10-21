@@ -1729,7 +1729,6 @@ private fun TuddyScreen(
     ) { uri ->
         val pending = pendingSbvSubtitleSave
         pendingSbvSubtitleSave = null
-                pendingTtmlSubtitleSave = null
         if (pending != null && pending.session == generation) {
             // SAF temporarily stops the editor; the authorized snapshot
             // survives only until the document picker returns.
@@ -2157,8 +2156,8 @@ private fun TuddyScreen(
             pendingSubtitleDraft = null
             pendingTimedSubtitleSheet = null
             pendingLrcSubtitleSave = null
-                pendingSbvSubtitleSave = null
-                pendingTtmlSubtitleSave = null
+            pendingSbvSubtitleSave = null
+            pendingTtmlSubtitleSave = null
             editedSubtitleSaveNotice = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
@@ -4994,8 +4993,8 @@ private fun TuddyScreen(
                         readySecondPasteDocument = null
                         pendingTimedSubtitleSheet = null
                         pendingLrcSubtitleSave = null
-                pendingSbvSubtitleSave = null
-                pendingTtmlSubtitleSave = null
+                        pendingSbvSubtitleSave = null
+                        pendingTtmlSubtitleSave = null
                         pendingTranscriptExport = null
                         pendingPinnedExport = null
                         pinnedExportOpen = false
