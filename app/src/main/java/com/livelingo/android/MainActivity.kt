@@ -113,6 +113,14 @@ private data class PendingTtmlSubtitleSave(
     val bytes: ByteArray
 )
 
+/** An immutable, opt-in ASS snapshot across Android's document picker. */
+private data class PendingAssSubtitleSave(
+    val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
+    val cues: List<PrivateSubtitleCue>,
+    val bytes: ByteArray
+)
+
 /** Explicit new SBV copy after opt-in full preview and Android SAF consent. */
 private data class PendingSbvSubtitleSave(
     val session: Int,
@@ -544,6 +552,9 @@ private fun TuddyScreen(
     }
     var pendingSbvSubtitleSave by remember {
         mutableStateOf<PendingSbvSubtitleSave?>(null)
+    }
+    var pendingAssSubtitleSave by remember {
+        mutableStateOf<PendingAssSubtitleSave?>(null)
     }
     var pendingTtmlSubtitleSave by remember {
         mutableStateOf<PendingTtmlSubtitleSave?>(null)
@@ -1935,6 +1946,34 @@ private fun TuddyScreen(
         }
     }
 
+    val saveAssSubtitle = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/x-ssa")
+    ) { uri ->
+        val pending = pendingAssSubtitleSave
+        pendingAssSubtitleSave = null
+        if (pending != null && pending.session == generation) {
+            subtitleFileCues = pending.editorDraft
+            val fresh = PrivateAssSubtitleExport.snapshot(pending.cues)
+            editedSubtitleSaveNotice = when {
+                fresh == null || !fresh.contentEquals(pending.bytes) ->
+                    "ASS-opslag geweigerd: de bevestigde inhoud is gewijzigd."
+                uri == null -> "ASS-opslag geannuleerd; concept heropend."
+                uri.scheme != "content" -> "Ongeldige opslaglocatie; geen ASS geschreven."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { out ->
+                            out.write(pending.bytes)
+                            out.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved) "Nieuwe ASS-kopie met exacte centiseconden opgeslagen."
+                    else "ASS niet opgeslagen; het originele document bleef intact."
+                }
+            }
+        }
+    }
+
     val saveTtmlSubtitle = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/ttml+xml")
     ) { uri ->
@@ -2352,6 +2391,7 @@ private fun TuddyScreen(
             pendingTimedSubtitleSheet = null
             pendingLrcSubtitleSave = null
             pendingSbvSubtitleSave = null
+            pendingAssSubtitleSave = null
             pendingTtmlSubtitleSave = null
             editedSubtitleSaveNotice = null
             pendingArchiveExcerpt = null
@@ -2995,6 +3035,18 @@ private fun TuddyScreen(
                             generation, editorDraft.toList(), exportCues.toList(), bytes
                         )
                         saveSbvSubtitle.launch("Tuddy-eigen-tijdvakken.sbv")
+                    }
+                },
+                onSaveAss = { editorDraft, exportCues ->
+                    val bytes = PrivateAssSubtitleExport.snapshot(exportCues)
+                    if (bytes == null) {
+                        error = "ASS bewaart alleen centiseconden. " +
+                            "Controleer de volledige tijden of gebruik SRT/VTT."
+                    } else {
+                        pendingAssSubtitleSave = PendingAssSubtitleSave(
+                            generation, editorDraft.toList(), exportCues.toList(), bytes
+                        )
+                        saveAssSubtitle.launch("Tuddy-eigen-ondertitels.ass")
                     }
                 },
                 onSaveTtml = { editorDraft, exportCues ->
@@ -5246,6 +5298,7 @@ private fun TuddyScreen(
                         pendingTimedSubtitleSheet = null
                         pendingLrcSubtitleSave = null
                         pendingSbvSubtitleSave = null
+                        pendingAssSubtitleSave = null
                         pendingTtmlSubtitleSave = null
                         pendingTranscriptExport = null
                         pendingPinnedExport = null
