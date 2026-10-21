@@ -640,9 +640,13 @@ internal fun LocalSubtitleAudioPreviewDialog(
     }
 
     fun clock(millis: Long): String {
-        val wholeSeconds = millis.coerceAtLeast(0L) / 1000L
-        return String.format(Locale.ROOT, "%02d:%02d:%02d",
-            wholeSeconds / 3600L, (wholeSeconds / 60L) % 60L, wholeSeconds % 60L)
+        // Keep the exact user-picked A/B boundary legible even when the
+        // passages begin or end within the same wall-clock second.
+        val safeMs = millis.coerceAtLeast(0L)
+        val wholeSeconds = safeMs / 1000L
+        return String.format(Locale.ROOT, "%02d:%02d:%02d.%03d",
+            wholeSeconds / 3600L, (wholeSeconds / 60L) % 60L,
+            wholeSeconds % 60L, safeMs % 1000L)
     }
 
     Dialog(
