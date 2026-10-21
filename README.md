@@ -2,8 +2,11 @@
 
 De optionele **geschatte woordvolger** kan maximaal 16 expliciet door
 jou gemarkeerde tijdankers van één ondertitel als selecteerbare tekst
-tonen, zoals `2=00:00:12.250;5=00:00:13.900`. Bewaar of kopieer
-die tekst zelf en plak hem later in de invoer onder
+tonen, zoals `2=00:00:12.250;5=00:00:13.900`. Gebruik **Kopieer
+woordankers** voor één-tik kopiëren naar het Android-klembord en
+**Plak woordankers uit klembord…** om die tekst alleen na een
+aparte tik in te lezen. Bewaar of kopieer die tekst zelf en plak hem
+later in de invoer onder
 **Handmatige woordankers** bij de **juiste** actieve cue.
 Tuddy valideert de hele set tegen de huidige tekst en tijdgrenzen,
 toont de exacte voorgestelde waarden en vervangt pas na
