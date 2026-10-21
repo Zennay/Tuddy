@@ -1631,7 +1631,6 @@ private fun TuddyScreen(
     ) { uri ->
         val pending = pendingLrcSubtitleSave
         pendingLrcSubtitleSave = null
-                pendingSbvSubtitleSave = null
         if (pending != null && pending.session == generation) {
             subtitleFileCues = pending.editorDraft
             val current = PrivateLrcSubtitleExport.snapshot(pending.cues)
