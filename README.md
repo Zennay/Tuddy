@@ -1717,6 +1717,14 @@ beschikbaar, met volledige gecombineerde preview en alles-of-niets
 bevestiging. Dubbele bronregels, tijdcodebotsingen en overschrijden van
 de limiet worden geheel geweigerd.
 
+Bovendien kan de primaire LRC-plakdialoog de **volledige
+zelfgeschreven/gecorrigeerde LRC-bron**, inclusief `[offset:]`,
+artiest-/titelmetadata en oorspronkelijke refreintags, als
+**een apart nieuw .lrc-document** bewaren via de expliciete
+Android SAF-bestandskiezer. Annuleren of mislukte opslag
+heropent de tijdelijke eigen brontekst; de oorspronkelijke
+door de gebruiker gekozen providerbron blijft ongewijzigd.
+
 Alle wijzigingen blijven RAM-only totdat de gebruiker apart de
 bestaande Android-bestandsopslag kiest; de oorspronkelijke gekozen
 providerbron wordt niet overschreven. Onmogelijke tijden, gewijzigde
