@@ -1,3 +1,40 @@
+## Nieuw: mijn afdrukbare luisterwerkblad met bronregels als zelfcontrole
+
+Na het maken van één tot vier eigen A–B-fragmenten kies je **Mijn privé
+oefenoverzicht bekijken** → **Bewaar luisterwerkblad · vragen en aparte
+bronregels…**. Dit maakt een apart **HTML-oefenblad** naast het bestaande
+HTML-verslag, TXT-overzicht en de CSV. De Android-bestandskiezer vraagt
+expliciet waar je het bestand bewaart; er wordt nooit automatisch geëxporteerd.
+
+In een gewone browser kun je per fragment eerst luisteren en zelf een
+betekenis of uitspraak opschrijven. Via het native HTML-knopje
+**Toon zelf gekozen bronregels** zie je pas daarna de eigen SRT/VTT-tekst
+die qua tijd volledig binnen het gekozen A–B-fragment valt.
+Er worden **geen woorden herkend of uit audio uitgelijnd**. Als er geen
+passende ondertiteltekst bestaat, staat dat expliciet bij het fragment;
+Tuddy verzint geen inhoud. De eigen beoordeling en volgende oefenstap
+staan erbij. Het bestand bevat geen JavaScript, geluid, audiopad,
+netwerkverzoeken of accountgegevens.
+
+Bij **afdrukken** blijven de bronregels verborgen op het vragenblad.
+De eigen SRT/VTT-bronregels verschijnen afzonderlijk in
+**Bronregels voor zelfcontrole** op een nieuwe afdrukpagina. Per passage
+worden maximaal **18 regels** getoond (bij lange passages de eerste
+negen en laatste negen), met het **exacte aantal niet-getoonde
+tussenregels**. Lange brontekst wordt zichtbaar en Unicode-veilig
+ingekort; rechts-naar-links-tekst heeft een eigen tekstrichting.
+Het is een oefenblad, niet een onvolledige bron die stilzwijgend als
+volledig wordt gepresenteerd.
+
+Ook bij deze export vergelijkt Tuddy bij terugkeer uit de
+Android-documentkiezer de **complete actuele bestandsbytes** met de
+tijdelijke conceptversie. Verandert de oefensessie, een A–B-fragment,
+de beoordeling of een eigen notitie, dan weigert Tuddy het oude
+oefenblad. De gekozen Android-provider kan de tekst wel zelf delen
+of synchroniseren: bewaar alleen eigen, toegestane privé-inhoud.
+
+---
+
 # Mijn privé luisteroefening als HTML of TXT
 
 ## Milliseconden blijven zichtbaar in je eigen tijdmarkeringen
