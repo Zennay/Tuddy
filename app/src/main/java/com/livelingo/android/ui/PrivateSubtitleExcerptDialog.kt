@@ -29,11 +29,12 @@ import com.livelingo.android.PrivateSubtitleRowSelection
 import com.livelingo.android.PrivateSubtitleTimeWindowRows
 import com.livelingo.android.PrivateTimedSubtitleSheet
 import com.livelingo.android.PrivateLrcSubtitleExport
+import com.livelingo.android.PrivateSbvSubtitleExport
 import com.livelingo.android.SubtitleDraftFormat
 import com.livelingo.android.SubtitleExcerptTiming
 import com.livelingo.android.TimedSubtitleSheetFormat
 
-private enum class SubtitleExcerptSaveFormat { SRT, WEBVTT, CSV, TSV, LRC }
+private enum class SubtitleExcerptSaveFormat { SRT, WEBVTT, CSV, TSV, LRC, SBV }
 
 /**
  * One explicit selection, tied to the unfiltered immutable editor draft.
@@ -47,6 +48,7 @@ internal fun PrivateSubtitleExcerptDialog(
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     onSaveTimedSheet: (List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
     onSaveLrc: (List<PrivateSubtitleCue>) -> Unit,
+    onSaveSbv: (List<PrivateSubtitleCue>) -> Unit,
     onShareExcerpt: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -80,6 +82,7 @@ internal fun PrivateSubtitleExcerptDialog(
             SubtitleExcerptSaveFormat.TSV ->
                 PrivateTimedSubtitleSheet.snapshot(cues, TimedSubtitleSheetFormat.TSV)
             SubtitleExcerptSaveFormat.LRC -> PrivateLrcSubtitleExport.snapshot(cues)
+            SubtitleExcerptSaveFormat.SBV -> PrivateSbvSubtitleExport.snapshot(cues)
         }
     }
 
@@ -236,7 +239,8 @@ internal fun PrivateSubtitleExcerptDialog(
                     "tussen cues. Dat is geen echte audio-uitlijning. " +
                     "CSV/TSV vereist uniforme eigen tekstkolommen en " +
                     "veilige spreadsheetwaarden; LRC bevat alleen " +
-                    "begintijden en kan geen eindtijden bewaren.",
+                    "begintijden. SBV behoudt begin- én eindtijden " +
+                    "van de bewust geselecteerde regels.",
                     style = MaterialTheme.typography.bodySmall)
                 if (bytes == null) {
                     Text("Deze selectie kan niet volledig en veilig als " +
@@ -286,6 +290,7 @@ internal fun PrivateSubtitleExcerptDialog(
                         SubtitleExcerptSaveFormat.TSV ->
                             onSaveTimedSheet(fresh.toList(), TimedSubtitleSheetFormat.TSV)
                         SubtitleExcerptSaveFormat.LRC -> onSaveLrc(fresh.toList())
+                        SubtitleExcerptSaveFormat.SBV -> onSaveSbv(fresh.toList())
                     }
                 }
             }) { Text("Kies opslaglocatie…") }
