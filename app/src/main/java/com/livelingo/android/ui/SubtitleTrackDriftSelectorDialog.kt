@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,6 +100,19 @@ internal fun SubtitleTrackDriftSelectorDialog(
                         onValueChange = { lastSecondary = it.take(3) },
                         label = { Text("Spoor 2 · regel") }, singleLine = true)
                 }
+                Text("Of tik rechtstreeks op de gewenste vroege en late " +
+                    "ondertitelregel; bladeren verandert je keuze niet vanzelf.",
+                    style = MaterialTheme.typography.bodySmall)
+                SubtitleTrackAnchorBrowser(
+                    label = "Eerste spoor", cues = primary,
+                    selectedFirst = firstPrimary, selectedLast = lastPrimary,
+                    onFirst = { firstPrimary = it },
+                    onLast = { lastPrimary = it })
+                SubtitleTrackAnchorBrowser(
+                    label = "Tweede spoor", cues = secondary,
+                    selectedFirst = firstSecondary, selectedLast = lastSecondary,
+                    onFirst = { firstSecondary = it },
+                    onLast = { lastSecondary = it })
                 if (preview == null) {
                     Text("Controleer bestaande chronologische rijnummers " +
                         "(spoor 1: 1–${primary.size}, spoor 2: 1–${secondary.size}). " +
@@ -144,4 +158,46 @@ internal fun SubtitleTrackDriftSelectorDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } }
     )
+}
+
+/** Browse the source without silently changing the explicit anchor selection. */
+@Composable
+private fun SubtitleTrackAnchorBrowser(
+    label: String,
+    cues: List<PrivateSubtitleCue>,
+    selectedFirst: String,
+    selectedLast: String,
+    onFirst: (String) -> Unit,
+    onLast: (String) -> Unit
+) {
+    var page by remember(cues) { mutableIntStateOf(0) }
+    val maxPage = if (cues.isEmpty()) 0 else (cues.size - 1) / 3
+    val shownPage = page.coerceIn(0, maxPage)
+    Text("$label · pagina ${shownPage + 1}/${maxPage + 1}",
+        style = MaterialTheme.typography.titleSmall)
+    cues.withIndex().drop(shownPage * 3).take(3).forEach { item ->
+        val row = (item.index + 1).toString()
+        val cue = item.value
+        Text("Regel $row · ${cue.startLabel} → ${cue.endLabel}\n" +
+            cue.text.replace('\n', ' ').take(95),
+            style = MaterialTheme.typography.bodySmall)
+        Row(modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            OutlinedButton(modifier = Modifier.weight(1f),
+                onClick = { onFirst(row) }) {
+                Text((if (selectedFirst == row) "✓ " else "") + "Kies vroeg")
+            }
+            OutlinedButton(modifier = Modifier.weight(1f),
+                onClick = { onLast(row) }) {
+                Text((if (selectedLast == row) "✓ " else "") + "Kies later")
+            }
+        }
+    }
+    Row(modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween) {
+        TextButton(enabled = shownPage > 0,
+            onClick = { page = shownPage - 1 }) { Text("← Vorige $label") }
+        TextButton(enabled = shownPage < maxPage,
+            onClick = { page = shownPage + 1 }) { Text("Volgende →") }
+    }
 }
