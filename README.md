@@ -21,6 +21,18 @@ snapshots bij voor het volledige editorconcept en de gekozen
 exportbytes; originele files en live gesprek worden niet gewijzigd.
 [Privacy en details](docs/MANUAL_SUBTITLE_PASTE.md).
 
+## Nieuw: meerdere losse tijdvensters in één bewerking
+
+Tuddy kan maximaal 16 **zelf ingevulde niet-overlappende tijdvensters**
+zoals `00:10-00:20;01:00-01:15` als één bronregelselectie
+gebruiken. Dat werkt voor **SRT/VTT/CSV/TSV/LRC-fragmentexport**,
+**gerichte tijdverschuiving**, **meerdere regels verwijderen** en
+**letterlijke vervanging in één of twee eigen tekstregels**.
+Volledige cues blijven in originele volgorde en verschijnen maximaal
+één keer. Er is geen automatische audio-uitlijning, cloudspraak of
+bestandswijziging zonder de bestaande aparte bevestigingen.
+[Uitleg en voorbeelden](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: eigen tijdvenster rechtstreeks naar ondertitelselectie
 
 Bij zowel **selectieve export** als **gerichte tijdverschuiving**
