@@ -54,6 +54,26 @@ internal object PrivatePinnedCaptionClozeHtml {
     )
     private const val MAX_BYTES = 262_144
 
+    /** Shared exact visual order for the HTML generator and native preview. */
+    fun orderedCardIndices(
+        count: Int, roundIndex: Int,
+        order: PinnedClozeCardOrder
+    ): List<Int> {
+        if (count <= 0 || count > SessionCaptionPins.MAX_PINS * 2) return emptyList()
+        val indices = (0 until count).toList()
+        return when (order) {
+            PinnedClozeCardOrder.SOURCE -> indices
+            PinnedClozeCardOrder.VARIED -> when (roundIndex) {
+                0 -> indices
+                1 -> indices.asReversed()
+                else -> {
+                    val pivot = (count + 1) / 2
+                    indices.drop(pivot) + indices.take(pivot)
+                }
+            }
+        }
+    }
+
     private fun escape(text: String): String = buildString(text.length) {
         text.forEach { ch ->
             append(when (ch) {
@@ -184,20 +204,10 @@ internal object PrivatePinnedCaptionClozeHtml {
                         if (showLanguageTags) row.sourceCode else null,
                         difficulty, hintMode, round), round))
             }
-            // Deterministic order: no seed, shuffle state or external entropy.
-            // Source order stays unchanged when there is only one card.
-            val arranged: List<PracticeCard> = when (cardOrder) {
-                PinnedClozeCardOrder.SOURCE -> roundCards
-                PinnedClozeCardOrder.VARIED -> when (round) {
-                    0 -> roundCards
-                    1 -> roundCards.asReversed()
-                    else -> {
-                        val pivot = (roundCards.size + 1) / 2
-                        roundCards.drop(pivot) + roundCards.take(pivot)
-                    }
-                }
-            }
-            cards.addAll(arranged)
+            // The same exact card index order powers the Android consent preview.
+            cards.addAll(orderedCardIndices(roundCards.size, round, cardOrder).map {
+                roundCards[it]
+            })
         }
         if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2 * 3) return null
         val cardsPerRound = cards.size / pass.indices.size
