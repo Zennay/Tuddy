@@ -16,6 +16,14 @@ Deze route vervangt **niet** de bestaande **Open SRT/WebVTT…**-bestandskiezer.
 
 ---
 
+## ASS/SSA uit een eigen bestand of platte tekst
+
+Tuddy kan ook SubStation Alpha (.ssa) en Advanced SubStation Alpha (.ass) inlezen. De parser leest uitsluitend Dialogue-regels uit de [Events]-sectie en gebruikt de Format-regel om de begin-, eind- en tekstkolom te vinden. De tijdcodes worden nauwkeurig omgerekend van centiseconden naar milliseconden. Styling-tags worden verwijderd; \\N en \\n worden regeleinden en \\h wordt een vaste spatie. De inhoud wordt nooit als script, animatie of HTML uitgevoerd.
+
+Maximaal 256 KiB UTF-8 en 500 tekstcues worden geaccepteerd. Ongeldige of tegenstrijdige tijdcodes, afwijkende event-formatregels, onveilige tekens of niet-exporteerbare tijdlijnen worden geweigerd. Vector-teken-cues worden overgeslagen; afbeeldingen, geluid, effecten en automatische audio-uitlijning zijn niet ondersteund. De invoer opent alleen een tijdelijk concept; het bronbestand wordt niet gewijzigd en er wordt niets automatisch vertaald of opgeslagen.
+
+Zie [ASS/SSA-importdetails](ASS_SSA_SUBTITLE_IMPORT.md) voor voorbeelden en beperkingen.
+
 # SRT/WebVTT, LRC, eigen tekst en documenten importeren
 
 Tuddy laat je handmatig een volledig SRT- of WebVTT-document plakken, zonder dat de app zelf je Android-klembord uitleest.
