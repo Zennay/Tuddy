@@ -7,7 +7,12 @@ import java.util.Locale
  * chosen synthetic durations. These are NOT speech timestamps, word alignment, or translations.
  * Only used after deliberate manual input; no audio, clipboard, or I/O.
  */
-internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS, TIMED_PAIRED_COLUMNS, PAIRED_TEXTBOXES }
+internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS, TIMED_TEXT_COLUMNS, TIMED_PAIRED_COLUMNS, PAIRED_TEXTBOXES }
+
+internal data class TimedSubtitleInputInspection(
+    val rowCount: Int,
+    val message: String?
+)
 
 internal data class PairedSubtitleInputInspection(
     val sourceRows: Int,
@@ -60,6 +65,63 @@ internal object PrivatePlainTextSubtitleDraft {
         return count
     }
 
+    /**
+     * A bounded, explicit three- or four-column transcript import. Both
+     * formats preserve the user's timecodes. The optional meaning column
+     * is NEVER inferred or translated.
+     *
+     * Also drives a precise inline error message with the original row number,
+     * instead of silently dropping malformed spreadsheet rows.
+     */
+    private fun timedColumns(
+        raw: String,
+        withMeaning: Boolean
+    ): Pair<List<PrivateSubtitleCue>?, TimedSubtitleInputInspection> {
+        val rows = pairedRows(raw)
+        fun fail(reason: String) = null to TimedSubtitleInputInspection(rows.size, reason)
+        if (rows.isEmpty()) return fail("Plak minimaal één volledige tijdregel.")
+        if (rows.size > MAX_CUES) return fail("Maximaal 500 tijdregels per concept.")
+        if (raw.toByteArray(Charsets.UTF_8).size > MAX_BYTES)
+            return fail("Invoer is groter dan 256 KiB.")
+        val columnsNeeded = if (withMeaning) 4 else 3
+        val result = ArrayList<PrivateSubtitleCue>(rows.size)
+        var previousStart = -1L
+        rows.forEachIndexed { index, row ->
+            val rowNumber = index + 1
+            if (row.isBlank()) return fail("Regel ${rowNumber} is leeg; behoud of herstel de rij.")
+            val columns = row.split('\t')
+            if (columns.size != columnsNeeded)
+                return fail("Regel ${rowNumber}: verwacht precies ${columnsNeeded} " +
+                    "tabgescheiden velden, kreeg ${columns.size}.")
+            val start = PrivateSubtitleTimelineNavigation.timestamp(columns[0])
+                ?: return fail("Regel ${rowNumber}: ongeldige begintijd.")
+            val end = PrivateSubtitleTimelineNavigation.timestamp(columns[1])
+                ?: return fail("Regel ${rowNumber}: ongeldige eindtijd.")
+            if (start < 0L || end > MAX_TIME || start >= end)
+                return fail("Regel ${rowNumber}: einde moet later zijn dan begin, binnen het tijdsbereik.")
+            if (start < previousStart)
+                return fail("Regel ${rowNumber}: begintijd loopt terug; zet de rijen chronologisch.")
+            previousStart = start
+            val written = columns.drop(2).map { it.trim() }
+            if (written.any { value ->
+                value.isEmpty() || value.length > 800 || "-->" in value ||
+                    value.any { ch -> ch == '\u0000' ||
+                        (ch.isISOControl() && ch != '\n') }
+            }) return fail("Regel ${rowNumber}: brontekst" +
+                (if (withMeaning) " of eigen betekenis" else "") +
+                " is leeg, te lang of bevat ongeldige tekens.")
+            result += PrivateSubtitleCue(start, end, label(start), label(end),
+                written.joinToString("\n"))
+        }
+        if (PrivateSubtitleDraftEditor.snapshot(result, SubtitleDraftFormat.SRT) == null ||
+            PrivateSubtitleDraftEditor.snapshot(result, SubtitleDraftFormat.WEBVTT) == null)
+            return fail("Deze tijdlijn kan niet veilig als SRT én WebVTT worden opgeslagen.")
+        return result to TimedSubtitleInputInspection(rows.size, null)
+    }
+
+    fun inspectTimed(raw: String, withMeaning: Boolean): TimedSubtitleInputInspection =
+        timedColumns(raw, withMeaning).second
+
     private fun label(milliseconds: Long): String =
         String.format(Locale.ROOT, "%02d:%02d:%02d,%03d",
             milliseconds / 3_600_000L,
@@ -101,38 +163,11 @@ internal object PrivatePlainTextSubtitleDraft {
                 return null
             return cues
         }
-        if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS) {
-            // Four manually supplied columns: start, end, source, own meaning.
-            // Unlike the estimated routes, timestamps are copied exactly.
-            val rawRows = pairedRows(raw)
-            // Blank spreadsheet rows must be corrected explicitly, not
-            // skipped: row numbers and user-supplied timing provenance matter.
-            if (rawRows.isEmpty() || rawRows.size > MAX_CUES ||
-                rawRows.any { it.isBlank() }) return null
-            val cues = rawRows.map { row ->
-                val columns = row.split('\t')
-                if (columns.size != 4) return null
-                val begin = PrivateSubtitleTimelineNavigation.timestamp(columns[0])
-                    ?: return null
-                val end = PrivateSubtitleTimelineNavigation.timestamp(columns[1])
-                    ?: return null
-                if (begin < 0L || end > MAX_TIME || begin >= end) return null
-                val source = columns[2].trim()
-                val meaning = columns[3].trim()
-                if (source.isEmpty() || meaning.isEmpty() ||
-                    source.length > 800 || meaning.length > 800 ||
-                    listOf(source, meaning).any { value ->
-                        "-->" in value || value.any { ch ->
-                            ch == '\u0000' || ch.isISOControl()
-                        }
-                    }) return null
-                PrivateSubtitleCue(begin, end, label(begin), label(end),
-                    source + "\n" + meaning)
-            }
-            if (PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.SRT) == null ||
-                PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.WEBVTT) == null)
-                return null
-            return cues
+        if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS ||
+            splitMode == PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS) {
+            return timedColumns(
+                raw, splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
+            ).first
         }
         // Never classify natural sentences as recognized speech: this merely
         // suggests cut points at punctuation followed by whitespace.
@@ -144,6 +179,7 @@ internal object PrivatePlainTextSubtitleDraft {
                 .split(Regex("""(?<=[.!?。！？؟])\s+"""))
                 .map { it.trim() }.filter { it.isNotEmpty() }
             PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS -> return null // handled above
+            PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS -> return null // handled above
             PlainSubtitleSplitMode.PAIRED_TEXTBOXES -> return null // handled above
             PlainSubtitleSplitMode.PAIRED_COLUMNS -> pairedRows(raw).map { row ->
                     // Reject a blank source row rather than shifting displayed
