@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -44,8 +43,7 @@ private enum class CaptionCardSide { BOTH, ORIGINAL, TRANSLATION }
 @Composable
 private fun CaptionSide(text: String, code: String, large: Boolean,
     highlightedWord: Int? = null) {
-    val language = code.substringBefore('-')
-    val rtl = language in setOf("ar", "fa", "ur", "he", "ps", "ckb")
+    val fallbackRtl = code.substringBefore('-') in setOf("ar", "fa", "ur", "he", "ps", "ckb")
     val wordRanges = remember(text) { Regex("\\S+").findAll(text).map { it.range }.toList() }
     val selected = highlightedWord?.let { wordRanges.getOrNull(it) }
     val emphasis = MaterialTheme.colorScheme.primary
@@ -66,7 +64,7 @@ private fun CaptionSide(text: String, code: String, large: Boolean,
             fontSize = if (large) 38.sp else 26.sp,
             lineHeight = if (large) 48.sp else 36.sp,
             fontWeight = FontWeight.Medium,
-            textDirection = if (rtl) TextDirection.Rtl else TextDirection.Ltr
+            textDirection = PrivateTextDirection.forContent(text, fallbackRtl)
         )
     )
 }
