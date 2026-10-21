@@ -26,7 +26,21 @@ internal object PrivatePlainTextSubtitleDraft {
     private const val MAX_TIME = 359_999_999L
     val durationOptions = listOf(2_000L, 3_500L, 5_000L, 7_000L)
     val startOptions = listOf(0L, 5_000L, 10_000L, 30_000L, 60_000L)
+    const val MAX_USER_START_MS = 21_600_000L // 6 hours, manually estimated
+    const val MIN_USER_DURATION_MS = 500L
+    const val MAX_USER_DURATION_MS = 30_000L
 
+
+    /** Strict positive decimal-second entry for human-estimated cue timing. */
+    fun manualSecondsMillis(input: String, minMillis: Long, maxMillis: Long): Long? {
+        val value = input.trim()
+        val match = Regex("""^([0-9]{1,5})(?:[.,]([0-9]{1,3}))?$""").matchEntire(value)
+            ?: return null
+        val whole = match.groupValues[1].toLongOrNull() ?: return null
+        val fraction = match.groupValues[2].padEnd(3, '0').toLongOrNull() ?: return null
+        val milliseconds = whole * 1_000L + fraction
+        return milliseconds.takeIf { it in minMillis..maxMillis }
+    }
     private fun pairedRows(text: String): List<String> {
         val normalized = text.removePrefix("\uFEFF")
             .replace("\r\n", "\n").replace('\r', '\n')
@@ -172,7 +186,8 @@ internal object PrivatePlainTextSubtitleDraft {
         splitMode: PlainSubtitleSplitMode = PlainSubtitleSplitMode.LINES,
         secondaryRaw: String = ""
     ): List<PrivateSubtitleCue>? {
-        if (startMillis !in startOptions || durationMillis !in durationOptions) return null
+        if (startMillis !in 0L..MAX_USER_START_MS ||
+            durationMillis !in MIN_USER_DURATION_MS..MAX_USER_DURATION_MS) return null
         val bytes = raw.toByteArray(Charsets.UTF_8)
         val secondaryBytes = secondaryRaw.toByteArray(Charsets.UTF_8)
         if (bytes.isEmpty() || bytes.size + secondaryBytes.size > MAX_BYTES ||
