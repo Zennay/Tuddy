@@ -426,6 +426,29 @@ authored tekst** in beide sporen wordt niet stilzwijgend
 weggegooid. De volledige samengevoegde kopie blijft apart
 doorbladerbaar in pagina's van vijf.
 
+### Een verkeerd voorgestelde koppeling handmatig afwijzen
+
+Open in dezelfde tijdelijke samenvoegpreview **Controleer elke
+bronregel-koppeling** en kies bij een voorgesteld paar **Laat tweede
+bronregel als losse cue staan**. Tuddy sluit dan precies deze
+oorspronkelijke **regel uit spoor twee** van verdere automatische
+koppelingen uit. Het hele tijdlijnvoorstel wordt opnieuw opgebouwd,
+zodat andere bronparen nog wel op volgorde gekoppeld kunnen worden.
+De uitgesloten regel **blijft compleet aanwezig** met eigen
+tekst en tijdcodes, nu als zelfstandige cue; er wordt niets verwijderd.
+Dit werkt ook als twee eigen teksten identiek zijn.
+
+Bij één of meer uitsluitingen verschijnt een aparte doorbladerbare
+lijst met vier oorspronkelijke cueverwijzingen per pagina. Gebruik
+**Sta koppeling van regel weer toe** om één uitsluiting terug te draaien
+of **Sta alle eerder uitgesloten koppelingen weer toe** om opnieuw
+vanaf alle originele bronregels te koppelen. Als meer losse regels
+de bestandsgrootte of 500-cue-grens zouden overschrijden, wordt
+toepassen geblokkeerd totdat je de selectie corrigeert; het
+oorspronkelijke concept wordt nooit stilzwijgend ingekort.
+De hele zichtbare lijst wordt bij definitieve bevestiging opnieuw
+berekend, inclusief handmatige uitsluitingen en werkelijke koppelingen.
+
 De algoritmische koppeling kijkt **alleen** naar geschreven
 tijdstempels, niet naar de werkelijke betekenis van woorden,
 sprekerherkenning, audio of media. Inspecteer de bronparen
