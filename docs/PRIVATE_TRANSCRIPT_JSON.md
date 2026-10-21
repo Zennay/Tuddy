@@ -62,6 +62,14 @@ query anywhere. Results show the original per-line date/time and a local
 match count; unfinished translations cannot silently match as finished.
 Changing search criteria only changes this read-only display, never the
 selected file, the source JSON or the live conversation.
+The selected Android provider is read **off the UI thread** through a
+bounded strict-UTF-8 reader. If a provider makes no progress on a bulk read,
+the reader falls back to a bounded one-byte read rather than entering an
+endless UI-thread loop. Oversized and invalid documents are refused.
+If a newer picker opens, the conversation is cleared or Tuddy moves
+to the background before the read finishes, its result is discarded
+instead of reopening private archive content unexpectedly.
+
 Close the dialog to discard its temporary in-memory preview. The selected
 document is never copied to app storage, persisted as conversation history,
 used as live speech evidence, or sent to a translation model.
