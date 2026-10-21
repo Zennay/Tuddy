@@ -1,3 +1,32 @@
+## Nieuw: tweetalige aanvuloefening zonder netwerk
+
+Kies **★ gemarkeerd → Exporteer selectie… → Aanvuloefening · HTML**.
+De app maakt van exact de geselecteerde, echt afgeronde tweetalige zinnen
+zelfstandige offline HTML-oefenkaarten. De oorspronkelijke vraag blijft
+leesbaar, terwijl **elke tweede witruimte-gescheiden antwoordterm** tijdelijk
+als invulstreep verschijnt. Voor schriftsoorten zonder spaties wordt de
+hele antwoordzijde als lege invulregel aangeboden, niet kunstmatig in
+woorden geknipt. **Bekijk volledig antwoord** toont per kaart de exacte
+volledige zin na een bewuste tik; op papier staat een afzonderlijk
+**antwoordblad** na de vragen. Het brontranscript zelf verandert nooit.
+
+Deze route ondersteunt bron→vertaling, vertaling→bron en beide richtingen,
+optionele taalcodelabels en het filter **Alleen mijn handmatig gecorrigeerde
+antwoorden**. De eerder getoonde unieke-kaartenteller en de daadwerkelijke
+bestandsvoorbeeldregels gelden ook voor de aanvuloefening. Dezelfde grenzen
+(maximaal 80 oorspronkelijke markeringen, maximaal 160 kaarten, 256 KiB
+uitvoer) en geldige brongegevens als voor de TSV-kaarten worden afgedwongen.
+Ongeldige uitvoer wordt helemaal geweigerd, nooit afgekapt.
+
+De app bewaart alleen na jouw expliciete Android-bestandskeuze en vergelijkt
+na het terugkeren exact opnieuw de tijdelijke selectie, filters en bytes.
+Het bestand heeft een strikte netwerkloze CSP, geen JavaScript en geen externe
+bronnen. De gekozen bestandsprovider kan je tekst wel synchroniseren. De
+weergegeven betekenis is eigen tekst of een **ongeverifieerde** lokaal
+verkregen modelvertaling; Tuddy geeft geen automatische juistheidsbeoordeling.
+
+---
+
 ## Nieuw: enkelzijdig afdrukbare vouwkaartjes
 
 Naast TSV/CSV en het interactieve HTML-oefenblad heeft de expliciete
