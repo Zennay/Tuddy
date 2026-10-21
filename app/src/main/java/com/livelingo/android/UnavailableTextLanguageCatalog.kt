@@ -1,7 +1,5 @@
 package com.livelingo.android
 
-import java.util.Locale
-
 /**
  * Non-selectable languages found in the user's archived LiveLingo v0.4
  * language requests. No claim of an installed or licensable ASR/MT model.
@@ -73,12 +71,9 @@ internal object UnavailableTextLanguageCatalog {
     )
 
     fun search(query: String): List<UnavailableTextLanguage> {
-        val needle = query.trim().lowercase(Locale.ROOT)
-        if (needle.isEmpty()) return emptyList()
-        return entries.filter {
-            it.code.contains(needle) ||
-                it.title.lowercase(Locale.ROOT).contains(needle) ||
-                it.aliases.contains(needle)
+        if (LanguageSearch.normalize(query).isEmpty()) return emptyList()
+        return entries.filter { item ->
+            LanguageSearch.matches(query, listOf(item.code, item.title, item.aliases))
         }
     }
 }
