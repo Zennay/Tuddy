@@ -295,6 +295,8 @@ private fun TuddyScreen(
     // Reuse ML Kit's bundled on-device language detector across live captions;
     // callbacks are invalidated when the screen leaves composition.
     val localLanguageDetector = remember { LocalLanguageDetector() }
+    // Keep a small, session-scoped cache of already-authorized local translators.
+    val localTranslatorPool = remember { LocalTranslatorPool() }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
         mutableStateOf(PrivateScreenShield.enabled(context))
@@ -757,28 +759,17 @@ private fun TuddyScreen(
             when (receipt.stage) {
                 OfflineTextStage.CHECKING -> Unit
                 OfflineTextStage.READY -> {
-                    val translator = try {
-                        Translation.getClient(TranslatorOptions.Builder()
-                            .setSourceLanguage(from)
-                            .setTargetLanguage(targetCode)
-                            .build())
-                    } catch (_: Exception) {
-                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                        return@check
-                    }
-                    try {
-                        translator.translate(text)
-                            .addOnSuccessListener { output ->
-                                updateLine(id, output, "Lokaal vertaald", token, revision)
-                                translator.close()
-                            }
-                            .addOnFailureListener {
-                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                                translator.close()
-                            }
-                    } catch (_: Exception) {
-                        translator.close()
-                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                    localTranslatorPool.translate(from, targetCode, text) { result ->
+                        if (translationStillRelevant(id, token, revision)) {
+                            result.fold(
+                                onSuccess = { output ->
+                                    updateLine(id, output, "Lokaal vertaald", token, revision)
+                                },
+                                onFailure = {
+                                    updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                                }
+                            )
+                        }
                     }
                 }
                 OfflineTextStage.MISSING -> updateLine(
@@ -887,6 +878,7 @@ private fun TuddyScreen(
             modelStorageNotice = message
             installedTextModels = null  // never keep presenting an old inventory
             if (success) {
+                localTranslatorPool.invalidate()
                 // The inventory and currently selected pair are independent;
                 // always re-read actual model status after storage changes.
                 textInventory.invalidate()
@@ -930,6 +922,7 @@ private fun TuddyScreen(
             translator.downloadModelIfNeeded(DownloadConditions.Builder().requireWifi().build())
                 .addOnSuccessListener {
                     translator.close()
+                    localTranslatorPool.invalidate()
                     preparingOfflineModel = false
                     if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                         offlineModelStatus = "Download afgerond; aanwezigheid opnieuw controleren…"
@@ -938,6 +931,7 @@ private fun TuddyScreen(
                 }
                 .addOnFailureListener {
                     translator.close()
+                    localTranslatorPool.invalidate()
                     preparingOfflineModel = false
                     if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                         offlineModelStatus = "Tekstmodel niet beschikbaar. Controleer wifi en opslag; probeer opnieuw."
@@ -945,6 +939,7 @@ private fun TuddyScreen(
                 }
         } catch (_: Exception) {
             translator.close()
+            localTranslatorPool.invalidate()
             preparingOfflineModel = false
             if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                 offlineModelStatus = "Tekstmodel kon niet worden voorbereid."
@@ -980,36 +975,19 @@ private fun TuddyScreen(
                 partialTranslation = text
                 return@Runnable
             }
-            val translator = try {
-                Translation.getClient(TranslatorOptions.Builder()
-                    .setSourceLanguage(sourceCode)
-                    .setTargetLanguage(targetCode)
-                    .build())
-            } catch (_: Exception) {
-                return@Runnable
-            }
             interimTranslationBusy = true
-            try {
-                // Do not call downloadModelIfNeeded: no per-word model traffic.
-                translator.translate(text)
-                    .addOnSuccessListener { translated ->
-                        if (InterimTranslationPolicy.mayPublish(
-                                revision, partialRevision, token, generation,
-                                voiceSessions.isCurrent(voiceToken), listening)) {
-                            partialTranslation = translated
-                        }
-                        translator.close()
-                        interimTranslationBusy = false
+            // This pool only translates; it never requests or downloads a model.
+            localTranslatorPool.translate(sourceCode, targetCode, text) { result ->
+                try {
+                    val translated = result.getOrNull()
+                    if (translated != null && InterimTranslationPolicy.mayPublish(
+                            revision, partialRevision, token, generation,
+                            voiceSessions.isCurrent(voiceToken), listening)) {
+                        partialTranslation = translated
                     }
-                    .addOnFailureListener {
-                        // A missing local model leaves the preview untranslated.
-                        // Never display raw ML Kit error text or attempt cloud STT.
-                        translator.close()
-                        interimTranslationBusy = false
-                    }
-            } catch (_: Exception) {
-                translator.close()
-                interimTranslationBusy = false
+                } finally {
+                    interimTranslationBusy = false
+                }
             }
         }
         pendingInterim = task
@@ -2008,6 +1986,7 @@ private fun TuddyScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) {
+                localTranslatorPool.invalidate()
                 modelStorage.invalidate()
                 modelStorageBusy = false
                 pendingModelDeletion = null
@@ -2116,6 +2095,7 @@ private fun TuddyScreen(
             pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
             localLanguageDetector.close()
+            localTranslatorPool.close()
             captionSpeaker.close()
         }
     }
