@@ -120,6 +120,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var completedGuidedRoute by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
     var completedGuidedRounds by remember { mutableIntStateOf(0) }
     var practiceReportOpen by remember { mutableStateOf(false) }
+    // The saved worksheet choice is independent of the guided playback queue.
+    var worksheetScope by remember { mutableStateOf(PrivatePracticeRouteScope.ALL) }
     var practiceCsvPreviewOpen by remember { mutableStateOf(false) }
     // An immutable user-approved document lives only while the Android
     // destination chooser is open; never retain the audio URI or audio bytes.
@@ -170,14 +172,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 PrivatePracticeReportFormat.WORKSHEET_HTML ->
                     PrivateListeningWorksheet.snapshot(
                         cues, subtitleOffsetMs, savedPracticePassages,
-                        passageRatings, passageNotes
+                        passageRatings, passageNotes, worksheetScope
                     )
                 PrivatePracticeReportFormat.TXT ->
                     PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
                 PrivatePracticeReportFormat.CSV ->
                     PrivatePrintablePracticeSummary.snapshotCsv(
                         cues, subtitleOffsetMs, savedPracticePassages,
-                        passageRatings, passageNotes
+                        passageRatings, passageNotes, worksheetScope
                     )
             }
             if (!prepared || savedPracticePassages.isEmpty() ||
@@ -1515,8 +1517,30 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             "gaan niet mee.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Text(
+                        "Mijn luisterwerkblad bevat alleen de fragmenten in " +
+                            "de hieronder gekozen persoonlijke categorie. " +
+                            "Dit verandert de begeleide afspeelroute niet.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    PrivatePracticeRouteScope.entries.forEach { candidate ->
+                        val candidateCount = privatePracticeRouteCandidates(
+                            savedPracticePassages, passageRatings, candidate
+                        ).size
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive && candidateCount > 0,
+                            onClick = { worksheetScope = candidate }
+                        ) {
+                            Text((if (worksheetScope == candidate) "● " else "○ ") +
+                                candidate.title + " (" + candidateCount + ")")
+                        }
+                    }
                     TextButton(
-                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive &&
+                            privatePracticeRouteCandidates(
+                                savedPracticePassages, passageRatings, worksheetScope
+                            ).isNotEmpty(),
                         onClick = {
                             choosePracticeReport(PrivatePracticeReportFormat.WORKSHEET_HTML)
                         }
