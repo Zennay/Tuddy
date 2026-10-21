@@ -704,7 +704,7 @@ internal fun SubtitlePasteDialog(
         },
         confirmButton = {
             TextButton(enabled = parsed != null && chosenIndices != null &&
-                !inputTooLarge, onClick = {
+                !inputTooLarge && !importReading, onClick = {
                 if (inputTooLarge) return@TextButton
                 // Fresh full parse, row range and exact selected cue snapshot
                 // at consent, independent of the search query and page.
