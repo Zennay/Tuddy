@@ -15,6 +15,13 @@ woordgroep. Tussen jouw ankers worden tussenliggende woorden nog steeds
 Markeringen moeten binnen de huidige cue liggen, in strikt oplopende
 woord- én tijdvolgorde passen en minimaal één milliseconde per woord
 overlaten. Bij een ongeldige keuze blijft de bestaande set behouden.
+Kies **Bekijk of bewerk eigen woordtijdmarkeringen** om per nummer de
+**exacte uu:mm:ss.mmm-markering** te inspecteren, het nummer opnieuw voor
+een nieuwe audiotijd in te vullen (**Bewerk**) of alleen dat ene anker
+te verwijderen (**Wis**). Met de knop **Vul huidig geschat woordnummer in**
+zet Tuddy enkel een voorstel in het nummerinvoerveld; er wordt niets
+zonder jouw tweede expliciete tik gemarkeerd.
+
 Je kunt alle ankers voor de actieve regel via **Herstel gelijkmatige
 woordschatting voor deze regel** wissen. Een gewijzigde ondertitel-offset
 wist alle handmatige ankers omdat ze dan niet meer bij dezelfde tijdcodes
