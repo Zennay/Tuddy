@@ -5,9 +5,11 @@ niet-afbreekbare spaties en expliciete zero-width-spaties (U+200B)
 als **door de schrijver zelf gekozen woordgrenzen**. Spaties en
 scheidingstekens blijven intact in de opgaven; een tekst zonder
 zulke grenzen wordt niet kunstmatig in woorden opgesplitst.
-De Android-hintpreview en zelfstandige offline HTML gebruiken
-dezelfde tokenisering. Zonder netwerk, audio-uitlijning of
-automatische taalbeoordeling.
+Losstaande leestekengroepen zoals `...` of `—` blijven zichtbaar
+en tellen niet mee als te verbergen antwoordwoord; de juiste
+invulpositie verschuift daardoor niet. De Android-hintpreview en
+zelfstandige offline HTML gebruiken dezelfde tokenisering.
+Zonder netwerk, audio-uitlijning of automatische taalbeoordeling.
 
 [Uitleg bij de invuloefening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
 
