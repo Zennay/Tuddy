@@ -1063,6 +1063,33 @@ Dezelfde selectiemethode bestaat dus in vier acties:
 zijn huidige bronregels bij bevestiging en raakt het live gesprek
 en oorspronkelijke bestand niet.
 
+## Alleen geselecteerde LRC-cues handmatig verschuiven
+
+In **LRC: eigen begintijden per regel** kun je een eigen LRC-bron (ook
+een refreinregel met meerdere tijdstempels) openen en de uitgewerkte
+chronologische cue-nummers kiezen via **Van/Tot** of
+**Losse regels** (bijvoorbeeld `3-5,9`). Dit is geen audiomatching.
+
+Vul onder **Alleen geselecteerde regels ± milliseconden** een expliciete
+waarde in, bijvoorbeeld `+1200` of `-750` (maximaal ±30.000 ms).
+De app berekent een volledige, gebladerde oude/nieuwe tijdlijn van alle
+cues, inclusief gewijzigde **eindtijden van aangrenzende cues**.
+Alleen na **Pas deze geselecteerde LRC-verschuiving bewust toe**
+verandert het tijdelijke tekstconcept in het invoervak. Het origineel
+bij de Android-bestandsprovider wordt nooit aangepast.
+
+De bestaande [offset:]-header blijft exact behouden. De wijziging
+past alleen de door de gebruiker gekozen timestamp-tags aan, ook
+wanneer meerdere refreinmomenten op één fysieke bronregel staan;
+eigen lyrics, titel, artiest en overige toegestane metadata blijven
+ongewijzigd. Een verschuiving die de totale chronologische volgorde
+zou omkeren, dubbele tijdstempels zou geven, een start vóór nul zet
+of een ongeldige SRT/VTT-uitkomst veroorzaakt, wordt **geheel geweigerd**.
+De selectie blijft na zo'n weigering behouden; er is geen gedeeltelijke
+overschrijving of verkapte fallback. De toekomstig opgeslagen
+SRT/VTT-eindtijden volgen nog steeds uit het volgende LRC-begin
+(laatste eindtijd blijft geschat), niet uit opgenomen audio.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
