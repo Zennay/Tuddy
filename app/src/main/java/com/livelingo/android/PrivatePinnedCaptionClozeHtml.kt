@@ -39,6 +39,12 @@ internal enum class PinnedClozePass(val title: String, val indices: List<Int>) {
     ALL_THREE("Alle drie rondes · volledig oefenboek", listOf(0, 1, 2))
 }
 
+/** Choose whether repeated rounds retain source order or change it predictably. */
+internal enum class PinnedClozeCardOrder(val title: String) {
+    SOURCE("Originele zinsvolgorde"),
+    VARIED("Afwisselende kaartvolgorde per ronde")
+}
+
 internal object PrivatePinnedCaptionClozeHtml {
     private data class PracticeCard(
         val question: String,
@@ -147,7 +153,8 @@ internal object PrivatePinnedCaptionClozeHtml {
         hintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK,
         answerSpace: PinnedClozeAnswerSpace = PinnedClozeAnswerSpace.STANDARD,
         audience: PinnedClozeAudience = PinnedClozeAudience.SELF_STUDY,
-        pass: PinnedClozePass = PinnedClozePass.FIRST
+        pass: PinnedClozePass = PinnedClozePass.FIRST,
+        cardOrder: PinnedClozeCardOrder = PinnedClozeCardOrder.SOURCE
     ): ByteArray? {
         // Same exact source-data and language-label validation as TSV.
         // Printed text must not gain spreadsheet formula-safety apostrophes.
@@ -157,6 +164,7 @@ internal object PrivatePinnedCaptionClozeHtml {
         // No randomness, remote model or inferred word timings.
         val cards = ArrayList<PracticeCard>()
         pass.indices.forEach { round ->
+            val roundCards = ArrayList<PracticeCard>()
             rows.forEach { row ->
                 val source = PrivatePinnedCaptionStudyTsv.field(
                     row.original, spreadsheetSafe = false
@@ -168,14 +176,28 @@ internal object PrivatePinnedCaptionClozeHtml {
                 val front = if (showLanguageTags) "[" + row.sourceCode + "] " + source else source
                 val back = if (showLanguageTags) "[" + row.targetCode + "] " + target else target
                 if (direction != PinnedStudyDirection.TARGET_TO_SOURCE)
-                    cards.add(PracticeCard(front, back, previewHint(target,
+                    roundCards.add(PracticeCard(front, back, previewHint(target,
                         if (showLanguageTags) row.targetCode else null,
                         difficulty, hintMode, round), round))
                 if (direction != PinnedStudyDirection.SOURCE_TO_TARGET)
-                    cards.add(PracticeCard(back, front, previewHint(source,
+                    roundCards.add(PracticeCard(back, front, previewHint(source,
                         if (showLanguageTags) row.sourceCode else null,
                         difficulty, hintMode, round), round))
             }
+            // Deterministic order: no seed, shuffle state or external entropy.
+            // Source order stays unchanged when there is only one card.
+            val arranged: List<PracticeCard> = when (cardOrder) {
+                PinnedClozeCardOrder.SOURCE -> roundCards
+                PinnedClozeCardOrder.VARIED -> when (round) {
+                    0 -> roundCards
+                    1 -> roundCards.asReversed()
+                    else -> {
+                        val pivot = (roundCards.size + 1) / 2
+                        roundCards.drop(pivot) + roundCards.take(pivot)
+                    }
+                }
+            }
+            cards.addAll(arranged)
         }
         if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2 * 3) return null
         val cardsPerRound = cards.size / pass.indices.size
@@ -229,8 +251,11 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "Schrijfruimte: " + escape(answerSpace.title) + ". " +
                 "Bestemming: " + escape(audience.title) + ". " +
                 "Oefenrondes: " + escape(pass.title) + ". " +
-                "Elke ronde heeft nieuwe gaten in dezelfde eigen zinnen; " +
-                "bij erg korte of ongesegmenteerde zinnen kunnen gaten gelijk blijven. " +
+                "Kaartvolgorde: " + escape(cardOrder.title) + ". " +
+                "Elke ronde heeft andere invulgaten. Met afwisselende kaartvolgorde " +
+                "komt ronde 2 in omgekeerde volgorde en ronde 3 met een verschoven start; " +
+                "bij een enkele kaart blijft de volgorde vanzelf gelijk. " +
+                "Bij korte of ongesegmenteerde zinnen kunnen gaten gelijk blijven. " +
                 "Vul de ontbrekende woorden in. Dit zijn uitsluitend " +
                 "zelfgekozen lokale zinnen, ongeverifieerde modelvertalingen " +
                 "of eigen correcties. Geen automatische taalcontrole." +
