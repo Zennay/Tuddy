@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PlainSubtitleSplitMode
+import com.livelingo.android.PrivateLrcSubtitleDraft
 import com.livelingo.android.PrivatePlainTextSubtitleDraft
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
@@ -52,6 +53,7 @@ internal fun SubtitlePasteDialog(
     var raw by remember { mutableStateOf("") }
     var ownMeaning by remember { mutableStateOf("") }
     var plainLines by remember { mutableStateOf(false) }
+    var lrcMode by remember { mutableStateOf(false) }
     var splitMode by remember { mutableStateOf(PlainSubtitleSplitMode.LINES) }
     var startMs by remember { mutableStateOf(0L) }
     var durationMs by remember { mutableStateOf(3_500L) }
@@ -85,6 +87,7 @@ internal fun SubtitlePasteDialog(
             val beforeMeaning = ownMeaning
             val beforeMode = splitMode
             val beforePlain = plainLines
+            val beforeLrc = lrcMode
             importScope.launch {
                 importReading = true
                 val imported = withContext(Dispatchers.IO) {
@@ -92,7 +95,7 @@ internal fun SubtitlePasteDialog(
                 }
                 if (request != importRequestId || raw != beforeRaw ||
                     ownMeaning != beforeMeaning || splitMode != beforeMode ||
-                    plainLines != beforePlain) {
+                    plainLines != beforePlain || lrcMode != beforeLrc) {
                     importReading = false
                     documentNotice = "Invoer of formaat is ondertussen veranderd: " +
                         "het document is niet overgenomen."
@@ -160,12 +163,13 @@ internal fun SubtitlePasteDialog(
             PrivatePlainTextSubtitleDraft.MIN_USER_DURATION_MS,
             PrivatePlainTextSubtitleDraft.MAX_USER_DURATION_MS
         ) else durationMs
-    val parsed = remember(raw, ownMeaning, plainLines, chosenStartMs, chosenDurationMs, splitMode) {
+    val parsed = remember(raw, ownMeaning, plainLines, lrcMode, chosenStartMs, chosenDurationMs, splitMode) {
         if (plainLines && chosenStartMs != null && chosenDurationMs != null)
             PrivatePlainTextSubtitleDraft.preview(
                 raw, chosenStartMs, chosenDurationMs, splitMode,
                 if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) ownMeaning else ""
             )
+        else if (lrcMode) PrivateLrcSubtitleDraft.preview(raw)
         else if (!plainLines) PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
         else null
     }
@@ -226,9 +230,9 @@ internal fun SubtitlePasteDialog(
                         documentNotice = ""
                         openDocument.launch(arrayOf("*/*"))
                     }
-                ) { Text("📂 Kies eigen UTF-8 SRT, VTT, CSV, TSV of TXT-document…") }
+                ) { Text("📂 Kies eigen UTF-8 SRT, VTT, LRC, CSV, TSV of TXT-document…") }
                 Text(
-                    "Selecteer eerst hieronder de bijpassende invoermodus. " +
+                    "Selecteer hieronder eerst de passende SRT/VTT-, LRC- of tekstmodus. " +
                         "Het gekozen document vervangt alleen het tekstvak en wordt " +
                         "begrensd in RAM gelezen (maximaal 256 KiB). " +
                         "Tuddy schrijft niets terug; je gekozen Android-provider " +
@@ -248,13 +252,19 @@ internal fun SubtitlePasteDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = {
                         plainLines = false
+                        lrcMode = false
                         page = 0
-                    }) { Text((if (!plainLines) "✓ " else "") + "SRT/VTT") }
+                    }) { Text((if (!plainLines && !lrcMode) "✓ " else "") + "SRT/VTT") }
                     OutlinedButton(onClick = {
                         plainLines = true
                         page = 0
                     }) { Text((if (plainLines) "✓ " else "") + "Gewone zinnen") }
                 }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { plainLines = false; lrcMode = true; page = 0 }
+                ) { Text((if (!plainLines && lrcMode) "✓ " else "") +
+                    "LRC: eigen begintijden per regel") }
                 if (plainLines) {
                     Text(
                         "Maak handmatig een ondertitelconcept van losse tekst. " +
@@ -459,7 +469,11 @@ internal fun SubtitlePasteDialog(
                     }
                 } else {
                     Text(
-                        "Voorzie iedere cue van begin- en eindtijd (volledig SRT/VTT). " +
+                        if (lrcMode)
+                            "LRC: één [mm:ss.xx]-begintijd per eigen regel. " +
+                                "Elk einde wordt de volgende begintijd; de laatste " +
+                                "eindtijd is geschat op 3 seconden, niet gemeten."
+                        else "Voorzie iedere cue van begin- en eindtijd (volledig SRT/VTT). " +
                             "Er wordt geen audio-uitlijning geclaimd.",
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -481,6 +495,7 @@ internal fun SubtitlePasteDialog(
                         }
                     },
                     label = { Text(when {
+                        !plainLines && lrcMode -> "LRC: [mm:ss.xx] eigen tekst"
                         !plainLines -> "SRT/WebVTT-brontekst"
                         splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES ->
                             "Jouw originele zinnen (één per regel)"
@@ -565,6 +580,9 @@ internal fun SubtitlePasteDialog(
                                 "betekenis bevatten. Drie kolommen: begin/einde/bron; " +
                                 "vier kolommen: begin/einde/bron/betekenis. " +
                                 "Alle velden moeten expliciet geldig zijn."
+                        else if (lrcMode) "Ongeldig LRC: één oplopende [mm:ss.xx] " +
+                            "per niet-lege regel (max. 500 regels, 800 tekens); " +
+                            "geen offsets of dubbele tijdstempels."
                         else "Geen volledig geldig SRT/WebVTT-document: " +
                             "controleer tijdcodes en maximaal 500 regels.",
                         color = MaterialTheme.colorScheme.error,
@@ -579,6 +597,8 @@ internal fun SubtitlePasteDialog(
                                 splitMode != PlainSubtitleSplitMode.TIMED_TEXT_CSV &&
                                 splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_CSV)
                                 "Tijdcodes zijn volledig geschat."
+                             else if (lrcMode) "Beginmomenten uit LRC; " +
+                                 "de laatste eindtijd is 3 s geschat."
                              else "Tijdcodes komen uit de zelf geplakte bron."),
                         style = MaterialTheme.typography.titleSmall
                     )
@@ -714,6 +734,7 @@ internal fun SubtitlePasteDialog(
                         chosenDurationMs ?: return@TextButton, splitMode,
                         if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) ownMeaning else ""
                     )
+                else if (lrcMode) PrivateLrcSubtitleDraft.preview(raw)
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
                 if (confirmed == null) return@TextButton
                 val indices = if (explicitRows.isNotBlank())
