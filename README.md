@@ -1,3 +1,19 @@
+## Hersteld: Android-documentkiezer verliest geen tijdelijk ondertitelconcept
+
+Bij een expliciete SRT/VTT/LRC/CSV/TSV/TXT-bestandskeuze kan Android
+de huidige dialoog sluiten zodra de systeembestandskiezer zichtbaar wordt.
+Daarom is de selectie nu **Activity-owned**, niet meer afhankelijk van een
+door `ON_STOP` verwijderde Compose-dialoog. Zowel bij het eerste als
+bij een tweede ondertitelspoor keert de gebruiker terug naar de
+**volledige tijdelijke voorbeeldweergave**, zonder het live gesprek te
+wijzigen. De oude eigen tekst, tijdinstellingen en selectie worden in
+RAM hersteld bij annuleren of weigering. Na een geslaagde keuze wordt
+uitsluitend de bewust gekozen brontekst vervangen, met behoud van
+aangepaste start-/duurinstellingen en een nieuwe expliciete bronselectie.
+Het inlezen blijft begrensd tot 256 KiB, op een IO-thread; er is
+geen blijvende URI-toestemming of verborgen bestandsschrijfroute.
+[Details](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: eigen ondertitel-CSV/TSV weer exporteren
 
 Na de bestaande SRT/VTT-, LRC- of spreadsheetimport kun je vanuit
