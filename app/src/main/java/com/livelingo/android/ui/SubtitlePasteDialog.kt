@@ -32,6 +32,7 @@ import com.livelingo.android.PrivatePlainTextSubtitleDraft
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
 import com.livelingo.android.PrivateSubtitleRowSelection
+import com.livelingo.android.PrivateSubtitleTimelineNavigation
 
 /**
  * Exact bounded editor input returned by the Activity-owned Android picker.
@@ -84,6 +85,9 @@ internal fun SubtitlePasteDialog(
     var lrcOffsetInput by remember(initialDocument) { mutableStateOf("") }
     var lrcSelectedShiftInput by remember(initialDocument) { mutableStateOf("") }
     var lrcShiftPreviewPage by remember { mutableIntStateOf(0) }
+    var lrcAnchorFirstInput by remember(initialDocument) { mutableStateOf("") }
+    var lrcAnchorLastInput by remember(initialDocument) { mutableStateOf("") }
+    var lrcAnchorPreviewPage by remember { mutableIntStateOf(0) }
     // Only deliberate in-dialog LRC timing actions are undoable here.
     // Bounded to eight RAM snapshots (each input is already <=256 KiB).
     var lrcUndo by remember(initialDocument) { mutableStateOf(emptyList<String>()) }
@@ -228,6 +232,26 @@ internal fun SubtitlePasteDialog(
     }
     val lrcShiftAfter = remember(lrcShiftProposal) {
         lrcShiftProposal?.let(PrivateLrcSubtitleDraft::preview)
+    }
+    val lrcAnchorIsContiguous = chosenIndices != null &&
+        chosenIndices.size >= 2 &&
+        chosenIndices == (chosenIndices.first()..chosenIndices.last()).toList()
+    val lrcAnchorFirstMs = PrivateSubtitleTimelineNavigation.timestamp(lrcAnchorFirstInput)
+    val lrcAnchorLastMs = PrivateSubtitleTimelineNavigation.timestamp(lrcAnchorLastInput)
+    val lrcAnchorProposal = remember(
+        raw, chosenIndices, lrcAnchorFirstMs, lrcAnchorLastMs, plainLines, lrcMode
+    ) {
+        if (!plainLines && lrcMode && lrcAnchorIsContiguous &&
+            chosenIndices != null && lrcAnchorFirstMs != null &&
+            lrcAnchorLastMs != null) {
+            PrivateLrcSubtitleDraft.withRangeAnchors(
+                raw, chosenIndices.first(), chosenIndices.last(),
+                lrcAnchorFirstMs, lrcAnchorLastMs
+            )
+        } else null
+    }
+    val lrcAnchorAfter = remember(lrcAnchorProposal) {
+        lrcAnchorProposal?.let(PrivateLrcSubtitleDraft::preview)
     }
     val pageSize = 15
     val countPages = maxOf(1, (filtered.size + pageSize - 1) / pageSize)
@@ -948,6 +972,147 @@ internal fun SubtitlePasteDialog(
                                     }
                                 ) {
                                     Text("Pas deze geselecteerde LRC-verschuiving bewust toe")
+                                }
+                            }
+                        }
+                    }
+                    if (!plainLines && lrcMode && chosenIndices != null) {
+                        Text(
+                            "Tweepuntscorrectie van een aaneengesloten LRC-reeks: " +
+                                "kies eerst Van/Tot zonder losse gaten, en geef de " +
+                                "nieuwe begintijd van de eerste en laatste cue op. " +
+                                "De tussenliggende begintijden volgen alleen uit jouw " +
+                                "twee ankers (0,5×–2× snelheid). Geen audioanalyse.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (!lrcAnchorIsContiguous) {
+                            Text(
+                                "Kies minstens twee opeenvolgende chronologische " +
+                                    "regels met Van/Tot, of een gesloten reeks. " +
+                                    "Losse niet-aangrenzende keuzes zijn voor de " +
+                                    "tweepuntscorrectie niet toegestaan.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        } else {
+                            val first = chosenIndices.first()
+                            val last = chosenIndices.last()
+                            Text(
+                                "Anker A: bronregel ${first + 1}, huidig " +
+                                    "${parsed[first].startLabel} — ${parsed[first].text}" +
+                                    "\nAnker B: bronregel ${last + 1}, huidig " +
+                                    "${parsed[last].startLabel} — ${parsed[last].text}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    lrcAnchorFirstInput = parsed[first].startLabel
+                                    lrcAnchorLastInput = parsed[last].startLabel
+                                    lrcAnchorPreviewPage = 0
+                                }
+                            ) { Text("Vul de twee huidige begintijden in") }
+                            OutlinedTextField(
+                                value = lrcAnchorFirstInput,
+                                onValueChange = {
+                                    if (it.length <= 13) {
+                                        lrcAnchorFirstInput = it
+                                        lrcAnchorPreviewPage = 0
+                                    }
+                                },
+                                label = { Text("Nieuwe tijd anker A (uu:mm:ss.mmm)") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = lrcAnchorLastInput,
+                                onValueChange = {
+                                    if (it.length <= 13) {
+                                        lrcAnchorLastInput = it
+                                        lrcAnchorPreviewPage = 0
+                                    }
+                                },
+                                label = { Text("Nieuwe tijd anker B (uu:mm:ss.mmm)") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (lrcAnchorFirstInput.isNotBlank() ||
+                                lrcAnchorLastInput.isNotBlank()) {
+                                if (lrcAnchorProposal == null || lrcAnchorAfter == null) {
+                                    Text(
+                                        "Nog geen veilige nieuwe tijdlijn. Vul beide tijden " +
+                                            "expliciet in, met een later tweede anker, " +
+                                            "0,5×–2× tijdverhouding en zonder overlap " +
+                                            "met ongewijzigde cues erbuiten. " +
+                                            "Ongewijzigde of niet-exporteerbare " +
+                                            "voorstellen worden geweigerd.",
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                } else {
+                                    val after = lrcAnchorAfter
+                                    val pages = maxOf(1, (parsed.size + 4) / 5)
+                                    val visible = lrcAnchorPreviewPage.coerceIn(0, pages - 1)
+                                    val changedPages = parsed.indices.filter { index ->
+                                        parsed[index].startMillis != after[index].startMillis ||
+                                            parsed[index].endMillis != after[index].endMillis
+                                    }.map { it / 5 }.distinct()
+                                    val previous = changedPages.lastOrNull { it < visible }
+                                    val next = changedPages.firstOrNull { it > visible }
+                                    Text(
+                                        "Bekijk alle originele en gecorrigeerde " +
+                                            "tijdcodes: pagina ${visible + 1}/${pages}. " +
+                                            "Ook aangrenzende eindtijden worden getoond.",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(
+                                            enabled = previous != null,
+                                            onClick = { previous?.let { lrcAnchorPreviewPage = it } }
+                                        ) { Text("← Vorige wijziging") }
+                                        OutlinedButton(
+                                            enabled = next != null,
+                                            onClick = { next?.let { lrcAnchorPreviewPage = it } }
+                                        ) { Text("Volgende wijziging →") }
+                                    }
+                                    parsed.indices.drop(visible * 5).take(5).forEach { index ->
+                                        val before = parsed[index]
+                                        val changed = after[index]
+                                        Text(
+                                            "Regel ${index + 1}" +
+                                                (if (index in first..last) " · binnen ankers" else "") +
+                                                "\n${before.startLabel} → ${before.endLabel}" +
+                                                "\nwordt ${changed.startLabel} → ${changed.endLabel}" +
+                                                "\n${before.text}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(
+                                            enabled = visible > 0,
+                                            onClick = { lrcAnchorPreviewPage = visible - 1 }
+                                        ) { Text("Vorige 5") }
+                                        OutlinedButton(
+                                            enabled = visible + 1 < pages,
+                                            onClick = { lrcAnchorPreviewPage = visible + 1 }
+                                        ) { Text("Volgende 5") }
+                                    }
+                                    OutlinedButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            commitLrcTiming(lrcAnchorProposal)
+                                            lrcAnchorFirstInput = ""
+                                            lrcAnchorLastInput = ""
+                                            lrcAnchorPreviewPage = 0
+                                            documentNotice = "Tweepuntscorrectie alleen in " +
+                                                "het tijdelijke LRC-concept toegepast. " +
+                                                "Het gekozen bronbestand is intact."
+                                        }
+                                    ) {
+                                        Text("Bevestig deze volledige tweepuntscorrectie")
+                                    }
                                 }
                             }
                         }
