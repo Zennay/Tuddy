@@ -1108,6 +1108,33 @@ overschrijving of verkapte fallback. De toekomstig opgeslagen
 SRT/VTT-eindtijden volgen nog steeds uit het volgende LRC-begin
 (laatste eindtijd blijft geschat), niet uit opgenomen audio.
 
+## Gecorrigeerde LRC-bron mét metadata als nieuw bestand bewaren
+
+In de primaire **Plak eigen SRT/WebVTT-tekst → LRC**-dialoog
+vind je na een volledig geldige LRC-invoer ook
+**Bewaar deze volledige LRC-bron als nieuw .lrc-bestand…**.
+Dat bewaart het **actuele, eventueel gecorrigeerde eigen
+UTF-8-brondocument** met alle expliciete refreintags, lyrics,
+toegestane artiest-/titelmetadata en `[offset:]` als bronkopie.
+Dit verschilt bewust van een uit SRT/VTT-cues gereconstrueerde
+LRC-export: bij die eerdere route kunnen bronheaders niet
+worden teruggevonden.
+
+De Android **CreateDocument**-bestandskiezer vraagt apart
+om een nieuwe opslaglocatie. Alleen na een expliciete keuze
+en hercontrole van de complete begrensde bronmomentopname
+worden bytes geschreven; het oorspronkelijk gekozen bestand
+wordt niet door Tuddy aangeraakt. De inhoud blijft tijdens
+DocumentsUI uitsluitend als tijdelijke RAM-snapshot beschikbaar.
+Na annuleren, een ongeldige providerlocatie of mislukte opslag
+wordt het bewerkbare eigen concept met een duidelijke melding
+opnieuw geopend. Een externe Android-provider kan zelf
+cloudsync aanbieden; Tuddy doet dit niet. Een handmatig
+gewijzigde of ongeldige volledige LRC, misvormde UTF-8,
+meer dan 500 uitgewerkte cues of 256 KiB wordt geweigerd.
+De functie bewaart dus alleen een eigen brondocument en
+voegt geen geautomatiseerde vertaling of audioverwerking toe.
+
 ## Meerdere foutieve LRC-begintijden in één bewuste correctie
 
 Als verscheidene eigen LRC-tijdstempels verkeerd zijn,
