@@ -793,8 +793,8 @@ internal fun PrivateSubtitleFileDialog(
                                     "Dubbele ankers ongeldig voor deze tijdlijn. " +
                                         "Kies ze opnieuw of gebruik één verschuiving."
                                 else "Dubbele ankers actief: regels " +
-                                    "${selected.firstPrimaryRow}/${selected.firstSecondaryRow}" +
-                                    " → ${selected.lastPrimaryRow}/${selected.lastSecondaryRow}. " +
+                                    "${selected?.firstPrimaryRow}/${selected?.firstSecondaryRow}" +
+                                    " → ${selected?.lastPrimaryRow}/${selected?.lastSecondaryRow}. " +
                                     "Bekijk hieronder het volledige nieuwe resultaat.",
                                 style = MaterialTheme.typography.bodySmall)
                             OutlinedButton(modifier = Modifier.fillMaxWidth(),
