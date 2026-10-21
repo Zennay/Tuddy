@@ -559,9 +559,11 @@ geen nieuwe permissies, accounts of netwerkverzoeken.
 
 ### Meerdere tijdvensters in één selectie
 
-Bij **Kies zelf bronregels om te bewaren…** en **Alleen gekozen
-bronregels in tijd verschuiven…** kun je ook in het veld
-**Tijdvensters: vanaf-tot;vanaf-tot** meerdere losse intervallen typen:
+Bij **Kies zelf bronregels om te bewaren…**, **Alleen gekozen
+bronregels in tijd verschuiven…**, **Meerdere eigen ondertitelregels
+verwijderen…** en **Zoek en vervang · tijdelijk** kun je in het extra
+veld met een `vanaf-tot;vanaf-tot`-voorbeeld meerdere losse
+intervallen typen:
 
 ```text
 00:10-00:20;01:00-01:15;02:35-02:42.500
@@ -579,6 +581,8 @@ van de getoonde cues blijft de originele bronvolgorde, ook als
 tijdvensters in een andere volgorde zijn ingevoerd. De bestaande
 enkele **Vanaf/Tot**-selectie en handmatige bronregelnummers blijven
 beschikbaar.
+
+Dit werkt in alle vier handmatige acties: **selectief exporteren**, **tijd verschuiven**, **regels verwijderen** en **letterlijk tekst vervangen**. De huidige, originele rijselectie wordt pas na de expliciete knop vervangen; daarna gelden nog steeds de bestaande volledige voor/na-preview en Undo/Redo. Geen venster wijzigt vanzelf de keuze.
 
 Dit doet **geen** audioanalyse of afkappen van captions.
 Het exportdialoog biedt nog steeds uitsluitend na volledige
