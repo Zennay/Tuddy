@@ -31,7 +31,21 @@ internal enum class PinnedClozeAudience(val title: String) {
     STUDENT_HANDOUT("Leerlingenblad · geen antwoorden in bestand")
 }
 
+/** Reproducible alternative missing-word placements for the same chosen sentences. */
+internal enum class PinnedClozePass(val title: String, val indices: List<Int>) {
+    FIRST("Ronde 1 · eerste invulpatroon", listOf(0)),
+    SECOND("Ronde 2 · andere ontbrekende woorden", listOf(1)),
+    THIRD("Ronde 3 · aanvullend invulpatroon", listOf(2)),
+    ALL_THREE("Alle drie rondes · volledig oefenboek", listOf(0, 1, 2))
+}
+
 internal object PrivatePinnedCaptionClozeHtml {
+    private data class PracticeCard(
+        val question: String,
+        val answer: String,
+        val hint: String,
+        val roundIndex: Int
+    )
     private const val MAX_BYTES = 262_144
 
     private fun escape(text: String): String = buildString(text.length) {
@@ -75,7 +89,7 @@ internal object PrivatePinnedCaptionClozeHtml {
             PinnedClozeHintMode.BLANK -> "________"
             PinnedClozeHintMode.FIRST_LETTER -> {
                 val first = term.codePointAt(0)
-                if (Character.isLetterOrDigit(first))
+                if (Character.isLetterOrDigit(first) && term.codePointCount(0, term.length) > 1)
                     String(Character.toChars(first)) + "____"
                 else "________"
             }
@@ -88,17 +102,23 @@ internal object PrivatePinnedCaptionClozeHtml {
     private fun missingWords(
         value: String,
         difficulty: PinnedClozeDifficulty,
-        hintMode: PinnedClozeHintMode
+        hintMode: PinnedClozeHintMode,
+        roundIndex: Int
     ): String {
         val words = value.trim().split(Regex("\\s+"))
         // Do not invent word boundaries in unsegmented scripts.
         if (words.size < 2) return "________"
+        val pass = roundIndex.coerceIn(0, 2)
         return words.mapIndexed { index, word ->
-            val hide = if (words.size < 3) index == words.lastIndex
+            val hide = if (words.size < 3) index == (1 - pass % 2)
                 else when (difficulty) {
-                    PinnedClozeDifficulty.EASY -> index % 3 == 2
-                    PinnedClozeDifficulty.NORMAL -> index % 2 == 1
-                    PinnedClozeDifficulty.CHALLENGE -> index % 3 != 0
+                    PinnedClozeDifficulty.EASY -> (index + pass) % 3 == 2
+                    PinnedClozeDifficulty.NORMAL -> when (pass) {
+                        0 -> index % 2 == 1
+                        1 -> index % 2 == 0
+                        else -> index % 6 in 1..3
+                    }
+                    PinnedClozeDifficulty.CHALLENGE -> (index + pass) % 3 != 0
                 }
             if (hide) hiddenWord(word, hintMode) else word
         }.joinToString(" ")
@@ -109,10 +129,12 @@ internal object PrivatePinnedCaptionClozeHtml {
         text: String,
         languageCode: String? = null,
         difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL,
-        hintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK
+        hintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK,
+        roundIndex: Int = 0
     ): String {
         val words = missingWords(
-            PrivatePinnedCaptionStudyTsv.field(text, spreadsheetSafe = false), difficulty, hintMode
+            PrivatePinnedCaptionStudyTsv.field(text, spreadsheetSafe = false),
+            difficulty, hintMode, roundIndex
         )
         return if (languageCode == null) words else "[" + languageCode + "] " + words
     }
@@ -124,28 +146,38 @@ internal object PrivatePinnedCaptionClozeHtml {
         difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL,
         hintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK,
         answerSpace: PinnedClozeAnswerSpace = PinnedClozeAnswerSpace.STANDARD,
-        audience: PinnedClozeAudience = PinnedClozeAudience.SELF_STUDY
+        audience: PinnedClozeAudience = PinnedClozeAudience.SELF_STUDY,
+        pass: PinnedClozePass = PinnedClozePass.FIRST
     ): ByteArray? {
         // Same exact source-data and language-label validation as TSV.
         // Printed text must not gain spreadsheet formula-safety apostrophes.
         if (PrivatePinnedCaptionStudyTsv.snapshot(rows, direction, showLanguageTags) == null)
             return null
-        // Prompt, exact complete answer, and what is visible before revealing it.
-        val cards = ArrayList<Triple<String, String, String>>()
-        rows.forEach { row ->
-            val source = PrivatePinnedCaptionStudyTsv.field(row.original, spreadsheetSafe = false)
-            val target = PrivatePinnedCaptionStudyTsv.field(row.translated, spreadsheetSafe = false)
-            if (source.isBlank() || target.isBlank()) return null
-            val front = if (showLanguageTags) "[" + row.sourceCode + "] " + source else source
-            val back = if (showLanguageTags) "[" + row.targetCode + "] " + target else target
-            if (direction != PinnedStudyDirection.TARGET_TO_SOURCE)
-                cards.add(Triple(front, back, previewHint(target,
-                    if (showLanguageTags) row.targetCode else null, difficulty, hintMode)))
-            if (direction != PinnedStudyDirection.SOURCE_TO_TARGET)
-                cards.add(Triple(back, front, previewHint(source,
-                    if (showLanguageTags) row.sourceCode else null, difficulty, hintMode)))
+        // Preserve each answer exactly while deliberately varying gap placements.
+        // No randomness, remote model or inferred word timings.
+        val cards = ArrayList<PracticeCard>()
+        pass.indices.forEach { round ->
+            rows.forEach { row ->
+                val source = PrivatePinnedCaptionStudyTsv.field(
+                    row.original, spreadsheetSafe = false
+                )
+                val target = PrivatePinnedCaptionStudyTsv.field(
+                    row.translated, spreadsheetSafe = false
+                )
+                if (source.isBlank() || target.isBlank()) return null
+                val front = if (showLanguageTags) "[" + row.sourceCode + "] " + source else source
+                val back = if (showLanguageTags) "[" + row.targetCode + "] " + target else target
+                if (direction != PinnedStudyDirection.TARGET_TO_SOURCE)
+                    cards.add(PracticeCard(front, back, previewHint(target,
+                        if (showLanguageTags) row.targetCode else null,
+                        difficulty, hintMode, round), round))
+                if (direction != PinnedStudyDirection.SOURCE_TO_TARGET)
+                    cards.add(PracticeCard(back, front, previewHint(source,
+                        if (showLanguageTags) row.sourceCode else null,
+                        difficulty, hintMode, round), round))
+            }
         }
-        if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2) return null
+        if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2 * 3) return null
 
         val out = StringBuilder(
             "<!doctype html><html lang=\"nl\"><head><meta charset=\"utf-8\">" +
@@ -186,6 +218,7 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "Invulhint: " + escape(hintMode.title) + ". " +
                 "Schrijfruimte: " + escape(answerSpace.title) + ". " +
                 "Bestemming: " + escape(audience.title) + ". " +
+                "Oefenrondes: " + escape(pass.title) + ". " +
                 "Vul de ontbrekende woorden in. Dit zijn uitsluitend " +
                 "zelfgekozen lokale zinnen, ongeverifieerde modelvertalingen " +
                 "of eigen correcties. Geen automatische taalcontrole." +
@@ -204,8 +237,10 @@ internal object PrivatePinnedCaptionClozeHtml {
                 else "Er is geen afdrukantwoordblad.</p>") +
                 "<section id=\"questions\" aria-label=\"Oefenvragen\"><h2>Vragen</h2>"
         )
-        cards.forEachIndexed { index, (question, answer, hint) ->
-            out.append("<article class=\"card\"><b>Kaart ").append(index + 1)
+        cards.forEachIndexed { index, card ->
+            val (question, answer, hint, roundIndex) = card
+            out.append("<article class=\"card\"><b>Ronde ").append(roundIndex + 1)
+                .append(" · kaart ").append(index + 1)
                 .append("</b><p class=\"phrase\"><bdi dir=\"auto\">")
                 .append(escape(question)).append("</bdi></p>")
                 .append("<p class=\"hint\"><bdi dir=\"auto\">")
@@ -245,8 +280,10 @@ internal object PrivatePinnedCaptionClozeHtml {
                     "<h2>Antwoordblad</h2>" +
                     "<a class=\"answerlink\" href=\"#questions\">" +
                     "Terug naar vragen</a>")
-            cards.forEachIndexed { index, (_, answer, _) ->
-                out.append("<p class=\"phrase\"><b>").append(index + 1)
+            cards.forEachIndexed { index, card ->
+                val answer = card.answer
+                out.append("<p class=\"phrase\"><b>Ronde ").append(card.roundIndex + 1)
+                    .append(" · kaart ").append(index + 1)
                     .append(".</b> <bdi dir=\"auto\">").append(escape(answer))
                     .append("</bdi></p>")
                 if (out.length > MAX_BYTES) return null
