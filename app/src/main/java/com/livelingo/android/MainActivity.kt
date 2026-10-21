@@ -3479,7 +3479,8 @@ private fun TuddyScreen(
                         if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
                             pinnedExportFormat == PinnedCaptionFormat.CSV ||
                             pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML ||
-                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML)) {
+                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML)) {
                             HorizontalDivider()
                             Text("Kies hoe je de tweetalige modelvertalingen wilt oefenen",
                                 style = MaterialTheme.typography.titleSmall)
@@ -3530,6 +3531,9 @@ private fun TuddyScreen(
                                         PinnedCaptionFormat.FOLD_HTML ->
                                             "als afdrukbare HTML-vouwkaartjes: een zijde bedrukken, " +
                                                 "knippen en de rechter betekenis achter de vraag vouwen."
+                                        PinnedCaptionFormat.CLOZE_HTML ->
+                                            "als lokaal HTML-aanvulblad: ontbrekende woorden, " +
+                                                "handmatig te openen antwoorden en apart antwoordblad."
                                         else -> "als UTF-8 TSV met twee tabgescheiden velden " +
                                             "(voor- en achterkant)."
                                     }),
@@ -3574,7 +3578,8 @@ private fun TuddyScreen(
                             if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
                             pinnedExportFormat == PinnedCaptionFormat.CSV ||
                             pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML ||
-                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML))
+                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML))
                                 "${included.size} unieke, werkelijk vertaalde paren van " +
                                     "${selection.size} markeringen (identieke paren worden " +
                                     "niet dubbel geëxporteerd)."
@@ -3587,7 +3592,8 @@ private fun TuddyScreen(
                         if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
                             pinnedExportFormat == PinnedCaptionFormat.CSV ||
                             pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML ||
-                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML)) {
+                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML)) {
                             val cards = included.size *
                                 (if (pinnedStudyDirection == PinnedStudyDirection.BOTH) 2 else 1)
                             Text(
@@ -3596,12 +3602,15 @@ private fun TuddyScreen(
                                         PinnedCaptionFormat.CSV -> "CSV"
                                         PinnedCaptionFormat.STUDY_HTML -> "oefen-HTML"
                                         PinnedCaptionFormat.FOLD_HTML -> "vouw-HTML"
+                                        PinnedCaptionFormat.CLOZE_HTML -> "aanvul-HTML"
                                         else -> "TSV"
                                     }) + (when (pinnedExportFormat) {
                                         PinnedCaptionFormat.STUDY_HTML ->
                                             " met antwoorden om open te klappen en aparte afdrukpagina. "
                                         PinnedCaptionFormat.FOLD_HTML ->
                                             " met linker vragen en rechter vouwantwoorden. "
+                                        PinnedCaptionFormat.CLOZE_HTML ->
+                                            " met half afgedekte antwoordwoorden en apart antwoordblad. "
                                         else -> " met twee tekstkolommen. "
                                     }) +
                                     (if (pinnedOnlyPersonalStudy)
@@ -3661,7 +3670,8 @@ private fun TuddyScreen(
                                 if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
                             pinnedExportFormat == PinnedCaptionFormat.CSV ||
                             pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML ||
-                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML)) {
+                            pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML ||
+                            pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML)) {
                                     val originalRow = selection.firstOrNull {
                                         it.id == record.id
                                     }?.caption
