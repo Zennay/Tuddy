@@ -19,6 +19,7 @@ internal data class PendingPrivatePracticeReport(
     val summary: String,
     val format: PrivatePracticeReportFormat,
     val selectionScope: PrivatePracticeRouteScope,
+    val worksheetAudience: PrivateListeningWorksheetAudience,
     val bytes: ByteArray
 )
 
