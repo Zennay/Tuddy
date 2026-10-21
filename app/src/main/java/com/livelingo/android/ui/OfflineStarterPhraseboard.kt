@@ -40,6 +40,7 @@ internal fun OfflineStarterPhraseboard(
     }
     var source by remember { mutableStateOf("nl") }
     var expandedIndex by remember { mutableStateOf<Int?>(null) }
+    var personalLookupOpen by remember { mutableStateOf(false) }
     val choices = listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val starter = listOf(
         "hallo" to "hello",
@@ -58,6 +59,18 @@ internal fun OfflineStarterPhraseboard(
             initialSource = source,
             target = target,
             onDismiss = { expandedIndex = null }
+        )
+        return
+    }
+
+    if (personalLookupOpen) {
+        OfflinePersonalPhraseLookupDialog(
+            initialLanguage = target,
+            onManagePersonalPhrases = {
+                personalLookupOpen = false
+                onOpenPersonalPhrases()
+            },
+            onDismiss = { personalLookupOpen = false }
         )
         return
     }
@@ -106,6 +119,14 @@ internal fun OfflineStarterPhraseboard(
                         HorizontalDivider()
                     }
                 }
+                OutlinedButton(
+                    onClick = { personalLookupOpen = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Zoek in maximaal 80 eigen offline zinnen…") }
+                Text("Je eigen zinnen komen uit het handmatig bewaarde persoonlijke " +
+                    "zinnenboek, niet uit deze beperkte vijf-woordenlijst. " +
+                    "Zoeken start geen spraak of vertaling.",
+                    style = MaterialTheme.typography.bodySmall)
                 Text("De bestaande zinnen zijn niet onafhankelijk door " +
                     "moedertaalsprekers gecontroleerd. Vermijd gebruik bij " +
                     "medische, juridische of urgente beslissingen zonder tolk.",
