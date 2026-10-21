@@ -42,6 +42,8 @@ internal fun OfflineReadinessDialog(
     onCheckBoth: () -> Unit,
     onCheckSpeech: () -> Unit,
     onDownloadSpeech: () -> Unit,
+    onCancelSpeech: () -> Unit,
+    onOpenSpeechSettings: () -> Unit,
     onCheckText: () -> Unit,
     onPrepareText: () -> Unit,
     onEditLanguages: () -> Unit,
@@ -103,6 +105,19 @@ internal fun OfflineReadinessDialog(
                             enabled = canInspect && speechServicePresent,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Spraak via wifi") }
+                    }
+                    if (checkingSpeech) {
+                        OutlinedButton(
+                            onClick = onCancelSpeech,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Stop volgen") }
+                    }
+                    if (speechCurrent && speechServicePresent &&
+                        speech.stage == SpeechPackStage.UNKNOWN) {
+                        OutlinedButton(
+                            onClick = onOpenSpeechSettings,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Open Android spraakinstellingen") }
                     }
                 }
                 HorizontalDivider()
