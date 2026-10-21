@@ -11,8 +11,9 @@ import android.content.Intent
 internal data class IncomingSharedText(
     val draft: String?,
     val notice: String?,
-    // Validated SRT/VTT from a deliberate Android text share. Preview only.
-    val subtitleDraft: String? = null
+    // Validated SRT/VTT/LRC from a deliberate Android text share. Preview only.
+    val subtitleDraft: String? = null,
+    val subtitleIsLrc: Boolean = false
 )
 
 internal object SharedPlainTextIntent {
@@ -51,21 +52,25 @@ internal object SharedPlainTextIntent {
                 Intent.EXTRA_PROCESS_TEXT else Intent.EXTRA_TEXT
             intent.getCharSequenceExtra(key)?.toString()
         }.getOrNull()
-        // A text/plain sharesheet item may be a complete SRT/WebVTT source,
-        // not a short sentence. Only classify it as subtitles if the existing
-        // strict, bounded parser accepts the WHOLE document. No URI reads,
-        // automatic import, model calls or persisted text are introduced.
-        // Reject malformed UTF-16 instead of silently replacing a surrogate
-        // while converting the shared String to UTF-8 for parser admission.
-        val subtitle = supplied?.takeIf { text ->
-            text.length <= PrivateSubtitleFileReader.MAX_BYTES &&
-                text.contains("-->") && wellFormedUtf16(text)
-        }?.takeIf { text ->
-            val bytes = text.toByteArray(Charsets.UTF_8)
-            bytes.isNotEmpty() && bytes.size <= PrivateSubtitleFileReader.MAX_BYTES &&
-                PrivateSubtitleFileReader.read(bytes) != null
+        // Classify complete, explicit user-shared subtitle documents only.
+        // Both parsers are already used by the private Android editor. Refuse
+        // malformed UTF-16 or excessive UTF-8 before opening a RAM-only draft.
+        val candidate = supplied?.takeIf { text ->
+            text.length <= PrivateSubtitleFileReader.MAX_BYTES && wellFormedUtf16(text)
         }
-        if (subtitle != null) return IncomingSharedText(null, null, subtitle)
+        if (candidate != null) {
+            val bytes = candidate.toByteArray(Charsets.UTF_8)
+            if (bytes.isNotEmpty() && bytes.size <= PrivateSubtitleFileReader.MAX_BYTES) {
+                if (candidate.contains("-->") &&
+                    PrivateSubtitleFileReader.read(bytes) != null)
+                    return IncomingSharedText(null, null, candidate)
+                // LRC tags are NOT speech alignment. Validate every timestamp
+                // and lyric row; metadata-only sheets cannot be imported.
+                if (candidate.contains('[') &&
+                    PrivateLrcSubtitleDraft.preview(candidate) != null)
+                    return IncomingSharedText(null, null, candidate, subtitleIsLrc = true)
+            }
+        }
         val clean = supplied?.let(OfflineTypedCaptionPolicy::normalize)
         return if (clean != null) {
             IncomingSharedText(clean, null)

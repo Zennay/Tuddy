@@ -1,3 +1,11 @@
+## Aanvulling: deel ook eigen LRC-songteksten zonder bestandsoverdracht
+
+Naast SRT/WebVTT kun je nu een complete eigen **LRC-tekst met [mm:ss.xx]- of [mm:ss.xxx]-beginmarkeringen** delen via **Android → Delen → Tuddy**, mits de verzendende app de echte bron als `text/plain` stuurt. Tuddy valideert alle tijdstempels en lyrics met de bestaande strikte LRC-parser en dezelfde 256-KiB-grens. Alleen een geldig document met echte cues opent een **tijdelijke LRC-editor**, met de bronregels en tijdcorrectiegereedschappen die Tuddy al heeft. Metadata zonder lyrics of ongeldig getimede tekst wordt niet als ondertitel overgenomen.
+
+**Belangrijk:** LRC bevat normaal alleen begintijden; afgeleide eindtijden en woordtiming zijn **geen gemeten audio-uitlijning**. Het Android-scherm vermeldt dit expliciet voordat je zelf de tekst bevestigt. Er is geen automatische bestandsbewerking, lyrics-download, auteursrechtelijke catalogus, spraakherkenning of cloudfallback. Bij een nog geopend SRT/VTT/LRC-concept wordt geen bestaand werk vervangen; sluit het concept en deel opnieuw. Een bronbestand delen als **bijlage/URI** blijft via deze tekst-only route geweigerd; open eigen bestanden apart via Androids documentkiezer.
+
+---
+
 ## Gedeelde SRT/WebVTT-tekst direct in Tuddy bekijken
 
 Je kunt nu in een andere Android-app bewust **Delen → Tuddy** kiezen bij een compleet SRT- of WebVTT-document dat daadwerkelijk als **platte tekst** wordt gedeeld. Tuddy controleert dit bericht volledig met dezelfde strikte UTF-8-/cue-/tijdcodeparser als de eigen documentimport (maximaal 256 KiB, 500 cues) en opent het vervolgens als **tijdelijk concept in de bestaande ondertiteleditor**. Dit is geen automatische overname: bekijk de cues, eventuele correcties en tijdcodes en tik zelf op de bestaande bevestiging. Sluiten gooit alleen dit RAM-concept weg.
