@@ -7,7 +7,9 @@ kun je vóór de eerste eigen tekst precies één `[offset:+500]` of
 30 seconden later of eerder te plaatsen. In Android zie je welke
 millisecondeverschuiving werkelijk is toegepast. Met
 **− 0,5 s**, **Offset 0** en **+ 0,5 s** pas je die header rechtstreeks
-aan in je tijdelijke, volledig herberekende LRC-concept. Ongeldige
+aan in je tijdelijke, volledig herberekende LRC-concept. Je kunt ook
+een exacte verschuiving zoals `-125` of `+750` milliseconden
+invoeren en bewust bevestigen met **Pas toe**. Ongeldige
 wijzigingen worden geweigerd; je originele Android-bestand verandert
 niet. Meerdere of ongeldige offsetregels worden geweigerd. Iedere
 tijdstempel wordt een eigen ondertitel-cue met dezelfde zelfgeschreven
