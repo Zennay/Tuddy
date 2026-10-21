@@ -263,6 +263,39 @@ In de tijdelijke ondertiteleditor open je **Zoek en vervang** (via het documentm
 
 Ook bij tweetalige kaarten bepaalt Tuddy **niet** welke taal de eerste of tweede regel werkelijk bevat; de volgorde blijft de verantwoordelijkheid van de gebruiker. Alle uitgaven blijven onder de bestaande 500-cue- en 256-KiB-limieten.
 
+## Zelfgeschreven LRC-begintijden weer exporteren
+
+Vanuit de tijdelijke ondertiteleditor kan je nu ook
+**Bewaar eigen begintijden als LRC…** kiezen. De route is expliciet en
+werkt zonder microfoon, netwerksessie, ASR of nieuwe opslagrechten.
+
+1. Controleer je eigen ondertitelconcept. Elke cue moet **precies één
+   tekstregel** hebben en de begintijden moeten **strikt oplopen**.
+   Er mogen maximaal **500 cues** en **999 minuten** aan
+   LRC-tijdsaanduiding worden meegenomen.
+2. Kies **Bewaar eigen begintijden als LRC…**. Tuddy toont de
+   **volledige werkelijk gegenereerde `[mm:ss.mmm]Tekst`-inhoud** en
+   het exacte aantal UTF-8-bytes. De importparser moet het geheel
+   kunnen lezen; anders wordt export geweigerd.
+3. LRC heeft **geen einde-tijdveld**. Daarom worden eindtijden,
+   eventuele overlap en audio-/woorduitlijning **niet geëxporteerd**.
+   Na opnieuw inlezen bepaalt de bestaande LRC-import het einde uit
+   de volgende begintijd en schat zij alleen het laatste einde.
+   Als je die eindtijden wilt bewaren, kies dan **SRT, VTT, CSV of TSV**
+   in plaats van LRC.
+4. Na je expliciete bevestiging kies je zelf in Android de locatie
+   voor een nieuwe `.lrc`-kopie. De Activity bewaart alleen de gekozen
+   bounded snapshot tijdens deze externe bestandskeuze en berekent de
+   volledige inhoud opnieuw voordat ze schrijft. Een latere,
+   gewijzigde of ongeldige snapshot wordt niet stilzwijgend bewaard.
+   Het origineel blijft intact.
+
+Niet-ondersteunde tekens, ontbrekende regels, onjuiste tijdvolgorde of
+overschreden 256 KiB worden geweigerd. De gekozen documentprovider
+kan extern/cloudgesynchroniseerd zijn; Tuddy schrijft niet op de
+achtergrond en vraagt geen blijvende URI-toegang. **Dit is een
+handmatige lyrics-uitwisseling, geen bewijs van accurate audiotiming.**
+
 ## CSV/TSV met eigen tijdcodes weer opslaan en opnieuw importeren
 
 Na bewerken van een tijdelijke ondertiteltijdlijn kun je nu naast SRT
