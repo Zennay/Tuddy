@@ -885,6 +885,40 @@ private fun TuddyScreen(
             }
     }
 
+    // User-triggered, privacy-safe diagnostics; never include caption/audio content.
+    fun copyOfflineReadinessReport(): Boolean = runCatching {
+        val appVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
+        val airplaneMode = runCatching {
+            Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
+        }.getOrNull()?.toString() ?: "unknown"
+        val report = buildString {
+            appendLine("Tuddy offline readiness report")
+            appendLine("App version: $appVersion")
+            appendLine("Build source SHA: ${BuildConfig.TUDDY_SOURCE_SHA}")
+            appendLine("GitHub workflow run ID: ${BuildConfig.TUDDY_BUILD_RUN_ID}")
+            appendLine("Android API: ${Build.VERSION.SDK_INT}")
+            appendLine("Airplane mode: $airplaneMode")
+            appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine("Source speech tag: ${source.speechCode}")
+            appendLine("Target text code: ${target.translateCode}")
+            appendLine("On-device speech service available: $offlineAvailable")
+            appendLine("Speech pack state: ${speechPackReceipt.stage}")
+            appendLine("Speech pack detail: ${speechPackReceipt.detail}")
+            appendLine("Text model pair: ${textReceipt.source} -> ${textReceipt.target}")
+            appendLine("Text model state: ${textReceipt.stage}")
+            appendLine("Text model detail: ${textReceipt.detail}")
+            appendLine("Listening at export: $listening")
+            appendLine("Transcript/audio included: no")
+        }
+        val board = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Tuddy offline readiness (no transcript/audio)", report)
+        clip.description.extras = PersistableBundle().apply {
+            putBoolean("android.content.extra.IS_SENSITIVE", true)
+        }
+        board.setPrimaryClip(clip)
+        true
+    }.getOrDefault(false)
+
     fun checkTextPair() {
         val from = source.translateCode
         val to = target.translateCode
@@ -2354,6 +2388,7 @@ private fun TuddyScreen(
                 onDownloadSpeech = { downloadSpeechPackNow() },
                 onCancelSpeech = { cancelSpeechPackFollow() },
                 onOpenSpeechSettings = { openSpeechSettings() },
+                onCopyDiagnostics = { copyOfflineReadinessReport() },
                 onCheckText = { checkTextPair() },
                 onPrepareText = { prepareOfflinePair() },
                 onEditLanguages = {
