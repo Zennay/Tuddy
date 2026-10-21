@@ -52,10 +52,11 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
     val candidate = if (firstRow != null && secondRow != null &&
         firstRow in 1..primary.size && secondRow in 1..secondary.size
     ) PrivateSubtitleMultiAnchor(firstRow, secondRow) else null
+    val editAt = editingIndex
     val candidateAnchors = candidate?.let { pair ->
-        (if (editingIndex != null && editingIndex in anchors.indices) {
+        (if (editAt != null && editAt in anchors.indices) {
             anchors.mapIndexed { index, saved ->
-                if (index == editingIndex) pair else saved
+                if (index == editAt) pair else saved
             }
         } else anchors + pair).sortedBy { it.primaryRow }
     }
