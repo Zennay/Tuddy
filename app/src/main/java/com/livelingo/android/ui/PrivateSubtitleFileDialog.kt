@@ -117,6 +117,7 @@ internal fun PrivateSubtitleFileDialog(
     var removeRows by remember { mutableStateOf("") }
     var removeWindowStart by remember { mutableStateOf("") }
     var removeWindowEnd by remember { mutableStateOf("") }
+    var removeWindowRanges by remember { mutableStateOf("") }
     var removeReviewPage by remember { mutableIntStateOf(0) }
     var wrapOpen by remember { mutableStateOf(false) }
     var wrapWidth by remember { mutableIntStateOf(42) }
@@ -130,6 +131,7 @@ internal fun PrivateSubtitleFileDialog(
     var batchExplicitRows by remember { mutableStateOf("") }
     var batchWindowStart by remember { mutableStateOf("") }
     var batchWindowEnd by remember { mutableStateOf("") }
+    var batchWindowRanges by remember { mutableStateOf("") }
     var insertOpen by remember { mutableStateOf(false) }
     var insertStart by remember { mutableStateOf("") }
     var insertEnd by remember { mutableStateOf("") }
@@ -1046,6 +1048,27 @@ internal fun PrivateSubtitleFileDialog(
                                 removeReviewPage = 0
                             }
                         }) { Text("Gebruik overlappende tijdvensterregels") }
+
+                    Text("Of kies maximaal 16 losse tijdvensters zonder overlap. " +
+                        "Een cue die twee vensters raakt, wordt één keer geselecteerd.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = removeWindowRanges,
+                        onValueChange = { removeWindowRanges = it.take(512) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Verwijderselectie: 00:10-00:20;01:00-01:15") })
+                    val windowSet = PrivateSubtitleTimeWindowRows.expressionForWindows(
+                        draft, removeWindowRanges)
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = windowSet != null,
+                        onClick = {
+                            if (windowSet != null) {
+                                removeRows = windowSet
+                                removeReviewPage = 0
+                            }
+                        }) { Text("Neem alle tijdvensters als bronregelselectie") }
                     if (proposed == null) {
                         Text("Geen geldige verwijdering. Controleer regelnummers " +
                             "(1–${draft.size}), dubbelen en behoud minstens één regel.",
@@ -1209,6 +1232,27 @@ internal fun PrivateSubtitleFileDialog(
                             if (windowBatchRows != null)
                                 batchExplicitRows = windowBatchRows
                         }) { Text("Kies overlappende tijdvensterregels") }
+
+                    Text("Of kies maximaal 16 losse tijdvensters zonder overlap. " +
+                        "Een cue die twee vensters raakt, wordt één keer geselecteerd.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = batchWindowRanges,
+                        onValueChange = { batchWindowRanges = it.take(512) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Correctiebereik: 00:10-00:20;01:00-01:15") })
+                    val batchWindowSet = PrivateSubtitleTimeWindowRows.expressionForWindows(
+                        draft, batchWindowRanges)
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = batchWindowSet != null,
+                        onClick = {
+                            if (batchWindowSet != null) {
+                                batchExplicitRows = batchWindowSet
+                                batchReviewPage = 0
+                            }
+                        }) { Text("Neem alle tijdvensters als bronregelselectie") }
                     OutlinedTextField(
                         value = batchFind,
                         onValueChange = { batchFind = it.take(100) },
