@@ -1,3 +1,27 @@
+## 21 oktober · volledige bronregels veilig bestuderen en als CSV bewaren
+
+Het zelfgekozen, offline **A–B-luisterwerkblad** toont maximaal 18 regels
+in de kleine vragen-preview, maar zet **alle volledig passende brontekstregels**
+in het afzonderlijke, bewust te openen bronregelblad. Lange regels worden
+alleen in de korte preview ingekort; in het volledige bronregelblad
+wordt te grote input veilig geweigerd in plaats van onvolledig
+gepresenteerd. Zonder print-opt-in blijft dat antwoordblad buiten
+de afdruk; leerlingenbestanden bevatten geen brontekst.
+
+Daarnaast is er **Bekijk volledige bronregel-CSV vóór opslaan**:
+een inspecteerbaar CSV-document met één rij per volledig binnen jouw
+eigen A–B-tijdvak passende ondertitelregel, oorspronkelijke bronregel,
+tijdcodes en eventuele eigen beoordeling/notitie. Via **Bewaar alle
+passende bronregels als CSV…** kies je daarna zelf een Android-provider.
+De bestaande compacte CSV blijft bestaan. Alle bronwaarden zijn
+als tekst beschermd tegen spreadsheetformules; geen automatische
+audio-uitlijning of netwerkfunctie. Bij terugkeer uit de Android-
+bestandskiezer controleert Tuddy opnieuw de exacte goedgekeurde bytes.
+
+[Volledige gebruiksuitleg](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 ## 21 oktober · volledig luisterbronregelblad en correcte A–B-CSV
 
 In de **offline luisteroefening** geeft de uitklapbare preview nog steeds
