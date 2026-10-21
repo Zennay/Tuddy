@@ -1,3 +1,22 @@
+## Nieuw: eigen ondertitel-CSV/TSV weer exporteren
+
+Na de bestaande SRT/VTT-, LRC- of spreadsheetimport kun je vanuit
+de **tijdelijke ondertiteleditor** je eigen begin- en eindtijden en
+handmatige tekst weer als **bewerkbare CSV of TSV** opslaan. Tijdcodes
+blijven behouden. Eén tekstregel per cue geeft drie kolommen; precies
+twee handmatige tekstregels per cue geven vier kolommen met eigen
+bronzin en eigen betekenis. Er wordt geen vertaling ingevuld.
+
+Vooraf verschijnt de **complete ruwe bestandspreview**, inclusief
+exact aantal UTF-8-bytes. Geen onzichtbare inkorting van meerregelige
+cues, geen verborgen formule-uitvoering in spreadsheetcellen en geen
+automatische opslag: een niet veilig/lossless exporteerbaar concept
+wordt geweigerd en kan nog steeds als SRT/VTT worden opgeslagen.
+Android vraagt een expliciete bestandsproviderkeuze, waarna de exact
+bevestigde bytes opnieuw worden berekend. CSV/TSV bevat geen
+kopregel en kan met de bestaande 3/4-koloms import terug worden geopend.
+[Stappen en grenzen](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: eigen LRC-lyrics met beginmomenten importeren
 
 Kies in de bestaande ondertitelimport **LRC: eigen begintijden per regel**.
