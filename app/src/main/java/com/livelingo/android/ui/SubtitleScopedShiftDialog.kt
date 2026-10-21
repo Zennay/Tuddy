@@ -25,6 +25,7 @@ import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleRowSelection
 import com.livelingo.android.PrivateSubtitleTimeWindowRows
 import com.livelingo.android.PrivateSubtitleScopedShift
+import com.livelingo.android.PrivateSubtitleOffset
 
 /**
  * Targeted manual correction. The new timeline is complete and must satisfy
@@ -48,7 +49,7 @@ internal fun SubtitleScopedShiftDialog(
     var windowEnd by remember(draft) { mutableStateOf("") }
     var windowRanges by remember(draft) { mutableStateOf("") }
     val activeOffset = if (customOffset.isBlank()) offset
-        else manualSubtitleOffsetMillis(customOffset)
+        else PrivateSubtitleOffset.parseSeconds(customOffset)
     val preview = activeOffset?.let { PrivateSubtitleScopedShift.preview(draft, rows, it) }
     val pageCount = maxOf(1, ((preview?.movedRows?.size ?: 0) + 4) / 5)
     val shown = page.coerceIn(0, pageCount - 1)
@@ -212,16 +213,4 @@ internal fun SubtitleScopedShiftDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } }
     )
-}
-
-/** Exact millisecond conversion without floating-point rounding or locale guesses. */
-private fun manualSubtitleOffsetMillis(raw: String): Long? {
-    val match = Regex("""^([+-]?)([0-9]{1,3})(?:[.,]([0-9]{1,3}))?$""")
-        .matchEntire(raw.trim()) ?: return null
-    val seconds = match.groupValues[2].toLongOrNull() ?: return null
-    val millis = match.groupValues[3].padEnd(3, '0')
-        .ifEmpty { "0" }.toLongOrNull() ?: return null
-    val absolute = seconds * 1_000L + millis
-    if (absolute !in 1L..600_000L) return null
-    return if (match.groupValues[1] == "-") -absolute else absolute
 }
