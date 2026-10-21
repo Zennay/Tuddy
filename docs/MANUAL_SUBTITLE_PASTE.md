@@ -84,6 +84,23 @@ Heb je zelf nauwkeurige begin- en eindtijdcodes naast je tweetalige zinnen, dan 
 
 Deze eigen tijdcodes zijn **niet bewezen** aan een audio- of videobestand gesynchroniseerd; Tuddy kopieert uitsluitend de tijdcodes die je zelf invoert.
 
+## Zelf begin en duur in seconden instellen
+
+Bij **Gewone zinnen** zonder meegeleverde tijdcodes kun je nu
+**Aangepaste begin- en duurinstelling…** kiezen. Typ een eerste
+beginmoment tussen 0 en 21600 seconden (maximaal zes uur) en een
+eigen duur per cue tussen 0,5 en 30 seconden. Zowel een punt als
+een komma als decimaalteken wordt geaccepteerd, met maximaal drie
+cijfers achter het scheidingsteken (bijvoorbeeld `97,250` en `4.5`).
+Alle waarden worden binnen de bestaande maximale SRT/VTT-tijdcode
+en cue-/documentgrenzen gecontroleerd; ongeldige cijfers blokkeren
+de preview en overname totdat je ze corrigeert.
+
+De oorspronkelijke vaste begin- en duurknoppen blijven beschikbaar
+als je de optie weer uitzet. CSV/TSV met **eigen begin- en eindtijdcodes**
+en volledige SRT/VTT-input nemen hun tijdcodes onveranderd over.
+Handmatig ingevoerde begin-/duurwaarden zijn uitsluitend schattingen,
+geen automatische spraakherkenning of bewezen audiosynchronisatie.
 ## Twee eigen tekstkolommen uit CSV zonder tijdcodes
 
 Heb je een eigen CSV-bestand met uitsluitend twee kolommen (bronzin en
