@@ -31,6 +31,7 @@ import com.livelingo.android.PrivateLrcSubtitleDraft
 import com.livelingo.android.PrivatePlainTextSubtitleDraft
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
+import com.livelingo.android.PrivateAssSubtitleReader
 import com.livelingo.android.PrivateSbvSubtitleReader
 import com.livelingo.android.PrivateYoutubeJson3SubtitleReader
 import com.livelingo.android.PrivateSubtitleRowSelection
@@ -202,6 +203,7 @@ internal fun SubtitlePasteDialog(
             )
         else if (!plainLines && lrcMode) PrivateLrcSubtitleDraft.preview(raw)
         else if (!plainLines) PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
+            ?: PrivateAssSubtitleReader.read(raw)
             ?: PrivateSbvSubtitleReader.read(raw)
             ?: PrivateYoutubeJson3SubtitleReader.read(raw.takeIf { it.length <= 65_536 } ?: "")
         else null
@@ -1583,6 +1585,7 @@ internal fun SubtitlePasteDialog(
                     )
                 else if (lrcMode) PrivateLrcSubtitleDraft.preview(raw)
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
+                    ?: PrivateAssSubtitleReader.read(raw)
                     ?: PrivateSbvSubtitleReader.read(raw)
                     ?: PrivateYoutubeJson3SubtitleReader.read(raw.takeIf { it.length <= 65_536 } ?: "")
                 if (confirmed == null) return@TextButton

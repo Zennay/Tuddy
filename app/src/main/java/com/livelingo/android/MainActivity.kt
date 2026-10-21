@@ -1841,12 +1841,13 @@ private fun TuddyScreen(
                     // infer word alignment, translations or speech from LRC.
                     val parsed = PrivateSubtitleFileReader.read(
                         selected.text.toByteArray(Charsets.UTF_8)
-                    ) ?: PrivateLrcSubtitleDraft.preview(selected.text)
+                    ) ?: PrivateAssSubtitleReader.read(selected.text)
+                        ?: PrivateLrcSubtitleDraft.preview(selected.text)
                         ?: PrivateTimedSubtitleSheet.readAuthored(selected.text)
                         ?: PrivateSbvSubtitleReader.read(selected.text)
                         ?: PrivateYoutubeJson3SubtitleReader.read(selected.text)
                     if (parsed == null)
-                        null to "Geen geldig SRT/VTT/LRC/CSV/TSV/SBV/JSON3-document: controleer " +
+                        null to "Geen geldig SRT/VTT/ASS/SSA/LRC/CSV/TSV/SBV/JSON3-document: controleer " +
                             "tijdcodes, tekstregels en maximaal 500 cues."
                     else parsed to ""
                 }
@@ -2207,7 +2208,7 @@ private fun TuddyScreen(
                             shared.subtitleTimedSheetMode != null ->
                                 "Gedeelde CSV/TSV heeft expliciete begin- en eindtijden; " +
                                     "een tweede tekstkolom is geen geverifieerde vertaling. "
-                            else -> "Gedeelde SRT/WebVTT/SBV/JSON3 is alleen een tijdelijk voorstel. "
+                            else -> "Gedeelde SRT/WebVTT/ASS/SSA/SBV/JSON3 is alleen een tijdelijk voorstel. "
                         }) + "Controleer inhoud en tijdcodes en bevestig apart; " +
                             "er wordt niets automatisch opgeslagen of vertaald."
                     )

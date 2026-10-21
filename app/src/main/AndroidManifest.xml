@@ -37,6 +37,9 @@
                 <data android:mimeType="text/srt"/>
                 <data android:mimeType="application/x-subrip"/>
                 <data android:mimeType="application/json"/>
+                <data android:mimeType="text/x-ass"/>
+                <data android:mimeType="text/x-ssa"/>
+                <data android:mimeType="application/x-ass"/>
             </intent-filter>
             <!-- Explicit one-file Android Share: selected content URI only.
                  No generic */* receiving and no multi-file permissions. -->
@@ -47,6 +50,9 @@
                 <data android:mimeType="text/srt"/>
                 <data android:mimeType="application/x-subrip"/>
                 <data android:mimeType="application/json"/>
+                <data android:mimeType="text/x-ass"/>
+                <data android:mimeType="text/x-ssa"/>
+                <data android:mimeType="application/x-ass"/>
             </intent-filter>
             <!-- User-highlighted text from Android's selection toolbar. -->
             <intent-filter>
