@@ -428,6 +428,44 @@ automatische inhoudsanalyse, vertaling, bestandsschrijfactie of netwerk-
 aanroep. Bewerkte bestanden blijven uitsluitend in het tijdelijke RAM-
 concept tot de gebruiker zelf opslag kiest.
 
+## Zoek en vervang in losse bronregels, niet alleen één blok
+
+De bestaande **Zoek en vervang · tijdelijk** heeft naast de **Van/Tot**
+velden nu **Losse bronregels (optioneel)**. Bijvoorbeeld `1-3,7,12`:
+alleen die oorspronkelijke nummers mogen worden aangepast. Als een
+losse selectie is ingevuld gaat die vóór Van/Tot; maak het veld leeg
+om het oude aaneengesloten bereik weer te gebruiken. Foute, dubbele,
+overlappende of buitenbereik-nummers worden afgewezen, niet
+automatisch hersteld. Via **Kies gevonden bronregels als bereik**
+kun je na expliciet zoeken ook *alle* bijbehorende oorspronkelijke
+rijnummers overnemen (niet alleen de zichtbare previewpagina).
+
+Het blijft een **letterlijke** zoek- en vervangactie, geen regex,
+vertaling of automatische correctie. De gebruiker kan kiezen voor
+de complete cue, alleen de eerste eigen bronregel of alleen de tweede
+zelfgeschreven betekenisregel. Een doorbladerbare **volledige
+voor/na-preview** toont voor iedere getroffen cue exact wat verandert.
+Bij bevestiging wordt de selectie opnieuw berekend uit het dan
+actuele tijdelijke concept. De tijdcodes blijven staan, de volledige
+SRT-/VTT-exportgrenzen worden hercontroleerd en de wijziging is in
+één keer te herstellen via **Terug/Opnieuw**. Niet-geselecteerde cues
+blijven byte-voor-byte gelijk.
+
+## SRT en WebVTT: volledige exacte preview vóór nieuw document bewaren
+
+Kies in de tijdelijke editor **Bewaar kopie SRT…** of **Bewaar kopie
+VTT…**. In plaats van een enkele algemene waarschuwing toont Tuddy
+nu de **complete werkelijke UTF-8-bestandsinhoud** met alle originele
+tijdcodes en teksten, opgesplitst in korte doorbladerbare pagina's.
+Je ziet zowel de totale bytegrootte als het aantal cues. Niet
+exporteerbare documenten krijgen geen actieve opslagknop. Bij
+**Kies opslaglocatie…** worden alle bytes opnieuw uit het huidige
+concept berekend en met de getoonde inhoud vergeleken. Alleen na
+die bevestiging vraagt Android om een bestandsprovider, die
+eventueel zelf online kan synchroniseren. Geen automatische cloud-
+spraakverwerking, schrijfacties vóór toestemming of verifieerbare
+audio-/woordtiming wordt hierdoor geclaimd.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
