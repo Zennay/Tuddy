@@ -315,6 +315,35 @@ internal class PrivatePhraseDeck(context: Context) {
         }
     }
 
+    /**
+     * Export only an explicitly previewed selection, never an implicit full deck.
+     * A stale or modified selected note fails closed instead of silently
+     * publishing a different entry. The returned bytes can be re-imported by
+     * the ordinary strict TSV importer without inference or transformation.
+     */
+    @Synchronized
+    fun exportTsvSelectionSnapshot(selection: List<PersonalPhrase>): ByteArray? {
+        if (selection.isEmpty() || selection.size > MAX_ROWS ||
+            selection.toSet().size != selection.size) return null
+        val saved = entries() ?: return null
+        if (!saved.containsAll(selection)) return null
+        val selected = selection.toSet()
+        val rows = saved.filter { it in selected }
+        if (rows.size != selection.size) return null
+        val text = buildString {
+            append("language\tphrase\tmeaningLanguage\townMeaning\n")
+            rows.forEach { note ->
+                append(note.language).append('\t')
+                append(note.phrase).append('\t')
+                append(note.meaningLanguage).append('\t')
+                append(note.ownMeaning).append('\n')
+            }
+        }
+        return text.toByteArray(Charsets.UTF_8).takeIf { bytes ->
+            bytes.size <= MAX_JSON && previewTsvImport(bytes) == rows
+        }
+    }
+
     /** User-chosen Storage Access Framework export; never background/silent. */
     @Synchronized
     fun exportSnapshot(): ByteArray? {
