@@ -96,6 +96,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var subtitleOffsetMs by remember { mutableLongStateOf(0L) }
     // Optional rough reading aid, not measured speech/word alignment.
     var estimatedWordFollow by remember { mutableStateOf(false) }
+    // Only one opt-in word-sized replay, derived from the current authored cue.
+    var wordReplayBounds by remember { mutableStateOf<Pair<Long, Long>?>(null) }
     var wordJumpListOpen by remember { mutableStateOf(false) }
     var wordJumpPage by remember { mutableIntStateOf(0) }
     var wordJumpNumber by remember { mutableStateOf("") }
@@ -278,6 +280,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         bookmarkRepeating = false
         subtitleOffsetMs = 0L
         estimatedWordFollow = false
+        wordReplayBounds = null
         cuePickerOpen = false
         confirmApplyOpen = false
         confirmClipOpen = false
@@ -422,7 +425,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         if (guidedActive) return guidedQueue.getOrNull(guidedIndex)
         if (bookmarkRepeating) return bookmarkBounds()
         if (rangeRepeating) return rangeBounds()
-        val single = cues.getOrNull(loopCueIndex) ?: return null
+        val single = cues.getOrNull(loopCueIndex) ?: return wordReplayBounds
         if (!cuePlayable(single) || single.endMillis - single.startMillis < 750L)
             return null
         return cueStart(single) to cueEnd(single)
@@ -460,6 +463,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         loopCueIndex = -1
         rangeRepeating = false
         bookmarkRepeating = false
+        wordReplayBounds = null
         pauseAudio()
         notice = "Oefening klaar: ${completedPasses} volledige " +
             (if (completedPasses == 1) "herhaling" else "herhalingen") +
@@ -471,6 +475,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val shifted = (subtitleOffsetMs + deltaMs).coerceIn(-30_000L, 30_000L)
         if (shifted == subtitleOffsetMs) return
         subtitleOffsetMs = shifted
+        wordReplayBounds = null
         loopCueIndex = -1
         rangeStartIndex = -1
         rangeEndIndex = -1
@@ -495,6 +500,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
             loopCueIndex = -1
             rangeRepeating = false
             bookmarkRepeating = false
+            wordReplayBounds = null
             completedPasses = 0
         }
         runCatching { current.seekTo(target.toInt()) }
@@ -667,7 +673,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
     LaunchedEffect(activeIndex, estimatedWordFollow) {
         wordJumpPage = 0
         wordJumpNumber = ""
-        if (!estimatedWordFollow) wordJumpListOpen = false
+        if (!estimatedWordFollow) {
+            wordJumpListOpen = false
+            wordReplayBounds = null
+        }
+    }
+    LaunchedEffect(loopCueIndex, rangeRepeating, bookmarkRepeating, guidedActive) {
+        if (loopCueIndex >= 0 || rangeRepeating || bookmarkRepeating || guidedActive)
+            wordReplayBounds = null
     }
     val nextIndex = cues.indexOfFirst {
         val start = cueStart(it)
@@ -1330,7 +1343,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     OutlinedButton(
                         enabled = active != null && active.text.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),
-                        onClick = { estimatedWordFollow = !estimatedWordFollow }
+                        onClick = {
+                            estimatedWordFollow = !estimatedWordFollow
+                            if (!estimatedWordFollow) wordReplayBounds = null
+                        }
                     ) {
                         Text(if (estimatedWordFollow)
                             "◉ Geschatte woordvolger aan · tik om uit te zetten"
@@ -1346,6 +1362,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         )
                     }
                     if (estimatedWordFollow && estimatedCueWord != null && active != null) {
+                        val replayWindow = PrivateCueWordProgress.estimatedWordReplayWindow(
+                            active.text, cueStart(active), cueEnd(active),
+                            estimatedCueWord.index
+                        )?.takeIf { it.second <= durationMs }
                         Text(
                             "Geschat woord ${estimatedCueWord.index + 1} van ${estimatedCueWord.count}",
                             style = MaterialTheme.typography.labelMedium
@@ -1379,6 +1399,36 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 }
                             ) { Text("Volgend ▶") }
                         }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive &&
+                                (wordReplayBounds != null || replayWindow != null),
+                            onClick = {
+                                if (wordReplayBounds != null) {
+                                    wordReplayBounds = null
+                                    notice = "Geschatte woordherhaling gestopt."
+                                } else if (replayWindow != null) {
+                                    loopCueIndex = -1
+                                    rangeRepeating = false
+                                    bookmarkRepeating = false
+                                    completedPasses = 0
+                                    lastLoopAtMs = 0L
+                                    wordReplayBounds = replayWindow
+                                    seekTo(replayWindow.first)
+                                    notice = "Geschat woordfragment wordt herhaald. " +
+                                        "Druk op Afspelen als het geluid pauzeert. " +
+                                        "Dit is geen herkende uitspraak."
+                                }
+                            }
+                        ) {
+                            Text(if (wordReplayBounds != null)
+                                "■ Stop geschatte woordherhaling"
+                            else "↻ Herhaal alleen dit geschatte woordfragment")
+                        }
+                        Text("Herhaalbaar alleen bij geschatte vensters van minstens " +
+                            "0,75 s. Dit gebruikt uitsluitend je ondertiteltijdcodes, " +
+                            "geen woorddetectie of audioanalyse.",
+                            style = MaterialTheme.typography.bodySmall)
                         Text("De woordstappen springen naar geschatte momenten; " +
                             "ze volgen geen gemeten uitspraak of audioanalyse.",
                             style = MaterialTheme.typography.labelSmall)
