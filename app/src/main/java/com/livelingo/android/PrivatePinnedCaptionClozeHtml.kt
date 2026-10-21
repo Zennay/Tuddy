@@ -156,7 +156,7 @@ internal object PrivatePinnedCaptionClozeHtml {
             if (partOfTerm(point)) break
             end -= Character.charCount(point)
         }
-        if (begin >= end) return "________"
+        if (begin >= end) return word // Authored punctuation is not a lexical answer.
         val term = word.substring(begin, end)
         val replacement = when (hintMode) {
             PinnedClozeHintMode.BLANK -> "________"
@@ -197,18 +197,22 @@ internal object PrivatePinnedCaptionClozeHtml {
                 isBoundary(text.codePointAt(cursor)) == boundary)
             segments.add(text.substring(start, cursor) to boundary)
         }
-        val wordCount = segments.count { !it.second }
+        // Standalone punctuation (e.g. "..." or "—") must remain
+        // visible and must not change the number of answer-bearing tokens.
+        val lexical = segments.map { (piece, boundary) ->
+            !boundary && piece.codePoints().anyMatch { cp -> partOfTerm(cp) }
+        }
+        val wordCount = lexical.count { it }
         if (wordCount == 0) return "________"
         // Never infer word segmentation when there is only one authored
-        // token. Keep surrounding punctuation but hide the whole lexical
-        // term without exposing the first character or its length.
-        if (wordCount == 1) return segments.joinToString("") { (textPart, boundary) ->
-            if (boundary) textPart else hiddenWord(textPart, PinnedClozeHintMode.BLANK)
-        }
+        // lexical token. Keep authored separators and punctuation intact.
+        if (wordCount == 1) return segments.mapIndexed { idx, (piece, _) ->
+            if (lexical[idx]) hiddenWord(piece, PinnedClozeHintMode.BLANK) else piece
+        }.joinToString("")
         val pass = roundIndex.coerceIn(0, 2)
         var wordIndex = 0
-        return segments.joinToString("") { (textPart, boundary) ->
-            if (boundary) textPart else {
+        return segments.mapIndexed { segmentIndex, (textPart, _) ->
+            if (!lexical[segmentIndex]) textPart else {
                 val index = wordIndex++
                 val hide = if (wordCount < 3) index == (1 - pass % 2)
                     else when (difficulty) {
