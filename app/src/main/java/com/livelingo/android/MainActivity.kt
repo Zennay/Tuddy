@@ -222,6 +222,7 @@ private fun TuddyScreen(
     var pinnedExportFormat by remember { mutableStateOf(PinnedCaptionFormat.JSON) }
     var pinnedExportScope by remember { mutableStateOf(PinnedCaptionScope.ALL) }
     var pinnedStudyDirection by remember { mutableStateOf(PinnedStudyDirection.SOURCE_TO_TARGET) }
+    var pinnedClozeDifficulty by remember { mutableStateOf(PinnedClozeDifficulty.NORMAL) }
     var pinnedOnlyPersonalStudy by remember { mutableStateOf(false) }
     var pinnedStudyLanguageTags by remember { mutableStateOf(false) }
     var pinnedLanguagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -3439,7 +3440,7 @@ private fun TuddyScreen(
             val computedPreview = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
-                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags
+                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags, pinnedClozeDifficulty
             ) {
                 PrivatePinnedCaptionExport.snapshot(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
@@ -3492,6 +3493,24 @@ private fun TuddyScreen(
                                     Text((if (pinnedStudyDirection == direction) "● " else "○ ") +
                                         direction.title)
                                 }
+                            }
+                            if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML) {
+                                HorizontalDivider()
+                                Text("Hoeveel woorden wil je zelf aanvullen?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozeDifficulty.entries.forEach { difficulty ->
+                                    TextButton(onClick = {
+                                        pinnedClozeDifficulty = difficulty
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozeDifficulty == difficulty) "● "
+                                            else "○ ") + difficulty.title)
+                                    }
+                                }
+                                Text("De gekozen moeilijkheid en exacte invulhints " +
+                                    "komen ook op je eigen oefenblad. Dit is geen " +
+                                    "geautomatiseerde taal- of juistheidsbeoordeling.",
+                                    style = MaterialTheme.typography.bodySmall)
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
@@ -3610,7 +3629,8 @@ private fun TuddyScreen(
                                         PinnedCaptionFormat.FOLD_HTML ->
                                             " met linker vragen en rechter vouwantwoorden. "
                                         PinnedCaptionFormat.CLOZE_HTML ->
-                                            " met half afgedekte antwoordwoorden en apart antwoordblad. "
+                                            " (" + pinnedClozeDifficulty.title + ") met invulwoorden " +
+                                                "en apart antwoordblad. "
                                         else -> " met twee tekstkolommen. "
                                     }) +
                                     (if (pinnedOnlyPersonalStudy)
