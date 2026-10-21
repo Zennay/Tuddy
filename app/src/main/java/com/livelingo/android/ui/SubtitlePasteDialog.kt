@@ -51,6 +51,14 @@ internal fun SubtitlePasteDialog(
     var firstRow by remember { mutableStateOf("1") }
     var lastRow by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
+    val timedInspection = remember(raw, plainLines, splitMode) {
+        if (plainLines && splitMode in setOf(
+            PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS,
+            PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
+        )) PrivatePlainTextSubtitleDraft.inspectTimed(
+            raw, splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
+        ) else null
+    }
     val pairedInspection = remember(raw, ownMeaning, plainLines, splitMode) {
         if (plainLines && splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES)
             PrivatePlainTextSubtitleDraft.inspectPaired(raw, ownMeaning)
@@ -142,6 +150,14 @@ internal fun SubtitlePasteDialog(
                             "Twee handmatige tekstkolommen (tab gescheiden)")
                     }
                     OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        splitMode = PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS
+                        page = 0
+                    }) {
+                        Text((if (splitMode == PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS)
+                            "✓ " else "") +
+                            "Drie kolommen: begin · einde · eigen tekst")
+                    }
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         splitMode = PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
                         page = 0
                     }) {
@@ -155,6 +171,15 @@ internal fun SubtitlePasteDialog(
                                 "betekenissen in het tweede. Elke positie hoort bij elkaar. " +
                                 "Beide vakken moeten precies evenveel regels hebben; " +
                                 "lege regels worden niet stilzwijgend overgeslagen.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    if (splitMode == PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS) {
+                        Text(
+                            "Plak drie tabgescheiden velden per regel: begin [TAB] einde " +
+                                "[TAB] jouw eigen transcripttekst. Tijdcodes blijven exact " +
+                                "zoals ingevoerd; er wordt geen ontbrekende vertaling " +
+                                "gegenereerd. Corrigeer ongeldige bronrijen hieronder.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -177,7 +202,8 @@ internal fun SubtitlePasteDialog(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    if (splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS) {
+                    if (splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS &&
+                        splitMode != PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS) {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             androidx.compose.foundation.layout.Box {
                                 OutlinedButton(modifier = Modifier.fillMaxWidth(),
@@ -248,6 +274,8 @@ internal fun SubtitlePasteDialog(
                         splitMode == PlainSubtitleSplitMode.PAIRED_COLUMNS -> "Brontaal [TAB] handmatige betekenis"
                         splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS ->
                             "Begin [TAB] einde [TAB] bron [TAB] betekenis"
+                        splitMode == PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS ->
+                            "Begin [TAB] einde [TAB] zelf geschreven tekst"
                         else -> "Eigen tekst of zinnen"
                     }) },
                     modifier = Modifier.fillMaxWidth(),
@@ -287,6 +315,16 @@ internal fun SubtitlePasteDialog(
                         }
                     }
                 }
+                if (timedInspection != null) {
+                    Text(
+                        "${timedInspection.rowCount} tijdregels uit eigen invoer.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    timedInspection.message?.let { error ->
+                        Text(error, color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
                 if (inputTooLarge) {
                     Text("Invoer geweigerd: meer dan 256 KiB. Verklein de bron.",
                         color = MaterialTheme.colorScheme.error,
@@ -296,7 +334,7 @@ internal fun SubtitlePasteDialog(
                     Text(
                         if (plainLines)
                             "Geen geldig tekstconcept: 1–500 cues, maximaal 800 " +
-                                "tekens per kolom. Twee kolommen: bron + eigen betekenis; " +
+                                "tekens per kolom. Drie kolommen: begin/einde/bron; " +
                                 "vier kolommen: begin/einde/bron/betekenis. " +
                                 "Alle velden moeten expliciet geldig zijn."
                         else "Geen volledig geldig SRT/WebVTT-document: " +
@@ -308,7 +346,8 @@ internal fun SubtitlePasteDialog(
                     Text(
                         "${parsed.size} regels in de oorspronkelijke invoer. " +
                             (if (plainLines &&
-                                splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS)
+                                splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS &&
+                                splitMode != PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS)
                                 "Tijdcodes zijn volledig geschat."
                              else "Tijdcodes komen uit de zelf geplakte bron."),
                         style = MaterialTheme.typography.titleSmall
