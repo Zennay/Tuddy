@@ -164,17 +164,18 @@ internal object PrivateListeningWorksheet {
                 "article{border:0;border-bottom:1px solid #999}}" +
                 "</style></head><body><main id=\"top\"><h1>Mijn privé luisterwerkblad</h1>" +
                 "<p>Luister eerst naar je eigen A–B-fragment. Schrijf op wat je " +
-                "hoort of begrijpt. Open daarna de eigen bronregels om zelf te " +
-                "vergelijken. " +
+                "hoort of begrijpt. " +
                 (if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
-                    "De bronregels staan achter een bewuste keuze en op een aparte " +
-                        "afdrukpagina. "
+                    "Open de eigen bronregels daarna bewust om te vergelijken. " +
+                        "Ze komen bovendien op een aparte afdrukpagina. "
                 else "Dit leerlingenblad bevat geen oorspronkelijke bronregels, " +
                     "persoonlijke inschattingen of eigen notities. ") +
-                "Dit zijn handmatig gekozen tijden en eigen teksten, " +
+                "Dit zijn handmatig gekozen fragmenttijden, " +
                 "geen ASR, uitspraakmeting of geverifieerde vertaling.</p>" +
-                "<p>Mijn bewust gekozen selectie: " + html(scope.title) + " (" +
-                selected.size + " van " + passages.size + " eigen fragmenten).</p>" +
+                (if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
+                    "<p>Mijn bewust gekozen selectie: " + html(scope.title) + " (" +
+                        selected.size + " van " + passages.size + " eigen fragmenten).</p>"
+                else "<p>Oefenfragmenten: " + selected.size + ".</p>") +
                 "<p>Bestemming: " + html(audience.title) + ".</p>"
         )
         for (part in sections) {
