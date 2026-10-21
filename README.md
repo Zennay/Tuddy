@@ -1,3 +1,9 @@
+## Privé luisteren: apart leerlingen-CSV zonder antwoorden of brontekst
+
+In **Mijn privé luisteroverzicht → Leerlingenblad** is nu naast het HTML-werkblad ook een **volledige, lokaal voorgestelde leerlingen-CSV** beschikbaar. Elke rij toont alleen een bewust geselecteerd eigen A–B-tijdvak, de gekozen opdracht en een lege antwoordcel. Niet inbegrepen zijn ondertitelregels, luisterbeoordelingen, persoonlijke notities of audio. Privé TXT/CSV/HTML-exportknoppen blijven in de leerlingenmodus gesloten; voor een eigen brontekstrapport kies je bewust **Zelfstudie**. Na Androids bestandskiezer controleert Tuddy opnieuw de volledige bestandsbytes en actuele gebruikerskeuze. [Gebruik en privacygrenzen](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 ## Offline luisteren · eigen opdracht kiezen
 
 Een werkblad kan nu ook **per geselecteerd A–B-fragment** een andere
