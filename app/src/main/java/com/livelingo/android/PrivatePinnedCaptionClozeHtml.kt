@@ -1,5 +1,7 @@
 package com.livelingo.android
 
+import java.util.Locale
+
 /**
  * Script-free, fully offline bilingual fill-in-the-gap workbook. The source
  * sentence is preserved; blanks are only displayed in the export.
@@ -53,6 +55,27 @@ internal object PrivatePinnedCaptionClozeHtml {
         val roundIndex: Int
     )
     private const val MAX_BYTES = 262_144
+    private val LANGUAGE_TAG_PREFIX =
+        Regex("""^\[([A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)\]\s""")
+    private val RTL_BASE_LANGUAGES =
+        setOf("ar", "ckb", "dv", "fa", "he", "ps", "sd", "ug", "ur", "yi")
+    private val RTL_SCRIPTS = setOf("arab", "hebr", "syrc", "thaa")
+
+    /**
+     * A visible [ar]/[ps]/[ckb] label is Latin text, so dir=auto on the whole
+     * string incorrectly makes Arabic-script content LTR. Honor a BCP-47
+     * language/script tag when present; otherwise let the actual text decide.
+     */
+    private fun htmlDirection(value: String): String {
+        val tag = LANGUAGE_TAG_PREFIX.find(value)?.groupValues?.get(1) ?: return "auto"
+        val subtags = tag.split('-')
+        val script = subtags.firstOrNull {
+            it.length == 4 && it.all { ch -> ch.isLetter() }
+        }?.lowercase(Locale.ROOT)
+        if (script != null) return if (script in RTL_SCRIPTS) "rtl" else "ltr"
+        return if (subtags.first().lowercase(Locale.ROOT) in RTL_BASE_LANGUAGES)
+            "rtl" else "ltr"
+    }
 
     /** Shared exact visual order for the HTML generator and native preview. */
     fun orderedCardIndices(
@@ -303,9 +326,9 @@ internal object PrivatePinnedCaptionClozeHtml {
             }
             out.append("<article class=\"card\"><b>Ronde ").append(roundIndex + 1)
                 .append(" · kaart ").append(index % cardsPerRound + 1)
-                .append("</b><p class=\"phrase\"><bdi dir=\"auto\">")
+                .append("</b><p class=\"phrase\"><bdi dir=\"").append(htmlDirection(question)).append("\">")
                 .append(escape(question)).append("</bdi></p>")
-                .append("<p class=\"hint\"><bdi dir=\"auto\">")
+                .append("<p class=\"hint\"><bdi dir=\"").append(htmlDirection(hint)).append("\">")
                 .append(escape(hint)).append("</bdi></p>")
                 .append("<form autocomplete=\"off\"><label class=\"work\" for=\"typed-").append(index + 1)
                 .append("\">Mijn eigen antwoord (alleen tijdelijk in de browser)</label>")
@@ -332,7 +355,7 @@ internal object PrivatePinnedCaptionClozeHtml {
             out.append("</div>")
             if (audience == PinnedClozeAudience.SELF_STUDY) {
                 out.append("<details><summary>Bekijk volledig antwoord</summary>")
-                    .append("<p class=\"phrase\"><bdi dir=\"auto\">")
+                    .append("<p class=\"phrase\"><bdi dir=\"").append(htmlDirection(answer)).append("\">")
                     .append(escape(answer)).append("</bdi></p></details>")
             }
             out.append("</article>")
@@ -354,7 +377,7 @@ internal object PrivatePinnedCaptionClozeHtml {
                 val answer = card.answer
                 out.append("<p class=\"phrase\"><b>Ronde ").append(card.roundIndex + 1)
                     .append(" · kaart ").append(index % cardsPerRound + 1)
-                    .append(".</b> <bdi dir=\"auto\">").append(escape(answer))
+                    .append(".</b> <bdi dir=\"").append(htmlDirection(answer)).append("\">").append(escape(answer))
                     .append("</bdi></p>")
                 if (out.length > MAX_BYTES) return null
             }
