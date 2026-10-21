@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PlainSubtitleSplitMode
 import com.livelingo.android.PrivatePlainTextSubtitleDraft
@@ -302,6 +304,7 @@ internal fun SubtitlePasteDialog(
                                 value = startSecondsInput,
                                 onValueChange = { startSecondsInput = it.take(12); page = 0 },
                                 label = { Text("Eerste cue begint na (0–21600 seconden)") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -309,6 +312,7 @@ internal fun SubtitlePasteDialog(
                                 value = durationSecondsInput,
                                 onValueChange = { durationSecondsInput = it.take(12); page = 0 },
                                 label = { Text("Duur per kaart (0,5–30 seconden)") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
