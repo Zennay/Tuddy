@@ -891,6 +891,8 @@ private fun TuddyScreen(
         val report = buildString {
             appendLine("Tuddy offline readiness report")
             appendLine("App version: $appVersion")
+            appendLine("Build source SHA: ${BuildConfig.TUDDY_SOURCE_SHA}")
+            appendLine("GitHub workflow run ID: ${BuildConfig.TUDDY_BUILD_RUN_ID}")
             appendLine("Android API: ${Build.VERSION.SDK_INT}")
             appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
             appendLine("Source speech tag: ${source.speechCode}")
