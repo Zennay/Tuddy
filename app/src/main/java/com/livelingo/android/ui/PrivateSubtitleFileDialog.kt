@@ -1289,6 +1289,18 @@ internal fun PrivateSubtitleFileDialog(
                                     Text("Volgende handmatige →")
                                 }
                             }
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    manualPairs = emptyList()
+                                    manualReviewPage = 0
+                                    manualBulkPage = 0
+                                    pairReviewPage = 0
+                                    secondTrackPreviewPage = 0
+                                }
+                            ) {
+                                Text("Herstel de tijdmatcher voor alle handmatige paren")
+                            }
                         }
                     }
                     if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
