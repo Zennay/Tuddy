@@ -124,6 +124,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var worksheetScope by remember { mutableStateOf(PrivatePracticeRouteScope.ALL) }
     var worksheetAudience by remember { mutableStateOf(PrivateListeningWorksheetAudience.SELF_STUDY) }
     var practiceCsvPreviewOpen by remember { mutableStateOf(false) }
+    var detailedCsvPreviewOpen by remember { mutableStateOf(false) }
     // An immutable user-approved document lives only while the Android
     // destination chooser is open; never retain the audio URI or audio bytes.
     var pendingPracticeReport by remember {
@@ -183,6 +184,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         cues, subtitleOffsetMs, savedPracticePassages,
                         passageRatings, passageNotes, worksheetScope
                     )
+                PrivatePracticeReportFormat.DETAILED_CSV ->
+                    PrivatePrintablePracticeSummary.snapshotDetailedCsv(
+                        cues, subtitleOffsetMs, savedPracticePassages,
+                        passageRatings, passageNotes, worksheetScope
+                    )
             }
             if (!prepared || savedPracticePassages.isEmpty() ||
                 updatedSummary != pending.summary ||
@@ -221,6 +227,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
             PrivatePracticeReportFormat.CSV ->
                 PrivatePrintablePracticeSummary.snapshotCsv(
+                    cues, subtitleOffsetMs, savedPracticePassages,
+                    passageRatings, passageNotes, worksheetScope
+                )
+            PrivatePracticeReportFormat.DETAILED_CSV ->
+                PrivatePrintablePracticeSummary.snapshotDetailedCsv(
                     cues, subtitleOffsetMs, savedPracticePassages,
                     passageRatings, passageNotes, worksheetScope
                 )
@@ -263,6 +274,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         completedGuidedRounds = 0
         practiceReportOpen = false
         practiceCsvPreviewOpen = false
+        detailedCsvPreviewOpen = false
         pendingPracticeReport = null
         worksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY
         guidedActive = false
@@ -1627,6 +1639,42 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             ).isNotEmpty(),
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.CSV) }
                     ) { Text("Bewaar mijn geselecteerde oefenfragmenten als CSV…") }
+                    TextButton(
+                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        onClick = { detailedCsvPreviewOpen = !detailedCsvPreviewOpen }
+                    ) {
+                        Text(if (detailedCsvPreviewOpen)
+                            "Verberg bronregel-CSV" else
+                            "Bekijk volledige bronregel-CSV vóór opslaan")
+                    }
+                    if (detailedCsvPreviewOpen) {
+                        Text(
+                            "Bronregel-CSV · " + worksheetScope.title +
+                                " · alleen volledig binnen eigen A–B-markeringen passende cues.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        val detailPreview = PrivatePrintablePracticeSummary.snapshotDetailedCsv(
+                            cues, subtitleOffsetMs, savedPracticePassages,
+                            passageRatings, passageNotes, worksheetScope
+                        )?.toString(Charsets.UTF_8)
+                        SelectionContainer {
+                            Text(
+                                detailPreview ?: "Geen veilig exporteerbare bronregel-CSV.",
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    TextButton(
+                        enabled = !guidedActive &&
+                            privatePracticeRouteCandidates(
+                                savedPracticePassages, passageRatings, worksheetScope
+                            ).isNotEmpty(),
+                        onClick = {
+                            choosePracticeReport(PrivatePracticeReportFormat.DETAILED_CSV)
+                        }
+                    ) { Text("Bewaar alle passende bronregels als CSV…") }
                     SelectionContainer {
                         Text(
                             practiceSummaryText,
