@@ -1079,7 +1079,7 @@ internal fun PrivateSubtitleFileDialog(
                                 value = manualFirstRow,
                                 onValueChange = {
                                     manualFirstRow =
-                                        it.filter { char -> char in '0'..'9' }.take(3)
+                                        it.filter { char -> char in '0'..'9' }.take(4)
                                 },
                                 label = { Text("Spoor 1 · bronregel") },
                                 singleLine = true
@@ -1089,7 +1089,7 @@ internal fun PrivateSubtitleFileDialog(
                                 value = manualSecondRow,
                                 onValueChange = {
                                     manualSecondRow =
-                                        it.filter { char -> char in '0'..'9' }.take(3)
+                                        it.filter { char -> char in '0'..'9' }.take(4)
                                 },
                                 label = { Text("Spoor 2 · bronregel") },
                                 singleLine = true
@@ -1165,8 +1165,11 @@ internal fun PrivateSubtitleFileDialog(
                             modifier = Modifier.fillMaxWidth(),
                             value = manualBulkExpression,
                             onValueChange = {
+                                // Keep a sentinel over-limit character: a long
+                                // paste must be invalid, not silently become
+                                // another valid partial expression.
                                 manualBulkExpression = it.take(
-                                    PrivateSubtitleManualPairSelection.MAX_EXPRESSION_LENGTH)
+                                    PrivateSubtitleManualPairSelection.MAX_EXPRESSION_LENGTH + 1)
                                 manualBulkPage = 0
                             },
                             label = { Text("Bronpaarreeksen, bv. 1:2,3-5:7-9") },
@@ -1192,7 +1195,11 @@ internal fun PrivateSubtitleFileDialog(
                             ) else null
                         }
                         if (manualBulkExpression.isNotBlank()) {
-                            Text(if (bulkProposal == null)
+                            Text(if (manualBulkExpression.length >
+                                PrivateSubtitleManualPairSelection.MAX_EXPRESSION_LENGTH)
+                                "Te lange bronpaarinvoer: maximaal 512 tekens. " +
+                                    "Kort de invoer bewust in."
+                                else if (bulkProposal == null)
                                 "Geen geldige bundel: controleer originele " +
                                     "bronnummers, oplopende volgorde, unieke " +
                                     "paarregels, bestaande uitsluitingen en " +
