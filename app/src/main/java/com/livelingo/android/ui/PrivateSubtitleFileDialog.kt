@@ -50,6 +50,7 @@ import com.livelingo.android.PrivateSubtitleLineWrap
 import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDocumentCombine
+import com.livelingo.android.PrivateSubtitleOffset
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateLrcSubtitleExport
@@ -151,6 +152,8 @@ internal fun PrivateSubtitleFileDialog(
     var pasteSecondOpen by remember { mutableStateOf(false) }
     var importMode by remember { mutableStateOf(SubtitleCombineMode.APPEND_AFTER_LAST) }
     var secondTrackOffsetMs by remember { mutableStateOf(0L) }
+    var secondTrackCustomOffset by remember { mutableStateOf("") }
+    var secondTrackPreviewPage by remember { mutableIntStateOf(0) }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
     val found = draft.mapIndexed { idx, row -> idx to row }
         .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
@@ -166,6 +169,8 @@ internal fun PrivateSubtitleFileDialog(
                 pendingImport = PendingSubtitleImport(previous.toList(), imported.toList())
                 importMode = SubtitleCombineMode.APPEND_AFTER_LAST
                 secondTrackOffsetMs = 0L
+                secondTrackCustomOffset = ""
+                secondTrackPreviewPage = 0
                 notice = ""
             } else {
                 notice = "Het concept veranderde tijdens de bestandskeuze. Kies opnieuw."
@@ -680,6 +685,8 @@ internal fun PrivateSubtitleFileDialog(
                 pendingImport = PendingSubtitleImport(draft.toList(), imported.toList())
                 importMode = SubtitleCombineMode.APPEND_AFTER_LAST
                 secondTrackOffsetMs = 0L
+                secondTrackCustomOffset = ""
+                secondTrackPreviewPage = 0
                 notice = ""
                 pasteSecondOpen = false
                 onSecondPasteConsumed()
@@ -689,10 +696,16 @@ internal fun PrivateSubtitleFileDialog(
     val stagedImport = pendingImport
     if (stagedImport != null) {
         val stillCurrent = draft == stagedImport.existing
-        val proposed = if (stillCurrent)
+        val selectedPairOffset = if (importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES ||
+            secondTrackCustomOffset.isBlank()) secondTrackOffsetMs
+            else PrivateSubtitleOffset.parseSeconds(secondTrackCustomOffset, allowZero = true)
+        val proposed = if (stillCurrent && selectedPairOffset != null)
             PrivateSubtitleDocumentCombine.preview(
-                draft, stagedImport.imported, importMode, secondTrackOffsetMs
+                draft, stagedImport.imported, importMode, selectedPairOffset
             ) else null
+        val previewRows = proposed?.cues.orEmpty()
+        val previewPages = maxOf(1, (previewRows.size + 4) / 5)
+        val shownPairPage = secondTrackPreviewPage.coerceIn(0, previewPages - 1)
         AlertDialog(
             onDismissRequest = { pendingImport = null },
             title = { Text("Tweede ondertitelspoor toevoegen") },
@@ -730,8 +743,8 @@ internal fun PrivateSubtitleFileDialog(
                         Box {
                             OutlinedButton(onClick = { offsetChoicesOpen = true }) {
                                 Text("Tijdverschuiving tweede spoor: " +
-                                    (if (secondTrackOffsetMs > 0L) "+" else "") +
-                                    "${secondTrackOffsetMs / 1000} seconden ▾")
+                                    PrivateSubtitleOffset.formatSeconds(secondTrackOffsetMs) +
+                                    " seconden ▾")
                             }
                             DropdownMenu(expanded = offsetChoicesOpen,
                                 onDismissRequest = { offsetChoicesOpen = false }) {
@@ -742,10 +755,31 @@ internal fun PrivateSubtitleFileDialog(
                                             "${value / 1000} seconden") },
                                         onClick = {
                                             secondTrackOffsetMs = value
+                                            secondTrackCustomOffset = ""
+                                            secondTrackPreviewPage = 0
                                             offsetChoicesOpen = false
                                         })
                                 }
                             }
+                        }
+                        Text("Of geef handmatig het exacte tijdverschil op. " +
+                            "Punt of komma, maximaal drie decimalen; nul is hier " +
+                            "toegestaan. Maximaal 600 seconden in beide richtingen.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            value = secondTrackCustomOffset,
+                            onValueChange = {
+                                secondTrackCustomOffset = it.take(10)
+                                secondTrackPreviewPage = 0
+                            },
+                            label = { Text("Eigen seconden tweede spoor, bv. -7,250") },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        if (secondTrackCustomOffset.isNotBlank() &&
+                            selectedPairOffset == null) {
+                            Text("Geen geldige verschuiving. Gebruik bijvoorbeeld " +
+                                "-7,250 of +12.125, binnen -600 en +600 seconden.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall)
                         }
                         Text("Kies desgewenst de verschuiving van het tweede " +
                             "spoor; een negatieve tijd of tijd buiten de bestandsgrens " +
@@ -774,6 +808,29 @@ internal fun PrivateSubtitleFileDialog(
                             "Controleer tijdcodes zelf; er is geen audio-/video-uitlijning.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (proposed != null) {
+                        Text("Volledige resultaat-preview, vijf cues per pagina " +
+                            "(niet alleen de tekstparen): pagina ${shownPairPage + 1}/" +
+                            "$previewPages.", style = MaterialTheme.typography.titleSmall)
+                        previewRows.drop(shownPairPage * 5).take(5)
+                            .forEachIndexed { localIndex, cue ->
+                                val sourceNumber = shownPairPage * 5 + localIndex + 1
+                                Text("Resultaatregel $sourceNumber · " +
+                                    "${cue.startLabel} → ${cue.endLabel}\n" + cue.text,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(enabled = shownPairPage > 0,
+                                onClick = { secondTrackPreviewPage = shownPairPage - 1 }) {
+                                Text("← Vorige")
+                            }
+                            TextButton(enabled = shownPairPage < previewPages - 1,
+                                onClick = { secondTrackPreviewPage = shownPairPage + 1 }) {
+                                Text("Volgende →")
+                            }
+                        }
+                    }
                     Text(
                         "SRT en VTT zijn beide leesbaar. Alleen expliciet bewaren als " +
                             "nieuwe SRT/VTT-kopie schrijft naar je gekozen " +
@@ -784,10 +841,18 @@ internal fun PrivateSubtitleFileDialog(
             },
             confirmButton = {
                 TextButton(enabled = proposed != null && stillCurrent, onClick = {
-                    val updated = PrivateSubtitleDocumentCombine.preview(
-                        draft, stagedImport.imported, importMode, secondTrackOffsetMs
-                    )
-                    if (draft != stagedImport.existing || updated == null) {
+                    val latestOffset = if (
+                        importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES ||
+                        secondTrackCustomOffset.isBlank()
+                    ) secondTrackOffsetMs else PrivateSubtitleOffset.parseSeconds(
+                        secondTrackCustomOffset, allowZero = true)
+                    val updated = latestOffset?.let {
+                        PrivateSubtitleDocumentCombine.preview(
+                            draft, stagedImport.imported, importMode, it)
+                    }
+                    if (draft != stagedImport.existing || updated == null ||
+                        proposed == null || updated.cues != proposed.cues ||
+                        updated.pairedCount != proposed.pairedCount) {
                         notice = "Het concept is veranderd of de gecombineerde " +
                             "ondertitels zijn ongeldig. Probeer opnieuw."
                     } else {
