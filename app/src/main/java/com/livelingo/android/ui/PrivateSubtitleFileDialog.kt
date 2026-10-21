@@ -1144,10 +1144,15 @@ internal fun PrivateSubtitleFileDialog(
                                 style = MaterialTheme.typography.bodySmall)
                             proposed.pairedLinks.drop(currentPairPage * 4).take(4)
                                 .forEach { link ->
+                                    val secondSourceStart = stagedImport.imported
+                                        .getOrNull(link.secondarySourceRow - 1)?.startLabel
+                                        ?: link.secondaryStart
                                     Text("Spoor 1 · bronregel ${link.primarySourceRow} · " +
                                         "${link.primaryStart}\n${link.primaryText}\n" +
                                         "Spoor 2 · bronregel ${link.secondarySourceRow} · " +
-                                        "${link.secondaryStart}\n${link.secondaryText}\n" +
+                                        "origineel ${secondSourceStart} → " +
+                                        "na timing ${link.secondaryStart}\n" +
+                                        "${link.secondaryText}\n" +
                                         "Overlappende tijd: ${link.overlapMillis} ms.",
                                         style = MaterialTheme.typography.bodySmall)
                                     OutlinedButton(
