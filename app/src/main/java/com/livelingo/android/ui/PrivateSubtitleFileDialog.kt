@@ -64,6 +64,7 @@ import com.livelingo.android.PrivateSubtitleDriftSelection
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateLrcSubtitleExport
+import com.livelingo.android.PrivateAssSubtitleExport
 import com.livelingo.android.PrivateSbvSubtitleExport
 import com.livelingo.android.PrivateTtmlSubtitleExport
 import com.livelingo.android.PrivateTimedSubtitleSheet
@@ -99,6 +100,7 @@ internal fun PrivateSubtitleFileDialog(
     onSaveLrc: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onSaveSbv: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onSaveTtml: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
+    onSaveAss: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onShareTtmlExcerpt: (List<PrivateSubtitleCue>) -> Unit,
     onShareExcerpt: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     incomingSecondPaste: SubtitlePasteFileContent?,
@@ -133,6 +135,7 @@ internal fun PrivateSubtitleFileDialog(
     var requestLrcSave by remember { mutableStateOf(false) }
     var requestSbvSave by remember { mutableStateOf(false) }
     var requestTtmlSave by remember { mutableStateOf(false) }
+    var requestAssSave by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
     var removeOpen by remember { mutableStateOf(false) }
@@ -554,6 +557,10 @@ internal fun PrivateSubtitleFileDialog(
                 OutlinedButton(modifier = Modifier.fillMaxWidth(),
                     onClick = { requestTtmlSave = true }) {
                     Text("Bewaar exacte tijdvakken als TTML…")
+                }
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    onClick = { requestAssSave = true }) {
+                    Text("Bewaar onopgemaakte ASS/SSA-kopie…")
                 }
                 if (notice.isNotBlank()) Text(notice,
                     style = MaterialTheme.typography.bodySmall)
@@ -2845,6 +2852,55 @@ internal fun PrivateSubtitleFileDialog(
         )
     }
 
+
+    if (requestAssSave) {
+        val exactAss = PrivateAssSubtitleExport.snapshot(draft)
+        AlertDialog(
+            onDismissRequest = { requestAssSave = false },
+            title = { Text("Eigen ondertitels als ASS bewaren?") },
+            text = {
+                Column(modifier = Modifier.heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("ASS/SSA ondersteunt uitsluitend honderdsten van seconden. " +
+                        "Tuddy rondt nooit je tijden af: alle begin- én eindtijden " +
+                        "moeten een veelvoud van 10 ms zijn. De uitvoer bevat " +
+                        "alleen tekst en een standaardstijl, geen animaties, " +
+                        "scripts, audio of bestaande ASS-stijlen.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (exactAss == null) {
+                        Text("Dit concept kan niet zonder verlies naar ASS: " +
+                            "controleer de exacte milliseconden, tekst en " +
+                            "bestandsgrenzen, of gebruik SRT/VTT.",
+                            color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text("${draft.size} regels · ${exactAss.size} UTF-8 bytes.",
+                            style = MaterialTheme.typography.titleSmall)
+                        PrivateSubtitlePagedExportPreview(exactAss)
+                    }
+                    Text("Alleen na jouw akkoord opent Android de opslagkiezer " +
+                        "voor een nieuwe kopie. De provider kan bestanden " +
+                        "buiten Tuddy synchroniseren.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = exactAss != null, onClick = {
+                    val fresh = PrivateAssSubtitleExport.snapshot(draft)
+                    if (exactAss == null || fresh == null ||
+                        !fresh.contentEquals(exactAss))
+                        notice = "Concept veranderd; open de ASS-preview opnieuw."
+                    else onSaveAss(draft.toList(), draft.toList())
+                    requestAssSave = false
+                }) { Text("Kies opslaglocatie…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { requestAssSave = false }) {
+                    Text("Annuleren")
+                }
+            }
+        )
+    }
 
     if (requestTtmlSave) {
         val exactTtml = PrivateTtmlSubtitleExport.snapshot(draft)
