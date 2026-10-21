@@ -116,7 +116,7 @@ internal object PrivateCueWordProgress {
         if (pieces.size !in 1..MAX_MANUAL_MARKS || pieces.any(String::isEmpty))
             return null
         val pattern = Regex(
-            """^([1-9][0-9]{0,2})=([0-9]{2,6}):([0-5][0-9]):([0-5][0-9])\\.([0-9]{3})$"""
+            """^([1-9][0-9]{0,2})=([0-9]{2,6}):([0-5][0-9]):([0-5][0-9])\.([0-9]{3})$"""
         )
         val marks = linkedMapOf<Int, Long>()
         for (piece in pieces) {
