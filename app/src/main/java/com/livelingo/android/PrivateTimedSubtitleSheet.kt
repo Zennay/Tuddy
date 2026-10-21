@@ -1,0 +1,70 @@
+package com.livelingo.android
+
+import java.nio.CharBuffer
+import java.nio.charset.CodingErrorAction
+import java.nio.charset.StandardCharsets
+import java.util.Locale
+
+/** User-consented spreadsheet interchange for an ephemeral subtitle draft.
+ * No title/header row: output can be pasted directly into the existing
+ * three/four-column timed CSV or TSV importer without guessing the schema.
+ */
+internal enum class TimedSubtitleSheetFormat { CSV, TSV }
+
+internal object PrivateTimedSubtitleSheet {
+    private const val MAX_BYTES = 262_144
+
+    /** Never silently discard extra text lines or mix incompatible row shapes. */
+    fun columnCount(cues: List<PrivateSubtitleCue>): Int? {
+        if (cues.isEmpty() || cues.size > 500) return null
+        val lines = cues.first().text.lines().size
+        return (lines + 2).takeIf { lines in 1..2 &&
+            cues.all { it.text.lines().size == lines } }
+    }
+
+    fun snapshot(cues: List<PrivateSubtitleCue>, format: TimedSubtitleSheetFormat): ByteArray? {
+        val columns = columnCount(cues) ?: return null
+        if (PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.SRT) == null ||
+            PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.WEBVTT) == null) return null
+
+        fun time(ms: Long): String =
+            String.format(Locale.ROOT, "%02d:%02d:%02d.%03d",
+                ms / 3_600_000L, (ms / 60_000L) % 60,
+                (ms / 1000L) % 60, ms % 1000L)
+
+        fun safe(value: String): Boolean {
+            if (value.isBlank() || value != value.trim() || value.length > 800 ||
+                "-->" in value || value.any { ch ->
+                    ch.isISOControl() || ch in '\u200B'..'\u200F' ||
+                        ch in '\u202A'..'\u202E' || ch in '\u2060'..'\u206F' ||
+                        ch == '\uFEFF'
+                }) return false
+            // Quoting a spreadsheet value is not reliable formula protection.
+            // Reject instead of silently prefixing a character that breaks
+            // round-trip fidelity. SRT/VTT remain available for these cues.
+            return value[0] !in "=+-@"
+        }
+
+        val lines = ArrayList<String>(cues.size)
+        for (cue in cues) {
+            val authored = cue.text.lines()
+            if (authored.size != columns - 2 || authored.any { !safe(it) })
+                return null
+            val fields = listOf(time(cue.startMillis), time(cue.endMillis)) + authored
+            lines += if (format == TimedSubtitleSheetFormat.CSV) {
+                fields.joinToString(",") { field -> "\"" + field.replace("\"", "\"\"") + "\"" }
+            } else {
+                fields.joinToString("\t")
+            }
+        }
+        val source = lines.joinToString(if (format == TimedSubtitleSheetFormat.CSV) "\r\n" else "\n") + "\n"
+        val encoded = runCatching {
+            StandardCharsets.UTF_8.newEncoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .encode(CharBuffer.wrap(source))
+        }.getOrNull() ?: return null
+        if (encoded.remaining() > MAX_BYTES) return null
+        return ByteArray(encoded.remaining()).also { encoded.get(it) }
+    }
+}

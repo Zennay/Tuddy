@@ -51,7 +51,9 @@ import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.livelingo.android.model.SafeCommunityPhrasebook
 import com.livelingo.android.ui.OfflineWordText
 import com.livelingo.android.ui.DailyStudyHub
@@ -62,6 +64,8 @@ import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.SessionMeaningIndexDialog
 import com.livelingo.android.ui.SessionMeaningRow
 import com.livelingo.android.ui.PrivateSubtitleFileDialog
+import com.livelingo.android.ui.SubtitlePasteDialog
+import com.livelingo.android.ui.SubtitlePasteFileContent
 import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
@@ -84,8 +88,40 @@ import java.util.Date
 /** Explicitly authored SRT/VTT copy while Android document chooser takes focus. */
 private data class PendingEditedSubtitleSave(
     val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
     val cues: List<PrivateSubtitleCue>,
     val format: SubtitleDraftFormat,
+    val bytes: ByteArray
+)
+
+/** An exact user-selected LRC start-timestamp snapshot for a SAF handoff. */
+private data class PendingLrcSubtitleSave(
+    val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
+    val cues: List<PrivateSubtitleCue>,
+    val bytes: ByteArray
+)
+
+/** Exact user-consented timed spreadsheet saved after Android's provider choice. */
+private data class PendingTimedSubtitleSheetSave(
+    val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
+    val cues: List<PrivateSubtitleCue>,
+    val format: TimedSubtitleSheetFormat,
+    val bytes: ByteArray
+)
+
+/** Explicit Android file selection with a RAM-only draft recovery point. */
+private data class PendingManualSubtitleDocument(
+    val session: Int,
+    val previous: SubtitlePasteFileContent,
+    val secondDraft: List<PrivateSubtitleCue>?
+)
+
+/** Explicit save of the original authored LRC syntax, including its headers. */
+private data class PendingAuthoredLrcSourceSave(
+    val session: Int,
+    val previous: SubtitlePasteFileContent,
     val bytes: ByteArray
 )
 
@@ -356,6 +392,19 @@ private fun TuddyScreen(
     // Explicitly opened SRT/WebVTT file; separate from the active transcript.
     var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
     var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    var subtitlePasteOpen by remember { mutableStateOf(false) }
+    var pendingManualSubtitleDocument by remember {
+        mutableStateOf<PendingManualSubtitleDocument?>(null)
+    }
+    var pendingAuthoredLrcSourceSave by remember {
+        mutableStateOf<PendingAuthoredLrcSourceSave?>(null)
+    }
+    var readyFirstPasteDocument by remember {
+        mutableStateOf<SubtitlePasteFileContent?>(null)
+    }
+    var readySecondPasteDocument by remember {
+        mutableStateOf<SubtitlePasteFileContent?>(null)
+    }
     // Second SRT/VTT picker: one explicit RAM-only document pair, never disk.
     var pendingSecondSubtitle by remember {
         mutableStateOf<Pair<Int, List<PrivateSubtitleCue>>?>(null)
@@ -378,6 +427,12 @@ private fun TuddyScreen(
     }
     // A user-confirmed immutable copy survives the Android document picker only.
     var pendingSubtitleDraft by remember { mutableStateOf<PendingEditedSubtitleSave?>(null) }
+    var pendingLrcSubtitleSave by remember {
+        mutableStateOf<PendingLrcSubtitleSave?>(null)
+    }
+    var pendingTimedSubtitleSheet by remember {
+        mutableStateOf<PendingTimedSubtitleSheetSave?>(null)
+    }
     var editedSubtitleSaveNotice by remember { mutableStateOf<String?>(null) }
     // The user selects one completed row from a read-only, unverified
     // imported archive. No clipboard/share side effects before consent.
@@ -1474,7 +1529,7 @@ private fun TuddyScreen(
         if (pending != null && pending.session == generation) {
             // Android closed the editor while DocumentsUI selected a location.
             // Reopen only the exact user-authored temporary draft.
-            subtitleFileCues = pending.cues
+            subtitleFileCues = pending.editorDraft
             val fresh = PrivateSubtitleDraftEditor.snapshot(pending.cues, pending.format)
             editedSubtitleSaveNotice = when {
                 fresh == null || !fresh.contentEquals(pending.bytes) ->
@@ -1493,6 +1548,108 @@ private fun TuddyScreen(
                     else "Opslaan mislukt; tijdelijk concept en origineel ongewijzigd."
                 }
             }
+        }
+    }
+
+    fun completeTimedSubtitleSheetSave(uri: Uri?) {
+        val pending = pendingTimedSubtitleSheet
+        pendingTimedSubtitleSheet = null
+        if (pending != null && pending.session == generation) {
+            // The editor closes on Android ON_STOP; preserve only this
+            // user-approved bounded snapshot across the external picker.
+            subtitleFileCues = pending.editorDraft
+            val current = PrivateTimedSubtitleSheet.snapshot(pending.cues, pending.format)
+            editedSubtitleSaveNotice = when {
+                current == null || !current.contentEquals(pending.bytes) ->
+                    "Spreadsheetkopie geweigerd: het tijdelijke concept is gewijzigd."
+                uri == null -> "CSV/TSV-opslag geannuleerd; concept heropend."
+                uri.scheme != "content" -> "Ongeldige locatie; geen CSV/TSV opgeslagen."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                            stream.write(pending.bytes)
+                            stream.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved) "Eigen tijdcodes bewaard als " +
+                        pending.format.name + "; tijdelijk concept blijft beschikbaar."
+                    else "CSV/TSV-opslag mislukt; concept en origineel blijven intact."
+                }
+            }
+        }
+    }
+
+    // Let Android's document provider classify each interoperable format.
+    val saveTimedSubtitleCsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri -> completeTimedSubtitleSheetSave(uri) }
+    val saveTimedSubtitleTsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/tab-separated-values")
+    ) { uri -> completeTimedSubtitleSheetSave(uri) }
+
+    val saveLrcSubtitle = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingLrcSubtitleSave
+        pendingLrcSubtitleSave = null
+        if (pending != null && pending.session == generation) {
+            subtitleFileCues = pending.editorDraft
+            val current = PrivateLrcSubtitleExport.snapshot(pending.cues)
+            editedSubtitleSaveNotice = when {
+                current == null || !current.contentEquals(pending.bytes) ->
+                    "LRC-opslag geweigerd: de bevestigde bron is niet meer geldig."
+                uri == null -> "LRC-bestandskeuze geannuleerd; concept heropend."
+                uri.scheme != "content" -> "Ongeldige locatie; geen LRC geschreven."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { out ->
+                            out.write(pending.bytes)
+                            out.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved) "Nieuwe LRC-kopie met eigen begintijden opgeslagen."
+                    else "LRC kon niet worden opgeslagen; het concept is heropend."
+                }
+            }
+        }
+    }
+
+    // CreateDocument, unlike OpenDocument, asks the user where a NEW
+    // complete LRC source copy should be written. The immutable authorized
+    // source survives DocumentsUI ON_STOP only until this picker returns.
+    val saveAuthoredLrcSource = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingAuthoredLrcSourceSave
+        pendingAuthoredLrcSourceSave = null
+        if (pending != null && pending.session == generation) {
+            val fresh = PrivateLrcSubtitleDraft.authoredSourceBytes(pending.previous.text)
+            val message = when {
+                !pending.previous.format.lrcMode || pending.previous.format.plainLines ||
+                    fresh == null || !fresh.contentEquals(pending.bytes) ->
+                    "LRC-bronopslag geweigerd: de oorspronkelijke momentopname is ongeldig."
+                uri == null ->
+                    "LRC-bestandskeuze geannuleerd; je tijdelijke invoer is heropend."
+                uri.scheme != "content" ->
+                    "Ongeldige Android-locatie; geen LRC geschreven."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { output ->
+                            output.write(pending.bytes)
+                            output.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved)
+                        "Document lokaal als nieuwe volledige LRC-kopie opgeslagen; metadata behouden."
+                    else
+                        "Nieuwe LRC-kopie kon niet worden bewaard; eigen tekst heropend."
+                }
+            }
+            readyFirstPasteDocument = pending.previous.copy(notice = message)
+            subtitlePasteOpen = true
         }
     }
 
@@ -1535,35 +1692,102 @@ private fun TuddyScreen(
         }
     }
 
+    // The external Android provider can be backed by network storage.
+    // Bounded IO and SRT/VTT parsing never run on the UI thread.
+    suspend fun readSelectedSubtitle(uri: Uri): Pair<List<PrivateSubtitleCue>?, String> {
+        if (uri.scheme != "content") return null to
+            "Geen geldige Android-documentprovider; bestaande ondertitels behouden."
+        return withContext(Dispatchers.IO) {
+            when (val selected = PrivateSubtitleImportDocument.read(
+                context.contentResolver, uri
+            )) {
+                is PrivateSubtitleImportDocument.Result.Rejected ->
+                    null to selected.reason
+                is PrivateSubtitleImportDocument.Result.Ready -> {
+                    val parsed = PrivateSubtitleFileReader.read(
+                        selected.text.toByteArray(Charsets.UTF_8)
+                    )
+                    if (parsed == null)
+                        null to "Geen geldig SRT/WebVTT-document: controleer " +
+                            "tijdcodes, tekstregels en maximaal 500 cues."
+                    else parsed to ""
+                }
+            }
+        }
+    }
+
     val openSubtitleFile = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         val expected = pendingSubtitleOpenGeneration
         pendingSubtitleOpenGeneration = null
-        if (uri != null && expected != null && expected == generation) {
-            val loaded = runCatching {
-                val input = context.contentResolver.openInputStream(uri)
-                    ?: throw IllegalArgumentException("Unreadable subtitle document")
-                val bytes = input.use { stream ->
-                    val collected = ByteArrayOutputStream()
-                    val buffer = ByteArray(8192)
-                    while (true) {
-                        val count = stream.read(buffer)
-                        if (count < 0) break
-                        if (count == 0) continue
-                        if (collected.size() + count > PrivateSubtitleFileReader.MAX_BYTES)
-                            throw IllegalArgumentException("Oversized subtitle document")
-                        collected.write(buffer, 0, count)
-                    }
-                    collected.toByteArray()
+        if (expected != null && expected == generation) {
+            when {
+                uri == null -> {
+                    // Android cancellation leaves the current live session alone.
+                    error = "Bestandskeuze geannuleerd; er is niets geopend."
                 }
-                PrivateSubtitleFileReader.read(bytes)
-            }.getOrNull()
-            subtitleFileCues = loaded
-            if (loaded == null) {
-                error = "Ongeldig of te groot SRT/WebVTT-bestand; gesprek ongewijzigd."
-            } else {
-                error = ""
+                else -> coroutineScope.launch {
+                    val (loaded, reason) = readSelectedSubtitle(uri)
+                    // A newer picker or erased session supersedes this read.
+                    if (expected != generation ||
+                        pendingSubtitleOpenGeneration != null) return@launch
+                    if (loaded == null) {
+                        error = reason + " Het huidige gesprek blijft ongewijzigd."
+                    } else {
+                        subtitleFileCues = loaded.toList()
+                        error = ""
+                    }
+                }
+            }
+        }
+    }
+
+    // Picker MUST be Activity-owned: ON_STOP dismisses all private dialogs.
+    // Recovery is restricted to the exact user-selected bounded UTF-8 input.
+    val openManualSubtitleDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val pending = pendingManualSubtitleDocument
+        pendingManualSubtitleDocument = null
+        if (pending != null && pending.session == generation) {
+            coroutineScope.launch {
+                val result = if (uri == null) {
+                    pending.previous.copy(notice =
+                        "Bestandskeuze geannuleerd; je eerdere invoer is heropend.")
+                } else if (uri.scheme != "content") {
+                    pending.previous.copy(notice =
+                        "Ongeldige Android-bestandslocatie; je eerdere invoer is behouden.")
+                } else {
+                    val loaded = withContext(Dispatchers.IO) {
+                        PrivateSubtitleImportDocument.read(context.contentResolver, uri)
+                    }
+                    when (loaded) {
+                        is PrivateSubtitleImportDocument.Result.Ready ->
+                            pending.previous.copy(
+                                text = loaded.text,
+                                ownMeaning = "",
+                                firstRow = "1",
+                                lastRow = "",
+                                explicitRows = "",
+                                search = "",
+                                notice = "Document lokaal ingelezen (${loaded.sizeBytes} bytes). " +
+                                    "Controleer eerst alle regels; niets is toegepast."
+                            )
+                        is PrivateSubtitleImportDocument.Result.Rejected ->
+                            pending.previous.copy(notice =
+                                loaded.reason + " Je eerdere invoer is behouden.")
+                    }
+                }
+                if (pending.session != generation ||
+                    pendingManualSubtitleDocument != null) return@launch
+                if (pending.secondDraft != null) {
+                    subtitleFileCues = pending.secondDraft.toList()
+                    readySecondPasteDocument = result
+                } else {
+                    readyFirstPasteDocument = result
+                    subtitlePasteOpen = true
+                }
             }
         }
     }
@@ -1574,30 +1798,21 @@ private fun TuddyScreen(
         val pending = pendingSecondSubtitle
         pendingSecondSubtitle = null
         if (pending != null && pending.first == generation) {
-            subtitleFileCues = pending.second // recover only explicit temporary draft
+            // The existing editor was intentionally dismissed while Android
+            // took focus. Reopen exactly that RAM-only snapshot.
+            subtitleFileCues = pending.second.toList()
             importedSecondSubtitle = null
             secondSubtitleError = null
-            if (uri != null) {
-                val loaded = if (uri.scheme != "content") null else runCatching {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        val collected = ByteArrayOutputStream()
-                        val buffer = ByteArray(8192)
-                        while (true) {
-                            val count = input.read(buffer)
-                            if (count < 0) break
-                            if (count == 0) continue
-                            if (collected.size() + count > PrivateSubtitleFileReader.MAX_BYTES)
-                                throw IllegalArgumentException("Subtitle exceeds size limit")
-                            collected.write(buffer, 0, count)
-                        }
-                        PrivateSubtitleFileReader.read(collected.toByteArray())
-                    }
-                }.getOrNull()
-                if (loaded != null) {
-                    importedSecondSubtitle = pending.second to loaded
+            if (uri != null) coroutineScope.launch {
+                val (loaded, reason) = readSelectedSubtitle(uri)
+                if (pending.first != generation ||
+                    pendingSecondSubtitle != null) return@launch
+                // A user could edit/replace the draft while the provider reads.
+                if (subtitleFileCues != pending.second) return@launch
+                if (loaded == null) {
+                    secondSubtitleError = reason + " Het bestaande concept is behouden."
                 } else {
-                    secondSubtitleError = "Tweede bestand geweigerd: kies een geldig UTF-8 " +
-                        "SRT/VTT-bestand van maximaal 256 KiB en 500 regels."
+                    importedSecondSubtitle = pending.second.toList() to loaded.toList()
                 }
             }
         }
@@ -1681,6 +1896,9 @@ private fun TuddyScreen(
                 manualText = ""
                 previewArchiveRows = null
                 subtitleFileCues = null
+                subtitlePasteOpen = false
+                readyFirstPasteDocument = null
+                readySecondPasteDocument = null
                 importedSecondSubtitle = null
                 secondSubtitleError = null
                 subtitleWorksheetNotice = null
@@ -1725,6 +1943,10 @@ private fun TuddyScreen(
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             subtitleFileCues = null
+            subtitlePasteOpen = false
+            pendingManualSubtitleDocument = null
+            readyFirstPasteDocument = null
+            readySecondPasteDocument = null
             pendingSecondSubtitle = null
             importedSecondSubtitle = null
             secondSubtitleError = null
@@ -1738,6 +1960,8 @@ private fun TuddyScreen(
             archiveSearchQuery = ""
             pendingArchiveGeneration = null
             pendingSubtitleDraft = null
+            pendingTimedSubtitleSheet = null
+            pendingLrcSubtitleSave = null
             editedSubtitleSaveNotice = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
@@ -2103,6 +2327,48 @@ private fun TuddyScreen(
                 initialCaptionId = sessionCaptionStudyStartId
             )
         }
+        if (subtitlePasteOpen) {
+            SubtitlePasteDialog(
+                title = "Eigen SRT/WebVTT-tekst plakken",
+                initialDocument = readyFirstPasteDocument,
+                onChooseDocument = { request ->
+                    pendingManualSubtitleDocument = PendingManualSubtitleDocument(
+                        generation, request, null
+                    )
+                    subtitlePasteOpen = false
+                    readyFirstPasteDocument = null
+                    openManualSubtitleDocument.launch(arrayOf("*/*"))
+                },
+                onSaveEditedLrcSource = { request ->
+                    val bytes = if (!request.format.plainLines && request.format.lrcMode)
+                        PrivateLrcSubtitleDraft.authoredSourceBytes(request.text)
+                    else null
+                    if (bytes == null) {
+                        readyFirstPasteDocument = request.copy(
+                            notice = "Ongeldige LRC-bron: geen bestand bewaard."
+                        )
+                        subtitlePasteOpen = true
+                    } else {
+                        pendingAuthoredLrcSourceSave = PendingAuthoredLrcSourceSave(
+                            generation, request, bytes
+                        )
+                        subtitlePasteOpen = false
+                        readyFirstPasteDocument = null
+                        saveAuthoredLrcSource.launch("Tuddy-gecorrigeerde-eigen-bron.lrc")
+                    }
+                },
+                onDismiss = {
+                    subtitlePasteOpen = false
+                    readyFirstPasteDocument = null
+                },
+                onAccept = { imported ->
+                    subtitlePasteOpen = false
+                    readyFirstPasteDocument = null
+                    subtitleFileCues = imported.toList()
+                    error = ""
+                }
+            )
+        }
         subtitleFileCues?.let { opened ->
             PrivateSubtitleFileDialog(
                 cues = opened,
@@ -2118,6 +2384,16 @@ private fun TuddyScreen(
                     // SAF providers do not agree on SRT/VTT MIME types.
                     openSecondSubtitleFile.launch(arrayOf("*/*"))
                 },
+                incomingSecondPaste = readySecondPasteDocument,
+                onChoosePasteDocument = { draftCues, request ->
+                    pendingManualSubtitleDocument = PendingManualSubtitleDocument(
+                        generation, request, draftCues.toList()
+                    )
+                    readySecondPasteDocument = null
+                    subtitleFileCues = null
+                    openManualSubtitleDocument.launch(arrayOf("*/*"))
+                },
+                onSecondPasteConsumed = { readySecondPasteDocument = null },
                 pendingSecondFile = importedSecondSubtitle,
                 secondFileError = secondSubtitleError,
                 onSecondFileReceived = {
@@ -2140,17 +2416,43 @@ private fun TuddyScreen(
                         saveSubtitleWorksheet.launch("Tuddy-ondertitels-oefenblad.html")
                     }
                 },
-                onSaveCopy = { editedCues, format ->
-                    val snapshot = PrivateSubtitleDraftEditor.snapshot(editedCues, format)
+                onSaveCopy = { editorDraft, exportCues, format ->
+                    val snapshot = PrivateSubtitleDraftEditor.snapshot(exportCues, format)
                     if (snapshot == null) {
                         error = "Kan geen veilige nieuwe ondertitelkopie maken."
                     } else {
                         pendingSubtitleDraft = PendingEditedSubtitleSave(
-                            generation, editedCues.toList(), format, snapshot
+                            generation, editorDraft.toList(), exportCues.toList(),
+                            format, snapshot
                         )
                         saveEditedSubtitle.launch(if (format == SubtitleDraftFormat.WEBVTT)
                             "Tuddy-handmatig-ondertitelconcept.vtt"
                         else "Tuddy-handmatig-ondertitelconcept.srt")
+                    }
+                },
+                onSaveLrc = { editorDraft, exportCues ->
+                    val bytes = PrivateLrcSubtitleExport.snapshot(exportCues)
+                    if (bytes == null) {
+                        error = "Ongeldig LRC-concept: bewaar volledige tijden als SRT/VTT."
+                    } else {
+                        pendingLrcSubtitleSave = PendingLrcSubtitleSave(
+                            generation, editorDraft.toList(), exportCues.toList(), bytes
+                        )
+                        saveLrcSubtitle.launch("Tuddy-eigen-begintijden.lrc")
+                    }
+                },
+                onSaveTimedSheet = { editorDraft, exportCues, format ->
+                    val bytes = PrivateTimedSubtitleSheet.snapshot(exportCues, format)
+                    if (bytes == null) {
+                        error = "Geen veilige volledige CSV/TSV-kopie mogelijk."
+                    } else {
+                        pendingTimedSubtitleSheet = PendingTimedSubtitleSheetSave(
+                            generation, editorDraft.toList(), exportCues.toList(),
+                            format, bytes
+                        )
+                        if (format == TimedSubtitleSheetFormat.CSV)
+                            saveTimedSubtitleCsv.launch("Tuddy-eigen-tijdcodes.csv")
+                        else saveTimedSubtitleTsv.launch("Tuddy-eigen-tijdcodes.tsv")
                     }
                 }
             )
@@ -4320,6 +4622,14 @@ private fun TuddyScreen(
                     ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
                     OutlinedButton(onClick = {
                         generation++
+                        // A conscious conversation wipe also discards snapshots
+                        // held solely for a pending external document picker.
+                        pendingManualSubtitleDocument = null
+                        pendingAuthoredLrcSourceSave = null
+                        readyFirstPasteDocument = null
+                        readySecondPasteDocument = null
+                        pendingTimedSubtitleSheet = null
+                        pendingLrcSubtitleSave = null
                         pendingTranscriptExport = null
                         pendingPinnedExport = null
                         pinnedExportOpen = false
@@ -4694,9 +5004,11 @@ private fun TuddyScreen(
                     TextButton(enabled = !listening, onClick = {
                         pendingSubtitleOpenGeneration = generation
                         subtitleFileCues = null
-                        openSubtitleFile.launch(arrayOf(
-                            "text/plain", "application/x-subrip", "text/vtt"
-                        ))
+                        // Android document providers inconsistently report
+                        // SRT/VTT as octet-stream, plain text or custom types.
+                        // Let the user intentionally choose a file; the strict
+                        // bounded parser remains the only acceptance gate.
+                        openSubtitleFile.launch(arrayOf("*/*"))
                     }) { Text("Open SRT/WebVTT…") }
                     Text(
                         "Bekijk een bewaard gesprek zonder je live gesprek te vervangen.",
@@ -4704,6 +5016,12 @@ private fun TuddyScreen(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !listening,
+                    onClick = { subtitlePasteOpen = true }
+                ) { Text("Plak eigen SRT/WebVTT-tekst en bekijk voorbeelden…") }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,

@@ -22,6 +22,22 @@ split is één tijdelijke Undo/Redo-bewerking. Het oorspronkelijke bestand
 wordt nooit overschreven en er wordt geen audio geanalyseerd of automatisch
 gesynchroniseerd.
 
+## Voor je twee ondertitelregels samenvoegt: controleer het tijdgat
+
+Kies bij een regel **Samenvoegen** om een volledige preview van beide
+oorspronkelijke teksten en tijdcodes te zien, plus het voorgestelde resultaat.
+Tuddy toont expliciet of de cues direct aansluiten, elkaar overlappen of
+een tijdgat bevatten. Bij een tijdgat waarschuwt de preview dat één
+samengevoegde cue beide regels gedurende het hele interval zichtbaar maakt;
+de afzonderlijke tijdscheiding verdwijnt. Controleer daarom het resultaat
+vóór **Voeg samen in tijdelijk concept**.
+
+Het voorgestelde resultaat loopt van het eerste begin tot de **laatste
+van beide eindtijden**. Ook als de tweede cue eerder eindigt dan de eerste,
+blijft de bestaande tijdsdekking daardoor behouden. De bevestiging verandert
+alleen het RAM-concept en is met **Herstel** ongedaan te maken. Te lange
+tekst of een ongeldige volledige tijdlijn schakelt samenvoegen uit. Er wordt
+nooit automatisch opgeslagen en het oorspronkelijke SRT/VTT-bestand blijft intact.
 
 ## Eigen bestanden rechtstreeks kiezen via Android (SRT, VTT, LRC, CSV, TSV, TXT)
 
@@ -360,11 +376,81 @@ In de tijdelijke ondertiteleditor open je **Zoek en vervang** (via het documentm
 
 1. Selecteer de **oorspronkelijke eerste en laatste regel** waar correcties zijn toegestaan. Leeg einde betekent alle regels tot het einde. Ongeldige of omgekeerde bereiken worden geweigerd.
 2. Kies wat aangepast mag worden: **alle tekstregels**, **alleen de eerste regel** (zelf aangeleverde brontekst), of **alleen de tweede regel** (zelf geschreven betekenis). De tweede-regeloptie slaat eentalige cues zonder tweede regel over; er wordt nooit zelf een betekenis verzonnen.
-3. Voer een letterlijke zoekterm en vervanging in, eventueel hoofdlettergevoelig. Bekijk **hoeveel cues en treffers** worden aangepast. Een scrollbare **vóór/na-preview toont de volledige tekst van iedere veranderde regel**, in bladerbare groepen van vijf. Bij een gewijzigde zoekterm, taalregel of selectie springt de preview terug naar het begin; er verdwijnen geen nog niet bekeken wijzigingen.
+3. Voer een letterlijke zoekterm en vervanging in. Zet desgewenst **Hoofdletters onderscheiden** aan; zonder deze optie worden internationale hoofdletters Unicode-bewust herkend. De vervangtekst is altijd letterlijk: `$` en backslashes zijn geen regexcommando's. Zet **Alleen volledige woorden** aan wanneer de zoekterm niet midden in langere woorden mag voorkomen, ook in niet-Latijnse tekst. Een hele-woord-zoekterm begint/eindigt met een letter, cijfer of combinatieaccent. Bekijk **hoeveel cues en treffers** worden aangepast. Een scrollbare **vóór/na-preview toont de volledige tekst van iedere veranderde regel**, in bladerbare groepen van vijf. Bij een gewijzigde zoekterm, taalregel of selectie springt de preview terug naar het begin; er verdwijnen geen nog niet bekeken wijzigingen.
 4. Bevestig afzonderlijk. Alle vervangingen vormen één bewerking in het tijdelijke concept; **Terug** maakt die ene wijziging ongedaan en **Opnieuw** kan haar terugzetten. Bestaande tijdcodes en regels buiten de gekozen selectie blijven onaangeroerd.
 5. Bewaar pas later, indien gewenst, een nieuw SRT/VTT-bestand via de Android-documentkiezer. Originele bronbestanden of gesprekken veranderen niet.
 
 Ook bij tweetalige kaarten bepaalt Tuddy **niet** welke taal de eerste of tweede regel werkelijk bevat; de volgorde blijft de verantwoordelijkheid van de gebruiker. Alle uitgaven blijven onder de bestaande 500-cue- en 256-KiB-limieten.
+
+## Meerdere eigen schrijfcorrecties als één handeling
+
+Open **Zoek en vervang** in het tijdelijke ondertitelconcept en kies
+**Meerdere tekstcorrecties in één keer**. Plak maximaal twaalf regels
+met telkens `zoekterm => vervangtekst`, bijvoorbeeld:
+
+```text
+goedemorge => goedemorgen
+goedemiddg => goedemiddag
+vertallng => vertaling
+```
+
+De afzonderlijke zoek- en vervangvelden worden vervangen door één
+meerregelig invoerveld. Regels worden **van boven naar beneden**
+uitgevoerd: de volgende regel werkt op het voorstel van de vorige.
+Elke opgegeven correctie moet werkelijk iets veranderen; anders is
+het gehele voorstel ongeldig. Maximaal 4.096 invoertekens, 100
+zoektekens en 200 vervangtekens per regel. Een lege vervanging is
+toegestaan zolang het hele ondertitelbestand geldig blijft.
+Windows-regeleinden en één afsluitende regeleinde zijn toegestaan.
+
+In dezelfde dialoog kun je je eigen regels met **Kopieer correctieregels**
+expliciet naar het Android-klembord sturen en met **Plak
+correctieregels** expliciet teruglezen. Tuddy leest het klembord niet
+uit zichzelf en schrijft geen correcties naar een bestand. Een externe
+klembordapp kan de tekst wél synchroniseren. Een plakactie boven de
+4.096 tekens wist de tijdelijke invoer in plaats van onbedoeld
+een geldig oud begin van de tekst over te nemen. Iedere geplakte reeks
+vereist opnieuw volledige validatie, een bladerbare preview en aparte
+bevestiging.
+
+Je kunt bron- en betekenisregels **binnen hetzelfde correctierecept**
+onafhankelijk aanpassen. Zet optioneel vóór de zoekterm
+`@bron:`, `@betekenis:` of `@alles:`, bijvoorbeeld:
+
+```text
+@bron:goeiemorge => goedemorgen
+@betekenis:helllo => hello
+@alles:rare fout => nieuwe tekst
+```
+
+De prefix bepaalt uitsluitend voor die regel welk tekstdeel in
+de geselecteerde oorspronkelijke cues aangepast mag worden.
+Zonder prefix geldt nog steeds de algemene keuze **Alle tekstregels**,
+**Alleen eerste regel** of **Alleen tweede regel**. Bij een ontbrekende
+tweede regel ontstaat nooit automatisch een vertaling. Een onbekende
+`@`-prefix wordt als een ongeldige regel geweigerd. De preview vermeldt
+voor iedere regel het werkelijke tekstdeel en het aantal vervangingen.
+
+Voor herbruikbare recepten die niet bij elk document alle foutwoorden
+bevatten, kun je **Sla niet-gevonden tekstcorrecties over** kiezen.
+Standaard blijft de bestaande strikte werkwijze actief: elke regel
+moet een verandering maken. Met overslaan mag een valide regel
+zonder treffers worden overgeslagen; er moet uiteindelijk minstens
+één echte wijziging zijn. De preview toont dan per opgegeven
+regel het aantal vervangingen of **overgeslagen**, plus het totaal.
+Ongeldige of niet als SRT/VTT exporteerbare resultaten worden ook
+met dit vinkje nooit geaccepteerd. De complete einduitkomst blijft
+één expliciet bevestigde Undo/Redo-handeling.
+
+**Van/Tot**, expliciete oorspronkelijke bronregels of geselecteerde
+tijdvensters, **alleen eerste/tweede tekstregel**, hoofdlettergevoeligheid
+en **Alleen volledige woorden** gelden voor álle ingevoerde regels.
+De complete, bladerbare vóór/na-preview toont alle uiteindelijke
+gewijzigde bronteksten; een onveilige, niet-exporteerbare of
+niet-uitgevoerde deelcorrectie weigert het geheel. Bevestigen past
+de hele set als **één RAM-only Undo/Redo-actie** toe. Er worden
+geen oorspronkelijke Android-bestanden herschreven, timestamps
+verschoven, vertalingen verzonnen of netwerkverzoeken gemaakt.
 
 ## Zelfgeschreven LRC-begintijden weer exporteren
 

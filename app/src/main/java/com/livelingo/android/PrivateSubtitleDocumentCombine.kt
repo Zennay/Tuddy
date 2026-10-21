@@ -15,7 +15,11 @@ internal data class SubtitleCombinePreview(
     val adjacentOverlaps: Int,
     val startsAtMillis: Long,
     val pairedCount: Int = 0,
-    val unpairedSecondTrack: Int = 0
+    val unpairedSecondTrack: Int = 0,
+    val unpairedFirstTrack: Int = 0,
+    val pairedLinks: List<SubtitleCuePairingLink> = emptyList(),
+    val unpairedPrimaryRows: List<Int> = emptyList(),
+    val unpairedSecondaryRows: List<Int> = emptyList()
 )
 
 /**
@@ -40,18 +44,23 @@ internal object PrivateSubtitleDocumentCombine {
         current: List<PrivateSubtitleCue>,
         incoming: List<PrivateSubtitleCue>,
         mode: SubtitleCombineMode,
-        secondTrackOffsetMs: Long = 0L
+        secondTrackOffsetMs: Long = 0L,
+        excludedSecondaryRows: Set<Int> = emptySet(),
+        manualPairs: List<SubtitleManualPair> = emptyList()
     ): SubtitleCombinePreview? {
         if (current.isEmpty() || incoming.isEmpty() ||
             (mode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES &&
-                current.size + incoming.size > 500) ||
+                (current.size + incoming.size > 500 ||
+                    excludedSecondaryRows.isNotEmpty() ||
+                    manualPairs.isNotEmpty())) ||
             PrivateSubtitleDraftEditor.snapshot(current, SubtitleDraftFormat.SRT) == null ||
             PrivateSubtitleDraftEditor.snapshot(incoming, SubtitleDraftFormat.SRT) == null
         ) return null
 
         if (mode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
             val paired = PrivateSubtitleTrackPairing.preview(
-                current, incoming, secondTrackOffsetMs) ?: return null
+                current, incoming, secondTrackOffsetMs,
+                excludedSecondaryRows, manualPairs) ?: return null
             return SubtitleCombinePreview(
                 cues = paired.cues,
                 importedCount = incoming.size,
@@ -60,7 +69,11 @@ internal object PrivateSubtitleDocumentCombine {
                 },
                 startsAtMillis = incoming.first().startMillis,
                 pairedCount = paired.pairedCount,
-                unpairedSecondTrack = paired.unpairedSecondTrack
+                unpairedSecondTrack = paired.unpairedSecondTrack,
+                unpairedFirstTrack = paired.unpairedFirstTrack,
+                pairedLinks = paired.pairedLinks,
+                unpairedPrimaryRows = paired.unpairedPrimaryRows,
+                unpairedSecondaryRows = paired.unpairedSecondaryRows
             )
         }
         val shifted = when (mode) {

@@ -2,14 +2,20 @@ package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -18,36 +24,188 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateSubtitleFilteredExcerpt
+import com.livelingo.android.PrivateSubtitleRowSelection
+import com.livelingo.android.PrivateSubtitleTimeWindowRows
+import com.livelingo.android.PrivateTimedSubtitleSheet
+import com.livelingo.android.PrivateLrcSubtitleExport
 import com.livelingo.android.SubtitleDraftFormat
 import com.livelingo.android.SubtitleExcerptTiming
+import com.livelingo.android.TimedSubtitleSheetFormat
 
-/** Preview of exactly the matched subtitle cues; never edits the open file. */
+private enum class SubtitleExcerptSaveFormat { SRT, WEBVTT, CSV, TSV, LRC }
+
+/**
+ * One explicit selection, tied to the unfiltered immutable editor draft.
+ * Original 1-based row numbers survive searches and paginated display.
+ * Export uses the shared Activity-owned save handlers; this dialog has no IO.
+ */
 @Composable
 internal fun PrivateSubtitleExcerptDialog(
-    selected: List<PrivateSubtitleCue>,
+    allCues: List<PrivateSubtitleCue>,
+    initialSourceRows: List<Int>,
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
+    onSaveTimedSheet: (List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
+    onSaveLrc: (List<PrivateSubtitleCue>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var timing by remember(selected) {
+    val initialExpression = remember(allCues, initialSourceRows) {
+        PrivateSubtitleRowSelection.formatSourceRows(initialSourceRows, allCues.size).orEmpty()
+    }
+    var expression by remember(allCues, initialExpression) {
+        mutableStateOf(initialExpression)
+    }
+    var timing by remember(allCues) {
         mutableStateOf(SubtitleExcerptTiming.KEEP_SOURCE_TIMES)
     }
-    var format by remember(selected) { mutableStateOf(SubtitleDraftFormat.SRT) }
-    val proposed = PrivateSubtitleFilteredExcerpt.prepare(selected, timing)
-    val bytes = proposed?.let { PrivateSubtitleDraftEditor.snapshot(it, format) }
-    val lengthMillis = if (proposed != null)
+    var format by remember(allCues) { mutableStateOf(SubtitleExcerptSaveFormat.SRT) }
+    var rowPage by remember(allCues) { mutableIntStateOf(0) }
+    var windowStart by remember(allCues) { mutableStateOf("") }
+    var windowEnd by remember(allCues) { mutableStateOf("") }
+    var windowRanges by remember(allCues) { mutableStateOf("") }
+    val selectedIndices = PrivateSubtitleRowSelection.parse(expression, allCues.size)
+    val original = selectedIndices?.map { allCues[it] }
+    val proposed = original?.let { PrivateSubtitleFilteredExcerpt.prepare(it, timing) }
+
+    fun snapshot(cues: List<PrivateSubtitleCue>?): ByteArray? {
+        if (cues == null) return null
+        return when (format) {
+            SubtitleExcerptSaveFormat.SRT ->
+                PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.SRT)
+            SubtitleExcerptSaveFormat.WEBVTT ->
+                PrivateSubtitleDraftEditor.snapshot(cues, SubtitleDraftFormat.WEBVTT)
+            SubtitleExcerptSaveFormat.CSV ->
+                PrivateTimedSubtitleSheet.snapshot(cues, TimedSubtitleSheetFormat.CSV)
+            SubtitleExcerptSaveFormat.TSV ->
+                PrivateTimedSubtitleSheet.snapshot(cues, TimedSubtitleSheetFormat.TSV)
+            SubtitleExcerptSaveFormat.LRC -> PrivateLrcSubtitleExport.snapshot(cues)
+        }
+    }
+
+    val bytes = snapshot(proposed)
+    val durationMs = if (proposed != null)
         proposed.maxOf { it.endMillis } - proposed.first().startMillis else 0L
+    val pageCount = maxOf(1, ((selectedIndices?.size ?: 0) + 5) / 6)
+    val currentPage = rowPage.coerceIn(0, pageCount - 1)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Bewaar alleen gevonden ondertitels") },
+        title = { Text("Eigen ondertitelregels selecteren en bewaren") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    "Je hebt bewust ${selected.size} gevonden regels gekozen. " +
-                        "Niet-overeenkomende regels komen niet in de nieuwe kopie. " +
-                        "Het geopende document blijft ongewijzigd.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+            Column(modifier = Modifier.heightIn(max = 560.dp)
+                .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Kies de oorspronkelijke bronregelnummers van dit volledige " +
+                    "tijdelijke concept. Zoeken en bladerpagina's veranderen de " +
+                    "selectie niet ongemerkt; origineel en live spraak blijven intact.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = expression,
+                    onValueChange = { expression = it.take(2000); rowPage = 0 },
+                    label = { Text("Bronregels, bijvoorbeeld 1-5,9,12-16") },
+                    singleLine = true)
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(modifier = Modifier.weight(1f),
+                        onClick = {
+                            expression = "1-${allCues.size}"
+                            rowPage = 0
+                        }) { Text("Alle regels") }
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        enabled = initialExpression.isNotEmpty(),
+                        onClick = {
+                            expression = initialExpression
+                            rowPage = 0
+                        }) { Text("Gevonden selectie") }
+                }
+                Text("Of kies complete cues die overlappen met een zelf " +
+                    "ingevuld tijdvenster; tijden worden hierbij niet ingekort.",
+                    style = MaterialTheme.typography.bodySmall)
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedTextField(
+                        value = windowStart, onValueChange = { windowStart = it.take(13) },
+                        label = { Text("Vanaf mm:ss") },
+                        singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(
+                        value = windowEnd, onValueChange = { windowEnd = it.take(13) },
+                        label = { Text("Tot mm:ss") },
+                        singleLine = true, modifier = Modifier.weight(1f))
+                }
+                val windowRows = PrivateSubtitleTimeWindowRows.expression(
+                    allCues, windowStart, windowEnd)
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    enabled = windowRows != null,
+                    onClick = {
+                        if (windowRows != null) {
+                            expression = windowRows
+                            rowPage = 0
+                        }
+                    }) { Text("Neem overlappende cues uit tijdvenster") }
+
+                Text("Meerdere losse tijdvensters kiezen, bijvoorbeeld " +
+                    "00:10-00:20;01:00-01:15. Maximaal 16 zonder overlap; " +
+                    "een cue die beide vensters raakt, wordt één keer gekozen.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = windowRanges,
+                    onValueChange = { windowRanges = it.take(512) },
+                    label = { Text("Tijdvensters: vanaf-tot;vanaf-tot") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true)
+                val multiWindowRows = PrivateSubtitleTimeWindowRows
+                    .expressionForWindows(allCues, windowRanges)
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    enabled = multiWindowRows != null,
+                    onClick = {
+                        if (multiWindowRows != null) {
+                            expression = multiWindowRows
+                            rowPage = 0
+                        }
+                    }) { Text("Neem cues uit alle gekozen tijdvensters") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = selectedIndices != null &&
+                        selectedIndices.size < allCues.size,
+                    onClick = {
+                        val chosen = selectedIndices?.toSet().orEmpty()
+                        val inverse = allCues.indices.filter { it !in chosen }.map { it + 1 }
+                        val formatted = PrivateSubtitleRowSelection
+                            .formatSourceRows(inverse, allCues.size)
+                        if (formatted != null) {
+                            expression = formatted
+                            rowPage = 0
+                        }
+                    }) { Text("Kies alle overige, niet-geselecteerde regels") }
+                if (selectedIndices == null) {
+                    Text("Ongeldige of lege selectie. Gebruik originele nummers " +
+                        "1–${allCues.size}, zonder dubbelen, overlap of " +
+                        "omgekeerde bereiken.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text("${selectedIndices.size} van ${allCues.size} originele " +
+                        "regels geselecteerd · pagina ${currentPage + 1}/$pageCount",
+                        style = MaterialTheme.typography.titleSmall)
+                    selectedIndices.drop(currentPage * 6).take(6).forEach { index ->
+                        val cue = allCues[index]
+                        Text("Bronregel ${index + 1} · ${cue.startLabel} → " +
+                            "${cue.endLabel}\n${cue.text}",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(enabled = currentPage > 0,
+                            onClick = { rowPage = currentPage - 1 }) {
+                            Text("← Vorige bronregels")
+                        }
+                        TextButton(enabled = currentPage < pageCount - 1,
+                            onClick = { rowPage = currentPage + 1 }) {
+                            Text("Volgende →")
+                        }
+                    }
+                }
                 OutlinedButton(modifier = Modifier.fillMaxWidth(),
                     onClick = { timing = SubtitleExcerptTiming.KEEP_SOURCE_TIMES }) {
                     Text((if (timing == SubtitleExcerptTiming.KEEP_SOURCE_TIMES)
@@ -56,49 +214,67 @@ internal fun PrivateSubtitleExcerptDialog(
                 OutlinedButton(modifier = Modifier.fillMaxWidth(),
                     onClick = { timing = SubtitleExcerptTiming.COMPACT_SELECTED }) {
                     Text((if (timing == SubtitleExcerptTiming.COMPACT_SELECTED)
-                        "✓ " else "") + "Maak aaneengesloten excerpt vanaf 00:00")
+                        "✓ " else "") + "Maak compact fragment vanaf 00:00")
                 }
-                OutlinedButton(modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        format = if (format == SubtitleDraftFormat.SRT)
-                            SubtitleDraftFormat.WEBVTT else SubtitleDraftFormat.SRT
-                    }) {
-                    Text("Bestand: " + (if (format == SubtitleDraftFormat.SRT)
-                        "SRT · wissel naar VTT" else "WebVTT · wissel naar SRT"))
+                Text("Kies het formaat:", style = MaterialTheme.typography.labelMedium)
+                SubtitleExcerptSaveFormat.entries.forEach { option ->
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                        onClick = { format = option }) {
+                        Text((if (format == option) "✓ " else "") + option.name)
+                    }
                 }
-                Text(
-                    if (bytes == null)
-                        "Deze selectie kan niet veilig worden opgeslagen. " +
-                            "Controleer de regels, tijdcodes en grootte."
-                    else "Voorbeeld: ${proposed!!.size} regels · lengte " +
-                        "${lengthMillis / 1000} seconden · ${bytes.size} bytes.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    "Compact betekent dat alle niet-geselecteerde pauzes vervallen; " +
-                        "er blijft 0,25 seconde tussen de geselecteerde tekstregels. " +
-                        "Dit is GEEN audio-uitlijning of gecontroleerde vertaling.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    "Een volgende, afzonderlijke Android-bestandskeuze is vereist. " +
-                        "Je provider kan de geëxporteerde tekst extern synchroniseren.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
+                Text("Compacter maken verwijdert pauzes met 0,25 seconde " +
+                    "tussen cues. Dat is geen echte audio-uitlijning. " +
+                    "CSV/TSV vereist uniforme eigen tekstkolommen en " +
+                    "veilige spreadsheetwaarden; LRC bevat alleen " +
+                    "begintijden en kan geen eindtijden bewaren.",
+                    style = MaterialTheme.typography.bodySmall)
+                if (bytes == null) {
+                    Text("Deze selectie kan niet volledig en veilig als " +
+                        "${format.name} worden bewaard. Controleer regelkeuze, " +
+                        "tekst, tijdcodes en maximaal 256 KiB; verander " +
+                        "eventueel het formaat. Er wordt niets weggelaten.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text("${proposed!!.size} cues · ${durationMs / 1000.0}s " +
+                        "· ${bytes.size} UTF-8 bytes. Volledige werkelijke inhoud:",
+                        style = MaterialTheme.typography.titleSmall)
+                    PrivateSubtitlePagedExportPreview(bytes)
+                }
+                Text("Pas na de aparte, expliciete Android-bestandskeuze " +
+                    "wordt een nieuw bestand geschreven. Een gekozen " +
+                    "externe provider kan zelf gegevens synchroniseren.",
+                    style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = {
-            TextButton(enabled = bytes != null, onClick = {
-                val fresh = PrivateSubtitleFilteredExcerpt.prepare(selected, timing)
-                if (fresh != null && PrivateSubtitleDraftEditor.snapshot(fresh, format) != null) {
-                    onDismiss()
-                    onSaveCopy(fresh.toList(), format)
+            TextButton(enabled = bytes != null && selectedIndices != null, onClick = {
+                // Re-resolve the entire current selection and exact bytes at consent.
+                val reselected = PrivateSubtitleRowSelection
+                    .parse(expression, allCues.size)
+                    ?.map { allCues[it] }
+                val fresh = reselected?.let {
+                    PrivateSubtitleFilteredExcerpt.prepare(it, timing)
                 }
-            }) { Text("Kies locatie voor gefilterde kopie…") }
+                val exact = snapshot(fresh)
+                if (fresh != null && bytes != null && exact != null &&
+                    exact.contentEquals(bytes)) {
+                    onDismiss()
+                    when (format) {
+                        SubtitleExcerptSaveFormat.SRT ->
+                            onSaveCopy(fresh.toList(), SubtitleDraftFormat.SRT)
+                        SubtitleExcerptSaveFormat.WEBVTT ->
+                            onSaveCopy(fresh.toList(), SubtitleDraftFormat.WEBVTT)
+                        SubtitleExcerptSaveFormat.CSV ->
+                            onSaveTimedSheet(fresh.toList(), TimedSubtitleSheetFormat.CSV)
+                        SubtitleExcerptSaveFormat.TSV ->
+                            onSaveTimedSheet(fresh.toList(), TimedSubtitleSheetFormat.TSV)
+                        SubtitleExcerptSaveFormat.LRC -> onSaveLrc(fresh.toList())
+                    }
+                }
+            }) { Text("Kies opslaglocatie…") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annuleren") }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } }
     )
 }
