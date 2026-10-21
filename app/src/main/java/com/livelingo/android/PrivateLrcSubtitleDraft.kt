@@ -107,6 +107,36 @@ internal object PrivateLrcSubtitleDraft {
     }
 
     /**
+     * Strict bulk edit of at most 32 explicit original cue start times.
+     * Example: "1=00:00:02.000;4=00:01:07.250". Original cue order
+     * and every unmentioned timestamp must remain unchanged.
+     */
+    fun withExactCueBatch(raw: String, writtenAssignments: String): String? {
+        if (writtenAssignments.isBlank() || writtenAssignments.length > 512)
+            return null
+        val before = preview(raw) ?: return null
+        val entries = writtenAssignments.trim()
+            .split(';', '\n')
+            .map { it.trim() }
+        if (entries.isEmpty() || entries.size > 32 ||
+            entries.any { it.isBlank() }) return null
+        val assignments = LinkedHashMap<Int, Long>(entries.size)
+        val pattern = Regex("""^([1-9][0-9]{0,2})\s*=\s*([0-9]{1,2}:[0-5][0-9]:[0-5][0-9][.,][0-9]{3})$""")
+        for (entry in entries) {
+            val groups = pattern.matchEntire(entry)?.groupValues ?: return null
+            val index = (groups[1].toIntOrNull() ?: return null) - 1
+            val target = PrivateSubtitleTimelineNavigation.timestamp(groups[2])
+                ?: return null
+            if (index !in before.indices ||
+                assignments.putIfAbsent(index, target) != null) return null
+        }
+        if (assignments.all { (index, desired) ->
+                desired == before[index].startMillis
+            }) return null
+        return withExactStarts(raw, before, assignments)
+    }
+
+    /**
      * Exact two-point correction of a CONTIGUOUS authored cue interval.
      * The user picks the first and last original cue plus two intended
      * timestamps; intermediate cue starts are interpolated only from those
