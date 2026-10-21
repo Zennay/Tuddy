@@ -65,6 +65,12 @@ internal object SharedPlainTextIntent {
                 if (candidate.contains("[Events]", ignoreCase = true) &&
                     PrivateAssSubtitleReader.read(candidate) != null)
                     return IncomingSharedText(null, null, candidate)
+                if (candidate.trimStart().let { it.startsWith("<tt") || it.startsWith("<?xml") }) {
+                    if (PrivateTtmlSubtitleReader.read(candidate) != null)
+                        return IncomingSharedText(null, null, candidate)
+                    return IncomingSharedText(null,
+                        "Geen geldig TTML-ondertitelbestand; kies een ondersteund XML-tekstbestand.")
+                }
                 if (candidate.contains("-->") &&
                     PrivateSubtitleFileReader.read(bytes) != null)
                     return IncomingSharedText(null, null, candidate)

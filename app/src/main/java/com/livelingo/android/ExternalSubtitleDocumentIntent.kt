@@ -17,7 +17,8 @@ internal data class IncomingViewedSubtitleDocument(
 internal object ExternalSubtitleDocumentIntent {
     private val allowedTypes = setOf(
         "text/plain", "text/vtt", "text/srt", "application/x-subrip",
-        "application/json", "text/x-ass", "text/x-ssa", "application/x-ass"
+        "application/json", "application/ttml+xml", "application/xml",
+        "text/xml", "text/x-ass", "text/x-ssa", "application/x-ass"
     )
 
     fun read(intent: Intent?, requestId: Long): IncomingViewedSubtitleDocument? {
@@ -36,7 +37,7 @@ internal object ExternalSubtitleDocumentIntent {
         val type = intent.type?.substringBefore(';')?.trim()?.lowercase()
         if (type !in allowedTypes)
             return IncomingViewedSubtitleDocument(requestId, null,
-                "Geen ondersteund tekstondertiteltype. Kies een SRT/VTT/ASS/SSA/LRC/" +
+                "Geen ondersteund tekstondertiteltype. Kies een SRT/VTT/ASS/SSA/TTML/LRC/" +
                     "CSV/TSV/SBV/JSON3-document via Open ondertitelbestand…")
         val chosen = if (action == Intent.ACTION_VIEW) intent.data else
             runCatching {

@@ -102,6 +102,14 @@ private data class PendingLrcSubtitleSave(
     val bytes: ByteArray
 )
 
+/** Private TTML copy, valid only across Android's user-selected save picker. */
+private data class PendingTtmlSubtitleSave(
+    val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
+    val cues: List<PrivateSubtitleCue>,
+    val bytes: ByteArray
+)
+
 /** Explicit new SBV copy after opt-in full preview and Android SAF consent. */
 private data class PendingSbvSubtitleSave(
     val session: Int,
@@ -132,7 +140,9 @@ private fun detectedSubtitlePasteFormat(raw: String): SubtitlePasteFormat? {
         return SubtitlePasteFormat(false, false, PlainSubtitleSplitMode.LINES)
     if (raw.contains('[') && PrivateLrcSubtitleDraft.preview(raw) != null)
         return SubtitlePasteFormat(false, true, PlainSubtitleSplitMode.LINES)
-    if (PrivateSbvSubtitleReader.read(raw) != null ||
+    if (PrivateTtmlSubtitleReader.read(raw) != null ||
+        PrivateAssSubtitleReader.read(raw) != null ||
+        PrivateSbvSubtitleReader.read(raw) != null ||
         PrivateYoutubeJson3SubtitleReader.read(raw) != null)
         return SubtitlePasteFormat(false, false, PlainSubtitleSplitMode.LINES)
     val timed = PrivateTimedSubtitleSheet.readAuthored(raw) ?: return null
@@ -531,6 +541,9 @@ private fun TuddyScreen(
     }
     var pendingSbvSubtitleSave by remember {
         mutableStateOf<PendingSbvSubtitleSave?>(null)
+    }
+    var pendingTtmlSubtitleSave by remember {
+        mutableStateOf<PendingTtmlSubtitleSave?>(null)
     }
     var pendingTimedSubtitleSheet by remember {
         mutableStateOf<PendingTimedSubtitleSheetSave?>(null)
@@ -1741,6 +1754,34 @@ private fun TuddyScreen(
         }
     }
 
+    val saveTtmlSubtitle = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/ttml+xml")
+    ) { uri ->
+        val pending = pendingTtmlSubtitleSave
+        pendingTtmlSubtitleSave = null
+        if (pending != null && pending.session == generation) {
+            subtitleFileCues = pending.editorDraft
+            val fresh = PrivateTtmlSubtitleExport.snapshot(pending.cues)
+            editedSubtitleSaveNotice = when {
+                fresh == null || !fresh.contentEquals(pending.bytes) ->
+                    "TTML-opslag geweigerd: het tijdelijke concept is gewijzigd."
+                uri == null -> "TTML-opslag geannuleerd; concept heropend."
+                uri.scheme != "content" -> "Ongeldige Android-opslaglocatie."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { out ->
+                            out.write(pending.bytes)
+                            out.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved) "Nieuwe TTML-kopie met eigen tijdvakken opgeslagen."
+                    else "TTML niet opgeslagen; het concept blijft ongewijzigd."
+                }
+            }
+        }
+    }
+
     // CreateDocument, unlike OpenDocument, asks the user where a NEW
     // complete LRC source copy should be written. The immutable authorized
     // source survives DocumentsUI ON_STOP only until this picker returns.
@@ -1844,12 +1885,13 @@ private fun TuddyScreen(
                     val parsed = PrivateSubtitleFileReader.read(
                         selected.text.toByteArray(Charsets.UTF_8)
                     ) ?: PrivateAssSubtitleReader.read(selected.text)
+                        ?: PrivateTtmlSubtitleReader.read(selected.text)
                         ?: PrivateLrcSubtitleDraft.preview(selected.text)
                         ?: PrivateTimedSubtitleSheet.readAuthored(selected.text)
                         ?: PrivateSbvSubtitleReader.read(selected.text)
                         ?: PrivateYoutubeJson3SubtitleReader.read(selected.text)
                     if (parsed == null)
-                        null to "Geen geldig SRT/VTT/ASS/SSA/LRC/CSV/TSV/SBV/JSON3-document: controleer " +
+                        null to "Geen geldig SRT/VTT/ASS/SSA/TTML/LRC/CSV/TSV/SBV/JSON3-document: controleer " +
                             "tijdcodes, tekstregels en maximaal 500 cues."
                     else parsed to ""
                 }
@@ -2114,7 +2156,8 @@ private fun TuddyScreen(
             pendingSubtitleDraft = null
             pendingTimedSubtitleSheet = null
             pendingLrcSubtitleSave = null
-                pendingSbvSubtitleSave = null
+            pendingSbvSubtitleSave = null
+            pendingTtmlSubtitleSave = null
             editedSubtitleSaveNotice = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
@@ -2723,6 +2766,17 @@ private fun TuddyScreen(
                             generation, editorDraft.toList(), exportCues.toList(), bytes
                         )
                         saveSbvSubtitle.launch("Tuddy-eigen-tijdvakken.sbv")
+                    }
+                },
+                onSaveTtml = { editorDraft, exportCues ->
+                    val bytes = PrivateTtmlSubtitleExport.snapshot(exportCues)
+                    if (bytes == null) {
+                        error = "Geen verliesvrije TTML-kopie mogelijk; gebruik SRT/VTT."
+                    } else {
+                        pendingTtmlSubtitleSave = PendingTtmlSubtitleSave(
+                            generation, editorDraft.toList(), exportCues.toList(), bytes
+                        )
+                        saveTtmlSubtitle.launch("Tuddy-eigen-tijdvakken.ttml")
                     }
                 },
                 onShareExcerpt = { selectedCues, format ->
@@ -4939,7 +4993,8 @@ private fun TuddyScreen(
                         readySecondPasteDocument = null
                         pendingTimedSubtitleSheet = null
                         pendingLrcSubtitleSave = null
-                pendingSbvSubtitleSave = null
+                        pendingSbvSubtitleSave = null
+                        pendingTtmlSubtitleSave = null
                         pendingTranscriptExport = null
                         pendingPinnedExport = null
                         pinnedExportOpen = false
