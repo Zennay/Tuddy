@@ -1078,6 +1078,16 @@ Alleen na **Pas deze geselecteerde LRC-verschuiving bewust toe**
 verandert het tijdelijke tekstconcept in het invoervak. Het origineel
 bij de Android-bestandsprovider wordt nooit aangepast.
 
+Zowel de correctie voor het hele LRC-spoor als een correctie van
+geselecteerde cues heeft nu **↶ LRC ongedaan** en **↷ Opnieuw**
+binnen dezelfde invoer. Maximaal de laatste acht bewuste tijdacties
+blijven uitsluitend in RAM bewaard, zodat je meerdere correcties kunt
+vergelijken zonder opnieuw een eigen bronbestand te openen. Vrij
+handmatig typen in het ruwe tekstvak begint uitdrukkelijk een nieuwe
+tijdactiegeschiedenis; onbedoeld terugzetten van daarna geschreven
+eigen tekst wordt zo voorkomen. Sluiten van het dialoogvenster
+verwijdert deze tijdelijke geschiedenis.
+
 De bestaande [offset:]-header blijft exact behouden. De wijziging
 past alleen de door de gebruiker gekozen timestamp-tags aan, ook
 wanneer meerdere refreinmomenten op één fysieke bronregel staan;
