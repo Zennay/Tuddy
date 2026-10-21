@@ -99,25 +99,40 @@ internal object PrivateSubtitleDraftEditor {
         if (current.size <= 1 || current.size > MAX_CUES || index !in current.indices) null
         else current.filterIndexed { position, _ -> position != index }
 
-    /** Split one user-edited cue into two bounded text parts at time midpoint. */
-    fun splitCue(current: List<PrivateSubtitleCue>, index: Int,
-        first: String, second: String): List<PrivateSubtitleCue>? {
+    /**
+     * Split one cue into two user-authored text parts. The default boundary is
+     * the midpoint; an explicit in-cue millisecond can be supplied instead.
+     * Both pieces retain at least 600 ms and the new boundary may not cross
+     * the next cue. This is manual editing, never speech alignment.
+     */
+    fun splitCue(
+        current: List<PrivateSubtitleCue>, index: Int,
+        first: String, second: String, splitAtMillis: Long? = null
+    ): List<PrivateSubtitleCue>? {
         if (index !in current.indices || current.size >= MAX_CUES ||
             revise(current, index, first) == null ||
             revise(current, index, second) == null) return null
         val old = current[index]
-        if (old.endMillis - old.startMillis < 1200L) return null
+        if (old.startMillis < 0L || old.endMillis > MAX_TIME ||
+            old.endMillis <= old.startMillis ||
+            old.endMillis - old.startMillis < 1200L) return null
         val midpoint = old.startMillis + (old.endMillis - old.startMillis) / 2
-        if (index < current.lastIndex && midpoint > current[index + 1].startMillis)
-            return null
-        val leading = old.copy(endMillis = midpoint,
-            endLabel = stamp(midpoint, SubtitleDraftFormat.SRT), text = first)
-        val trailing = old.copy(startMillis = midpoint,
-            startLabel = stamp(midpoint, SubtitleDraftFormat.SRT), text = second)
-        return current.toMutableList().apply {
+        val boundary = splitAtMillis ?: midpoint
+        if (boundary - old.startMillis < 600L ||
+            old.endMillis - boundary < 600L ||
+            (index < current.lastIndex &&
+                boundary > current[index + 1].startMillis)) return null
+        val leading = old.copy(endMillis = boundary,
+            endLabel = stamp(boundary, SubtitleDraftFormat.SRT), text = first)
+        val trailing = old.copy(startMillis = boundary,
+            startLabel = stamp(boundary, SubtitleDraftFormat.SRT), text = second)
+        val result = current.toMutableList().apply {
             this[index] = leading
             add(index + 1, trailing)
         }
+        if (snapshot(result, SubtitleDraftFormat.SRT) == null ||
+            snapshot(result, SubtitleDraftFormat.WEBVTT) == null) return null
+        return result
     }
 
     /** Merge a cue and the immediately following cue after explicit consent. */
