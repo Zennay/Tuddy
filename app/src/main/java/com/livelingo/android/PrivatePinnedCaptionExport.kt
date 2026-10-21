@@ -9,6 +9,7 @@ internal enum class PinnedCaptionFormat(
     TXT("Gesprek · TXT", "text/plain", "Tuddy-selectie.txt"),
     TSV("Leerkaarten · TSV", "text/tab-separated-values", "Tuddy-eigen-leerkaarten.tsv"),
     CSV("Leerkaarten · CSV", "text/csv", "Tuddy-eigen-leerkaarten.csv"),
+    STUDY_HTML("Oefenblad · HTML", "text/html", "Tuddy-leerkaarten-oefenblad.html"),
     JSON("Archief · JSON", "application/json", "Tuddy-selectie.json"),
     HTML("Afdrukbaar · HTML", "text/html", "Tuddy-selectie.html"),
     SRT("Ondertitelconcept · SRT", "application/x-subrip", "Tuddy-selectie-concept.srt"),
@@ -121,7 +122,8 @@ internal object PrivatePinnedCaptionExport {
                 it.caption.targetCode == languagePair.second
         }
         if (format == PinnedCaptionFormat.TSV ||
-            format == PinnedCaptionFormat.CSV) {
+            format == PinnedCaptionFormat.CSV ||
+            format == PinnedCaptionFormat.STUDY_HTML) {
             return selected.filter { row ->
                 row.caption.status == "Lokaal vertaald" &&
                     row.caption.translated.isNotBlank() &&
@@ -179,6 +181,8 @@ internal object PrivatePinnedCaptionExport {
                 PrivatePinnedCaptionStudyTsv.snapshot(rows, studyDirection, showLanguageTags)
             PinnedCaptionFormat.CSV ->
                 PrivatePinnedCaptionStudyCsv.snapshot(rows, studyDirection, showLanguageTags)
+            PinnedCaptionFormat.STUDY_HTML ->
+                PrivatePinnedCaptionStudyHtml.snapshot(rows, studyDirection, showLanguageTags)
             PinnedCaptionFormat.JSON -> PrivateTranscriptJsonExport.snapshot(rows)
             PinnedCaptionFormat.HTML -> PrivatePrintableConversation.snapshot(rows, onlyFinished = false)
             PinnedCaptionFormat.SRT ->
@@ -306,6 +310,76 @@ internal object PrivatePinnedCaptionStudyCsv {
         }
         if (csv.isEmpty()) return null
         return csv.toString().toByteArray(Charsets.UTF_8)
+            .takeIf { it.size <= MAX_BYTES }
+    }
+}
+
+
+/**
+ * A print-only, self-contained HTML workbook for the same explicitly selected
+ * two-sided study cards as CSV/TSV. No script, remote content, storage or audio.
+ * Questions appear first; answers are on a separate print page so they cannot
+ * be accidentally exposed when distributing the question sheet.
+ */
+internal object PrivatePinnedCaptionStudyHtml {
+    private const val MAX_BYTES = 262_144
+
+    private fun escape(value: String): String = buildString(value.length) {
+        value.forEach { char ->
+            append(when (char) {
+                '&' -> "&amp;"
+                '<' -> "&lt;"
+                '>' -> "&gt;"
+                '"' -> "&quot;"
+                '\'' -> "&#39;"
+                else -> char.toString()
+            })
+        }
+    }
+
+    fun snapshot(
+        rows: List<TranscriptExportRow>,
+        direction: PinnedStudyDirection,
+        showLanguageTags: Boolean = false
+    ): ByteArray? {
+        // Reuse the bounded, fail-closed TSV exporter for identical card count,
+        // correction scope, language tags, UTF-16 and formula-safe text fields.
+        val tsv = PrivatePinnedCaptionStudyTsv.snapshot(rows, direction, showLanguageTags)
+            ?.toString(Charsets.UTF_8) ?: return null
+        val cards = tsv.lineSequence().filter { it.isNotEmpty() }.map { line ->
+            val fields = line.split('\t')
+            if (fields.size != 2 || fields.any { it.isBlank() }) return null
+            fields[0] to fields[1]
+        }.toList()
+        if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2) return null
+
+        val out = StringBuilder(
+            "<!doctype html><html lang=\"nl\"><head><meta charset=\"utf-8\">" +
+                "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
+                "<title>Tuddy · Mijn leerkaarten</title>" +
+                "<style>body{font:16px system-ui,sans-serif;max-width:850px;margin:auto;" +
+                "padding:24px;color:#161616}li{margin:18px 0;white-space:pre-wrap;" +
+                "overflow-wrap:anywhere}.answer-key{break-before:page;page-break-before:always}" +
+                "@media print{body{padding:0}li{break-inside:avoid}}</style></head><body>" +
+                "<h1>Mijn tweetalige oefenblad</h1>" +
+                "<p>Zelf gekozen en lokaal verwerkte teksten. Modelvertalingen en eigen " +
+                "correcties zijn niet onafhankelijk geverifieerd. " +
+                "Vul eerst de antwoorden in; de antwoorden staan op een aparte pagina.</p>" +
+                "<h2>Vragen</h2><ol>"
+        )
+        for ((front, _) in cards) {
+            out.append("<li>").append(escape(front))
+                .append("<br><span aria-hidden=\"true\">________________________</span></li>")
+            if (out.length > MAX_BYTES) return null
+        }
+        out.append("</ol><section class=\"answer-key\"><h2>Antwoorden</h2><ol>")
+        for ((_, back) in cards) {
+            out.append("<li>").append(escape(back)).append("</li>")
+            if (out.length > MAX_BYTES) return null
+        }
+        out.append("</ol><p>Privé-uitvoer via een door jou gekozen Android-bestandsprovider." +
+            " De provider kan bestanden synchroniseren of delen.</p></section></body></html>")
+        return out.toString().toByteArray(Charsets.UTF_8)
             .takeIf { it.size <= MAX_BYTES }
     }
 }
