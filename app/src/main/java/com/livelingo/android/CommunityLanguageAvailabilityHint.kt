@@ -6,8 +6,9 @@ package com.livelingo.android
  */
 internal object CommunityLanguageAvailabilityHint {
     private val phraseOnlyNames = setOf(
-        "kurmanji", "kurmani", "kurmanci", "kurdish", "koerdisch", "kurdisch",
-        "sorani", "pashto", "pasjtoe", "pushto", "kmr", "ckb", "ps"
+        "kurmanji", "kurmani", "kurmanci", "kurdi", "kurdish", "koerdisch", "kurdisch",
+        "sorani", "pashto", "pasjtoe", "pushto", "kmr", "ckb", "ps",
+        "کوردی", "کوردیی", "کردی", "پښتو", "پشتو"
     )
     private val phraseOnlyPhrases = setOf("northern kurdish", "central kurdish")
 
