@@ -74,6 +74,10 @@ internal object SharedPlainTextIntent {
                 // that Tuddy can export. Preserve the original text and
                 // explicitly selected input mode; do not treat it as a
                 // sentence to translate or invent subtitle timestamps.
+                // YouTube SBV timecodes are untrusted user text too. Keep
+                // the original full document in a preview-only RAM draft.
+                if (PrivateSbvSubtitleReader.read(candidate) != null)
+                    return IncomingSharedText(null, null, candidate)
                 val timed = PrivateTimedSubtitleSheet.readAuthored(candidate)
                 if (timed != null) {
                     val paired = timed.first().text.contains('\n')

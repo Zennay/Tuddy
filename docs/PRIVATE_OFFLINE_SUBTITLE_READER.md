@@ -1,4 +1,4 @@
-# Lokale SRT, WebVTT, LRC, CSV, TSV, SBV en YouTube JSON3 openen
+# Lokale SRT, WebVTT, LRC, CSV, TSV, SBV en JSON3 openen
 
 Via **Gesprekstools → Open ondertitelbestand…** kiest de gebruiker zelf een
 SRT-, WebVTT-, LRC-, getimed CSV-/TSV- of YouTube SBV-tekstbestand met de Android-documentkiezer. Tuddy leest
@@ -92,37 +92,49 @@ als tweede spoor verwerken of met aparte bevestiging als SRT/VTT
 bewaren. Uit SBV blijven geen oorspronkelijke YouTube-metadata
 of audio-identiteit als geverifieerd bewijs bestaan.
 
+## SBV zonder bestanden plakken, delen en exporteren
+
+De handmatige knop **Plak of importeer ondertiteltekst…** kan nu ook
+complete `H:MM:SS.mmm,H:MM:SS.mmm` SBV-blokken lokaal lezen.
+In de Android-deelactie **Delen → Tuddy** wordt alleen letterlijk
+geselecteerde `text/plain`-SBV-inhoud met geldige timestamps aan de
+private preview doorgegeven. Een onvolledige of ongeldige SBV krijgt
+geen automatische opname, spraakherkenning of tijdschatting.
+Ook wanneer in de handmatige editor een SBV-document via **Kies document…**
+wordt geopend, wordt de invoermodus pas voorgesteld nadat de hele
+bestandsinhoud met de strikte SBV-parser is gecontroleerd.
+De originele bron blijft onaangeroerd.
+
+Na handmatig bewerken verschijnt **Bewaar exacte tijdvakken als YouTube SBV…**.
+Die route toont eerst de exacte UTF-8-bestandsinhoud in pagina's en
+vereist vervolgens afzonderlijk een Android-opslaglocatie. Het exportformaat
+bewaart per cue **start, einde en letterlijke tekst**, zonder koptekst
+of veronderstelde audio-/video-identiteit. De nieuwe export wordt vóór
+opslaan opnieuw als SBV geparsed en byte-voor-byte gecontroleerd tegen
+de bevestigde preview. Cues met ongeldige regels, tijdcodes of
+lege tussenregels worden volledig geweigerd; SRT/VTT blijven mogelijk.
+De Android-provider kan extern synchroniseren, maar Tuddy doet dit
+niet zelf. Het originele bestand wordt niet overschreven.
+
 ## YouTube JSON3-ondertitels uit een eigen bestand
 
-De Android-knop **Open ondertitelbestand…** accepteert nu ook expliciet
-gekozen YouTube timed-text `.json3`-ondertitels. Dit is een **lokaal
-gekozen bestand**: Tuddy heeft geen YouTube-API, URL, video-ID, account,
-cookie, internetverbinding of downloader nodig. JSON3 is nadrukkelijk
-iets anders dan het privégespreksarchief van Tuddy.
+**Open ondertitelbestand…** ondersteunt ook expliciet geselecteerde YouTube
+timed-text **.json3**. Tuddy vraagt geen URL, YouTube-account of
+internetverbinding op. Het aangeleverde `events[].tStartMs` en
+`dDurationMs` bepalen uitsluitend de cue-start en -eindtijd;
+`segs[].utf8` wordt per event samengevoegd tot één tekstblok.
+Dit zijn geen bewezen woordtijden of spraak- en vertaalresultaten.
+Layout-events zonder tekst worden niet getoond. JSON3 is niet
+uitwisselbaar met een Tuddy-privégespreksarchief.
 
-Voorbeeld van de herkende JSON3-structuur:
-
-```json
-{"events":[{"tStartMs":1200,"dDurationMs":2500,"segs":[{"utf8":"Mijn eigen ondertitel"}]}]}
-```
-
-De `tStartMs` en `dDurationMs` komen rechtstreeks uit het bestand.
-Meerdere `segs[].utf8`-fragmenten binnen één event vormen **één cue**:
-dit bewijst geen werkelijke woordtijden, gesproken taal, vertaling,
-speaker of media-uitlijning. Layout-/styling-only events zonder tekst
-worden niet getoond. De volgorde en expliciete tijden van getoonde cues
-blijven behouden, met bestaande SRT/VTT-documentgrenzen. Het maximum is
-256 KiB geselecteerde UTF-8, 3.000 JSON-events en 500 getoonde cues;
-ongeldige duur, niet-chronologische starts, misvormde of te lange tekst
-weigerden de volledige import. De originele JSON3 is ongewijzigd.
-
-Na bewust kiezen staan de regels in de bestaande tijdelijke ondertitel-
-editor. Je kunt daar afzonderlijk zoeken, corrigeren, de tijdlijn bekijken
-en na aparte Android-opslagtoestemming **een nieuwe SRT/VTT-kopie**
-bewaren. JSON3 bevat niet altijd bruikbare oorspronkelijke eindtijden
-voor alle layout-events; Tuddy verzint daarom geen ontbrekende
-ondertitelcues. Dit is nog steeds geen echte hardware-/offline-
-spraakacceptatie.
+Een geldig document bevat maximaal 256 KiB strikt leesbare UTF-8,
+3.000 JSON-events en 500 bruikbare cues met chronologische start,
+positieve duur, begrensde tekst en tijden die als SRT én VTT bewaard
+kunnen worden. Bij ongeldige inhoud wordt het volledige document
+geweigerd. De tekst staat alleen tijdelijk in de bestaande lokale
+ondertitel-editor; correcties en nieuwe SRT/VTT-kopieën zijn afzonderlijke
+gebruikeracties. Geen video, geluid, model, import-URL of automatische
+netwerkactie. De oorspronkelijke JSON3 blijft onaangeroerd.
 
 ## Veiligheid en privacy
 
