@@ -133,7 +133,7 @@ internal fun PrivateSubtitleFileDialog(
     var clipStart by remember { mutableStateOf("") }
     var clipEnd by remember { mutableStateOf("") }
     var excerptOpen by remember { mutableStateOf(false) }
-    var excerptCues by remember { mutableStateOf<List<PrivateSubtitleCue>>(emptyList()) }
+    var excerptSourceRows by remember { mutableStateOf<List<Int>>(emptyList()) }
     var practiceOpen by remember { mutableStateOf(false) }
     var retimingOpen by remember { mutableStateOf(false) }
     var inspectorOpen by remember { mutableStateOf(false) }
@@ -359,12 +359,20 @@ internal fun PrivateSubtitleFileDialog(
                 )
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = query.isNotBlank() && found.isNotEmpty(),
+                    enabled = found.isNotEmpty() && query.isNotBlank(),
                     onClick = {
-                        excerptCues = found.map { it.second }.toList()
+                        excerptSourceRows = found.map { it.first + 1 }
                         excerptOpen = true
                     }
-                ) { Text("↳ Bewaar alleen gevonden regels als SRT/VTT…") }
+                ) { Text("↳ Bewaar gevonden regels als SRT, VTT, CSV, TSV of LRC…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = draft.isNotEmpty(),
+                    onClick = {
+                        excerptSourceRows = (1..draft.size).toList()
+                        excerptOpen = true
+                    }
+                ) { Text("↳ Kies zelf bronregels om te bewaren…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = draft.size > 1,
@@ -563,7 +571,8 @@ internal fun PrivateSubtitleFileDialog(
 
     if (excerptOpen) {
         PrivateSubtitleExcerptDialog(
-            selected = excerptCues,
+            allCues = draft.toList(),
+            initialSourceRows = excerptSourceRows,
             onSaveCopy = onSaveCopy,
             onSaveTimedSheet = onSaveTimedSheet,
             onSaveLrc = onSaveLrc,
