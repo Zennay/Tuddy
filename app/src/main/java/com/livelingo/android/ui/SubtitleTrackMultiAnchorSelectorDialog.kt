@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleMultiAnchor
+import com.livelingo.android.PrivateSubtitleManualPairSelection
 import com.livelingo.android.PrivateSubtitleTrackMultiAnchorAlignment
 
 /**
@@ -44,6 +45,7 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
         ))
     }
     var primaryInput by remember(primary, secondary) { mutableStateOf("") }
+    var anchorExpression by remember(primary, secondary) { mutableStateOf("") }
     var editingIndex by remember(primary, secondary) { mutableStateOf<Int?>(null) }
     var secondaryInput by remember(primary, secondary) { mutableStateOf("") }
 
@@ -66,6 +68,13 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
         primary, secondary, candidateAnchors) else null
     val preview = PrivateSubtitleTrackMultiAnchorAlignment.preview(
         primary, secondary, anchors)
+    val mappedBulkRows = PrivateSubtitleManualPairSelection.parse(
+        anchorExpression, primary.size, secondary.size)
+        ?.takeIf { it.size in 2..PrivateSubtitleTrackMultiAnchorAlignment.MAX_ANCHORS }
+        ?.map { PrivateSubtitleMultiAnchor(it.primaryRow, it.secondaryRow) }
+    val bulkPreview = mappedBulkRows?.let {
+        PrivateSubtitleTrackMultiAnchorAlignment.preview(primary, secondary, it)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -117,6 +126,68 @@ internal fun SubtitleTrackMultiAnchorSelectorDialog(
                             }
                         ) { Text("Verwijder alleen anker ${index + 1}") }
                     }
+                }
+                Text("Voor lange sporen: je kunt ook alle ankers in één " +
+                    "bewust getypte reeks opgeven, bijvoorbeeld " +
+                    "1:1,100:99,240:237,500:497. Dit zijn exact " +
+                    "de oorspronkelijke bronnummers, geen tijdcodes.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = anchorExpression,
+                    onValueChange = { anchorExpression = it.take(201) },
+                    label = { Text("Vervang ankerreeks · spoor1:spoor2, …") },
+                    minLines = 1, maxLines = 3
+                )
+                if (anchorExpression.isNotBlank() && bulkPreview == null) {
+                    Text("Ongeldige ankerreeks. Kies 2–8 strikt " +
+                        "oplopende, unieke, bestaande bronparen. Elk " +
+                        "segment moet binnen tijd- en schaalgrenzen " +
+                        "vallen en het hele tweede spoor exporteerbaar maken.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                if (bulkPreview != null) {
+                    Text("Volledige oorspronkelijke ankervoorstel: " +
+                        "${bulkPreview.anchors.size} bronparen. " +
+                        "Alle eigen teksten hieronder vooraf beoordelen:",
+                        style = MaterialTheme.typography.titleSmall)
+                    bulkPreview.anchors.forEachIndexed { index, pair ->
+                        val original = primary[pair.primaryRow - 1]
+                        val incoming = secondary[pair.secondaryRow - 1]
+                        Text("Nieuw anker ${index + 1}: spoor 1 " +
+                            "bronregel ${pair.primaryRow} " +
+                            "${original.startLabel}\n${original.text}\n" +
+                            "Spoor 2 bronregel ${pair.secondaryRow} " +
+                            "${incoming.startLabel}\n${incoming.text}",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            val freshRows = PrivateSubtitleManualPairSelection.parse(
+                                anchorExpression, primary.size, secondary.size)
+                                ?.takeIf {
+                                    it.size in 2..
+                                        PrivateSubtitleTrackMultiAnchorAlignment.MAX_ANCHORS
+                                }
+                                ?.map {
+                                    PrivateSubtitleMultiAnchor(it.primaryRow, it.secondaryRow)
+                                }
+                            val fresh = freshRows?.let {
+                                PrivateSubtitleTrackMultiAnchorAlignment.preview(
+                                    primary, secondary, it)
+                            }
+                            if (fresh != null && fresh == bulkPreview &&
+                                freshRows != null) {
+                                anchors = freshRows
+                                editingIndex = null
+                                primaryInput = ""
+                                secondaryInput = ""
+                                anchorExpression = ""
+                            }
+                        }
+                    ) { Text("Vervang alle ankers bewust door deze reeks") }
                 }
                 Text("Voeg een extra overeenkomst tussen bestaande " +
                     "ankers toe, of tik bij een bestaand anker op Wijzig. " +
