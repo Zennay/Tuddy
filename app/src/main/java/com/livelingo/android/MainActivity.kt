@@ -46,7 +46,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
@@ -293,6 +292,12 @@ private fun TuddyScreen(
     onViewedSubtitleConsumed: (Long) -> Unit
 ) {
     val context = LocalContext.current
+    // Reuse ML Kit's bundled on-device language detector across live captions;
+    // callbacks are invalidated when the screen leaves composition.
+    val localLanguageDetector = remember { LocalLanguageDetector() }
+    DisposableEffect(localLanguageDetector) {
+        onDispose { localLanguageDetector.close() }
+    }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
         mutableStateOf(PrivateScreenShield.enabled(context))
@@ -803,29 +808,13 @@ private fun TuddyScreen(
         }
         // Speech recognition may provide a broad language tag. This local-only
         // detector is advisory and never upgrades unsupported model coverage.
-        val detector = try { LanguageIdentification.getClient() }
-            catch (_: Exception) {
-                translateResolved(text, id, sourceCode, targetCode, token, revision)
-                return
-            }
-        try {
-            detector.identifyLanguage(text)
-                .addOnSuccessListener { guess ->
-                    detector.close()
-                    if (!translationStillRelevant(id, token, revision)) return@addOnSuccessListener
-                    val detected = guess.takeIf { it != "und" }
-                        ?.let { TranslateLanguage.fromLanguageTag(it) }
-                        ?.takeIf { it in TargetCatalog.codes }
-                    translateResolved(text, id, detected ?: sourceCode,
-                        targetCode, token, revision)
-                }
-                .addOnFailureListener {
-                    detector.close()
-                    translateResolved(text, id, sourceCode, targetCode, token, revision)
-                }
-        } catch (_: Exception) {
-            detector.close()
-            translateResolved(text, id, sourceCode, targetCode, token, revision)
+        localLanguageDetector.identify(text) { guess ->
+            if (!translationStillRelevant(id, token, revision)) return@identify
+            val detected = guess
+                ?.let { TranslateLanguage.fromLanguageTag(it) }
+                ?.takeIf { it in TargetCatalog.codes }
+            translateResolved(text, id, detected ?: sourceCode,
+                targetCode, token, revision)
         }
     }
 
