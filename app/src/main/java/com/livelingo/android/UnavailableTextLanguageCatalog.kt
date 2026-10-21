@@ -57,6 +57,50 @@ internal object UnavailableTextLanguageCatalog {
             "commercieel gebruik uit zonder aparte toestemming. Niet geïntegreerd of geactiveerd."
     )
 
+    private val soraniBaseResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "RevgeAI/vekol-stt-ckb-base",
+        url = "https://huggingface.co/RevgeAI/vekol-stt-ckb-base",
+        declaredLicense = "CC-BY-NC-4.0 (niet-commercieel)",
+        footprint = "36 MB int4 / 72 MB int8; 74M parameters volgens modelkaart",
+        limitation = "Modelkaart rapporteert WER 29,0% en CER 7,95% op de speaker-disjoint Common Voice 25-test. " +
+            "Zelfgerapporteerd, niet onafhankelijk herhaald op Android; niet-commerciële licentie. " +
+            "Niet geïntegreerd of geactiveerd."
+    )
+
+    private val soraniSmallResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "RevgeAI/vekol-stt-ckb-small",
+        url = "https://huggingface.co/RevgeAI/vekol-stt-ckb-small",
+        declaredLicense = "CC-BY-NC-4.0 (niet-commercieel)",
+        footprint = "121 MB int4 / 241 MB int8; 244M parameters volgens modelkaart",
+        limitation = "Modelkaart rapporteert WER 15,5% en circa 3% CER op de speaker-disjoint Common Voice 25-test. " +
+            "Zelfgerapporteerd, niet onafhankelijk herhaald op Android; niet-commerciële licentie. " +
+            "Niet geïntegreerd of geactiveerd."
+    )
+
+    private val kurmanjiWav2VecResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "salamhasan/wav2vec2-large-xlsr-kurmanji",
+        url = "https://huggingface.co/salamhasan/wav2vec2-large-xlsr-kurmanji",
+        declaredLicense = "Apache-2.0 volgens modelkaart; toegang gated",
+        footprint = "0,3B parameters; exacte bestandsgrootte niet geverifieerd",
+        limitation = "Modeltoegang vereist eerst akkoord met het delen van contactgegevens. " +
+            "Modelkaart rapporteert zelf WER 32,98% en CER 7,97% op Common Voice 8.0; alleen gelezen Latijnse spraak is beschreven. " +
+            "Niet onafhankelijk herhaald, niet op Android getest en niet geïntegreerd."
+    )
+
+    private val soraniApacheResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "SECT19N/whisper-small-ckb-merged",
+        url = "https://huggingface.co/SECT19N/whisper-small-ckb-merged",
+        declaredLicense = "Apache-2.0 volgens modelkaart; toegang gated",
+        footprint = "0,2B parameters; exacte bestandsgrootte niet geverifieerd",
+        limitation = "Modeltoegang vereist eerst akkoord met het delen van contactgegevens. " +
+            "Modelkaart rapporteert zelf WER 7,96% op Common Voice 24.0; dit is niet onafhankelijk herhaald of op Android gevalideerd. " +
+            "Gebruikt de Perzische decoder-token als Sorani-workaround; niet geïntegreerd of geactiveerd."
+    )
+
     private val madladResearchCandidate = OfflineLanguageModelCandidate(
         category = "Tekstvertaling",
         title = "Google MADLAD-400-3B-MT",
@@ -87,7 +131,8 @@ internal object UnavailableTextLanguageCatalog {
                     limitation = "Niet geïntegreerd of op Android getest. Trainingsdatarechten, " +
                         "dialectnauwkeurigheid, latency en geheugenbeslag zijn niet geverifieerd."
                 ),
-                kurmanjiCompactResearchCandidate
+                kurmanjiCompactResearchCandidate,
+                kurmanjiWav2VecResearchCandidate
             ),
             translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
@@ -109,7 +154,10 @@ internal object UnavailableTextLanguageCatalog {
                     limitation = "Niet geïntegreerd of op Android getest. Trainingsdatarechten, " +
                         "Sorani-variantdekking, latency en geheugenbeslag zijn niet geverifieerd."
                 ),
-                soraniTinyResearchCandidate
+                soraniTinyResearchCandidate,
+                soraniBaseResearchCandidate,
+                soraniSmallResearchCandidate,
+                soraniApacheResearchCandidate
             ),
             translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
