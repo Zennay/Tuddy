@@ -1,5 +1,16 @@
 # Tuddy 🎙️
 
+## Nieuw: tik direct het gewenste woord in je ondertitel aan
+
+In de optionele **geschatte woordvolger** kun je nu een doorbladerbare
+lijst met de woorden van de actieve SRT/VTT-regel openen. Eén tik springt
+naar het bijbehorende *geschatte* woordmoment; vorige/volgende-woord
+blijft werken. Alles gebruikt uitsluitend de eigen cue-tijdcodes:
+geen spraakherkenning, betrouwbare woordtiming of nieuwe permissies.
+[Handleiding](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
 ## Nieuw: privé luisteroverzicht ook als CSV (inclusief woordvolger)
 
 De optionele geschatte ondertitelwoordvolger behoudt nu de nieuwste
