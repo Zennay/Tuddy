@@ -1471,6 +1471,20 @@ internal fun PrivateSubtitleFileDialog(
                                         "${link.secondaryText}\n" +
                                         "Overlappende tijd: ${link.overlapMillis} ms.",
                                         style = MaterialTheme.typography.bodySmall)
+                                    if (!link.manuallyChosen) {
+                                        OutlinedButton(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            onClick = {
+                                                manualFirstRow =
+                                                    link.primarySourceRow.toString()
+                                                manualSecondRow =
+                                                    link.secondarySourceRow.toString()
+                                            }
+                                        ) {
+                                            Text("Neem beide bronnummers over om " +
+                                                "de koppeling bewust vast te zetten")
+                                        }
+                                    }
                                     OutlinedButton(
                                         modifier = Modifier.fillMaxWidth(),
                                         onClick = {
