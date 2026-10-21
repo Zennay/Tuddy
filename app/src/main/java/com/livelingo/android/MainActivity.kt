@@ -759,31 +759,30 @@ private fun TuddyScreen(
             when (receipt.stage) {
                 OfflineTextStage.CHECKING -> Unit
                 OfflineTextStage.READY -> {
-                    val lease = try {
+                    val translator = try {
                         localTranslatorPool.acquire(from, targetCode)
                     } catch (_: Exception) {
                         updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
                         return@check
                     }
-                    val translator = lease.translator
                     try {
                         translator.translate(text)
                             .addOnSuccessListener { output ->
                                 try {
                                     updateLine(id, output, "Lokaal vertaald", token, revision)
                                 } finally {
-                                    localTranslatorPool.release(lease)
+                                    translator.close()
                                 }
                             }
                             .addOnFailureListener {
                                 try {
                                     updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
                                 } finally {
-                                    localTranslatorPool.release(lease)
+                                    translator.close()
                                 }
                             }
                     } catch (_: Exception) {
-                        localTranslatorPool.release(lease)
+                        translator.close()
                         updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
                     }
                 }
