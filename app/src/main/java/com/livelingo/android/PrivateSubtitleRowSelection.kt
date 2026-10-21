@@ -24,10 +24,13 @@ internal object PrivateSubtitleRowSelection {
             val from = numbers[0].trim().takeIf { it.isNotEmpty() &&
                 it.all { char -> char in '0'..'9' } }?.toIntOrNull()
                 ?: return null
-            val to = if (numbers.size == 2) numbers[1].trim()
-                .takeIf { it.isNotEmpty() && it.all { char -> char in '0'..'9' } }
-                ?.toIntOrNull() ?: return null
-                else from
+            val to = if (numbers.size == 2) {
+                numbers[1].trim()
+                    .takeIf { it.isNotEmpty() && it.all { char -> char in '0'..'9' } }
+                    ?.toIntOrNull() ?: return null
+            } else {
+                from
+            }
             if (from !in 1..sourceRows || to !in from..sourceRows) return null
             for (number in from..to) {
                 if (marks[number - 1]) return null
