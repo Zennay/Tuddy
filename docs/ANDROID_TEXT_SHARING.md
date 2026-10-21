@@ -57,6 +57,21 @@ Na bewuste bewerking is een **nieuwe SBV-kopie met begin- én eindtijden**
 ook beschikbaar via de private ondertitel-editor en Androids
 opslagkiezer; zie [PRIVATE_OFFLINE_SUBTITLE_READER.md](PRIVATE_OFFLINE_SUBTITLE_READER.md).
 
+## Gedeelde JSON3-ondertitels uit YouTube
+
+Via **Delen → Tuddy** of **Tekst verwerken** kan een gebruiker
+ook een compleet `text/plain` JSON3-ondertitelblok delen. De app
+herkent alleen een geldige `events`-structuur met expliciete
+`tStartMs`, `dDurationMs` en `segs[].utf8`, met dezelfde lokale
+cue-validatie als het bewust gekozen bestand. Android-deelacties en
+handmatig **plakken** zijn voor JSON3 extra begrensd op **64 KiB**
+om langdurig ontleden in de interface te voorkomen. Voor grotere
+JSON3-bronnen gebruikt de gebruiker **Open ondertitelbestand…**,
+dat maximaal 256 KiB asynchroon via de gekozen Android-provider leest.
+De gekozen tekst blijft een tijdelijke preview zonder vertaling of
+automatische opslag. Een ongeldig gestructureerd JSON3-bericht wordt
+niet stilzwijgend als een gewone vertaalzin behandeld.
+
 ## Grenzen en privacy
 
 - **Geen automatische vertaling, opslag, export, microfoonactivatie of serverupload** bij binnenkomst van een deelverzoek.
