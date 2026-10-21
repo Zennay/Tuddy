@@ -722,13 +722,20 @@ internal fun PrivateSubtitleFileDialog(
     val stagedImport = pendingImport
     if (stagedImport != null) {
         val stillCurrent = draft == stagedImport.existing
-        val drift = selectedDrift?.takeIf {
-            importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES && stillCurrent
-        }?.let {
-            PrivateSubtitleTrackDriftAlignment.preview(
-                draft, stagedImport.imported,
-                it.firstPrimaryRow, it.firstSecondaryRow,
-                it.lastPrimaryRow, it.lastSecondaryRow)
+        // Computing full-document drift and 500×500 chronological pairing
+        // is bounded but not cheap. Cache while the actual authored sources,
+        // selection, or merge mode remain identical; paging/scrolling must
+        // not recompute this work.
+        val drift = remember(draft, stagedImport.imported, selectedDrift,
+            importMode, stillCurrent) {
+            selectedDrift?.takeIf {
+                importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES && stillCurrent
+            }?.let {
+                PrivateSubtitleTrackDriftAlignment.preview(
+                    draft, stagedImport.imported,
+                    it.firstPrimaryRow, it.firstSecondaryRow,
+                    it.lastPrimaryRow, it.lastSecondaryRow)
+            }
         }
         val selectedPairOffset = when {
             importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES -> secondTrackOffsetMs
@@ -741,11 +748,14 @@ internal fun PrivateSubtitleFileDialog(
         val proposedIncoming = if (
             selectedDrift != null && importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
         ) drift?.adjustedSecondary else stagedImport.imported
-        val proposed = if (stillCurrent && selectedPairOffset != null &&
-            proposedIncoming != null
-        ) PrivateSubtitleDocumentCombine.preview(
-            draft, proposedIncoming, importMode, selectedPairOffset
-        ) else null
+        val proposed = remember(draft, proposedIncoming,
+            importMode, selectedPairOffset, stillCurrent) {
+            if (stillCurrent && selectedPairOffset != null &&
+                proposedIncoming != null
+            ) PrivateSubtitleDocumentCombine.preview(
+                draft, proposedIncoming, importMode, selectedPairOffset
+            ) else null
+        }
         val previewRows = proposed?.cues.orEmpty()
         val previewPages = maxOf(1, (previewRows.size + 4) / 5)
         val shownPairPage = secondTrackPreviewPage.coerceIn(0, previewPages - 1)
