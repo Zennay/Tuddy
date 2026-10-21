@@ -61,6 +61,7 @@ internal fun PrivateSubtitleExcerptDialog(
     var rowPage by remember(allCues) { mutableIntStateOf(0) }
     var windowStart by remember(allCues) { mutableStateOf("") }
     var windowEnd by remember(allCues) { mutableStateOf("") }
+    var windowRanges by remember(allCues) { mutableStateOf("") }
     val selectedIndices = PrivateSubtitleRowSelection.parse(expression, allCues.size)
     val original = selectedIndices?.map { allCues[it] }
     val proposed = original?.let { PrivateSubtitleFilteredExcerpt.prepare(it, timing) }
@@ -142,6 +143,27 @@ internal fun PrivateSubtitleExcerptDialog(
                             rowPage = 0
                         }
                     }) { Text("Neem overlappende cues uit tijdvenster") }
+
+                Text("Meerdere losse tijdvensters kiezen, bijvoorbeeld " +
+                    "00:10-00:20;01:00-01:15. Maximaal 16 zonder overlap; " +
+                    "een cue die beide vensters raakt, wordt één keer gekozen.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = windowRanges,
+                    onValueChange = { windowRanges = it.take(512) },
+                    label = { Text("Tijdvensters: vanaf-tot;vanaf-tot") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true)
+                val multiWindowRows = PrivateSubtitleTimeWindowRows
+                    .expressionForWindows(allCues, windowRanges)
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    enabled = multiWindowRows != null,
+                    onClick = {
+                        if (multiWindowRows != null) {
+                            expression = multiWindowRows
+                            rowPage = 0
+                        }
+                    }) { Text("Neem cues uit alle gekozen tijdvensters") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = selectedIndices != null &&
