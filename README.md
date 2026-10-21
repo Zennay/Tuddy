@@ -1,5 +1,20 @@
 # Tuddy 🎙️
 
+## Nieuw: mijn A–B-luisterkaarten als CSV voor eigen overzichten
+
+Naast HTML en TXT heeft het tijdelijke privé-luisteroverzicht nu een
+**volledige CSV-preview** en een afzonderlijke, bewuste **Bewaar CSV…**-keuze.
+De zes kolommen bevatten eigen fragmenttijden, zelfbeoordeling, eigen notities
+en alleen een begrensd ondertitelvoorbeeld, nooit audio of een audio-URI.
+Het UTF-8-bestand is begrensd, spreadsheetformula-veilig, kan door een
+Android-provider gesynchroniseerd worden en wordt na de documentkiezer
+exact opnieuw gecontroleerd op gewijzigde brondata. Het is geen
+automatisch begrip-/uitspraakrapport.
+[Details](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+
 ## Nieuw: mijn offline luisteroefenoverzicht zelf als HTML of TXT bewaren
 
 Bekijk na je eigen SRT/VTT-audiooefening **Mijn privé oefenoverzicht**
