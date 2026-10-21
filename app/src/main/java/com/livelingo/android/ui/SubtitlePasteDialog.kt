@@ -863,6 +863,46 @@ internal fun SubtitlePasteDialog(
                                 val after = lrcShiftAfter
                                 val previewPages = maxOf(1, (parsed.size + 4) / 5)
                                 val visiblePage = lrcShiftPreviewPage.coerceIn(0, previewPages - 1)
+                                // A cue before a moved start can gain or lose end
+                                // time, so navigate all changed starts AND ends.
+                                val affectedPages = parsed.indices.filter { index ->
+                                    val old = parsed[index]
+                                    val now = after[index]
+                                    old.startMillis != now.startMillis ||
+                                        old.endMillis != now.endMillis
+                                }.map { it / 5 }.distinct()
+                                val previousChange = affectedPages.lastOrNull { it < visiblePage }
+                                val nextChange = affectedPages.firstOrNull { it > visiblePage }
+                                Text(
+                                    "Gewijzigde start- of eindtijden op " +
+                                        "${affectedPages.size} van ${previewPages} pagina's. " +
+                                        "Spring naar de volgende wijziging of blader " +
+                                        "zelf door alle regels.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        enabled = previousChange != null,
+                                        onClick = {
+                                            previousChange?.let { lrcShiftPreviewPage = it }
+                                        }
+                                    ) { Text("← Vorige wijziging") }
+                                    OutlinedButton(
+                                        enabled = nextChange != null,
+                                        onClick = {
+                                            nextChange?.let { lrcShiftPreviewPage = it }
+                                        }
+                                    ) { Text("Volgende wijziging →") }
+                                }
+                                OutlinedButton(
+                                    enabled = affectedPages.isNotEmpty() &&
+                                        visiblePage != affectedPages.first(),
+                                    onClick = {
+                                        affectedPages.firstOrNull()?.let {
+                                            lrcShiftPreviewPage = it
+                                        }
+                                    }
+                                ) { Text("Ga naar eerste gewijzigde regel") }
                                 Text(
                                     "Volledige oude → nieuwe tijdlijn: " +
                                         "${parsed.size} regels, pagina " +
