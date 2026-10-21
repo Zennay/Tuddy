@@ -97,7 +97,7 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
         if (Build.VERSION.SDK_INT < 33) {
             cancel()
             callback(SpeechPackReceipt(tag, SpeechPackStage.UNKNOWN,
-                "Android 12 kan spraakpakketten niet per taal opvragen. Start offline spraak alleen als Android het ondersteunt."))
+                "Android 12 kan spraakpakketten niet per taal opvragen. Controleer in Android-spraakinstellingen of offline spraak en deze taal zijn gedownload; Tuddy kan dit niet zelf bevestigen."))
             return
         }
         val (token, engine) = fresh(tag) ?: run {
