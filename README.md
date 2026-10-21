@@ -14,8 +14,10 @@ overschreven en de grens wordt niet uit audio herkend.
 
 Bij **Samenvoegen** laat een extra preview beide originele tijdvakken zien
 en waarschuwt die expliciet wanneer een tijdgat verdwijnt of de cues
-elkaar overlappen. De bevestiging is één Undo/Redo-bewerking in de
-tijdelijke editor; de originele bestanden blijven onaangeroerd.
+elkaar overlappen. Het resultaat behoudt de volledige tijdsdekking tot de
+laatste van beide oorspronkelijke eindtijden. De bevestiging is één
+Undo/Redo-bewerking in de tijdelijke editor; de originele bestanden blijven
+onaangeroerd.
 
 ---
 
