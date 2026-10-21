@@ -31,3 +31,8 @@ The historical v0.4 archive used a different source layout from the current app.
 3. **Full community-language support:** [issue #2](https://github.com/Zennay/Tuddy/issues/2) remains open. Kurmanji, Sorani and Pashto are not full free-form offline ASR+MT targets; the separate five-phrase preview must remain explicitly labeled until appropriate model rights, implementation, native-speaker review and device acceptance exist.
 
 Do not close issue #1 based on this map alone. It records current equivalences and the remaining boundaries so future changes can continue without overwriting newer production code with stale historical modules.
+
+
+## Archive inspection update — 21 October 2026
+
+The original Library ZIP has now been recovered and extracted for direct inspection; its SHA-256 is unchanged. The exact uncompressed per-file hashes and sizes are recorded in [TUDDY_V0_4_ARCHIVE_INVENTORY.md](TUDDY_V0_4_ARCHIVE_INVENTORY.md). This resolves uncertainty about which files exist in the archive, but does not mean those 23 files have all been copied into the GitHub repository. Current equivalents remain the active implementations; no historical module was blindly overlaid onto the newer privacy/lifecycle architecture. Issue #1 remains open for the remaining source-import work and authorized physical-device acceptance.
