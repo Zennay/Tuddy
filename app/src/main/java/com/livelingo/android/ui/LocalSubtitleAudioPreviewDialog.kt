@@ -96,6 +96,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var subtitleOffsetMs by remember { mutableLongStateOf(0L) }
     // Optional rough reading aid, not measured speech/word alignment.
     var estimatedWordFollow by remember { mutableStateOf(false) }
+    var wordJumpListOpen by remember { mutableStateOf(false) }
+    var wordJumpPage by remember { mutableIntStateOf(0) }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var rangeStartIndex by remember { mutableIntStateOf(-1) }
     var rangeEndIndex by remember { mutableIntStateOf(-1) }
@@ -642,6 +644,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
             active.text, cueStart(active), cueEnd(active), displayTimeMs
         )
     } else null
+    val wordJumpChoices = if (wordJumpListOpen && estimatedCueWord != null &&
+        active != null) {
+        PrivateCueWordProgress.choices(active.text, cueStart(active), cueEnd(active))
+    } else null
+    LaunchedEffect(activeIndex, estimatedWordFollow) {
+        wordJumpPage = 0
+        if (!estimatedWordFollow) wordJumpListOpen = false
+    }
     val nextIndex = cues.indexOfFirst {
         val start = cueStart(it)
         start > positionMs + 250L && start in 0L until durationMs
@@ -1355,6 +1365,52 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         Text("De woordstappen springen naar geschatte momenten; " +
                             "ze volgen geen gemeten uitspraak of audioanalyse.",
                             style = MaterialTheme.typography.labelSmall)
+                        TextButton(onClick = {
+                            wordJumpListOpen = !wordJumpListOpen
+                            wordJumpPage = estimatedCueWord.index / 9
+                        }) {
+                            Text(if (wordJumpListOpen)
+                                "Sluit directe woordkeuze"
+                            else "Kies direct een woord uit deze ondertitel")
+                        }
+                        if (wordJumpListOpen && !wordJumpChoices.isNullOrEmpty()) {
+                            val pageCount = (wordJumpChoices.size + 8) / 9
+                            val visiblePage = wordJumpPage.coerceIn(0, pageCount - 1)
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(
+                                    enabled = visiblePage > 0,
+                                    onClick = { wordJumpPage = visiblePage - 1 }
+                                ) { Text("◀") }
+                                Text("Woordenpagina ${visiblePage + 1} / $pageCount",
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.labelMedium)
+                                TextButton(
+                                    enabled = visiblePage + 1 < pageCount,
+                                    onClick = { wordJumpPage = visiblePage + 1 }
+                                ) { Text("▶") }
+                            }
+                            wordJumpChoices.drop(visiblePage * 9).take(9)
+                                .chunked(3).forEach { wordRow ->
+                                    Row(modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        wordRow.forEach { word ->
+                                            TextButton(
+                                                modifier = Modifier.weight(1f),
+                                                onClick = { seekTo(word.estimatedStartMs) }
+                                            ) {
+                                                Text("${word.index + 1}. " +
+                                                    active.text.substring(word.span),
+                                                    maxLines = 2)
+                                            }
+                                        }
+                                    }
+                                }
+                            Text("Alle tijden zijn gelijkmatige schattingen uit jouw " +
+                                "SRT/VTT; geen woordherkenning, audio-uitlijning " +
+                                "of nieuwe opname.",
+                                style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                     Text("Woordkaarten bij je eigen SRT/VTT: kies zelf de teksttaal. " +
                         "Onbekende talen krijgen geen verzonnen vertaling of woordtiming.",
