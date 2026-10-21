@@ -84,6 +84,19 @@ internal fun SubtitlePasteDialog(
     var lrcOffsetInput by remember(initialDocument) { mutableStateOf("") }
     var lrcSelectedShiftInput by remember(initialDocument) { mutableStateOf("") }
     var lrcShiftPreviewPage by remember { mutableIntStateOf(0) }
+    // Only deliberate in-dialog LRC timing actions are undoable here.
+    // Bounded to eight RAM snapshots (each input is already <=256 KiB).
+    var lrcUndo by remember(initialDocument) { mutableStateOf(emptyList<String>()) }
+    var lrcRedo by remember(initialDocument) { mutableStateOf(emptyList<String>()) }
+    val commitLrcTiming: (String) -> Unit = { revised ->
+        if (revised != raw) {
+            lrcUndo = (lrcUndo + raw).takeLast(8)
+            lrcRedo = emptyList()
+            raw = revised
+            page = 0
+            lrcShiftPreviewPage = 0
+        }
+    }
     var splitMode by remember(initialDocument) {
         mutableStateOf(initialDocument?.format?.splitMode ?: PlainSubtitleSplitMode.LINES)
     }
@@ -507,6 +520,10 @@ internal fun SubtitlePasteDialog(
                             ownMeaning.toByteArray(Charsets.UTF_8).size else 0)
                         if (totalBytes <= PrivateSubtitleFileReader.MAX_BYTES) {
                             raw = candidate
+                            // Manual typing starts a new unsaved edit history;
+                            // do not undo unrelated authored text changes.
+                            lrcUndo = emptyList()
+                            lrcRedo = emptyList()
                             documentNotice = ""
                             inputTooLarge = false
                             page = 0
@@ -641,6 +658,49 @@ internal fun SubtitlePasteDialog(
                                 "staan in de volledige preview.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                enabled = lrcUndo.isNotEmpty(),
+                                onClick = {
+                                    val previous = lrcUndo.lastOrNull()
+                                        ?: return@OutlinedButton
+                                    lrcUndo = lrcUndo.dropLast(1)
+                                    lrcRedo = (lrcRedo + raw).takeLast(8)
+                                    raw = previous
+                                    lrcSelectedShiftInput = ""
+                                    lrcOffsetInput = ""
+                                    page = 0
+                                    lrcShiftPreviewPage = 0
+                                    documentNotice = "Laatste tijdelijke LRC-tijdcorrectie " +
+                                        "ongedaan gemaakt; het bronbestand is intact."
+                                }
+                            ) { Text("↶ LRC ongedaan (${lrcUndo.size})") }
+                            OutlinedButton(
+                                enabled = lrcRedo.isNotEmpty(),
+                                onClick = {
+                                    val next = lrcRedo.lastOrNull()
+                                        ?: return@OutlinedButton
+                                    lrcRedo = lrcRedo.dropLast(1)
+                                    lrcUndo = (lrcUndo + raw).takeLast(8)
+                                    raw = next
+                                    lrcSelectedShiftInput = ""
+                                    lrcOffsetInput = ""
+                                    page = 0
+                                    lrcShiftPreviewPage = 0
+                                    documentNotice = "Tijdelijke LRC-tijdcorrectie opnieuw " +
+                                        "toegepast; het bronbestand is intact."
+                                }
+                            ) { Text("↷ Opnieuw (${lrcRedo.size})") }
+                        }
+                        Text(
+                            "Maximaal 8 bewuste tijdcorrecties terug; vrije bewerking " +
+                                "in het tekstvak start een nieuwe geschiedenis. " +
+                                "Alleen dit tijdelijke concept verandert.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         val currentOffset = declaredOffset ?: 0L
                         val applyOffset: (Long) -> Unit = { chosen ->
                             val updated = PrivateLrcSubtitleDraft.withDeclaredOffset(raw, chosen)
@@ -648,8 +708,7 @@ internal fun SubtitlePasteDialog(
                                 documentNotice = "Deze offset geeft ongeldige of " +
                                     "negatieve tijden. De vorige eigen tekst blijft staan."
                             } else {
-                                raw = updated
-                                page = 0
+                                commitLrcTiming(updated)
                                 lrcOffsetInput = ""
                                 documentNotice = "Alle eigen LRC-cues zijn expliciet " +
                                     "bijgesteld; bekijk de nieuwe chronologische preview. " +
@@ -839,7 +898,7 @@ internal fun SubtitlePasteDialog(
                                     onClick = {
                                         // The proposal is tied to the current RAM source and
                                         // exact selection; no provider file is overwritten.
-                                        raw = lrcShiftProposal
+                                        commitLrcTiming(lrcShiftProposal)
                                         lrcSelectedShiftInput = ""
                                         lrcShiftPreviewPage = 0
                                         page = 0
