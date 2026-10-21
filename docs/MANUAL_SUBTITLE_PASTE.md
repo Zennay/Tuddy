@@ -429,6 +429,27 @@ authored tekst** in beide sporen wordt niet stilzwijgend
 weggegooid. De volledige samengevoegde kopie blijft apart
 doorbladerbaar in pagina's van vijf.
 
+Gebruik **Controleer elke bronregel-koppeling** om tot maximaal 500
+voorgestelde bronparen gericht te onderzoeken: typ een letterlijk
+woord of zinsdeel uit **één van beide originele teksten** (zoeken
+negeert hoofdletters), en/of vul het **exacte oorspronkelijke
+regelnummer uit spoor 2** in. De twee filters beperken uitsluitend
+de vier-paren-per-pagina-weergave. Het echte koppelen, uitsluiten,
+tijdcorrecties en de volledige resultaatpreview blijven gebaseerd
+op het ongewijzigde bronbestand en dezelfde expliciete keuzes.
+Een niet-gekoppelde bronregel toont terecht geen zoekresultaat
+in de lijst van **gekoppelde** paren.
+
+Via **Inspecteer niet-gekoppelde bronregels** kun je nu daarnaast
+**alle losse originele regels uit beide sporen**, met hun werkelijke
+1-gebaseerde bronnummers, volledige teksten en oorspronkelijke
+begin-/eindtijden, vijf per pagina inspecteren. Ook handmatig
+uitgesloten tweede-spoorregels blijven hier vindbaar. Een
+tijdsverschuiving of tweepuntscorrectie maakt de **bron** niet
+anders: de daadwerkelijk toegepaste tijden blijven apart
+zichtbaar in de volledige resultaatpreview. Deze inspectie
+schrijft, vertaalt of verwijdert niets.
+
 ### Een verkeerd voorgestelde koppeling handmatig afwijzen
 
 Open in dezelfde tijdelijke samenvoegpreview **Controleer elke
