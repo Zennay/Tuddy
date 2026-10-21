@@ -32,6 +32,12 @@ De volledige offline preview, expliciete deel-/meerbereikselectie en
 bewuste Android-opslag blijven bestaan. Een CSV-regel is steeds één cue;
 meerdere fysieke regels binnen een gequote veld worden niet ondersteund.
 Er is geen automatische ASR, audiouitlijning of vertaling.
+**Ook zonder tijdcodes:** kies twee eigen CSV-tekstkolommen (bron en
+handmatige betekenis). Tuddy combineert ieder door jou geschreven paar tot
+één tweetalige cue met uitsluitend handmatig geschatte tijden; geen ASR
+of automatische vertaling. De app noemt de oorspronkelijke foutregel
+als CSV-invoer niet klopt.
+
 [Voorbeelden en beperkingen](docs/MANUAL_SUBTITLE_PASTE.md).
 
 ---
