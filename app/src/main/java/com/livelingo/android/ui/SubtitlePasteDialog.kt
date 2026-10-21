@@ -623,6 +623,47 @@ internal fun SubtitlePasteDialog(
                                 "staan in de volledige preview.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        val currentOffset = declaredOffset ?: 0L
+                        val applyOffset: (Long) -> Unit = { chosen ->
+                            val updated = PrivateLrcSubtitleDraft.withDeclaredOffset(raw, chosen)
+                            if (updated == null) {
+                                documentNotice = "Deze offset geeft ongeldige of " +
+                                    "negatieve tijden. De vorige eigen tekst blijft staan."
+                            } else {
+                                raw = updated
+                                page = 0
+                                documentNotice = "Alle eigen LRC-cues zijn expliciet " +
+                                    "bijgesteld; bekijk de nieuwe chronologische preview. " +
+                                    "Het oorspronkelijke bestand is niet veranderd."
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = currentOffset >= -29_500L,
+                                onClick = { applyOffset(currentOffset - 500L) }
+                            ) { Text("− 0,5 s") }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = currentOffset != 0L,
+                                onClick = { applyOffset(0L) }
+                            ) { Text("Offset 0") }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = currentOffset <= 29_500L,
+                                onClick = { applyOffset(currentOffset + 500L) }
+                            ) { Text("+ 0,5 s") }
+                        }
+                        Text(
+                            "Deze knoppen wijzigen alleen je huidige tijdelijke " +
+                                "LRC-tekst en daarmee de hele voorbeeldtijdlijn. " +
+                                "Geen audioanalyse en geen wijziging aan het " +
+                                "originele bestand of de live transcriptie.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
