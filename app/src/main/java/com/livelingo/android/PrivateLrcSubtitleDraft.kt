@@ -14,7 +14,9 @@ internal object PrivateLrcSubtitleDraft {
     private const val MAX_ROWS = 550
     private const val MAX_CUES = 500
     private const val MAX_TIME_MS = 359_999_999L
-    private val timestamp = Regex("""^\[(\d{1,3}):([0-5]\d)\.(\d{2,3})\](.+)$""")
+    // Consecutive [mm:ss.xx] tags refer to the *same* lyric in repeated choruses.
+    private val timestampTag = Regex("""\[(\d{1,3}):([0-5]\d)\.(\d{2,3})\]""")
+    private const val MAX_TIMESTAMPS_PER_LINE = 16
     private val metadata = Regex("""^\[(?:ar|ti|al|by|length):[^\r\n\[\]]{0,200}\]$""")
 
     fun preview(raw: String): List<PrivateSubtitleCue>? {
@@ -40,22 +42,42 @@ internal object PrivateLrcSubtitleDraft {
             if (line.isEmpty()) continue
             if (header && metadata.matches(line)) continue
             header = false
-            val match = timestamp.matchEntire(line) ?: return null
-            val minute = match.groupValues[1].toLong()
-            val second = match.groupValues[2].toLong()
-            val fraction = match.groupValues[3].padEnd(3, '0').toLong()
-            val start = minute * 60_000L + second * 1_000L + fraction
-            val words = match.groupValues[4].trim()
-            if (start >= MAX_TIME_MS || words.isEmpty() || words.length > 800 ||
+
+            // LRC allows repeated occurrences of one lyric in a single row:
+            // [00:01.25][01:05.80]same chorus text. Each explicit tag becomes
+            // an independent cue; no text repetition or timing is invented.
+            var position = 0
+            val starts = ArrayList<Long>(2)
+            while (position < line.length && line[position] == '[') {
+                val match = timestampTag.find(line, position)
+                    ?.takeIf { it.range.first == position } ?: break
+                val minute = match.groupValues[1].toLong()
+                val second = match.groupValues[2].toLong()
+                val fraction = match.groupValues[3].padEnd(3, '0').toLong()
+                val start = minute * 60_000L + second * 1_000L + fraction
+                if (start >= MAX_TIME_MS) return null
+                starts.add(start)
+                if (starts.size > MAX_TIMESTAMPS_PER_LINE ||
+                    times.size + starts.size > MAX_CUES) return null
+                position = match.range.last + 1
+            }
+            if (starts.isEmpty()) return null
+            val words = line.substring(position).trim()
+            if (words.isEmpty() || words.length > 800 ||
                 "-->" in words || words.any { it.isISOControl() }) return null
-            if (times.lastOrNull()?.first?.let { start <= it } == true) return null
-            times.add(start to words)
-            if (times.size > MAX_CUES) return null
+            for (start in starts) times.add(start to words)
         }
         if (times.isEmpty()) return null
-        val cues = times.mapIndexed { index, pair ->
+
+        // A repeated lyric may list its second occurrence long before the
+        // next physical LRC row. Restore chronological cue order explicitly.
+        // Identical timestamps are ambiguous and must never silently overwrite.
+        val ordered = times.sortedBy { it.first }
+        if (ordered.zipWithNext().any { (a, b) -> a.first >= b.first })
+            return null
+        val cues = ordered.mapIndexed { index, pair ->
             val start = pair.first
-            val end = if (index + 1 < times.size) times[index + 1].first
+            val end = if (index + 1 < ordered.size) ordered[index + 1].first
                 else minOf(MAX_TIME_MS, start + 3_000L)
             if (end <= start) return null
             PrivateSubtitleCue(start, end, label(start), label(end), pair.second)
