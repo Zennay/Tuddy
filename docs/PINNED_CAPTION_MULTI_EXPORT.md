@@ -4,8 +4,12 @@ Invulhints volgen nu de **daadwerkelijk door de schrijver aangebrachte**
 woordgrenzen: gewone spaties, non-breaking spaces (NBSP), narrow NBSP,
 overige Unicode-witruimte en expliciete zero-width spaces (U+200B).
 De export bewaart de eigen scheidingstekens tussen de zichtbare en
-afgedekte woorden, ook bij meerdere oefenrondes. Daardoor ontstaan
-minder onbedoelde hele-zinsgaten in internationale ondertitelteksten.
+afgedekte woorden, ook bij meerdere oefenrondes. Zelfstandige
+leestekengroepen zoals `...` of `—` blijven zichtbaar en tellen
+niet als te verbergen woord, zodat de gaten niet per ongeluk naar
+de verkeerde plek schuiven. Ook leestekens om één echt woord blijven
+zichtbaar. Daardoor ontstaan minder onbedoelde hele-zinsgaten
+in internationale ondertitelteksten.
 Bij ongesegmenteerde tekst zonder zulke grenzen blijft het hele
 woord/de hele regel één afgedekt token; Tuddy verzint geen
 taalkundige segmentatie, woordtijden of automatische vertaling.
