@@ -7,8 +7,9 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 /**
  * Session-scoped pool of local ML Kit translator clients.
  *
- * The caller must first confirm that the exact model pair is installed.
- * This class never downloads models or persists source/translated text.
+ * Finalized translations must pass the exact-pair model inventory first.
+ * Provisional captions may attempt a no-download translation and fail closed
+ * when a model is absent. This class never downloads models or persists text.
  */
 internal class LocalTranslatorPool {
     private data class Entry(
