@@ -25,7 +25,8 @@ internal object PrivateSubtitleBatchReplace {
         fromRow: Int = 1,
         throughRow: Int = cues.size,
         field: SubtitleReplaceField = SubtitleReplaceField.ALL_TEXT,
-        explicitRows: String = ""
+        explicitRows: String = "",
+        wholeWords: Boolean = false
     ): SubtitleBatchPreview? {
         if (cues.isEmpty() || cues.size > 500 ||
             fromRow !in 1..cues.size || throughRow !in fromRow..cues.size ||
@@ -44,7 +45,23 @@ internal object PrivateSubtitleBatchReplace {
         // replacement also works for international subtitle scripts.
         val flags = if (matchCase) 0 else
             Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE
-        val pattern = Pattern.compile(Pattern.quote(search), flags)
+        // Opt-in Unicode-aware whole word correction: never replace inside
+        // a longer word, including letters with combining marks.
+        val wordChar = """[\p{L}\p{M}\p{N}_]"""
+        if (wholeWords) {
+            val first = Character.codePointAt(search, 0)
+            val last = Character.codePointBefore(search, search.length)
+            fun wordEdge(code: Int): Boolean =
+                Character.isLetterOrDigit(code) ||
+                Character.getType(code) == Character.NON_SPACING_MARK.toInt() ||
+                Character.getType(code) == Character.COMBINING_SPACING_MARK.toInt()
+            if (!wordEdge(first) || !wordEdge(last)) return null
+        }
+        val literal = Pattern.quote(search)
+        val expression = if (wholeWords)
+            "(?<!$wordChar)$literal(?!$wordChar)"
+        else literal
+        val pattern = Pattern.compile(expression, flags)
         var affected = 0
         var occurrences = 0
         val draft = cues.mapIndexed { index, cue ->

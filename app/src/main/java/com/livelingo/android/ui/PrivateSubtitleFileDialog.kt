@@ -135,6 +135,7 @@ internal fun PrivateSubtitleFileDialog(
     var batchFind by remember { mutableStateOf("") }
     var batchWith by remember { mutableStateOf("") }
     var batchMatchCase by remember { mutableStateOf(false) }
+    var batchWholeWords by remember { mutableStateOf(false) }
     var batchField by remember { mutableStateOf(SubtitleReplaceField.ALL_TEXT) }
     var batchReviewPage by remember { mutableIntStateOf(0) }
     var batchFirstRow by remember { mutableStateOf("1") }
@@ -2194,7 +2195,7 @@ internal fun PrivateSubtitleFileDialog(
     if (batchOpen) {
         // A changed search, translation line, or selected range always starts
         // review at the first actual changed cue, not an old preview page.
-        LaunchedEffect(draft, batchFind, batchWith, batchMatchCase,
+        LaunchedEffect(draft, batchFind, batchWith, batchMatchCase, batchWholeWords,
             batchField, batchFirstRow, batchLastRow, batchExplicitRows) {
             batchReviewPage = 0
         }
@@ -2207,7 +2208,7 @@ internal fun PrivateSubtitleFileDialog(
                 draft, batchFind, batchWith, batchMatchCase,
                 if (explicitBatch) 1 else scopeFrom!!,
                 if (explicitBatch) draft.size else scopeTo!!,
-                batchField, batchExplicitRows)
+                batchField, batchExplicitRows, batchWholeWords)
         else null
         val changes = proposed?.updated?.withIndex()?.filter { (i, cue) ->
             cue.text != draft[i].text
@@ -2333,6 +2334,16 @@ internal fun PrivateSubtitleFileDialog(
                             onCheckedChange = { batchMatchCase = it })
                         Text("Hoofdletters onderscheiden")
                     }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Checkbox(checked = batchWholeWords,
+                            onCheckedChange = { batchWholeWords = it })
+                        Text("Alleen volledige woorden")
+                    }
+                    Text("Ook bij niet-Latijnse woorden: vervang niet binnen " +
+                        "een langer woord. Zoekterm moet met een letter of cijfer " +
+                        "beginnen en eindigen (combinatieaccenten toegestaan).",
+                        style = MaterialTheme.typography.bodySmall)
                     Text(
                         if (proposed == null)
                             "Geen geldige wijziging; controleer zoekterm, " +
@@ -2381,7 +2392,7 @@ internal fun PrivateSubtitleFileDialog(
                             draft, batchFind, batchWith, batchMatchCase,
                             if (explicitConfirmed) 1 else confirmedFrom!!,
                             if (explicitConfirmed) draft.size else confirmedTo!!,
-                            batchField, batchExplicitRows)
+                            batchField, batchExplicitRows, batchWholeWords)
                     else null
                     if (confirmed != null) {
                         applyChange(confirmed.updated)
