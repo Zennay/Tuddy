@@ -102,6 +102,23 @@ document. In de Android-voorbeeldweergave staat de daadwerkelijk
 verwerkte, expliciete offset naast de tijdcodes; er wordt niets uit
 audio afgeleid en geen stille verschuiving uitgevoerd. Het
 resultaat moet veilig als volledige SRT **én** WebVTT exporteerbaar zijn.
+
+### De hele LRC-tijdlijn bewust 500 ms verschuiven
+
+Als het eigen LRC-document geldig is, zie je naast de chronologische
+cue-preview de actieve offset en drie knoppen: **− 0,5 s**,
+**Offset 0** en **+ 0,5 s**. Iedere tik past alleen de ene zichtbare
+`[offset:...]`-header in je **tijdelijke invoer** aan. Bij een offset
+van nul verdwijnt die regel volledig; de zelfgeschreven zinnen en
+expliciete oorspronkelijke tijdstempels veranderen niet. De
+uitgewerkte tijdlijn wordt meteen opnieuw samengesteld, met dezelfde
+maximumgrenzen en chronologische selectie. Als de verschuiving een
+negatieve tijd, dubbele/onveilige tijd of ongeldige export oplevert,
+weigert Tuddy de wijziging en blijft je oude eigen tekst staan. Je
+kunt de toegevoegde header en resulterende tijdstempels vóór
+overname zelf bekijken. Het **oorspronkelijke gekozen bestand** wordt
+nooit ongemerkt aangepast of overschreven.
+
 Volledige preview, zoeken, eigen cue-selectie en bewuste Android-keuze
 blijven vereist. Tijdcodes zijn aangeleverd, **niet gemeten**, en
 zeggen niets over correcte spraak-/woorduitlijning, ASR of MT.
