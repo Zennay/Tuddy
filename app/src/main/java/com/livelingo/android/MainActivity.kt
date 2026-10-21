@@ -895,6 +895,8 @@ private fun TuddyScreen(
             modelStorageNotice = message
             installedTextModels = null  // never keep presenting an old inventory
             if (success) {
+                // Invalidate translator clients as well as inventory after model removal.
+                localTranslatorPool.invalidate()
                 // The inventory and currently selected pair are independent;
                 // always re-read actual model status after storage changes.
                 textInventory.invalidate()
@@ -938,6 +940,7 @@ private fun TuddyScreen(
             translator.downloadModelIfNeeded(DownloadConditions.Builder().requireWifi().build())
                 .addOnSuccessListener {
                     translator.close()
+                    localTranslatorPool.invalidate()
                     preparingOfflineModel = false
                     if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                         offlineModelStatus = "Download afgerond; aanwezigheid opnieuw controleren…"
@@ -946,6 +949,7 @@ private fun TuddyScreen(
                 }
                 .addOnFailureListener {
                     translator.close()
+                    localTranslatorPool.invalidate()
                     preparingOfflineModel = false
                     if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                         offlineModelStatus = "Tekstmodel niet beschikbaar. Controleer wifi en opslag; probeer opnieuw."
@@ -953,6 +957,7 @@ private fun TuddyScreen(
                 }
         } catch (_: Exception) {
             translator.close()
+            localTranslatorPool.invalidate()
             preparingOfflineModel = false
             if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                 offlineModelStatus = "Tekstmodel kon niet worden voorbereid."
@@ -2000,6 +2005,7 @@ private fun TuddyScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) {
+                localTranslatorPool.invalidate()
                 modelStorage.invalidate()
                 modelStorageBusy = false
                 pendingModelDeletion = null
@@ -2107,6 +2113,7 @@ private fun TuddyScreen(
             pendingSingleCaptionDelete = null
             pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
+            localTranslatorPool.close()
             captionSpeaker.close()
         }
     }
