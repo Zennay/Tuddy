@@ -88,6 +88,9 @@ internal fun SubtitlePasteDialog(
     var lrcAnchorFirstInput by remember(initialDocument) { mutableStateOf("") }
     var lrcAnchorLastInput by remember(initialDocument) { mutableStateOf("") }
     var lrcAnchorPreviewPage by remember { mutableIntStateOf(0) }
+    var lrcExactRowInput by remember(initialDocument) { mutableStateOf("") }
+    var lrcExactTimeInput by remember(initialDocument) { mutableStateOf("") }
+    var lrcExactPreviewPage by remember { mutableIntStateOf(0) }
     // Only deliberate in-dialog LRC timing actions are undoable here.
     // Bounded to eight RAM snapshots (each input is already <=256 KiB).
     var lrcUndo by remember(initialDocument) { mutableStateOf(emptyList<String>()) }
@@ -252,6 +255,21 @@ internal fun SubtitlePasteDialog(
     }
     val lrcAnchorAfter = remember(lrcAnchorProposal) {
         lrcAnchorProposal?.let(PrivateLrcSubtitleDraft::preview)
+    }
+    val lrcExactRowIndex = lrcExactRowInput.toIntOrNull()?.minus(1)
+    val lrcExactTimeMillis = PrivateSubtitleTimelineNavigation.timestamp(lrcExactTimeInput)
+    val lrcExactProposal = remember(
+        raw, lrcExactRowIndex, lrcExactTimeMillis, plainLines, lrcMode
+    ) {
+        if (!plainLines && lrcMode && lrcExactRowIndex != null &&
+            lrcExactTimeMillis != null) {
+            PrivateLrcSubtitleDraft.withExactCueStart(
+                raw, lrcExactRowIndex, lrcExactTimeMillis
+            )
+        } else null
+    }
+    val lrcExactAfter = remember(lrcExactProposal) {
+        lrcExactProposal?.let(PrivateLrcSubtitleDraft::preview)
     }
     val pageSize = 15
     val countPages = maxOf(1, (filtered.size + pageSize - 1) / pageSize)
@@ -973,6 +991,132 @@ internal fun SubtitlePasteDialog(
                                 ) {
                                     Text("Pas deze geselecteerde LRC-verschuiving bewust toe")
                                 }
+                            }
+                        }
+                    }
+                    if (!plainLines && lrcMode) {
+                        Text(
+                            "Corrigeer één foutief LRC-begin exact: kies een " +
+                                "chronologisch uitgewerkt origineel bronregelnummer " +
+                                "en zijn gewenste absolute begintijd. Dit is geen " +
+                                "globale verschuiving en geen nieuwe cue-invoer.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = chosenIndices?.isNotEmpty() == true,
+                            onClick = {
+                                val index = chosenIndices?.firstOrNull()
+                                    ?: return@OutlinedButton
+                                lrcExactRowInput = (index + 1).toString()
+                                lrcExactTimeInput = parsed[index].startLabel
+                                lrcExactPreviewPage = index / 5
+                            }
+                        ) {
+                            Text("Vul eerste geselecteerde cue en zijn huidige tijd in")
+                        }
+                        OutlinedTextField(
+                            value = lrcExactRowInput,
+                            onValueChange = { value ->
+                                if (value.length <= 4 && value.all { it in '0'..'9' }) {
+                                    lrcExactRowInput = value
+                                    lrcExactPreviewPage = 0
+                                }
+                            },
+                            label = { Text("Exact bronregelnummer (1–${parsed.size})") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = lrcExactTimeInput,
+                            onValueChange = { value ->
+                                if (value.length <= 13) {
+                                    lrcExactTimeInput = value
+                                    lrcExactPreviewPage = 0
+                                }
+                            },
+                            label = { Text("Nieuwe begintijd (uu:mm:ss.mmm)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (lrcExactRowInput.isNotBlank() ||
+                            lrcExactTimeInput.isNotBlank()) {
+                            if (lrcExactProposal == null || lrcExactAfter == null) {
+                                Text(
+                                    "Kies één bestaande cue en een gewijzigde, geldige tijd. " +
+                                        "Omkeren, gelijke begintijden of een " +
+                                        "onexporteerbare tijdlijn is niet toegestaan. " +
+                                        "Geen wijziging toegepast.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            } else {
+                                val after = lrcExactAfter
+                                val pages = maxOf(1, (parsed.size + 4) / 5)
+                                val shown = lrcExactPreviewPage.coerceIn(0, pages - 1)
+                                val changedPages = parsed.indices.filter { index ->
+                                    parsed[index].startMillis != after[index].startMillis ||
+                                        parsed[index].endMillis != after[index].endMillis
+                                }.map { it / 5 }.distinct()
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        enabled = shown != changedPages.firstOrNull(),
+                                        onClick = {
+                                            changedPages.firstOrNull()?.let {
+                                                lrcExactPreviewPage = it
+                                            }
+                                        }
+                                    ) { Text("Eerste verandering") }
+                                    OutlinedButton(
+                                        enabled = changedPages.any { it > shown },
+                                        onClick = {
+                                            changedPages.firstOrNull { it > shown }?.let {
+                                                lrcExactPreviewPage = it
+                                            }
+                                        }
+                                    ) { Text("Volgende verandering") }
+                                }
+                                Text(
+                                    "Complete oude/nieuwe preview · pagina ${shown + 1}/${pages}. " +
+                                        "Ook de vorige cue kan een andere eindtijd krijgen.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                parsed.indices.drop(shown * 5).take(5).forEach { index ->
+                                    val old = parsed[index]
+                                    val updated = after[index]
+                                    Text(
+                                        "Regel ${index + 1}" +
+                                            (if (index == lrcExactRowIndex) " · gekozen" else "") +
+                                            "\n${old.startLabel} → ${old.endLabel}" +
+                                            "\nwordt ${updated.startLabel} → ${updated.endLabel}" +
+                                            "\n${old.text}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        enabled = shown > 0,
+                                        onClick = { lrcExactPreviewPage = shown - 1 }
+                                    ) { Text("Vorige 5") }
+                                    OutlinedButton(
+                                        enabled = shown + 1 < pages,
+                                        onClick = { lrcExactPreviewPage = shown + 1 }
+                                    ) { Text("Volgende 5") }
+                                }
+                                OutlinedButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = {
+                                        commitLrcTiming(lrcExactProposal)
+                                        lrcExactRowInput = ""
+                                        lrcExactTimeInput = ""
+                                        lrcExactPreviewPage = 0
+                                        documentNotice = "Eén absolute cue-begintijd bewust " +
+                                            "gecorrigeerd in het tijdelijke LRC-concept. " +
+                                            "Het oorspronkelijke document is intact."
+                                    }
+                                ) { Text("Bevestig deze ene exacte LRC-tijdcorrectie") }
                             }
                         }
                     }
