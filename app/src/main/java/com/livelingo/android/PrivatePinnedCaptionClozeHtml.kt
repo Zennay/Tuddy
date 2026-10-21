@@ -10,6 +10,13 @@ internal enum class PinnedClozeDifficulty(val title: String) {
     CHALLENGE("Uitdaging · 2 van 3 woorden ontbreken")
 }
 
+/** The learner chooses how much of each hidden whitespace-separated term to see. */
+internal enum class PinnedClozeHintMode(val title: String) {
+    BLANK("Alleen invulstrepen"),
+    FIRST_LETTER("Eerste teken van verborgen woorden"),
+    LENGTH("Woordlengte als invulstrepen")
+}
+
 internal object PrivatePinnedCaptionClozeHtml {
     private const val MAX_BYTES = 262_144
 
@@ -26,7 +33,24 @@ internal object PrivatePinnedCaptionClozeHtml {
         }
     }
 
-    private fun missingWords(value: String, difficulty: PinnedClozeDifficulty): String {
+    private fun hiddenWord(word: String, hintMode: PinnedClozeHintMode): String =
+        when (hintMode) {
+            PinnedClozeHintMode.BLANK -> "________"
+            PinnedClozeHintMode.FIRST_LETTER -> {
+                val first = word.codePointAt(0)
+                if (Character.isLetterOrDigit(first))
+                    String(Character.toChars(first)) + "____"
+                else "________"
+            }
+            PinnedClozeHintMode.LENGTH ->
+                "_".repeat(word.codePointCount(0, word.length).coerceIn(1, 16))
+        }
+
+    private fun missingWords(
+        value: String,
+        difficulty: PinnedClozeDifficulty,
+        hintMode: PinnedClozeHintMode
+    ): String {
         val words = value.trim().split(Regex("\\s+"))
         // Do not invent word boundaries in unsegmented scripts.
         if (words.size < 2) return "________"
@@ -37,7 +61,7 @@ internal object PrivatePinnedCaptionClozeHtml {
                     PinnedClozeDifficulty.NORMAL -> index % 2 == 1
                     PinnedClozeDifficulty.CHALLENGE -> index % 3 != 0
                 }
-            if (hide) "________" else word
+            if (hide) hiddenWord(word, hintMode) else word
         }.joinToString(" ")
     }
 
@@ -45,10 +69,11 @@ internal object PrivatePinnedCaptionClozeHtml {
     fun previewHint(
         text: String,
         languageCode: String? = null,
-        difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL
+        difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL,
+        hintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK
     ): String {
         val words = missingWords(
-            PrivatePinnedCaptionStudyTsv.field(text, spreadsheetSafe = false), difficulty
+            PrivatePinnedCaptionStudyTsv.field(text, spreadsheetSafe = false), difficulty, hintMode
         )
         return if (languageCode == null) words else "[" + languageCode + "] " + words
     }
@@ -57,7 +82,8 @@ internal object PrivatePinnedCaptionClozeHtml {
         rows: List<TranscriptExportRow>,
         direction: PinnedStudyDirection,
         showLanguageTags: Boolean = false,
-        difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL
+        difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL,
+        hintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK
     ): ByteArray? {
         // Same exact source-data and language-label validation as TSV.
         // Printed text must not gain spreadsheet formula-safety apostrophes.
@@ -73,10 +99,10 @@ internal object PrivatePinnedCaptionClozeHtml {
             val back = if (showLanguageTags) "[" + row.targetCode + "] " + target else target
             if (direction != PinnedStudyDirection.TARGET_TO_SOURCE)
                 cards.add(Triple(front, back, previewHint(target,
-                    if (showLanguageTags) row.targetCode else null, difficulty)))
+                    if (showLanguageTags) row.targetCode else null, difficulty, hintMode)))
             if (direction != PinnedStudyDirection.SOURCE_TO_TARGET)
                 cards.add(Triple(back, front, previewHint(source,
-                    if (showLanguageTags) row.sourceCode else null, difficulty)))
+                    if (showLanguageTags) row.sourceCode else null, difficulty, hintMode)))
         }
         if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2) return null
 
@@ -107,6 +133,7 @@ internal object PrivatePinnedCaptionClozeHtml {
                 ".card{break-inside:avoid}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
                 "<p>Moeilijkheid: " + escape(difficulty.title) + ". " +
+                "Invulhint: " + escape(hintMode.title) + ". " +
                 "Vul de ontbrekende woorden in. Dit zijn uitsluitend " +
                 "zelfgekozen lokale zinnen, ongeverifieerde modelvertalingen " +
                 "of eigen correcties. Geen automatische taalcontrole." +
