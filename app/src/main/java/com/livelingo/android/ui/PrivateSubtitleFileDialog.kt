@@ -343,14 +343,15 @@ internal fun PrivateSubtitleFileDialog(
                 verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Eigen ondertitelconcept · SRT/VTT/LRC",
+                    Text("Eigen ondertitelconcept · lokaal",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f))
                     TextButton(onClick = onDismiss) { Text("Sluiten") }
                 }
-                Text("Tekst en begintijden komen uit je gekozen bronbestand. " +
+                Text("Tekst en tijdcodes komen uit je gekozen SRT/VTT/LRC/CSV/TSV. " +
                     "Bij LRC eindigt iedere regel bij de volgende begintijd; " +
                     "voor de laatste regel wordt 3 seconden geschat. " +
+                    "CSV/TSV neemt bestaande begin- en eindtijden over. " +
                     "Geen geverifieerde vertaling of automatische audio-synchronisatie.",
                     style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(value = query, onValueChange = {
@@ -508,7 +509,7 @@ internal fun PrivateSubtitleFileDialog(
                         // ON_STOP; parser and merge preview remain fail-closed.
                         onChooseSecondFile(draft.toList())
                     }
-                ) { Text("＋ Tweede SRT/VTT/LRC-document toevoegen…") }
+                ) { Text("＋ Tweede ondertitelbestand toevoegen…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = draft.size < 500,
@@ -760,7 +761,7 @@ internal fun PrivateSubtitleFileDialog(
 
     if (pasteSecondOpen || incomingSecondPaste != null) {
         SubtitlePasteDialog(
-            title = "Tweede SRT/VTT/LRC-spoor zelf plakken",
+            title = "Tweede ondertitelspoor zelf plakken",
             initialDocument = incomingSecondPaste,
             onChooseDocument = { request ->
                 onChoosePasteDocument(draft.toList(), request)
