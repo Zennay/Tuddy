@@ -50,6 +50,19 @@ internal object PrivateCueWordProgress {
         return startAt(startMs, endMs, index, tokens.size)
     }
 
+    /** All explicitly selectable estimated positions for one visible cue. */
+    fun choices(text: String, startMs: Long, endMs: Long): List<EstimatedCueWord>? {
+        if (startMs < 0L || endMs <= startMs) return null
+        val tokens = ranges(text) ?: return null
+        if (endMs - startMs < tokens.size) return null
+        return tokens.mapIndexed { index, span ->
+            EstimatedCueWord(
+                span = span, index = index, count = tokens.size,
+                estimatedStartMs = startAt(startMs, endMs, index, tokens.size)
+            )
+        }
+    }
+
     fun estimatedSpan(
         text: String, startMs: Long, endMs: Long, positionMs: Long
     ): IntRange? = estimate(text, startMs, endMs, positionMs)?.span
