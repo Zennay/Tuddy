@@ -45,6 +45,7 @@ internal fun SubtitleScopedShiftDialog(
     var page by remember(draft) { mutableIntStateOf(0) }
     var windowStart by remember(draft) { mutableStateOf("") }
     var windowEnd by remember(draft) { mutableStateOf("") }
+    var windowRanges by remember(draft) { mutableStateOf("") }
     val preview = PrivateSubtitleScopedShift.preview(draft, rows, offset)
     val pageCount = maxOf(1, ((preview?.movedRows?.size ?: 0) + 4) / 5)
     val shown = page.coerceIn(0, pageCount - 1)
@@ -99,6 +100,27 @@ internal fun SubtitleScopedShiftDialog(
                             page = 0
                         }
                     }) { Text("Selecteer cues die tijdvenster overlappen") }
+
+                Text("Meerdere losse tijdvensters kiezen, bijvoorbeeld " +
+                    "00:10-00:20;01:00-01:15. Maximaal 16 zonder overlap; " +
+                    "een cue die beide vensters raakt, wordt één keer gekozen.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = windowRanges,
+                    onValueChange = { windowRanges = it.take(512) },
+                    label = { Text("Tijdvensters: vanaf-tot;vanaf-tot") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true)
+                val multiWindowRows = PrivateSubtitleTimeWindowRows
+                    .expressionForWindows(draft, windowRanges)
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    enabled = multiWindowRows != null,
+                    onClick = {
+                        if (multiWindowRows != null) {
+                            rows = multiWindowRows
+                            page = 0
+                        }
+                    }) { Text("Neem cues uit alle gekozen tijdvensters") }
                 Text("Handmatige verschuiving:",
                     style = MaterialTheme.typography.labelMedium)
                 listOf(
