@@ -613,7 +613,17 @@ tijdcodes** de nieuwe knop **Meerdere tijdankers: corrigeer
    twee bestaande ankers. Met **Wijzig beide oorspronkelijke
    rijen** kun je een bestaand anker vervangen en met
    **Verwijder alleen anker** een extra anker herstellen.
-   Minimaal twee ankerparen blijven nodig.
+   Minimaal twee ankerparen blijven nodig. Je kunt ook een
+   complete, zelfgeschreven ankerreeks gebruiken zoals
+   `1:1,100:99,240:237,500:497`. Deze invoer bevat de
+   **oorspronkelijke 1-gebaseerde bronregelnummers** links uit
+   spoor één en rechts uit spoor twee, geen milliseconden.
+   Tuddy weigert ongeldige, dubbele, niet oplopende of
+   onexporteerbare reeksen. Van de volledige voorgestelde
+   reeks zie je eerst **alle originele zinnen en begintijden**
+   voordat **Vervang alle ankers bewust door deze reeks**
+   je eerdere selectie verandert. Er wordt niets automatisch
+   gekoppeld op basis van tekst, audio of vertaalkennis.
 3. De app toont voor ieder zelfgekozen anker **beide volledige
    oorspronkelijke teksten én begintijdstempels**. Voor ieder
    opeenvolgend paar toont hij de originele tweede-spoor-duur
