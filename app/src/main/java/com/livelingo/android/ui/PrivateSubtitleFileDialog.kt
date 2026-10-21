@@ -65,6 +65,7 @@ import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateLrcSubtitleExport
 import com.livelingo.android.PrivateSbvSubtitleExport
+import com.livelingo.android.PrivateTtmlSubtitleExport
 import com.livelingo.android.PrivateTimedSubtitleSheet
 import com.livelingo.android.TimedSubtitleSheetFormat
 import com.livelingo.android.PrivateSubtitleTimelineNavigation
@@ -97,6 +98,7 @@ internal fun PrivateSubtitleFileDialog(
     onSaveTimedSheet: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
     onSaveLrc: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onSaveSbv: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
+    onSaveTtml: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onShareExcerpt: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     incomingSecondPaste: SubtitlePasteFileContent?,
     onChoosePasteDocument: (List<PrivateSubtitleCue>, SubtitlePasteFileContent) -> Unit,
@@ -129,6 +131,7 @@ internal fun PrivateSubtitleFileDialog(
     var requestTimedSheet by remember { mutableStateOf<TimedSubtitleSheetFormat?>(null) }
     var requestLrcSave by remember { mutableStateOf(false) }
     var requestSbvSave by remember { mutableStateOf(false) }
+    var requestTtmlSave by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
     var removeOpen by remember { mutableStateOf(false) }
@@ -546,6 +549,10 @@ internal fun PrivateSubtitleFileDialog(
                 OutlinedButton(modifier = Modifier.fillMaxWidth(),
                     onClick = { requestSbvSave = true }) {
                     Text("Bewaar exacte tijdvakken als YouTube SBV…")
+                }
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    onClick = { requestTtmlSave = true }) {
+                    Text("Bewaar exacte tijdvakken als TTML…")
                 }
                 if (notice.isNotBlank()) Text(notice,
                     style = MaterialTheme.typography.bodySmall)
@@ -2832,6 +2839,50 @@ internal fun PrivateSubtitleFileDialog(
     }
 
 
+    if (requestTtmlSave) {
+        val exactTtml = PrivateTtmlSubtitleExport.snapshot(draft)
+        AlertDialog(
+            onDismissRequest = { requestTtmlSave = false },
+            title = { Text("Eigen ondertitelregels als TTML bewaren?") },
+            text = {
+                Column(modifier = Modifier.heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("TTML is een nieuwe privé-kopie van jouw tekst met exacte " +
+                        "begin- en eindtijden. Opmaak, afbeeldingen, audio en " +
+                        "spraakherkenning worden niet toegevoegd.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (exactTtml == null) {
+                        Text("Deze cues kunnen niet zonder inhoudsverlies als " +
+                            "TTML worden bewaard. Gebruik SRT/VTT.",
+                            color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text("${draft.size} cues · ${exactTtml.size} UTF-8 bytes.",
+                            style = MaterialTheme.typography.titleSmall)
+                        PrivateSubtitlePagedExportPreview(exactTtml)
+                    }
+                    Text("Pas na bevestiging kies je een locatie voor een NIEUW " +
+                        "bestand. De Android-provider kan dit synchroniseren.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = exactTtml != null, onClick = {
+                    val fresh = PrivateTtmlSubtitleExport.snapshot(draft)
+                    if (exactTtml == null || fresh == null ||
+                        !fresh.contentEquals(exactTtml))
+                        notice = "Concept gewijzigd; open de TTML-preview opnieuw."
+                    else onSaveTtml(draft.toList(), draft.toList())
+                    requestTtmlSave = false
+                }) { Text("Kies opslaglocatie…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { requestTtmlSave = false }) {
+                    Text("Annuleren")
+                }
+            }
+        )
+    }
     if (requestSbvSave) {
         val exactSbv = PrivateSbvSubtitleExport.snapshot(draft)
         AlertDialog(

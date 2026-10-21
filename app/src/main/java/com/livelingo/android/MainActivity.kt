@@ -102,6 +102,14 @@ private data class PendingLrcSubtitleSave(
     val bytes: ByteArray
 )
 
+/** Private TTML copy, valid only across Android's user-selected save picker. */
+private data class PendingTtmlSubtitleSave(
+    val session: Int,
+    val editorDraft: List<PrivateSubtitleCue>,
+    val cues: List<PrivateSubtitleCue>,
+    val bytes: ByteArray
+)
+
 /** Explicit new SBV copy after opt-in full preview and Android SAF consent. */
 private data class PendingSbvSubtitleSave(
     val session: Int,
@@ -533,6 +541,9 @@ private fun TuddyScreen(
     }
     var pendingSbvSubtitleSave by remember {
         mutableStateOf<PendingSbvSubtitleSave?>(null)
+    }
+    var pendingTtmlSubtitleSave by remember {
+        mutableStateOf<PendingTtmlSubtitleSave?>(null)
     }
     var pendingTimedSubtitleSheet by remember {
         mutableStateOf<PendingTimedSubtitleSheetSave?>(null)
@@ -1718,6 +1729,7 @@ private fun TuddyScreen(
     ) { uri ->
         val pending = pendingSbvSubtitleSave
         pendingSbvSubtitleSave = null
+                pendingTtmlSubtitleSave = null
         if (pending != null && pending.session == generation) {
             // SAF temporarily stops the editor; the authorized snapshot
             // survives only until the document picker returns.
@@ -1738,6 +1750,34 @@ private fun TuddyScreen(
                     }.getOrDefault(false)
                     if (saved) "Nieuwe SBV-kopie met eigen begin- en eindtijden opgeslagen."
                     else "SBV kon niet worden opgeslagen; origineel ongewijzigd."
+                }
+            }
+        }
+    }
+
+    val saveTtmlSubtitle = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/ttml+xml")
+    ) { uri ->
+        val pending = pendingTtmlSubtitleSave
+        pendingTtmlSubtitleSave = null
+        if (pending != null && pending.session == generation) {
+            subtitleFileCues = pending.editorDraft
+            val fresh = PrivateTtmlSubtitleExport.snapshot(pending.cues)
+            editedSubtitleSaveNotice = when {
+                fresh == null || !fresh.contentEquals(pending.bytes) ->
+                    "TTML-opslag geweigerd: het tijdelijke concept is gewijzigd."
+                uri == null -> "TTML-opslag geannuleerd; concept heropend."
+                uri.scheme != "content" -> "Ongeldige Android-opslaglocatie."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { out ->
+                            out.write(pending.bytes)
+                            out.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved) "Nieuwe TTML-kopie met eigen tijdvakken opgeslagen."
+                    else "TTML niet opgeslagen; het concept blijft ongewijzigd."
                 }
             }
         }
@@ -2118,6 +2158,7 @@ private fun TuddyScreen(
             pendingTimedSubtitleSheet = null
             pendingLrcSubtitleSave = null
                 pendingSbvSubtitleSave = null
+                pendingTtmlSubtitleSave = null
             editedSubtitleSaveNotice = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
@@ -2726,6 +2767,17 @@ private fun TuddyScreen(
                             generation, editorDraft.toList(), exportCues.toList(), bytes
                         )
                         saveSbvSubtitle.launch("Tuddy-eigen-tijdvakken.sbv")
+                    }
+                },
+                onSaveTtml = { editorDraft, exportCues ->
+                    val bytes = PrivateTtmlSubtitleExport.snapshot(exportCues)
+                    if (bytes == null) {
+                        error = "Geen verliesvrije TTML-kopie mogelijk; gebruik SRT/VTT."
+                    } else {
+                        pendingTtmlSubtitleSave = PendingTtmlSubtitleSave(
+                            generation, editorDraft.toList(), exportCues.toList(), bytes
+                        )
+                        saveTtmlSubtitle.launch("Tuddy-eigen-tijdvakken.ttml")
                     }
                 },
                 onShareExcerpt = { selectedCues, format ->
@@ -4943,6 +4995,7 @@ private fun TuddyScreen(
                         pendingTimedSubtitleSheet = null
                         pendingLrcSubtitleSave = null
                 pendingSbvSubtitleSave = null
+                pendingTtmlSubtitleSave = null
                         pendingTranscriptExport = null
                         pendingPinnedExport = null
                         pinnedExportOpen = false
