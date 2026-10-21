@@ -375,7 +375,9 @@ internal fun MyOfflinePhrasesPanel(
                                     else TextDirection.Ltr
                             ))
                         Text("Eigen betekenis: ${item.ownMeaning}",
-                            style = MaterialTheme.typography.bodySmall)
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = TextDirection.Ltr
+                            ))
                     }
                 }
             },
@@ -430,7 +432,9 @@ internal fun MyOfflinePhrasesPanel(
                                 else TextDirection.Ltr
                         ))
                     Text("Mijn eigen betekenis: ${removingSingle.ownMeaning}",
-                        style = MaterialTheme.typography.bodyMedium)
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textDirection = TextDirection.Ltr
+                        ))
                     Text("Maak indien nodig eerst een privé-back-up. " +
                         "Tuddy deelt of verstuurt deze zin niet.",
                         style = MaterialTheme.typography.bodySmall)
@@ -579,7 +583,10 @@ internal fun MyOfflinePhrasesPanel(
                 OutlinedTextField(
                     value = meaning, onValueChange = { meaning = it.take(180) },
                     label = { Text("Je eigen betekenis (geen automatische vertaling)") },
-                    modifier = Modifier.fillMaxWidth(), maxLines = 3
+                    modifier = Modifier.fillMaxWidth(), maxLines = 3,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        textDirection = TextDirection.Ltr
+                    )
                 )
                 OutlinedButton(
                     enabled = phrase.isNotBlank() && meaning.isNotBlank(),
@@ -808,7 +815,9 @@ internal fun MyOfflinePhrasesPanel(
                                 textDirection = if (item.language == "ckb" || item.language == "ps")
                                     TextDirection.Rtl else TextDirection.Ltr
                             ))
-                        Text(item.ownMeaning, style = MaterialTheme.typography.bodyMedium)
+                        Text(item.ownMeaning, style = MaterialTheme.typography.bodyMedium.copy(
+                        textDirection = TextDirection.Ltr
+                    ))
                         Text("Thema: ${phraseTopics.topicFor(item) ?: "Niet ingedeeld"}",
                             style = MaterialTheme.typography.labelSmall)
                         TextButton(onClick = { assigningTopicTo = item }) {
@@ -1010,7 +1019,9 @@ internal fun MyOfflinePhrasesPanel(
                                     else TextDirection.Ltr
                             ))
                         Text("Eigen betekenis: ${record.ownMeaning}",
-                            style = MaterialTheme.typography.bodySmall)
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = TextDirection.Ltr
+                            ))
                     }
                 }
             },
