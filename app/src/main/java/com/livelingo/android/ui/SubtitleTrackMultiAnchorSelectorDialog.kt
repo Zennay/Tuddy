@@ -1,0 +1,250 @@
+package com.livelingo.android.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.livelingo.android.PrivateSubtitleCue
+import com.livelingo.android.PrivateSubtitleMultiAnchor
+import com.livelingo.android.PrivateSubtitleTrackMultiAnchorAlignment
+
+/**
+ * Every matching cue is selected by the user; browsing never commits a match.
+ * Only the immutable original source cues are shown here, not the retimed copy.
+ */
+@Composable
+internal fun SubtitleTrackMultiAnchorSelectorDialog(
+    primary: List<PrivateSubtitleCue>,
+    secondary: List<PrivateSubtitleCue>,
+    initial: List<PrivateSubtitleMultiAnchor>?,
+    onChoose: (List<PrivateSubtitleMultiAnchor>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var anchors by remember(primary, secondary) {
+        mutableStateOf(initial ?: listOf(
+            PrivateSubtitleMultiAnchor(1, 1),
+            PrivateSubtitleMultiAnchor(primary.size, secondary.size)
+        ))
+    }
+    var primaryInput by remember(primary, secondary) { mutableStateOf("") }
+    var secondaryInput by remember(primary, secondary) { mutableStateOf("") }
+
+    val firstRow = primaryInput.toIntOrNull()
+    val secondRow = secondaryInput.toIntOrNull()
+    val candidate = if (firstRow != null && secondRow != null &&
+        firstRow in 1..primary.size && secondRow in 1..secondary.size
+    ) PrivateSubtitleMultiAnchor(firstRow, secondRow) else null
+    val candidateAnchors = candidate?.let { pair ->
+        (anchors + pair).sortedBy { it.primaryRow }
+    }
+    val additionalPreview = if (candidateAnchors != null &&
+        candidateAnchors.size <= PrivateSubtitleTrackMultiAnchorAlignment.MAX_ANCHORS
+    ) PrivateSubtitleTrackMultiAnchorAlignment.preview(
+        primary, secondary, candidateAnchors) else null
+    val preview = PrivateSubtitleTrackMultiAnchorAlignment.preview(
+        primary, secondary, anchors)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tweede spoor · meerpunts tijdcorrectie") },
+        text = {
+            Column(
+                modifier = Modifier.heightIn(max = 560.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                Text("Tuddy past het tweede, door jou gekozen spoor " +
+                    "stuk voor stuk aan tussen 2–8 zelf aangewezen bij " +
+                    "elkaar horende bronregelparen. Buiten de eerste " +
+                    "en laatste ankers geldt het dichtstbijzijnde tempo. " +
+                    "Dit is geen audio-uitlijning of taalherkenning.",
+                    style = MaterialTheme.typography.bodySmall)
+                Text("${anchors.size} gekozen ankers (maximaal 8). " +
+                    "Kies ze zelf in beide originele sporen. " +
+                    "De begin-/eindtijden worden pas na aparte " +
+                    "definitieve toestemming in RAM toegepast.",
+                    style = MaterialTheme.typography.bodySmall)
+
+                anchors.forEachIndexed { index, pair ->
+                    val firstCue = primary.getOrNull(pair.primaryRow - 1)
+                    val secondCue = secondary.getOrNull(pair.secondaryRow - 1)
+                    if (firstCue != null && secondCue != null) {
+                        Text("Anker ${index + 1} · spoor 1, bronregel " +
+                            "${pair.primaryRow} · ${firstCue.startLabel}\n" +
+                            firstCue.text + "\nSpoor 2, bronregel " +
+                            "${pair.secondaryRow} · ${secondCue.startLabel}\n" +
+                            secondCue.text,
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = anchors.size > 2,
+                            onClick = { anchors = anchors.filterIndexed {
+                                i, _ -> i != index
+                            } }
+                        ) { Text("Verwijder alleen anker ${index + 1}") }
+                    }
+                }
+                Text("Voeg desgewenst een extra overeenkomst tussen " +
+                    "bestaande ankers toe. Dit overschrijft de eerdere " +
+                    "keuze niet en vereist stijgende originele bronvolgorde.",
+                    style = MaterialTheme.typography.bodySmall)
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedTextField(
+                        modifier = Modifier.weight(1f),
+                        value = primaryInput,
+                        onValueChange = {
+                            primaryInput = it.filter { char ->
+                                char in '0'..'9' }.take(4)
+                        },
+                        label = { Text("Spoor 1 · rij") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        modifier = Modifier.weight(1f),
+                        value = secondaryInput,
+                        onValueChange = {
+                            secondaryInput = it.filter { char ->
+                                char in '0'..'9' }.take(4)
+                        },
+                        label = { Text("Spoor 2 · rij") },
+                        singleLine = true
+                    )
+                }
+                MultiAnchorSourceBrowser(
+                    label = "Origineel spoor 1",
+                    cues = primary,
+                    onChoose = { primaryInput = it.toString() }
+                )
+                MultiAnchorSourceBrowser(
+                    label = "Origineel spoor 2",
+                    cues = secondary,
+                    onChoose = { secondaryInput = it.toString() }
+                )
+                if (candidate != null && additionalPreview != null) {
+                    val a = primary[candidate.primaryRow - 1]
+                    val b = secondary[candidate.secondaryRow - 1]
+                    Text("Nieuw gekozen paar, nog niet toegevoegd:\n" +
+                        "Spoor 1 · ${a.startLabel}\n${a.text}\n" +
+                        "Spoor 2 · ${b.startLabel}\n${b.text}",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = additionalPreview != null,
+                    onClick = {
+                        if (candidateAnchors != null &&
+                            PrivateSubtitleTrackMultiAnchorAlignment.preview(
+                                primary, secondary, candidateAnchors) != null
+                        ) {
+                            anchors = candidateAnchors
+                            primaryInput = ""
+                            secondaryInput = ""
+                        }
+                    }
+                ) { Text("Voeg dit bronankerpaar bewust toe") }
+
+                if (preview == null) {
+                    Text("Tijdlijn ongeldig. Elk anker moet in beide bronnen " +
+                        "verderop liggen, met per anker maximaal ±600 s verschil " +
+                        "en per segment tempo tussen 0,5× en 2×. " +
+                        "De hele uitkomst moet als SRT én VTT geldig zijn.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                } else {
+                    preview.segmentSourceSpansMs.indices.forEach { index ->
+                        Text("Segment ${index + 1} → ${index + 2}: " +
+                            "tweede spoor ${preview.segmentSourceSpansMs[index]} ms " +
+                            "wordt eerste spoor " +
+                            "${preview.segmentTargetSpansMs[index]} ms.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("Na overnemen volgt de volledige gecombineerde " +
+                        "preview met alle losse bronregels. Pas de aparte " +
+                        "bevestiging verandert het tijdelijke concept.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = preview != null, onClick = {
+                val fresh = PrivateSubtitleTrackMultiAnchorAlignment.preview(
+                    primary, secondary, anchors)
+                if (fresh != null && preview != null &&
+                    fresh.adjustedSecondary == preview.adjustedSecondary &&
+                    fresh.anchors == preview.anchors) onChoose(anchors.toList())
+            }) { Text("Neem alle tijdankers over") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annuleren") }
+        }
+    )
+}
+
+@Composable
+private fun MultiAnchorSourceBrowser(
+    label: String,
+    cues: List<PrivateSubtitleCue>,
+    onChoose: (Int) -> Unit
+) {
+    var search by remember(cues) { mutableStateOf("") }
+    var page by remember(cues) { mutableIntStateOf(0) }
+    var expanded by remember(cues) { mutableStateOf(emptySet<Int>()) }
+    val found = cues.withIndex().filter {
+        search.isBlank() || it.value.text.contains(search.trim(), ignoreCase = true)
+    }
+    val pages = maxOf(1, (found.size + 2) / 3)
+    val currentPage = page.coerceIn(0, pages - 1)
+    Text("$label · ${found.size} van ${cues.size} regels · " +
+        "pagina ${currentPage + 1}/$pages",
+        style = MaterialTheme.typography.titleSmall)
+    OutlinedTextField(
+        modifier = Modifier.fillMaxWidth(), value = search,
+        onValueChange = { search = it.take(100); page = 0 },
+        label = { Text("Zoek eigen originele zinsdelen") },
+        singleLine = true
+    )
+    if (found.isEmpty()) Text("Geen originele bronregels gevonden.",
+        style = MaterialTheme.typography.bodySmall)
+    found.drop(currentPage * 3).take(3).forEach { item ->
+        val row = item.index + 1
+        val cue = item.value
+        val showAll = row in expanded
+        Text("Originele rij $row · ${cue.startLabel} → ${cue.endLabel}\n" +
+            (if (showAll) cue.text else cue.text.replace('\n', ' ').take(95)),
+            style = MaterialTheme.typography.bodySmall)
+        if (cue.text.length > 95 || cue.text.contains('\n')) {
+            TextButton(onClick = {
+                expanded = if (showAll) expanded - row else expanded + row
+            }) { Text(if (showAll) "Verkort bronregel" else "Lees volledige bronregel") }
+        }
+        OutlinedButton(modifier = Modifier.fillMaxWidth(),
+            onClick = { onChoose(row) }) {
+            Text("Neem oorspronkelijke regel $row over (nog niet koppelen)")
+        }
+    }
+    Row(modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween) {
+        TextButton(enabled = currentPage > 0,
+            onClick = { page = currentPage - 1 }) { Text("← Vorige $label") }
+        TextButton(enabled = currentPage < pages - 1,
+            onClick = { page = currentPage + 1 }) { Text("Volgende →") }
+    }
+}
