@@ -90,14 +90,17 @@ internal object PrivateListeningWorksheet {
         offsetMs: Long,
         passages: List<Pair<Long, Long>>,
         ratings: Map<Pair<Long, Long>, String>,
-        notes: Map<Pair<Long, Long>, String>
+        notes: Map<Pair<Long, Long>, String>,
+        scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL
     ): ByteArray? {
         if (passages.isEmpty() || passages.size > 4 ||
             passages.distinct().size != passages.size ||
             cues.size > MAX_CUES) return null
 
+        val selected = privatePracticeRouteCandidates(passages, ratings, scope)
+        if (selected.isEmpty()) return null
         val sections = ArrayList<Passage>()
-        for ((index, bounds) in passages.withIndex()) {
+        for ((index, bounds) in selected.withIndex()) {
             val start = bounds.first
             val end = bounds.second
             if (start < 0L || end <= start || end - start > 300_000L) return null
@@ -147,7 +150,9 @@ internal object PrivateListeningWorksheet {
                 "<p>Luister eerst naar je eigen A–B-fragment. Schrijf op wat je " +
                 "hoort of begrijpt. Open daarna de eigen bronregels om zelf te " +
                 "vergelijken. Dit zijn handmatig gekozen tijden en eigen teksten, " +
-                "geen ASR, uitspraakmeting of geverifieerde vertaling.</p>"
+                "geen ASR, uitspraakmeting of geverifieerde vertaling.</p>" +
+                "<p>Mijn bewust gekozen selectie: " + html(scope.title) + " (" +
+                selected.size + " van " + passages.size + " eigen fragmenten).</p>"
         )
         for (part in sections) {
             out.append("<article><h2>Fragment ").append(part.number).append("</h2><p>")
