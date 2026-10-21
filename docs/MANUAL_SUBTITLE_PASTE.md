@@ -466,6 +466,42 @@ eventueel zelf online kan synchroniseren. Geen automatische cloud-
 spraakverwerking, schrijfacties vóór toestemming of verifieerbare
 audio-/woordtiming wordt hierdoor geclaimd.
 
+## Alleen gevonden regels als SRT, VTT, CSV, TSV of LRC bewaren
+
+Zoek in het tijdelijke ondertitelconcept op een woord of zin en kies
+**↳ Bewaar alleen gevonden regels als SRT/VTT…**. De bestaande
+zoekselectie toont nog steeds de eigen oorspronkelijke regels; er
+worden geen niet-gevonden ondertitels meegenomen. In het vernieuwde
+expliciete exportvenster kun je kiezen uit **SRT, WebVTT, CSV, TSV of
+LRC**. De knopnaam verwijst om compatibiliteitsredenen nog naar
+SRT/VTT, maar alle vijf opties worden in het venster aangeboden.
+
+Kies **Behoud oorspronkelijke tijdcodes** als je de oorspronkelijke
+begins/uitloop wilt behouden, of **Maak aaneengesloten excerpt vanaf
+00:00** om de geselecteerde regels zonder tussengelegen pauzes te
+exporteren (0,25 s tussen de kaarten). Dit is een handmatige
+tijdlijnbewerking, **geen gemeten audio-uitlijning**. Het is geen
+automatische tekst- of spraakvertaling.
+
+- **SRT/VTT** bevatten de volledige eigen tekst en begin-/eindtijden.
+- **CSV/TSV** zijn alleen beschikbaar als alle gekozen cues één
+  tekstregel (3 kolommen) of allemaal precies twee regels (4 kolommen)
+  hebben; onveilig spreadsheetinvoer en ongeldige tekst worden
+  geweigerd. Ze zijn zonder kopregel direct opnieuw importeerbaar.
+- **LRC** is uitsluitend bedoeld voor één eigen tekstregel per cue
+  met strikt oplopende begintijden. **Eindtijden gaan verloren**;
+  gebruik SRT/VTT/CSV/TSV als je ze wilt behouden.
+
+Het exportvenster laat **alle werkelijk te schrijven UTF-8-bytes**
+zien in doorbladerbare deelpagina's, plus de bron-/excerptlengte en
+bestandsgrootte. Niet veilig exporteerbare combinaties zetten de
+opslaan-knop uit in plaats van inhoud stilzwijgend weg te laten.
+Vlak vóór opslag herberekent Tuddy de exacte export op basis van
+de actuele tijdelijke selectie, en de gedeelde Android-bestandsroute
+controleert de snapshot nogmaals na de bewuste providerkeuze.
+Het origineel blijft ongewijzigd. Een provider die je zelf kiest
+kan extern synchroniseren.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
