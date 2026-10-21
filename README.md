@@ -1,3 +1,14 @@
+## Nieuw: vier ondertitelbewerkingen op dezelfde tijdselectie
+
+Exporteren, tijdcodes verschuiven, ongewenste ondertitels
+verwijderen en letterlijke tekst corrigeren kunnen nu allemaal
+beginnen met een handmatig **Vanaf/Tot**-tijdvenster. De
+geselecteerde volledige oorspronkelijke cues worden zichtbaar
+omgezet naar regelnummers; toepassing of bestandsschrijven is
+altijd een afzonderlijke bewuste stap. De bestaande paginapreviews,
+tijdcodegrenzen en Terug/Opnieuw blijven behouden.
+[Meer informatie](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Hersteld: gefilterd bestand exporteren wist geen andere editorregels
 
 Wanneer je enkel geselecteerde SRT/VTT/CSV/TSV/LRC-regels naar een
