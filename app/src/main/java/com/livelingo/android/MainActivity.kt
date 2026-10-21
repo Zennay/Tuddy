@@ -3832,25 +3832,53 @@ private fun TuddyScreen(
                                     val studentCopy = pinnedExportFormat ==
                                         PinnedCaptionFormat.CLOZE_HTML &&
                                         pinnedClozeAudience == PinnedClozeAudience.STUDENT_HANDOUT
-                                    Text((if (studentCopy) "Zichtbare opdrachtzin: "
-                                        else "Voorzijde: ") +
-                                        (if (reverse) meaning else source),
-                                        style = MaterialTheme.typography.bodySmall)
+                                    val frontCode = if (reverse)
+                                        record.caption.targetCode else record.caption.sourceCode
+                                    val backCode = if (reverse)
+                                        record.caption.sourceCode else record.caption.targetCode
+                                    val frontDirection = if (
+                                        PrivatePinnedCaptionClozeHtml.isRightToLeft(frontCode))
+                                        TextDirection.Rtl else TextDirection.Ltr
+                                    val backDirection = if (
+                                        PrivatePinnedCaptionClozeHtml.isRightToLeft(backCode))
+                                        TextDirection.Rtl else TextDirection.Ltr
+                                    Text(if (studentCopy) "Zichtbare opdrachtzin:"
+                                        else "Voorzijde:",
+                                        style = MaterialTheme.typography.labelSmall)
+                                    Text(if (reverse) meaning else source,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            textDirection = frontDirection))
                                     if (studentCopy) {
                                         Text("De volledige achterkant komt NIET in het " +
                                             "leerlingenbestand of de HTML-bron terecht. " +
                                             "Alleen de gekozen invulhint wordt getoond.",
                                             style = MaterialTheme.typography.bodySmall)
                                     } else {
-                                        Text("Achterzijde: " + (if (reverse) source else meaning),
-                                            style = MaterialTheme.typography.bodySmall)
+                                        Text("Achterzijde:",
+                                            style = MaterialTheme.typography.labelSmall)
+                                        Text(if (reverse) source else meaning,
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                textDirection = backDirection))
                                     }
                                     if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
                                         Text(if (studentCopy)
-                                            "Ook omgekeerd: opdrachtzin " + meaning +
-                                                " (volledig antwoord blijft achterwege)"
-                                        else "Omgekeerde kaart: " + meaning + " → " + source,
-                                            style = MaterialTheme.typography.bodySmall)
+                                            "Ook omgekeerd: opdrachtzin (zonder antwoord)"
+                                        else "Omgekeerde kaart:",
+                                            style = MaterialTheme.typography.labelSmall)
+                                        Text(meaning, style =
+                                            MaterialTheme.typography.bodySmall.copy(
+                                                textDirection = if (
+                                                    PrivatePinnedCaptionClozeHtml.isRightToLeft(
+                                                        record.caption.targetCode))
+                                                    TextDirection.Rtl else TextDirection.Ltr))
+                                        if (!studentCopy) {
+                                            Text(source, style =
+                                                MaterialTheme.typography.bodySmall.copy(
+                                                    textDirection = if (
+                                                        PrivatePinnedCaptionClozeHtml.isRightToLeft(
+                                                            record.caption.sourceCode))
+                                                        TextDirection.Rtl else TextDirection.Ltr))
+                                        }
                                     }
                                     if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML) {
                                         pinnedClozePass.indices.forEach { round ->
@@ -3862,17 +3890,22 @@ private fun TuddyScreen(
                                                 else record.caption.targetCode,
                                                 pinnedClozeDifficulty, pinnedClozeHintMode, round
                                             )
-                                            Text("Ronde ${round + 1} · aanvulhint: " + targetHint,
-                                                style = MaterialTheme.typography.bodySmall)
+                                            Text("Ronde ${round + 1} · aanvulhint:",
+                                                style = MaterialTheme.typography.labelSmall)
+                                            Text(targetHint,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    textDirection = backDirection))
                                             if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
-                                                Text("Ronde ${round + 1} · omgekeerd: " +
-                                                    PrivatePinnedCaptionClozeHtml.previewHint(
-                                                        record.caption.original,
-                                                        if (pinnedStudyLanguageTags)
-                                                            record.caption.sourceCode else null,
-                                                        pinnedClozeDifficulty,
-                                                        pinnedClozeHintMode, round
-                                                    ), style = MaterialTheme.typography.bodySmall)
+                                                Text("Ronde ${round + 1} · omgekeerde aanvulhint:",
+                                                    style = MaterialTheme.typography.labelSmall)
+                                                Text(PrivatePinnedCaptionClozeHtml.previewHint(
+                                                    record.caption.original,
+                                                    if (pinnedStudyLanguageTags)
+                                                        record.caption.sourceCode else null,
+                                                    pinnedClozeDifficulty,
+                                                    pinnedClozeHintMode, round
+                                                ), style = MaterialTheme.typography.bodySmall.copy(
+                                                    textDirection = frontDirection))
                                             }
                                         }
                                     }

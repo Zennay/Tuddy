@@ -83,6 +83,10 @@ internal object PrivatePinnedCaptionClozeHtml {
             "rtl" else "ltr"
     }
 
+    /** Keep the Android consent preview in the export's exact script direction. */
+    fun isRightToLeft(languageCode: String): Boolean =
+        htmlDirection("", languageCode) == "rtl"
+
     private fun htmlLanguageAttribute(languageCode: String?): String {
         if (languageCode == null || !LANGUAGE_TAG_CODE.matches(languageCode)) return ""
         return " lang=\"" + escape(languageCode) + "\""

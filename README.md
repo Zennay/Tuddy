@@ -11,6 +11,11 @@ invulpositie verschuift daardoor niet. De Android-hintpreview en
 zelfstandige offline HTML gebruiken dezelfde tokenisering.
 Zonder netwerk, audio-uitlijning of automatische taalbeoordeling.
 
+De native Android-voorbeeldweergave voor kaartvragen, antwoorden
+en invulhints gebruikt nu ook de echte LTR/RTL-schriftrichting,
+los van Nederlandse UI-labels. De offline HTML-export en de
+leerlingenvariant behouden hun bestaande privacygrenzen.
+
 Ook de getypte en afgedrukte **antwoordruimte** volgt voortaan de expliciet gekozen LTR/RTL-antwoordtaal, met HTML-`lang` voor schermlezers. [Uitleg bij de invuloefening](docs/PINNED_CAPTION_MULTI_EXPORT.md).
 
 ---

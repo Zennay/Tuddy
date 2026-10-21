@@ -21,6 +21,19 @@ bestandskiezer en lokale/offline beperkingen blijven gehandhaafd.
 
 ---
 
+## Android-voorbeeld in de juiste eigen leesrichting
+
+Ook **vóór opslaan**, in de native export-preview, staat de
+taalrichting van de voorbeeldzin los van het Nederlandse label
+'Voorzijde', 'Achterzijde' of 'Aanvulhint'. Tuddy geeft de
+zelfgekozen bron- en doeltaalcodes door aan dezelfde
+RTL/LTR-beslissing als het uiteindelijke HTML-document.
+Zo worden Pasjtoe en Sorani bij voorbeelden, omgekeerde kaarten
+en alle drie invulrondes rechts-naar-links weergegeven,
+ook wanneer zichtbare [taal]-labels aan staan. Studentkopieën
+blijven antwoordvrij: een verborgen antwoord komt niet in
+de preview terug als de leerlingvariant is gekozen.
+
 ## RTL-tekst en schermlezers in tweetalige HTML-oefenkaarten
 
 Bij de HTML-aanvuloefening kunnen taalcodes zoals `[ar]`, `[ps]` en
