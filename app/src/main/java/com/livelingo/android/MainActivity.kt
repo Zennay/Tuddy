@@ -3830,9 +3830,11 @@ private fun TuddyScreen(
                     TextButton(enabled = !listening, onClick = {
                         pendingSubtitleOpenGeneration = generation
                         subtitleFileCues = null
-                        openSubtitleFile.launch(arrayOf(
-                            "text/plain", "application/x-subrip", "text/vtt"
-                        ))
+                        // Android document providers inconsistently report
+                        // SRT/VTT as octet-stream, plain text or custom types.
+                        // Let the user intentionally choose a file; the strict
+                        // bounded parser remains the only acceptance gate.
+                        openSubtitleFile.launch(arrayOf("*/*"))
                     }) { Text("Open SRT/WebVTT…") }
                     Text(
                         "Bekijk een bewaard gesprek zonder je live gesprek te vervangen.",
