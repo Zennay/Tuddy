@@ -1,5 +1,17 @@
 # Tuddy 🎙️
 
+## Nieuw: beter leesbare eigen passages in privé-luisterverslagen
+
+Voor geselecteerde A–B-fragmenten toont Tuddy nu maximaal acht
+bijbehorende originele SRT/VTT-bronregels afzonderlijk met hun
+bronnummers; voor grotere passages worden de niet-getoonde regels
+expliciet geteld. Lange zinnen worden zichtbaar en op hele
+Unicode-tekens ingekort. Dit komt in het privé-overzicht en de
+bewuste HTML/TXT-export, niet als verborgen audio-analyse.
+[Handleiding](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 ## Nieuw: exacte milliseconden op eigen A–B-luisterkaartjes
 
 Eigen gekozen audiofragmenten behouden nu ook in de HTML-, TXT- en
