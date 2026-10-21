@@ -89,6 +89,24 @@ internal object PrivateLrcSubtitleDraft {
     }
 
     /**
+     * Explicitly replace ONE authored LRC cue start with an exact user time.
+     * Unlike a ±30-second group shift, this is useful for correcting a
+     * mistakenly transcribed minute or second. The complete document must
+     * still preserve its original cue identities and chronological order.
+     */
+    fun withExactCueStart(
+        raw: String,
+        cueIndex: Int,
+        newStartMillis: Long
+    ): String? {
+        val before = preview(raw) ?: return null
+        if (cueIndex !in before.indices ||
+            newStartMillis !in 0L until MAX_TIME_MS ||
+            newStartMillis == before[cueIndex].startMillis) return null
+        return withExactStarts(raw, before, mapOf(cueIndex to newStartMillis))
+    }
+
+    /**
      * Exact two-point correction of a CONTIGUOUS authored cue interval.
      * The user picks the first and last original cue plus two intended
      * timestamps; intermediate cue starts are interpolated only from those
