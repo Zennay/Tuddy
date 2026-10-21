@@ -781,6 +781,28 @@ internal fun PrivateSubtitleFileDialog(
                             "✓ " else "") + "Combineer twee teksten bij overlappende tijdcodes")
                     }
                     if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                            onClick = { driftSelectorOpen = true }) {
+                            Text((if (selectedDrift != null) "✓ " else "") +
+                                "Twee cueparen: corrigeer geleidelijk tijdverloop…")
+                        }
+                        if (selectedDrift != null) {
+                            val selected = selectedDrift
+                            Text(
+                                if (drift == null)
+                                    "Dubbele ankers ongeldig voor deze tijdlijn. " +
+                                        "Kies ze opnieuw of gebruik één verschuiving."
+                                else "Dubbele ankers actief: regels " +
+                                    "${selected.firstPrimaryRow}/${selected.firstSecondaryRow}" +
+                                    " → ${selected.lastPrimaryRow}/${selected.lastSecondaryRow}. " +
+                                    "Bekijk hieronder het volledige nieuwe resultaat.",
+                                style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    selectedDrift = null
+                                    secondTrackPreviewPage = 0
+                                }) { Text("Gebruik weer één constante verschuiving") }
+                        } else {
                         Box {
                             OutlinedButton(onClick = { offsetChoicesOpen = true }) {
                                 Text("Tijdverschuiving tweede spoor: " +
@@ -949,6 +971,7 @@ internal fun PrivateSubtitleFileDialog(
                             "Niet gekoppelde regels blijven apart. Controleer taal en " +
                             "timing zelf: dit bewijst geen vertaling of synchronisatie.",
                             style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                     Text(
                         if (!stillCurrent)
@@ -1048,6 +1071,19 @@ internal fun PrivateSubtitleFileDialog(
                 TextButton(onClick = { pendingImport = null }) { Text("Annuleren") }
             }
         )
+        if (driftSelectorOpen) {
+            SubtitleTrackDriftSelectorDialog(
+                primary = draft,
+                secondary = stagedImport.imported,
+                initial = selectedDrift,
+                onChoose = { selection ->
+                    selectedDrift = selection
+                    driftSelectorOpen = false
+                    secondTrackPreviewPage = 0
+                },
+                onDismiss = { driftSelectorOpen = false }
+            )
+        }
     }
 
     if (insertOpen) {
