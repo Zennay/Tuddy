@@ -22,6 +22,23 @@ synchroniseert of slaat zonder aparte toestemming op.
 
 # Tuddy 🎙️
 
+## Nieuw: meerdere losse ondertitelbereiken in één import
+
+In **Plak zelf tekst…** kun je nu met **Losse regels (optioneel)**
+bewust een selectie invoeren zoals `1-5,8,12-16`.
+Dat kiest uitsluitend die originele bronregels in tijdlijnvolgorde,
+ook uit een groter SRT/VTT-document of eigen geplakte transcriptregels.
+De bestaande **Van/Tot**-selectie blijft beschikbaar wanneer je het
+extra veld leeg laat. De preview toont oorspronkelijke regelnummers;
+zoeken wijzigt de gekozen import niet. Dubbele/overlappende of
+ongeldige bereiken worden afgewezen; de bevestiging leest de
+volledige bron opnieuw en importeert alleen de bevestigde rijen.
+De originele documenten en tijdcodes worden niet herschreven.
+[Exacte bediening](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
+
+
 ## Nieuw: eigen transcript met begin/eindtijden direct plakken
 
 In de tijdelijke ondertiteleditor kun je nu ook **drie eigen
