@@ -178,28 +178,51 @@ internal object PrivatePinnedCaptionClozeHtml {
         hintMode: PinnedClozeHintMode,
         roundIndex: Int
     ): String {
-        val words = value.trim().split(Regex("\\s+"))
-        // Do not invent word boundaries in unsegmented scripts. Even for a
-        // one-token line, hide the complete token but preserve its authored
-        // punctuation (e.g. "Hello!" becomes "________!"). Do not expose a
-        // first-letter/length hint when there is no reliable word boundary.
-        if (words.size < 2) return words.singleOrNull()?.let {
-            hiddenWord(it, PinnedClozeHintMode.BLANK)
-        } ?: "________"
+        // Java's default regex \\s misses NBSP and many international
+        // whitespace characters. Honor only boundaries *already authored*
+        // in the original sentence (including explicit U+200B). Preserve
+        // the exact separators in every round instead of collapsing them.
+        fun isBoundary(point: Int): Boolean =
+            Character.isWhitespace(point) || Character.isSpaceChar(point) ||
+                point == 0x0085 || point == 0x200B
+        val text = value.trim()
+        val segments = ArrayList<Pair<String, Boolean>>()
+        var cursor = 0
+        while (cursor < text.length) {
+            val start = cursor
+            val boundary = isBoundary(text.codePointAt(cursor))
+            do {
+                cursor += Character.charCount(text.codePointAt(cursor))
+            } while (cursor < text.length &&
+                isBoundary(text.codePointAt(cursor)) == boundary)
+            segments.add(text.substring(start, cursor) to boundary)
+        }
+        val wordCount = segments.count { !it.second }
+        if (wordCount == 0) return "________"
+        // Never infer word segmentation when there is only one authored
+        // token. Keep surrounding punctuation but hide the whole lexical
+        // term without exposing the first character or its length.
+        if (wordCount == 1) return segments.joinToString("") { (textPart, boundary) ->
+            if (boundary) textPart else hiddenWord(textPart, PinnedClozeHintMode.BLANK)
+        }
         val pass = roundIndex.coerceIn(0, 2)
-        return words.mapIndexed { index, word ->
-            val hide = if (words.size < 3) index == (1 - pass % 2)
-                else when (difficulty) {
-                    PinnedClozeDifficulty.EASY -> (index + pass) % 3 == 2
-                    PinnedClozeDifficulty.NORMAL -> when (pass) {
-                        0 -> index % 2 == 1
-                        1 -> index % 2 == 0
-                        else -> index % 6 in 1..3
+        var wordIndex = 0
+        return segments.joinToString("") { (textPart, boundary) ->
+            if (boundary) textPart else {
+                val index = wordIndex++
+                val hide = if (wordCount < 3) index == (1 - pass % 2)
+                    else when (difficulty) {
+                        PinnedClozeDifficulty.EASY -> (index + pass) % 3 == 2
+                        PinnedClozeDifficulty.NORMAL -> when (pass) {
+                            0 -> index % 2 == 1
+                            1 -> index % 2 == 0
+                            else -> index % 6 in 1..3
+                        }
+                        PinnedClozeDifficulty.CHALLENGE -> (index + pass) % 3 != 0
                     }
-                    PinnedClozeDifficulty.CHALLENGE -> (index + pass) % 3 != 0
-                }
-            if (hide) hiddenWord(word, hintMode) else word
-        }.joinToString(" ")
+                if (hide) hiddenWord(textPart, hintMode) else textPart
+            }
+        }
     }
 
     /** Same gaps as the exported HTML, for the Android consent preview. */
