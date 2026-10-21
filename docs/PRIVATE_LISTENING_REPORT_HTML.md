@@ -6,6 +6,15 @@ bronregels…**. Dit maakt een apart **HTML-oefenblad** naast het bestaande
 HTML-verslag, TXT-overzicht en de CSV. De Android-bestandskiezer vraagt
 expliciet waar je het bestand bewaart; er wordt nooit automatisch geëxporteerd.
 
+Vóór de export kies je bewust **Alle fragmenten**, **Nog oefenen** of
+**Nog niet beoordeeld**. De beschikbare aantallen worden getoond;
+een lege categorie kan niet worden bewaard. Die keuze geldt alleen
+voor het te maken **oefenblad** en verandert de begeleide
+afspeelroute niet. Ook de **gekozen selectie en aantallen** staan
+in het afdrukbare HTML-bestand. Als de selectie of een beoordeling
+wijzigt tijdens de Android-documentkiezer, wordt het oude concept
+niet stilzwijgend opgeslagen.
+
 In een gewone browser kun je per fragment eerst luisteren en zelf een
 betekenis of uitspraak opschrijven. Via het native HTML-knopje
 **Toon zelf gekozen bronregels** zie je pas daarna de eigen SRT/VTT-tekst
