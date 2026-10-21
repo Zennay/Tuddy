@@ -25,6 +25,7 @@ import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateSubtitleFilteredExcerpt
 import com.livelingo.android.PrivateSubtitleRowSelection
+import com.livelingo.android.PrivateSubtitleTimeWindowRows
 import com.livelingo.android.PrivateTimedSubtitleSheet
 import com.livelingo.android.PrivateLrcSubtitleExport
 import com.livelingo.android.SubtitleDraftFormat
@@ -58,6 +59,8 @@ internal fun PrivateSubtitleExcerptDialog(
     }
     var format by remember(allCues) { mutableStateOf(SubtitleExcerptSaveFormat.SRT) }
     var rowPage by remember(allCues) { mutableIntStateOf(0) }
+    var windowStart by remember(allCues) { mutableStateOf("") }
+    var windowEnd by remember(allCues) { mutableStateOf("") }
     val selectedIndices = PrivateSubtitleRowSelection.parse(expression, allCues.size)
     val original = selectedIndices?.map { allCues[it] }
     val proposed = original?.let { PrivateSubtitleFilteredExcerpt.prepare(it, timing) }
@@ -115,6 +118,30 @@ internal fun PrivateSubtitleExcerptDialog(
                             rowPage = 0
                         }) { Text("Gevonden selectie") }
                 }
+                Text("Of kies complete cues die overlappen met een zelf " +
+                    "ingevuld tijdvenster; tijden worden hierbij niet ingekort.",
+                    style = MaterialTheme.typography.bodySmall)
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedTextField(
+                        value = windowStart, onValueChange = { windowStart = it.take(13) },
+                        label = { Text("Vanaf mm:ss") },
+                        singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(
+                        value = windowEnd, onValueChange = { windowEnd = it.take(13) },
+                        label = { Text("Tot mm:ss") },
+                        singleLine = true, modifier = Modifier.weight(1f))
+                }
+                val windowRows = PrivateSubtitleTimeWindowRows.expression(
+                    allCues, windowStart, windowEnd)
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    enabled = windowRows != null,
+                    onClick = {
+                        if (windowRows != null) {
+                            expression = windowRows
+                            rowPage = 0
+                        }
+                    }) { Text("Neem overlappende cues uit tijdvenster") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = selectedIndices != null &&
