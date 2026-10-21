@@ -32,6 +32,7 @@ import com.livelingo.android.PrivatePlainTextSubtitleDraft
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
 import com.livelingo.android.PrivateSbvSubtitleReader
+import com.livelingo.android.PrivateYoutubeJson3SubtitleReader
 import com.livelingo.android.PrivateSubtitleRowSelection
 import com.livelingo.android.PrivateSubtitleTimelineNavigation
 
@@ -202,6 +203,7 @@ internal fun SubtitlePasteDialog(
         else if (!plainLines && lrcMode) PrivateLrcSubtitleDraft.preview(raw)
         else if (!plainLines) PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
             ?: PrivateSbvSubtitleReader.read(raw)
+            ?: PrivateYoutubeJson3SubtitleReader.read(raw.takeIf { it.length <= 65_536 } ?: "")
         else null
     }
     // Explicit 1-based row selection, never quietly clamped after editing.
@@ -1582,6 +1584,7 @@ internal fun SubtitlePasteDialog(
                 else if (lrcMode) PrivateLrcSubtitleDraft.preview(raw)
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
                     ?: PrivateSbvSubtitleReader.read(raw)
+                    ?: PrivateYoutubeJson3SubtitleReader.read(raw.takeIf { it.length <= 65_536 } ?: "")
                 if (confirmed == null) return@TextButton
                 val indices = if (explicitRows.isNotBlank())
                     PrivateSubtitleRowSelection.parse(explicitRows, confirmed.size)
