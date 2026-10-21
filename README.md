@@ -1,5 +1,20 @@
 # Tuddy 🎙️
 
+## Nieuw: privé luisteroverzicht ook als CSV (inclusief woordvolger)
+
+De optionele geschatte ondertitelwoordvolger behoudt nu de nieuwste
+mogelijkheden uit de luisteroefenmodule. Je kunt naast HTML en TXT
+je eigen A–B-fragmenten **bewust als zeskoloms UTF-8 CSV** exporteren,
+na het bekijken van de volledige CSV-inhoud. Fragmentbeoordeling,
+zelfgeschreven vervolgstap, tijdvak en kort ondertitelvoorbeeld blijven
+lokaal tot je expliciet een Android-documentprovider kiest.
+De bytes worden bij terugkomst opnieuw gecontroleerd; geen audio-URI,
+nieuwe permissies, automatische ASR of automatische woorduitlijning.
+[Meer informatie](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+
 ## Nieuw: optionele geschatte woordvolger bij eigen audio
 
 In **▶ Eigen audio met tijdcodes afspelen…** kun je nu bewust
