@@ -557,6 +557,35 @@ geen nieuwe permissies, accounts of netwerkverzoeken.
 
 ## Bronregels uit een gekozen tijdvenster
 
+### Meerdere tijdvensters in één selectie
+
+Bij **Kies zelf bronregels om te bewaren…** en **Alleen gekozen
+bronregels in tijd verschuiven…** kun je ook in het veld
+**Tijdvensters: vanaf-tot;vanaf-tot** meerdere losse intervallen typen:
+
+```text
+00:10-00:20;01:00-01:15;02:35-02:42.500
+```
+
+Kies daarna bewust **Neem cues uit alle gekozen tijdvensters**.
+Tuddy selecteert complete ondertitels die één of meer intervallen
+overlappen en toont de **unieke oorspronkelijke bronregelnummers**
+voordat je iets toepast of bewaart. Ook een lange cue die meerdere
+gekozen vensters raakt, verschijnt maar één keer. Invoer heeft
+maximaal **16 intervallen / 512 tekens**, elk met een echte
+starttijd vóór de eindtijd. Lege, overlappende of omgekeerde vensters
+zijn ongeldig; aangrenzende vensters zijn toegestaan. De volgorde
+van de getoonde cues blijft de originele bronvolgorde, ook als
+tijdvensters in een andere volgorde zijn ingevoerd. De bestaande
+enkele **Vanaf/Tot**-selectie en handmatige bronregelnummers blijven
+beschikbaar.
+
+Dit doet **geen** audioanalyse of afkappen van captions.
+Het exportdialoog biedt nog steeds uitsluitend na volledige
+bestandsvoorbeeldcontrole een eigen Android SAF-opslagkeuze;
+de tijdverschuiving blijft een expliciete herstelbare editorbewerking.
+
+
 In **Kies zelf bronregels om te bewaren…** en **Alleen gekozen
 bronregels in tijd verschuiven…** kun je naast regelnummers ook een
 **Vanaf**- en **Tot**-tijd invullen, in `mm:ss`,
