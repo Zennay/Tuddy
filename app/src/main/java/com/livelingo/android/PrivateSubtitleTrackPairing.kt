@@ -10,6 +10,9 @@ import java.util.Locale
  * cues without a sufficiently overlapping primary cue remain visible as standalone
  * rows, rather than silently disappearing. Original source files are untouched.
  */
+/** Exact original 1-based row numbers, intentionally paired by the user. */
+internal data class SubtitleManualPair(val primaryRow: Int, val secondaryRow: Int)
+
 internal data class SubtitleCuePairingLink(
     val primarySourceRow: Int,
     val secondarySourceRow: Int,
@@ -17,7 +20,8 @@ internal data class SubtitleCuePairingLink(
     val secondaryStart: String,
     val overlapMillis: Long,
     val primaryText: String,
-    val secondaryText: String
+    val secondaryText: String,
+    val manuallyChosen: Boolean = false
 )
 
 internal data class SubtitleTrackPairingPreview(
@@ -41,7 +45,8 @@ internal object PrivateSubtitleTrackPairing {
         primary: List<PrivateSubtitleCue>,
         secondary: List<PrivateSubtitleCue>,
         secondTrackOffsetMs: Long = 0L,
-        excludedSecondaryRows: Set<Int> = emptySet()
+        excludedSecondaryRows: Set<Int> = emptySet(),
+        manualPairs: List<SubtitleManualPair> = emptyList()
     ): SubtitleTrackPairingPreview? {
         if (!PrivateSubtitleOffset.isSupported(secondTrackOffsetMs) ||
             primary.isEmpty() || secondary.isEmpty() ||
@@ -51,6 +56,23 @@ internal object PrivateSubtitleTrackPairing {
             PrivateSubtitleDraftEditor.snapshot(primary, SubtitleDraftFormat.SRT) == null ||
             PrivateSubtitleDraftEditor.snapshot(secondary, SubtitleDraftFormat.SRT) == null
         ) return null
+
+        // A pinned pairing is never inferred from audio or text. Require
+        // unique, chronological source-row pairs, not exceeding a bounded 32.
+        // A pinned secondary cue cannot also be manually excluded.
+        if (manualPairs.size > 32) return null
+        val ordered = manualPairs.sortedBy { it.primaryRow }
+        var previousPrimary = 0
+        var previousSecondary = 0
+        for (pair in ordered) {
+            if (pair.primaryRow !in 1..primary.size ||
+                pair.secondaryRow !in 1..secondary.size ||
+                pair.primaryRow <= previousPrimary ||
+                pair.secondaryRow <= previousSecondary ||
+                pair.secondaryRow in excludedSecondaryRows) return null
+            previousPrimary = pair.primaryRow
+            previousSecondary = pair.secondaryRow
+        }
 
         // The offset is user-selected and applies only in this temporary draft.
         // Reject shifts beyond the same limits as the underlying SRT/VTT editor.
@@ -79,8 +101,14 @@ internal object PrivateSubtitleTrackPairing {
         val m = adjusted.size
         val width = m + 1
         val cells = (n + 1) * width
-        val bestPairs = IntArray(cells)
+        val bestPairs = IntArray(cells) { -1 }
         val bestOverlaps = LongArray(cells)
+        val pinnedPrimary = IntArray(n) { -1 }
+        val pinnedSecondary = IntArray(m) { -1 }
+        ordered.forEach {
+            pinnedPrimary[it.primaryRow - 1] = it.secondaryRow - 1
+            pinnedSecondary[it.secondaryRow - 1] = it.primaryRow - 1
+        }
         // 1=skip primary, 2=skip secondary, 3=pair. Ties prefer a
         // chronological pair over either skip; otherwise prefer earlier
         // primary cues on equal-quality paths.
@@ -96,28 +124,63 @@ internal object PrivateSubtitleTrackPairing {
                 else 0L
         }
 
+        // A valid path must include every explicitly pinned pair. Skipping
+        // either of its source rows is forbidden. Unpinned gaps retain the
+        // maximum-pair / maximum-overlap objective and source ordering.
+        bestPairs[n * width + m] = 0
+        for (i in n - 1 downTo 0) {
+            val cell = i * width + m
+            if (pinnedPrimary[i] < 0 && bestPairs[cell + width] >= 0) {
+                bestPairs[cell] = 0
+                moves[cell] = 1
+            }
+        }
+        for (j in m - 1 downTo 0) {
+            val cell = n * width + j
+            if (pinnedSecondary[j] < 0 && bestPairs[cell + 1] >= 0) {
+                bestPairs[cell] = 0
+                moves[cell] = 2
+            }
+        }
+
         for (i in n - 1 downTo 0) {
             for (j in m - 1 downTo 0) {
                 val cell = i * width + j
                 val below = (i + 1) * width + j
                 val right = cell + 1
                 val diagonal = below + 1
-                var count = bestPairs[below]
-                var totalOverlap = bestOverlaps[below]
-                var move: Byte = 1
-                if (bestPairs[right] > count ||
-                    (bestPairs[right] == count && bestOverlaps[right] > totalOverlap)) {
+                var count = -1
+                var totalOverlap = 0L
+                var move: Byte = 0
+                if (pinnedPrimary[i] < 0 && bestPairs[below] >= 0) {
+                    count = bestPairs[below]
+                    totalOverlap = bestOverlaps[below]
+                    move = 1
+                }
+                if (pinnedSecondary[j] < 0 && bestPairs[right] >= 0 &&
+                    (bestPairs[right] > count ||
+                        (bestPairs[right] == count &&
+                            bestOverlaps[right] > totalOverlap))) {
                     count = bestPairs[right]
                     totalOverlap = bestOverlaps[right]
                     move = 2
                 }
-                // An explicitly excluded secondary source row stays visible
-                // as a standalone cue. Never reinterpret exclusion as deletion.
+                val explicitlyPaired = pinnedPrimary[i] == j
+                val ordinaryPair = pinnedPrimary[i] < 0 &&
+                    pinnedSecondary[j] < 0
+                // An explicit manual pairing may have no timestamp overlap;
+                // the user already supplied both exact original source rows.
                 val overlap = if ((j + 1) in excludedSecondaryRows) 0L
                     else pairOverlap(primary[i], adjusted[j])
-                if (overlap > 0L) {
+                if (bestPairs[diagonal] >= 0 &&
+                    (explicitlyPaired || (ordinaryPair && overlap > 0L))) {
+                    val realOverlap = if (explicitlyPaired)
+                        maxOf(0L, minOf(primary[i].endMillis,
+                            adjusted[j].endMillis) -
+                            maxOf(primary[i].startMillis, adjusted[j].startMillis))
+                        else overlap
                     val pairedCount = bestPairs[diagonal] + 1
-                    val pairedOverlap = bestOverlaps[diagonal] + overlap
+                    val pairedOverlap = bestOverlaps[diagonal] + realOverlap
                     if (pairedCount > count ||
                         (pairedCount == count && pairedOverlap >= totalOverlap)) {
                         count = pairedCount
@@ -130,6 +193,7 @@ internal object PrivateSubtitleTrackPairing {
                 moves[cell] = move
             }
         }
+        if (bestPairs[0] < 0) return null
 
         val matched = arrayOfNulls<String>(n)
         val links = ArrayList<SubtitleCuePairingLink>()
@@ -142,7 +206,12 @@ internal object PrivateSubtitleTrackPairing {
                 3 -> {
                     val source = primary[primaryIndex]
                     val candidate = adjusted[secondaryIndex]
-                    val overlap = pairOverlap(source, candidate)
+                    val manuallyChosen =
+                        pinnedPrimary[primaryIndex] == secondaryIndex
+                    val overlap = if (manuallyChosen)
+                        maxOf(0L, minOf(source.endMillis, candidate.endMillis) -
+                            maxOf(source.startMillis, candidate.startMillis))
+                    else pairOverlap(source, candidate)
                     links += SubtitleCuePairingLink(
                         primarySourceRow = primaryIndex + 1,
                         secondarySourceRow = secondaryIndex + 1,
@@ -150,7 +219,8 @@ internal object PrivateSubtitleTrackPairing {
                         secondaryStart = candidate.startLabel,
                         overlapMillis = overlap,
                         primaryText = source.text,
-                        secondaryText = candidate.text
+                        secondaryText = candidate.text,
+                        manuallyChosen = manuallyChosen
                     )
                     matched[primaryIndex] = candidate.text
                     paired++
