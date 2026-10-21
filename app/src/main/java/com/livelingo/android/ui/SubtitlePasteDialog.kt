@@ -27,6 +27,7 @@ import com.livelingo.android.PlainSubtitleSplitMode
 import com.livelingo.android.PrivatePlainTextSubtitleDraft
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleFileReader
+import com.livelingo.android.PrivateSubtitleRowSelection
 
 /**
  * Intentional manual paste only. No clipboard reads, IO, cloud, transcript
@@ -50,6 +51,7 @@ internal fun SubtitlePasteDialog(
     var search by remember { mutableStateOf("") }
     var firstRow by remember { mutableStateOf("1") }
     var lastRow by remember { mutableStateOf("") }
+    var explicitRows by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
     val timedInspection = remember(raw, plainLines, splitMode) {
         if (plainLines && splitMode in setOf(
@@ -80,11 +82,19 @@ internal fun SubtitlePasteDialog(
             start !in 1..parsed.size || end !in start..parsed.size) null
         else start..end
     }
-    val filtered = remember(parsed, selectedRange, search) {
-        val scope = selectedRange
+    // Only one explicit row-selection mode is in force. A nonempty list
+    // overrides the contiguous range; search filters PREVIEW only.
+    val chosenIndices = remember(parsed, selectedRange, explicitRows) {
+        if (parsed == null) null
+        else if (explicitRows.isNotBlank())
+            PrivateSubtitleRowSelection.parse(explicitRows, parsed.size)
+        else selectedRange?.map { it - 1 }
+    }
+    val filtered = remember(parsed, chosenIndices, search) {
+        val scope = chosenIndices?.toSet()
         if (scope == null) emptyList()
         else parsed.orEmpty().withIndex().filter { row ->
-            row.index + 1 in scope &&
+            row.index in scope &&
                 row.value.text.contains(search.trim().take(120), ignoreCase = true)
         }
     }
@@ -374,15 +384,33 @@ internal fun SubtitlePasteDialog(
                             singleLine = true
                         )
                     }
-                    if (selectedRange == null) {
-                        Text("Kies een geldig bereik tussen 1 en ${parsed.size}; " +
-                            "er wordt niets overgeslagen zonder jouw keuze.",
+                    OutlinedTextField(
+                        value = explicitRows,
+                        onValueChange = { input ->
+                            explicitRows = input.take(2_000)
+                            page = 0
+                        },
+                        label = { Text("Losse regels (optioneel): 1-3,7,9-11") },
+                        minLines = 1,
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        "Als dit veld is ingevuld, vervangt het de selectie Van/Tot. " +
+                            "Je kiest alleen jouw originele regelnummers; " +
+                            "dubbele of overlappende regels worden geweigerd.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (chosenIndices == null) {
+                        Text("Ongeldige selectie. Kies 1–${parsed.size} met Van/Tot, " +
+                            "of geef unieke komma-gescheiden regels/bereiken op. " +
+                            "Er wordt niets stilzwijgend weggelaten.",
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall)
                     } else {
                         Text(
-                            "Alleen ${selectedRange.count()} gekozen regels worden geopend. " +
-                                "Zoeken verandert de selectie niet.",
+                            "Exact ${chosenIndices.size} regels geselecteerd uit ${parsed.size} " +
+                                "(bronvolgorde). Zoeken verandert deze selectie niet.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -428,7 +456,7 @@ internal fun SubtitlePasteDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = parsed != null && selectedRange != null &&
+            TextButton(enabled = parsed != null && chosenIndices != null &&
                 !inputTooLarge, onClick = {
                 if (inputTooLarge) return@TextButton
                 // Fresh full parse, row range and exact selected cue snapshot
@@ -439,13 +467,18 @@ internal fun SubtitlePasteDialog(
                         if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) ownMeaning else ""
                     )
                 else PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
-                val start = firstRow.toIntOrNull() ?: return@TextButton
-                val end = if (lastRow.isBlank()) confirmed?.size
-                    else lastRow.toIntOrNull()
-                if (confirmed == null || end == null ||
-                    start !in 1..confirmed.size || end !in start..confirmed.size)
-                    return@TextButton
-                onAccept(confirmed.subList(start - 1, end).toList())
+                if (confirmed == null) return@TextButton
+                val indices = if (explicitRows.isNotBlank())
+                    PrivateSubtitleRowSelection.parse(explicitRows, confirmed.size)
+                else {
+                    val start = firstRow.toIntOrNull() ?: return@TextButton
+                    val end = if (lastRow.isBlank()) confirmed.size
+                        else lastRow.toIntOrNull() ?: return@TextButton
+                    if (start !in 1..confirmed.size || end !in start..confirmed.size)
+                        return@TextButton
+                    (start - 1 until end).toList()
+                } ?: return@TextButton
+                onAccept(indices.map { index -> confirmed[index] })
             }) { Text("Open gekozen regels") }
         },
         dismissButton = {
