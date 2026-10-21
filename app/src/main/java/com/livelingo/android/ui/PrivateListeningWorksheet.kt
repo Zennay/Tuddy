@@ -111,18 +111,24 @@ internal object PrivateListeningWorksheet {
             val start = bounds.first
             val end = bounds.second
             if (start < 0L || end <= start || end - start > 300_000L) return null
-            val note = clean(notes[bounds].orEmpty(), 240) ?: return null
+            // A student handout never needs the subtitle or private-note
+            // content at all: avoid traversing it or rejecting this redacted
+            // document due to unrelated malformed source text.
+            val note = if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
+                clean(notes[bounds].orEmpty(), 240) ?: return null else ""
             val allLines = ArrayList<Pair<Int, String>>()
-            // Match complete subtitle cues only. A manually picked A–B window
-            // may have no exact cue coverage: clearly say so, never invent text.
-            for ((cueIndex, cue) in cues.withIndex()) {
-                val cueStart = runCatching { Math.addExact(cue.startMillis, offsetMs) }
-                    .getOrNull() ?: return null
-                val cueEnd = runCatching { Math.addExact(cue.endMillis, offsetMs) }
-                    .getOrNull() ?: return null
-                if (cueStart >= start && cueEnd <= end && cueEnd > cueStart) {
-                    val line = clean(cue.text, MAX_LINE_CODEPOINTS) ?: return null
-                    if (line.isNotBlank()) allLines.add(cueIndex + 1 to line)
+            if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
+                // Match complete subtitle cues only. Hand-picked A–B times
+                // never imply that audio and SRT/VTT have been aligned.
+                for ((cueIndex, cue) in cues.withIndex()) {
+                    val cueStart = runCatching { Math.addExact(cue.startMillis, offsetMs) }
+                        .getOrNull() ?: return null
+                    val cueEnd = runCatching { Math.addExact(cue.endMillis, offsetMs) }
+                        .getOrNull() ?: return null
+                    if (cueStart >= start && cueEnd <= end && cueEnd > cueStart) {
+                        val line = clean(cue.text, MAX_LINE_CODEPOINTS) ?: return null
+                        if (line.isNotBlank()) allLines.add(cueIndex + 1 to line)
+                    }
                 }
             }
             // When a longer passage is selected, disclose any omitted middle
