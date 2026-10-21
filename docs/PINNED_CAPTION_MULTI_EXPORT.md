@@ -1,13 +1,15 @@
-## RTL-tekst blijft leesbaar met taalcodes aan
+## RTL-tekst en schermlezers in tweetalige HTML-oefenkaarten
 
 Bij de HTML-aanvuloefening kunnen taalcodes zoals `[ar]`, `[ps]` en
 `[ckb]` vóór de zin staan. Omdat deze labels Latijnse letters gebruiken,
 kan automatische tekstrichting de hele regel ten onrechte als links-naar-rechts
-interpreteren. Tuddy bepaalt nu de richting op basis van de zichtbare BCP-47-
-taal-/scriptcode wanneer die aanwezig is; zonder taalcode blijft de richting
-afhankelijk van de daadwerkelijke tekst. Dit geldt voor vragen, invulhints,
-uitklapantwoorden en het volledige antwoordblad. Het verandert de tekst of
-de inhoudelijke status van de vertaling niet.
+interpreteren. Tuddy houdt de zichtbare taalcode nu apart in een LTR-label en
+bepaalt de richting van de echte zin op basis van de BCP-47-taal-/scriptcode.
+De zin krijgt ook het bijbehorende HTML-`lang`-attribuut, zodat schermlezers
+de taal correct kunnen kiezen. Dit geldt voor vragen, invulhints, uitgeklapte
+antwoorden en het volledige antwoordblad, óók als de zichtbare taalcodes zijn
+uitgeschakeld. Zonder geldige taalcode blijft de richting automatisch
+afhankelijk van de tekst. Inhoud en correctheidsstatus van de vertaling wijzigen niet.
 
 ---
 
