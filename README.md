@@ -1,3 +1,15 @@
+## Nieuw: exporteer precieze ondertitelranges zonder te zoeken
+
+Selecteer in de tijdelijke ondertiteleditor nu zelf bronregels zoals
+`1-5,9,12-16` om alleen dat fragment te bewaren. Je kunt ook alle
+regels of juist de overige, niet-geselecteerde regels kiezen. Bij
+zoeken neemt de aparte exportknop bewust de **oorspronkelijke
+regelnummers uit alle zoekhits** als uitgangspunt. Een doorbladerbare
+bronregelpreview toont wat je geselecteerd hebt; daarna volgt de
+complete exacte bestandsinhoud voor SRT/VTT/CSV/TSV/LRC. De bestaande
+tijdkeuzes, formaatgrenzen en expliciete Android-opslag blijven gelden.
+[Handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: vijf formaten voor een zelfgekozen ondertitelfragment
 
 Doorzoek je tijdelijke ondertitelconcept en kies **Bewaar alleen
