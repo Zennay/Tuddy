@@ -581,6 +581,33 @@ preview of vóór/na-tijdcodepreview verplicht, evenals de
 separate expliciete bevestiging. Taalmodel, vertaling,
 netwerktoegang en extra toestemmingen zijn niet vereist.
 
+## Na fragmentexport: het volledige tijdelijke concept blijft intact
+
+Wanneer je alleen gevonden regels, een handmatig regelbereik of een
+tijdvenster als SRT/VTT/CSV/TSV/LRC bewaart, hoort het **opgeslagen
+bestand** alleen de gekozen regels te bevatten. Dat betekent **niet**
+dat de geopende tijdelijke editor met die subset mag worden vervangen.
+
+De Activity-owned Android-opslagroute bewaart daarom afzonderlijk,
+uitsluitend in RAM tijdens de bewust geopende documentkiezer:
+
+- het **volledige huidige bewerkbare ondertitelconcept**, dat na
+  Androids DocumentsUI wordt heropend, ook bij annulering of
+  mislukte opslag;
+- de **expliciet gekozen te exporteren cues** met alle exacte
+  vooraf bevestigde bytes, die bij terugkeer worden herberekend en
+  uitsluitend naar de gekozen bestandsprovider worden geschreven.
+
+Dat geldt nu identiek voor **SRT, VTT, CSV, TSV én LRC**,
+inclusief een selectie uit zoeken, handmatige bronranges, of
+het complement daarvan. Het herstellen van de volledige editor
+betekent geen wijziging van de eigen originele bronfile;
+het reeds bevestigde exportbestand kan bewust kleiner zijn.
+Bij verlopen sessietoestemming, ongeldig formaat of gewijzigde bytes
+wordt niet alsnog opgeslagen. Een gekozen externe Android-provider
+kan zelf online synchroniseren. Undo-geschiedenis in de dialoog
+wordt niet als langdurige opslag bewaard.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
