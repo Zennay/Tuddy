@@ -3448,6 +3448,11 @@ private fun TuddyScreen(
                     ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
                     OutlinedButton(onClick = {
                         generation++
+                        // A conscious conversation wipe also discards snapshots
+                        // held solely for a pending external document picker.
+                        pendingManualSubtitleDocument = null
+                        readyFirstPasteDocument = null
+                        readySecondPasteDocument = null
                         pendingTimedSubtitleSheet = null
                         pendingLrcSubtitleSave = null
                         pendingTranscriptExport = null
