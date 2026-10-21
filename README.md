@@ -22,6 +22,20 @@ synchroniseert of slaat zonder aparte toestemming op.
 
 # Tuddy 🎙️
 
+## Nieuw: bestaande tijdcodes uit CSV-spreadsheets plakken
+
+Naast de bestaande tabgescheiden import kun je eigen transcriptregels
+nu ook als **drie- of vierkoloms CSV** plakken. Een CSV-veld met een
+komma of aanhalingstekens wordt strikt gelezen; tijdcodes blijven
+ongewijzigd. Bij ongeldige invoer noemt Tuddy de oorspronkelijke bronrij.
+De volledige offline preview, expliciete deel-/meerbereikselectie en
+bewuste Android-opslag blijven bestaan. Een CSV-regel is steeds één cue;
+meerdere fysieke regels binnen een gequote veld worden niet ondersteund.
+Er is geen automatische ASR, audiouitlijning of vertaling.
+[Voorbeelden en beperkingen](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
+
 ## Nieuw: meerdere losse ondertitelbereiken in één import
 
 In **Plak zelf tekst…** kun je nu met **Losse regels (optioneel)**
