@@ -1696,3 +1696,28 @@ en bevestigen weigert de verouderde export. Sprekerlabels zijn nooit
 biometrisch herkend, geen echte persoonsidentiteit, niet gesynchroniseerd
 door Tuddy en niet in het normale archief opgeslagen. Een gekozen externe
 bestandsprovider kan documenten wel opslaan of synchroniseren.
+
+### LRC-tijdcorrectie: exact één cue of een aaneengesloten reeks (PR #226)
+
+In de volledig lokale **Plak eigen ondertitels → LRC**-route kun je
+uitgeschreven refrein-cues per individueel tijdstempel corrigeren.
+Naast de bestaande gekozen ±30 seconden verschuiving zijn er nu twee
+verschillende expliciete opties. **Eén exact cue-begin** vervangt alleen
+de opgegeven oorspronkelijke starttijd; **Tweepuntscorrectie** verdeelt
+de begintijden tussen twee bewust gekozen bronrijankers (0,5×–2×
+snelheidsverhouding) zonder cues erbuiten aan te raken. Beide functies
+gebruiken een volledig pagineerbare tijdlijn met originele én
+gecorrigeerde start-/eindtijden, springen naar gewijzigde pagina's,
+en vereisen een afzonderlijke bevestiging. De laatste acht bewuste
+tijdacties zijn tijdelijk ongedaan te maken/opnieuw toe te passen.
+
+Alle wijzigingen blijven RAM-only totdat de gebruiker apart de
+bestaande Android-bestandsopslag kiest; de oorspronkelijke gekozen
+providerbron wordt niet overschreven. Onmogelijke tijden, gewijzigde
+chronologische cue-identiteit en niet als SRT én VTT exporteerbare
+uitkomsten worden volledig geweigerd. Er wordt geen audio gelezen,
+spraak herkend, automatisch vertaald of cloudfallback gestart.
+Zie [de LRC-/ondertitelhandleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+**Deze wijzigingen zijn vooralsnog uitsluitend op open PR #226;
+verplichte Android CI en de afzonderlijke device/licentie/release-gates
+bepalen of ze naar main kunnen.**
