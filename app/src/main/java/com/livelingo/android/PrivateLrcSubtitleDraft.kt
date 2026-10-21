@@ -47,13 +47,11 @@ internal object PrivateLrcSubtitleDraft {
             return null
         val lines = raw.removePrefix("\uFEFF")
             .replace("\r\n", "\n").replace('\r', '\n').split('\n').toMutableList()
-        var firstContent = lines.size
         var existingOffset = -1
         for ((index, source) in lines.withIndex()) {
             val line = source.trim()
             if (line.isEmpty() || metadata.matches(line)) continue
             if (offsetHeader.matches(line)) existingOffset = index
-            else firstContent = index
             break
         }
         // Removing a header keeps all actual text unchanged. Inserting a new
