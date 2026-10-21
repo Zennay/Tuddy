@@ -165,6 +165,8 @@ internal fun PrivateSubtitleFileDialog(
     var pairReviewPage by remember { mutableIntStateOf(0) }
     var excludedReviewPage by remember { mutableIntStateOf(0) }
     var pairReviewOpen by remember { mutableStateOf(false) }
+    var unmatchedReviewOpen by remember { mutableStateOf(false) }
+    var unmatchedReviewPage by remember { mutableIntStateOf(0) }
     var pairReviewQuery by remember { mutableStateOf("") }
     var pairReviewSecondaryRow by remember { mutableStateOf("") }
     var excludedSecondRows by remember { mutableStateOf(setOf<Int>()) }
@@ -202,6 +204,8 @@ internal fun PrivateSubtitleFileDialog(
                 excludedReviewPage = 0
                 pairReviewPage = 0
                 pairReviewOpen = false
+                unmatchedReviewOpen = false
+                unmatchedReviewPage = 0
                 notice = ""
             } else {
                 notice = "Het concept veranderde tijdens de bestandskeuze. Kies opnieuw."
@@ -731,6 +735,8 @@ internal fun PrivateSubtitleFileDialog(
                 excludedReviewPage = 0
                 pairReviewPage = 0
                 pairReviewOpen = false
+                unmatchedReviewOpen = false
+                unmatchedReviewPage = 0
                 notice = ""
                 pasteSecondOpen = false
                 onSecondPasteConsumed()
@@ -1124,6 +1130,55 @@ internal fun PrivateSubtitleFileDialog(
                                 pairReviewPage = 0
                                 secondTrackPreviewPage = 0
                             }) { Text("Sta alle eerder uitgesloten koppelingen weer toe") }
+                    }
+                    if (proposed != null &&
+                        importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES &&
+                        (proposed.unpairedPrimaryRows.isNotEmpty() ||
+                            proposed.unpairedSecondaryRows.isNotEmpty())) {
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                unmatchedReviewOpen = !unmatchedReviewOpen
+                                unmatchedReviewPage = 0
+                            }) {
+                            Text((if (unmatchedReviewOpen) "▼ " else "▶ ") +
+                                "Inspecteer niet-gekoppelde bronregels " +
+                                "(${proposed.unpairedPrimaryRows.size} + " +
+                                "${proposed.unpairedSecondaryRows.size})")
+                        }
+                        if (unmatchedReviewOpen) {
+                            // Keep original document row indices. This read-only
+                            // review does not alter matching, exclusions or files.
+                            val unmatched = proposed.unpairedPrimaryRows.map { 1 to it } +
+                                proposed.unpairedSecondaryRows.map { 2 to it }
+                            val pageCount = maxOf(1, (unmatched.size + 4) / 5)
+                            val shownPage = unmatchedReviewPage.coerceIn(0, pageCount - 1)
+                            Text("Oorspronkelijke, niet-gekoppelde volledige " +
+                                "bronregels · pagina ${shownPage + 1}/$pageCount. " +
+                                "De bronwaarden zijn ongewijzigd. De tweede " +
+                                "spoor-tijdcorrectie is in de resultaatpreview te zien.",
+                                style = MaterialTheme.typography.bodySmall)
+                            unmatched.drop(shownPage * 5).take(5).forEach { (track, row) ->
+                                val cue = if (track == 1) draft.getOrNull(row - 1)
+                                    else stagedImport.imported.getOrNull(row - 1)
+                                if (cue != null) {
+                                    Text("Spoor $track · originele regel $row · " +
+                                        "${cue.startLabel} → ${cue.endLabel}\n" +
+                                        cue.text,
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween) {
+                                TextButton(enabled = shownPage > 0,
+                                    onClick = { unmatchedReviewPage = shownPage - 1 }) {
+                                    Text("← Vorige losse")
+                                }
+                                TextButton(enabled = shownPage < pageCount - 1,
+                                    onClick = { unmatchedReviewPage = shownPage + 1 }) {
+                                    Text("Volgende losse →")
+                                }
+                            }
+                        }
                     }
                     if (proposed != null &&
                         importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
