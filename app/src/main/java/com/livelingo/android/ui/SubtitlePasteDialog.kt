@@ -88,15 +88,6 @@ internal fun SubtitlePasteDialog(
     // Bounded to eight RAM snapshots (each input is already <=256 KiB).
     var lrcUndo by remember(initialDocument) { mutableStateOf(emptyList<String>()) }
     var lrcRedo by remember(initialDocument) { mutableStateOf(emptyList<String>()) }
-    val commitLrcTiming: (String) -> Unit = { revised ->
-        if (revised != raw) {
-            lrcUndo = (lrcUndo + raw).takeLast(8)
-            lrcRedo = emptyList()
-            raw = revised
-            page = 0
-            lrcShiftPreviewPage = 0
-        }
-    }
     var splitMode by remember(initialDocument) {
         mutableStateOf(initialDocument?.format?.splitMode ?: PlainSubtitleSplitMode.LINES)
     }
@@ -131,6 +122,15 @@ internal fun SubtitlePasteDialog(
         mutableStateOf(initialDocument?.explicitRows.orEmpty())
     }
     var page by remember { mutableIntStateOf(0) }
+    val commitLrcTiming: (String) -> Unit = { revised ->
+        if (revised != raw) {
+            lrcUndo = (lrcUndo + raw).takeLast(8)
+            lrcRedo = emptyList()
+            raw = revised
+            page = 0
+            lrcShiftPreviewPage = 0
+        }
+    }
     var documentNotice by remember(initialDocument) {
         mutableStateOf(initialDocument?.notice.orEmpty())
     }
