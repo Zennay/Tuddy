@@ -110,3 +110,19 @@ telemetrie of permanent modelregister. Android 12 kan geen individuele
 spraakpaketten detecteren en toont dus uitsluitend een onbekende status;
 een Android-locale-kandidaat bewijst nooit volledige offline taalondersteuning.
 Kurmanji, Sorani en Pasjtoe blijven uitsluitend handmatige vijf-zinnenpreview.
+
+
+## Doorzoekbaar overzicht en vrijwillig pakketrapport
+
+Het bronpakkettenoverzicht heeft nu een zoekveld voor taallabels en
+regiocodes, plus **Toon alleen aanwezig**. De filter verandert de
+op het toestel gelezen status niet en doet geen modeldownload.
+
+Via **Kopieer pakketoverzicht** kun je na de alleen-lezen controle op
+eigen verzoek een korte lijst met alle 13 locale-codes en de door
+Android gemelde enum-statussen op het klembord zetten, plus Android API,
+apparaatmodel en de bron-/buildidentiteit. Er wordt geen spraak of
+gesprek meegenomen en de clip wordt als gevoelig gemarkeerd. Het
+systeemklembord valt buiten Tuddy en kan door andere apps worden gelezen;
+deel geen apparaatdetails als je dat niet wilt. Een dergelijke
+kopie bewijst nog geen spraak- of vertaalkwaliteit in vliegtuigmodus.
