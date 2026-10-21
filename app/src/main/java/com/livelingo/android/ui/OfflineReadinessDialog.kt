@@ -49,6 +49,8 @@ internal fun OfflineReadinessDialog(
     onBrowseSpeechPacks: () -> Unit,
     onCopyDiagnostics: () -> Boolean,
     onReportSnapshot: () -> ByteArray?,
+    onReportPickerStarted: () -> Unit,
+    onReportPickerFinished: () -> Unit,
     onCheckText: () -> Unit,
     onPrepareText: () -> Unit,
     onEditLanguages: () -> Unit,
@@ -180,7 +182,9 @@ internal fun OfflineReadinessDialog(
                     Text(diagnosticsMessage.value, style = MaterialTheme.typography.bodySmall)
                 OfflineReadinessFileExportAction(
                     enabled = !isListening,
-                    snapshot = onReportSnapshot
+                    snapshot = onReportSnapshot,
+                    onPickerStarted = onReportPickerStarted,
+                    onPickerFinished = onReportPickerFinished
                 )
                 Text("Het rapport bevat alleen apparaat-, taal- en modelstatus; geen transcript of audio.",
                     style = MaterialTheme.typography.bodySmall)
