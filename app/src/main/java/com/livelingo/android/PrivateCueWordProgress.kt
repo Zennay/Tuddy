@@ -22,21 +22,29 @@ internal object PrivateCueWordProgress {
         return result.takeIf { it.isNotEmpty() && it.size <= MAX_WORDS }
     }
 
-    private fun startAt(startMs: Long, endMs: Long, index: Int, count: Int): Long =
-        // Ceil to avoid navigating into the previous word's fractional window.
-        startMs + kotlin.math.ceil(
-            (endMs - startMs).toDouble() * index / count
-        ).toLong()
+    // A bounded SRT/VTT cue cannot span days. Fail closed for impossible
+    // arithmetic ranges rather than overflowing while mapping token positions.
+    private fun safeWindow(startMs: Long, endMs: Long): Boolean =
+        startMs >= 0L && endMs > startMs && endMs - startMs <= 86_400_000L &&
+            endMs < Long.MAX_VALUE / MAX_WORDS
+
+    private fun startAt(startMs: Long, endMs: Long, index: Int, count: Int): Long {
+        // Exact integer ceilings keep seeks consistent with the highlighted
+        // slot; unlike floating point, no rounding changes word boundaries.
+        val duration = endMs - startMs
+        val numerator = duration * index.toLong()
+        return startMs + (numerator / count +
+            if (numerator % count == 0L) 0L else 1L)
+    }
 
     fun estimate(text: String, startMs: Long, endMs: Long, positionMs: Long): EstimatedCueWord? {
-        if (startMs < 0L || endMs <= startMs ||
+        if (!safeWindow(startMs, endMs) ||
             positionMs < startMs || positionMs >= endMs) return null
         val tokens = ranges(text) ?: return null
         // No meaningful per-word seek slots for implausibly short cue windows.
         if (endMs - startMs < tokens.size) return null
-        val share = ((positionMs - startMs).toDouble() /
-            (endMs - startMs).toDouble()).coerceIn(0.0, 0.999999)
-        val index = (share * tokens.size).toInt().coerceIn(0, tokens.lastIndex)
+        val index = (((positionMs - startMs) * tokens.size) /
+            (endMs - startMs)).toInt().coerceIn(0, tokens.lastIndex)
         return EstimatedCueWord(
             tokens[index], index, tokens.size, startAt(startMs, endMs, index, tokens.size)
         )
@@ -44,7 +52,7 @@ internal object PrivateCueWordProgress {
 
     /** Seek by estimated word index, still only relying on the user's cue clock. */
     fun estimatedWordStart(text: String, startMs: Long, endMs: Long, index: Int): Long? {
-        if (startMs < 0L || endMs <= startMs) return null
+        if (!safeWindow(startMs, endMs)) return null
         val tokens = ranges(text) ?: return null
         if (endMs - startMs < tokens.size || index !in tokens.indices) return null
         return startAt(startMs, endMs, index, tokens.size)
@@ -52,7 +60,7 @@ internal object PrivateCueWordProgress {
 
     /** All explicitly selectable estimated positions for one visible cue. */
     fun choices(text: String, startMs: Long, endMs: Long): List<EstimatedCueWord>? {
-        if (startMs < 0L || endMs <= startMs) return null
+        if (!safeWindow(startMs, endMs)) return null
         val tokens = ranges(text) ?: return null
         if (endMs - startMs < tokens.size) return null
         return tokens.mapIndexed { index, span ->
