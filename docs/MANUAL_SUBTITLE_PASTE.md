@@ -2,6 +2,24 @@
 
 Tuddy laat je handmatig een volledig SRT- of WebVTT-document plakken, zonder dat de app zelf je Android-klembord uitleest.
 
+## Een ondertitel op een zelf gekozen tijdstip splitsen
+
+In **Eigen ondertitelconcept · SRT/WebVTT** kies je bij een regel **Splitsen**.
+De editor vult twee tekststukken voor je voor, die je vóór bevestiging vrij
+kunt aanpassen. Laat **Exacte splitsingstijd** leeg om de cue precies in het
+midden te delen, of voer zelf een tijdcode in zoals `01:23.500` of
+`00:01:23.500`. Komma en punt zijn toegestaan voor milliseconden.
+
+De preview toont de huidige cue en de duur van beide voorgestelde delen.
+Beide nieuwe cues moeten minimaal 0,6 seconde duren en de splitsgrens mag
+niet voorbij het begin van de volgende cue vallen. Een ongeldige tijd,
+te korte helft, lege/ongeldige tekst of onveilige volledige tijdlijn wordt
+geweigerd; de editor blijft open zodat je de invoer kunt herstellen. De
+split is één tijdelijke Undo/Redo-bewerking. Het oorspronkelijke bestand
+wordt nooit overschreven en er wordt geen audio geanalyseerd of automatisch
+gesynchroniseerd.
+
+
 ## Eigen bestanden rechtstreeks kiezen via Android (SRT, VTT, LRC, CSV, TSV, TXT)
 
 Je hoeft een eigen bestand niet eerst met een andere app te openen en te kopiëren:
