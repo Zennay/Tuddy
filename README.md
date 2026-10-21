@@ -9,8 +9,9 @@ gepresenteerd. Zonder print-opt-in blijft dat antwoordblad buiten
 de afdruk; leerlingenbestanden bevatten geen brontekst.
 
 Daarnaast is er **Bekijk volledige bronregel-CSV vóór opslaan**:
-een inspecteerbaar CSV-document met één rij per volledig binnen jouw
-eigen A–B-tijdvak passende ondertitelregel, oorspronkelijke bronregel,
+een per 12 rijen doorbladerbaar CSV-document met één rij per
+volledig binnen jouw eigen A–B-tijdvak passende ondertitelregel,
+oorspronkelijke bronregel,
 tijdcodes en eventuele eigen beoordeling/notitie. Via **Bewaar alle
 passende bronregels als CSV…** kies je daarna zelf een Android-provider.
 De bestaande compacte CSV blijft bestaan. Alle bronwaarden zijn
