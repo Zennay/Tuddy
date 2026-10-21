@@ -1735,9 +1735,17 @@ internal fun PrivateSubtitleFileDialog(
                             it.firstPrimaryRow, it.firstSecondaryRow,
                             it.lastPrimaryRow, it.lastSecondaryRow)
                     }
+                    val latestMultiDrift = selectedMultiAnchors?.takeIf {
+                        importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
+                    }?.let {
+                        PrivateSubtitleTrackMultiAnchorAlignment.preview(
+                            draft, stagedImport.imported, it)
+                    }
                     val latestOffset = when {
                         importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES ->
                             secondTrackOffsetMs
+                        selectedMultiAnchors != null ->
+                            if (latestMultiDrift != null) 0L else null
                         selectedDrift != null -> if (latestDrift != null) 0L else null
                         anchorSelectionNeedsApply -> null
                         secondTrackCustomOffset.isBlank() -> secondTrackOffsetMs
@@ -1745,9 +1753,13 @@ internal fun PrivateSubtitleFileDialog(
                             secondTrackCustomOffset, allowZero = true)
                     }
                     val latestIncoming = if (
-                        selectedDrift != null &&
-                        importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
-                    ) latestDrift?.adjustedSecondary else stagedImport.imported
+                        importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
+                    ) stagedImport.imported else when {
+                        selectedMultiAnchors != null ->
+                            latestMultiDrift?.adjustedSecondary
+                        selectedDrift != null -> latestDrift?.adjustedSecondary
+                        else -> stagedImport.imported
+                    }
                     val updated = if (latestOffset != null && latestIncoming != null)
                         PrivateSubtitleDocumentCombine.preview(
                             draft, latestIncoming, importMode, latestOffset,
