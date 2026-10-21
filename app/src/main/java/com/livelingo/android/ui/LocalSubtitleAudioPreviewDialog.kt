@@ -1347,7 +1347,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     else "Geen ondertitel actief op deze audiopositie.",
                         style = MaterialTheme.typography.labelLarge)
                     OutlinedButton(
-                        enabled = active != null && active.text.isNotBlank(),
+                        enabled = estimatedWordFollow ||
+                            (active != null && active.text.isNotBlank()),
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
                             estimatedWordFollow = !estimatedWordFollow
