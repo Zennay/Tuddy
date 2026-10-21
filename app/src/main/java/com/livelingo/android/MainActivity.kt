@@ -226,6 +226,7 @@ private fun TuddyScreen(
     var pinnedClozeHintMode by remember { mutableStateOf(PinnedClozeHintMode.BLANK) }
     var pinnedClozeAnswerSpace by remember { mutableStateOf(PinnedClozeAnswerSpace.STANDARD) }
     var pinnedClozeAudience by remember { mutableStateOf(PinnedClozeAudience.SELF_STUDY) }
+    var pinnedClozePass by remember { mutableStateOf(PinnedClozePass.FIRST) }
     var pinnedOnlyPersonalStudy by remember { mutableStateOf(false) }
     var pinnedStudyLanguageTags by remember { mutableStateOf(false) }
     var pinnedLanguagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -1249,7 +1250,7 @@ private fun TuddyScreen(
                 pending.languagePair, pending.studyDirection,
                 pinnedStudyEdits.toMap(), pending.onlyPersonallyCorrected,
                 pending.showLanguageTags, pending.clozeDifficulty, pending.clozeHintMode,
-                pending.clozeAnswerSpace, pending.clozeAudience
+                pending.clozeAnswerSpace, pending.clozeAudience, pending.clozePass
             )
             if (pending.generation != generation || listening ||
                 pending.format != pinnedExportFormat ||
@@ -1263,6 +1264,7 @@ private fun TuddyScreen(
                 pending.clozeHintMode != pinnedClozeHintMode ||
                 pending.clozeAnswerSpace != pinnedClozeAnswerSpace ||
                 pending.clozeAudience != pinnedClozeAudience ||
+                pending.clozePass != pinnedClozePass ||
                 pending.subtitleOptions != pinnedSubtitleOptions ||
                 currentSelection != pending.selection || currentBytes == null ||
                 !currentBytes.contentEquals(pending.bytes)
@@ -3448,13 +3450,13 @@ private fun TuddyScreen(
             val computedPreview = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
-                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience
+                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass
             ) {
                 PrivatePinnedCaptionExport.snapshot(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
                     pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection,
                     pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
-                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience
+                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass
                 )
             }
             AlertDialog(
@@ -3557,6 +3559,22 @@ private fun TuddyScreen(
                                 else "Zelfstudie: complete antwoorden staan achter " +
                                     "bewuste openklapkeuzes of in het afzonderlijke " +
                                     "antwoordblad.", style = MaterialTheme.typography.bodySmall)
+                                HorizontalDivider()
+                                Text("Welke ronde(s) wil je oefenen?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozePass.entries.forEach { pass ->
+                                    TextButton(onClick = {
+                                        pinnedClozePass = pass
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozePass == pass) "● " else "○ ") +
+                                            pass.title)
+                                    }
+                                }
+                                Text("Bij meerdere rondes komen dezelfde zinnen terug " +
+                                    "met andere ontbrekende woorden. De volgorde ligt " +
+                                    "vast; er worden geen nieuwe vertalingen gemaakt.",
+                                    style = MaterialTheme.typography.bodySmall)
                                 Text("De gekozen moeilijkheid en exacte invulhints " +
                                     "komen ook op je eigen oefenblad. Dit is geen " +
                                     "geautomatiseerde taal- of juistheidsbeoordeling.",
@@ -3664,7 +3682,9 @@ private fun TuddyScreen(
                             pinnedExportFormat == PinnedCaptionFormat.FOLD_HTML ||
                             pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML)) {
                             val cards = included.size *
-                                (if (pinnedStudyDirection == PinnedStudyDirection.BOTH) 2 else 1)
+                                (if (pinnedStudyDirection == PinnedStudyDirection.BOTH) 2 else 1) *
+                                (if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML)
+                                    pinnedClozePass.indices.size else 1)
                             Text(
                                 "$cards studiekaarten in " +
                                     (when (pinnedExportFormat) {
@@ -3681,8 +3701,11 @@ private fun TuddyScreen(
                                         PinnedCaptionFormat.CLOZE_HTML ->
                                             " (" + pinnedClozeDifficulty.title + "; " +
                                                 pinnedClozeHintMode.title + "; " + pinnedClozeAnswerSpace.title + "; " + pinnedClozeAudience.title +
+                                                "; " + pinnedClozePass.title +
                                                 ") met invulwoorden " +
-                                                "en apart antwoordblad. "
+                                                (if (pinnedClozeAudience == PinnedClozeAudience.SELF_STUDY)
+                                                    "en apart antwoordblad. "
+                                                else "zonder volledige antwoorden. ")
                                         else -> " met twee tekstkolommen. "
                                     }) +
                                     (if (pinnedOnlyPersonalStudy)
@@ -3855,7 +3878,7 @@ private fun TuddyScreen(
                                 selection, format, options, scope, languagePair,
                                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
                                 pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
-                                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience
+                                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
@@ -3865,7 +3888,7 @@ private fun TuddyScreen(
                                     generation, selection, format, scope,
                                     languagePair, pinnedStudyDirection,
                                     pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
-                                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience,
+                                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass,
                                     options, bytes
                                 )
                                 exportStatus = ""
@@ -3901,7 +3924,7 @@ private fun TuddyScreen(
                 pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
                 pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
-                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience
+                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass
             )
             val previewLines = remember(exactBytes?.contentHashCode(),
                 exactBytes?.size
