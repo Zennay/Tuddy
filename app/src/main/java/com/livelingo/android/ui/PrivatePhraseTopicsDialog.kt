@@ -27,6 +27,12 @@ import com.livelingo.android.PrivatePhraseTopics
 import com.livelingo.android.PrivatePhraseTopicBackup
 import java.io.ByteArrayOutputStream
 
+private data class PendingTopicRestore(
+    val backup: PrivatePhraseTopicBackup,
+    val previousTopics: ByteArray?,
+    val previousNotes: List<PersonalPhrase>
+)
+
 /** Theme management for human-authored notes, never model-derived categories. */
 @Composable
 internal fun PrivatePhraseTopicsDialog(
@@ -41,7 +47,7 @@ internal fun PrivatePhraseTopicsDialog(
     var pendingDelete by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
     var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
-    var pendingRestore by remember { mutableStateOf<PrivatePhraseTopicBackup?>(null) }
+    var pendingRestore by remember { mutableStateOf<PendingTopicRestore?>(null) }
     val context = LocalContext.current
     val exportDocument = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -92,32 +98,77 @@ internal fun PrivatePhraseTopicsDialog(
                 notice = "Thema-back-up geweigerd: ongeldige gegevens of " +
                     "bijbehorende eigen zinnen ontbreken. Herstel eerst die zinnen."
             } else {
-                pendingRestore = candidate
-                notice = ""
+                val previousNotes = storage.notesSnapshot()
+                if (previousNotes == null) {
+                    notice = "De eigen zinnen zijn intussen veranderd. Open de back-up opnieuw."
+                } else {
+                    pendingRestore = PendingTopicRestore(
+                        candidate, storage.exportSnapshot(), previousNotes
+                    )
+                    notice = ""
+                }
             }
         }
     }
 
     val restoring = pendingRestore
     if (restoring != null) {
+        val backup = restoring.backup
+        val affected = storage.previewAssignments(backup)
         AlertDialog(
             onDismissRequest = { pendingRestore = null },
             title = { Text("Privéthema's vervangen?") },
-            text = { Text(
-                "Gekozen back-up: ${restoring.names.size} thema's en " +
-                    "${restoring.assignments.size} koppelingen naar eigen zinnen. " +
-                    "Je bestaande thema-indeling wordt vervangen; je eigen " +
-                    "zinnen, betekenissen, favorieten en herhaalplanning blijven " +
-                    "ongewijzigd. Een externe back-up wordt niet automatisch gewist."
-            ) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 470.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Volledige voorbeeldweergave. Deze back-up bevat " +
+                        "${backup.names.size} zelfbenoemde thema’s en " +
+                        "${backup.assignments.size} koppelingen. Alleen de " +
+                        "huidige indeling wordt vervangen, niet je zinnen, " +
+                        "betekenissen, favorieten of herhaalplanning.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("Nieuwe themanamen", style = MaterialTheme.typography.titleSmall)
+                    backup.names.forEach { name -> Text("• $name") }
+                    Text("Zinnen die een thema krijgen", 
+                        style = MaterialTheme.typography.titleSmall)
+                    if (affected == null) {
+                        Text("De onderliggende zinnen zijn gewijzigd; herstellen is " +
+                            "geblokkeerd. Kies de back-up opnieuw.",
+                            color = MaterialTheme.colorScheme.error)
+                    } else if (affected.isEmpty()) {
+                        Text("Geen zinnen krijgen een thema.")
+                    } else {
+                        affected.forEachIndexed { index, (phrase, topic) ->
+                            Text("${index + 1}. [${phrase.language}] ${phrase.phrase}",
+                                style = MaterialTheme.typography.bodyMedium)
+                            Text("→ $topic · eigen betekenis: ${phrase.ownMeaning}",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Text("Niet genoemde zinnen worden zonder thema. Een externe " +
+                        "back-up blijft bij de gekozen Android-bestandsprovider. " +
+                        "Tuddy controleert of vertaalt de eigen betekenissen niet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    val restored = storage.replaceImported(restoring)
-                    if (restored) onChanged()
-                    notice = if (restored) "Thema-indeling lokaal hersteld."
-                        else "Herstellen mislukt; bestaande indeling is behouden."
-                    pendingRestore = null
-                }) { Text("Vervang alleen thema-indeling") }
+                TextButton(
+                    enabled = affected != null,
+                    onClick = {
+                        val restored = storage.replaceImportedIfUnchanged(
+                            backup, restoring.previousTopics, restoring.previousNotes
+                        )
+                        if (restored) onChanged()
+                        notice = if (restored) "Thema-indeling lokaal hersteld."
+                            else "Een thema of eigen zin is veranderd sinds de " +
+                                "preview. Herstel geweigerd; open de back-up opnieuw."
+                        pendingRestore = null
+                    }
+                ) { Text("Vervang alleen deze thema-indeling") }
             },
             dismissButton = {
                 TextButton(onClick = { pendingRestore = null; notice = "Herstel geannuleerd." }) {
