@@ -3,9 +3,10 @@
 ## Nieuw: afdrukbaar privé-oefenblad uit eigen tweetalige zinnen
 
 Maak uit de bewust geselecteerde **★ gemarkeerde** gesprekszinnen nu
-ook **Oefenblad · HTML**: een zelfstandig bestand met alle vragen
-voorop en de bijbehorende antwoorden op een afzonderlijke
-afdrukpagina. Dezelfde keuze voor bron→vertaling, omgekeerde kaarten
+ook **Oefenblad · HTML**: een zelfstandig bestand met per vraag een **Toon antwoord**-knop
+via native HTML-details, geheel zonder scripts of netwerk. Op papier
+blijven de antwoorden verborgen bij de vragen en staan ze op een
+afzonderlijke afdrukpagina. Dezelfde keuze voor bron→vertaling, omgekeerde kaarten
 of beide richtingen, optionele taalcodes, alleen persoonlijk
 gecorrigeerde antwoorden en ontdubbeling als bij TSV/CSV blijft intact.
 Alles gebeurt in RAM en pas na expliciete Android-bestandskeuze.
