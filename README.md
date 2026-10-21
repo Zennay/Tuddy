@@ -1,3 +1,27 @@
+## Nieuw: handmatig geschat woordfragment herhalen en volledig privé-luisterwerkblad
+
+In de eigen SRT/VTT-audiospeler laat de optionele geschatte woordvolger
+nu één zelfgekozen woordpositie **handmatig herhalen** via de bestaande
+A–B-afspeellus. Alleen cue-vensters van minstens 750 ms worden gebruikt;
+dit zijn gelijkmatig geschatte tijden, **geen gemeten of herkende
+woordgrenzen**. De herhaling stopt afzonderlijk of bij uitschakelen
+van de woordvolger, andere afspeelkeuze, gewijzigde tijdverschuiving
+of verlaten van de speler. Er worden geen audiofragmenten gemaakt.
+
+De bestaande PR #225 integreert daarnaast het privé-luisterwerkblad
+en selectie-veilige CSV-export uit PR #224. Kies maximaal vier eigen
+A–B-luisterpassages en exporteer bewust **alle**, **nog oefenen** of
+**nog onbeoordeelde** als afdrukbaar HTML-luisterwerkblad met aparte
+bronpagina, of als controleerbare UTF-8 CSV. Broncode, persoonlijke
+beoordelingen en aantallen weggelaten regels zijn transparant;
+oude gegevens worden niet na een gewijzigde Android-bestandskeuze
+opgeslagen. Geen netwerk, ASR, automatische uitlijning of studieprofiel.
+
+[Handleiding woordherhaling](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md) ·
+[Handleiding luisterexport](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 # Tuddy 🎙️
 
 ## Nieuw: tik direct het gewenste woord in je ondertitel aan
