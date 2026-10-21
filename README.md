@@ -1,3 +1,18 @@
+## Nieuw: offline luisterwerkblad met ingeklapte bronregels en afdrukversie
+
+Maak in de eigen SRT/VTT-audiospeler maximaal vier A–B-fragmenten en
+kies bij **Mijn privé oefenoverzicht** nu ook **Bewaar luisterwerkblad…**.
+In het scriptvrije HTML-bestand kun je eerst luisteren en notities maken;
+per fragment onthul je pas zelf de bronondertiteltekst. Bij afdrukken
+staan de vragen met schrijfruimte voorop en de gekozen SRT/VTT-bronregels
+op een aparte zelfcontrolepagina. Lange passages vermelden zichtbaar
+hoeveel tussenliggende regels zijn weggelaten. Eigen beoordeling en
+oefennotitie gaan mee, nooit audio, URI of spraakherkenningsresultaten.
+De bestaande expliciete Android-bestandskeuze en byte-hercontrole
+blijven verplicht. [Details](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 # Tuddy 🎙️
 
 ## Nieuw: beter leesbare eigen passages in privé-luisterverslagen
