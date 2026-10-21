@@ -86,3 +86,27 @@ Documentation: https://developer.android.com/reference/android/speech/SpeechReco
 ## Privacy-safe readiness diagnostics
 
 The offline readiness dialog includes an explicit **Kopieer diagnoserapport** action. The report contains the app version, Android API/device model, airplane-mode state, selected language codes, speech-service availability, speech/text-model readiness states, the source SHA, and GitHub Actions run ID (local builds are marked `local`). The CI APK artifact also contains `build-manifest.txt` with source SHA, workflow run ID/attempt, event/ref, APK SHA-256 and byte size. Match the report's source/run ID to that external manifest; the APK checksum cannot be embedded in the APK itself. It never includes transcript text or audio. Copying is user-triggered and marks the clipboard content as sensitive; the user can review it before sharing.
+
+
+## Alle lokale spreektaalpakketten bekijken
+
+Via **Offline startcheck → Bekijk offline spreektaalpakketten** opent een
+alleen-lezen overzicht van de 13 expliciete Android-spraaklocale-kandidaten.
+**Controleer alle talen** bevraagt de lokale Android-spraakdienst sequentieel,
+één tijdelijke recognizer tegelijk. Per exacte regionale taalcode zie je
+*aanwezig*, *download aangeboden*, *in behandeling*, *alleen online*,
+*niet ondersteund* of *onbekend*. Er wordt niets automatisch gedownload, en er
+wordt geen microfoonopname of cloud-herkenning gestart.
+
+**Kies als spreektaal** stopt eventuele lopende luistersessie, bewaart de
+nieuwe bronkeuze indien lokale voorkeuren schrijfbaar zijn, maakt de eerdere
+spraak-/tekstmodelstatus ongeldig en keert terug naar de individuele offline
+startcheck. Een catalogusstatus van een eerdere taal wordt niet klakkeloos
+overgenomen; de gebruiker controleert opnieuw vóór het luisteren.
+
+**Stop controle**, sluiten, schermachtergrond en lifecycle-opruimen vernietigen
+de tijdelijke controller en negeren verlate callbacks. Dit is geen externe
+telemetrie of permanent modelregister. Android 12 kan geen individuele
+spraakpaketten detecteren en toont dus uitsluitend een onbekende status;
+een Android-locale-kandidaat bewijst nooit volledige offline taalondersteuning.
+Kurmanji, Sorani en Pasjtoe blijven uitsluitend handmatige vijf-zinnenpreview.
