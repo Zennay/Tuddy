@@ -101,6 +101,56 @@ internal object PrivateCueWordProgress {
         return proposed.takeIf { wordStarts(text, startMs, endMs, it) != null }
     }
 
+    /**
+     * Explicit, reusable *text*, not a subtitle or audio file.
+     * Example: 2=00:00:12.250;5=00:00:13.900
+     * The user supplies absolute cue-timeline millisecond positions. A full
+     * replacement is applied only when all entries are in range and all
+     * interpolated word positions retain positive duration.
+     */
+    fun parseManualMarkSheet(
+        source: String, text: String, startMs: Long, endMs: Long
+    ): Map<Int, Long>? {
+        if (source.isBlank() || source.length > 512) return null
+        val pieces = source.split(';', '\n').map(String::trim)
+        if (pieces.size !in 1..MAX_MANUAL_MARKS || pieces.any(String::isEmpty))
+            return null
+        val pattern = Regex(
+            """^([1-9][0-9]{0,2})=([0-9]{2,6}):([0-5][0-9]):([0-5][0-9])\\.([0-9]{3})$"""
+        )
+        val marks = linkedMapOf<Int, Long>()
+        for (piece in pieces) {
+            val match = pattern.matchEntire(piece) ?: return null
+            val number = match.groupValues[1].toIntOrNull() ?: return null
+            val hours = match.groupValues[2].toLongOrNull() ?: return null
+            val minutes = match.groupValues[3].toLongOrNull() ?: return null
+            val seconds = match.groupValues[4].toLongOrNull() ?: return null
+            val millis = match.groupValues[5].toLongOrNull() ?: return null
+            val absoluteMs = hours * 3_600_000L + minutes * 60_000L +
+                seconds * 1_000L + millis
+            if (number < 2 || number > MAX_WORDS ||
+                marks.put(number - 1, absoluteMs) != null) return null
+        }
+        val proposed = marks.toSortedMap()
+        return proposed.takeIf { wordStarts(text, startMs, endMs, it) != null }
+    }
+
+    /** Deterministic, human-copyable draft from current manual marks only. */
+    fun formatManualMarkSheet(marks: Map<Int, Long>): String? {
+        if (marks.isEmpty() || marks.size > MAX_MANUAL_MARKS ||
+            marks.any { (index, timestamp) ->
+                index !in 1 until MAX_WORDS || timestamp < 0L
+            }) return null
+        return marks.toSortedMap().entries.joinToString(";") { (index, stamp) ->
+            val seconds = stamp / 1_000L
+            (index + 1).toString() + "=" +
+                String.format(java.util.Locale.ROOT,
+                    "%02d:%02d:%02d.%03d",
+                    seconds / 3_600L, seconds / 60L % 60L,
+                    seconds % 60L, stamp % 1_000L)
+        }
+    }
+
     fun estimate(
         text: String, startMs: Long, endMs: Long, positionMs: Long,
         marks: Map<Int, Long> = emptyMap()
