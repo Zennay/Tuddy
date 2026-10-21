@@ -390,7 +390,7 @@ private fun TuddyScreen(
     var pendingArchiveSubtitleExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var archiveSearchQuery by remember { mutableStateOf("") }
     var pendingArchiveGeneration by remember { mutableStateOf<Int?>(null) }
-    // Explicitly opened SRT/WebVTT file; separate from the active transcript.
+    // Explicitly opened timed SRT/VTT/LRC/CSV/TSV text; not the live transcript.
     var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
     var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var subtitlePasteOpen by remember { mutableStateOf(false) }
@@ -406,7 +406,7 @@ private fun TuddyScreen(
     var readySecondPasteDocument by remember {
         mutableStateOf<SubtitlePasteFileContent?>(null)
     }
-    // Second SRT/VTT picker: one explicit RAM-only document pair, never disk.
+    // Second timed subtitle picker: one explicit RAM-only document pair, never disk.
     var pendingSecondSubtitle by remember {
         mutableStateOf<Pair<Int, List<PrivateSubtitleCue>>?>(null)
     }
@@ -1694,7 +1694,7 @@ private fun TuddyScreen(
     }
 
     // The external Android provider can be backed by network storage.
-    // Bounded IO and SRT/VTT parsing never run on the UI thread.
+    // Bounded IO and timed subtitle parsing never run on the UI thread.
     suspend fun readSelectedSubtitle(uri: Uri): Pair<List<PrivateSubtitleCue>?, String> {
         if (uri.scheme != "content") return null to
             "Geen geldige Android-documentprovider; bestaande ondertitels behouden."
@@ -1705,11 +1705,16 @@ private fun TuddyScreen(
                 is PrivateSubtitleImportDocument.Result.Rejected ->
                     null to selected.reason
                 is PrivateSubtitleImportDocument.Result.Ready -> {
+                    // These are user-supplied timestamps. For LRC the end of
+                    // each lyric is derived from the next start; only the
+                    // final lyric receives an explicit +3s estimate. Never
+                    // infer word alignment, translations or speech from LRC.
                     val parsed = PrivateSubtitleFileReader.read(
                         selected.text.toByteArray(Charsets.UTF_8)
-                    )
+                    ) ?: PrivateLrcSubtitleDraft.preview(selected.text)
+                        ?: PrivateTimedSubtitleSheet.readAuthored(selected.text)
                     if (parsed == null)
-                        null to "Geen geldig SRT/WebVTT-document: controleer " +
+                        null to "Geen geldig SRT/VTT/LRC/getimed CSV/TSV-document: controleer " +
                             "tijdcodes, tekstregels en maximaal 500 cues."
                     else parsed to ""
                 }
@@ -2361,7 +2366,7 @@ private fun TuddyScreen(
         }
         if (subtitlePasteOpen) {
             SubtitlePasteDialog(
-                title = "Eigen SRT/WebVTT-tekst plakken",
+                title = "Eigen ondertitels plakken of importeren",
                 initialDocument = readyFirstPasteDocument,
                 onChooseDocument = { request ->
                     pendingManualSubtitleDocument = PendingManualSubtitleDocument(
@@ -2413,7 +2418,7 @@ private fun TuddyScreen(
                     pendingSecondSubtitle = generation to draftCues.toList()
                     importedSecondSubtitle = null
                     secondSubtitleError = null
-                    // SAF providers do not agree on SRT/VTT MIME types.
+                    // SAF providers do not agree on timed subtitle MIME types.
                     openSecondSubtitleFile.launch(arrayOf("*/*"))
                 },
                 incomingSecondPaste = readySecondPasteDocument,
@@ -5037,11 +5042,11 @@ private fun TuddyScreen(
                         pendingSubtitleOpenGeneration = generation
                         subtitleFileCues = null
                         // Android document providers inconsistently report
-                        // SRT/VTT as octet-stream, plain text or custom types.
+                        // SRT/VTT/LRC/CSV/TSV as octet-stream, plain text or custom types.
                         // Let the user intentionally choose a file; the strict
                         // bounded parser remains the only acceptance gate.
                         openSubtitleFile.launch(arrayOf("*/*"))
-                    }) { Text("Open SRT/WebVTT…") }
+                    }) { Text("Open ondertitelbestand…") }
                     Text(
                         "Bekijk een bewaard gesprek zonder je live gesprek te vervangen.",
                         modifier = Modifier.weight(1f),
@@ -5052,7 +5057,7 @@ private fun TuddyScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !listening,
                     onClick = { subtitlePasteOpen = true }
-                ) { Text("Plak eigen SRT/WebVTT-tekst en bekijk voorbeelden…") }
+                ) { Text("Plak of importeer ondertiteltekst…") }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
