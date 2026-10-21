@@ -903,8 +903,12 @@ internal fun PrivateSubtitleFileDialog(
                             OutlinedButton(modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     selectedMultiAnchors = null
+                                    selectedDrift = null
+                                    anchorSelectionNeedsApply = false
+                                    secondTrackOffsetMs = 0L
+                                    secondTrackCustomOffset = ""
                                     secondTrackPreviewPage = 0
-                                }) { Text("Stop meerpuntscorrectie, gebruik één offset") }
+                                }) { Text("Stop meerpuntscorrectie, gebruik nul-offset") }
                         } else if (selectedDrift != null) {
                             val selected = selectedDrift
                             Text(
@@ -1831,6 +1835,7 @@ internal fun PrivateSubtitleFileDialog(
                 onChoose = { selection ->
                     selectedMultiAnchors = selection
                     selectedDrift = null
+                    anchorSelectionNeedsApply = false
                     multiAnchorSelectorOpen = false
                     secondTrackPreviewPage = 0
                 },
@@ -1845,6 +1850,7 @@ internal fun PrivateSubtitleFileDialog(
                 onChoose = { selection ->
                     selectedDrift = selection
                     selectedMultiAnchors = null
+                    anchorSelectionNeedsApply = false
                     driftSelectorOpen = false
                     secondTrackPreviewPage = 0
                 },
