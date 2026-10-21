@@ -208,9 +208,24 @@ internal object PrivateCueWordProgress {
     ): Pair<Long, Long>? {
         val (tokens, starts) = wordStarts(text, startMs, endMs, marks) ?: return null
         if (index !in tokens.indices) return null
-        return (starts[index] to starts[index + 1]).takeIf { (a, b) ->
-            b - a >= 750L
+        val first = starts[index]
+        val last = starts[index + 1]
+        val wordLength = last - first
+        // A single guessed word often lasts less than 750 ms. Give the
+        // listener a playable 750-ms window with neighboring context, rather
+        // than disabling repetition for most multi-word subtitles. This is
+        // still only an estimate from user-supplied cue times / manual marks.
+        // Very long guessed word windows must never cause minutes of looping.
+        if (wordLength > 120_000L || endMs - startMs < 750L) return null
+        if (wordLength >= 750L) return first to last
+        val context = (750L - wordLength) / 2L
+        var replayStart = (first - context).coerceAtLeast(startMs)
+        var replayEnd = replayStart + 750L
+        if (replayEnd > endMs) {
+            replayEnd = endMs
+            replayStart = replayEnd - 750L
         }
+        return replayStart to replayEnd
     }
 
     fun estimatedPhraseReplayWindow(
