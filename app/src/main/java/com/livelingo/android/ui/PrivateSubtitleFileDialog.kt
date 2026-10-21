@@ -156,6 +156,7 @@ internal fun PrivateSubtitleFileDialog(
     var secondTrackCustomOffset by remember { mutableStateOf("") }
     var primaryAnchorRow by remember { mutableStateOf("1") }
     var secondaryAnchorRow by remember { mutableStateOf("1") }
+    var anchorSelectionNeedsApply by remember { mutableStateOf(false) }
     var secondTrackPreviewPage by remember { mutableIntStateOf(0) }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
     val found = draft.mapIndexed { idx, row -> idx to row }
@@ -175,6 +176,7 @@ internal fun PrivateSubtitleFileDialog(
                 secondTrackCustomOffset = ""
                 primaryAnchorRow = "1"
                 secondaryAnchorRow = "1"
+                anchorSelectionNeedsApply = false
                 secondTrackPreviewPage = 0
                 notice = ""
             } else {
@@ -693,6 +695,7 @@ internal fun PrivateSubtitleFileDialog(
                 secondTrackCustomOffset = ""
                 primaryAnchorRow = "1"
                 secondaryAnchorRow = "1"
+                anchorSelectionNeedsApply = false
                 secondTrackPreviewPage = 0
                 notice = ""
                 pasteSecondOpen = false
@@ -703,9 +706,14 @@ internal fun PrivateSubtitleFileDialog(
     val stagedImport = pendingImport
     if (stagedImport != null) {
         val stillCurrent = draft == stagedImport.existing
-        val selectedPairOffset = if (importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES ||
-            secondTrackCustomOffset.isBlank()) secondTrackOffsetMs
-            else PrivateSubtitleOffset.parseSeconds(secondTrackCustomOffset, allowZero = true)
+        val selectedPairOffset = when {
+            importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES ->
+                secondTrackOffsetMs
+            anchorSelectionNeedsApply -> null
+            secondTrackCustomOffset.isBlank() -> secondTrackOffsetMs
+            else -> PrivateSubtitleOffset.parseSeconds(
+                secondTrackCustomOffset, allowZero = true)
+        }
         val proposed = if (stillCurrent && selectedPairOffset != null)
             PrivateSubtitleDocumentCombine.preview(
                 draft, stagedImport.imported, importMode, selectedPairOffset
@@ -763,6 +771,7 @@ internal fun PrivateSubtitleFileDialog(
                                         onClick = {
                                             secondTrackOffsetMs = value
                                             secondTrackCustomOffset = ""
+                                            anchorSelectionNeedsApply = false
                                             secondTrackPreviewPage = 0
                                             offsetChoicesOpen = false
                                         })
@@ -777,6 +786,7 @@ internal fun PrivateSubtitleFileDialog(
                             value = secondTrackCustomOffset,
                             onValueChange = {
                                 secondTrackCustomOffset = it.take(10)
+                                anchorSelectionNeedsApply = false
                                 secondTrackPreviewPage = 0
                             },
                             label = { Text("Eigen seconden tweede spoor, bv. -7,250") },
@@ -798,6 +808,7 @@ internal fun PrivateSubtitleFileDialog(
                             OutlinedTextField(value = primaryAnchorRow,
                                 onValueChange = {
                                     primaryAnchorRow = it.take(3)
+                                    anchorSelectionNeedsApply = true
                                     secondTrackCustomOffset = ""
                                     secondTrackPreviewPage = 0
                                 }, modifier = Modifier.weight(1f),
@@ -805,6 +816,7 @@ internal fun PrivateSubtitleFileDialog(
                             OutlinedTextField(value = secondaryAnchorRow,
                                 onValueChange = {
                                     secondaryAnchorRow = it.take(3)
+                                    anchorSelectionNeedsApply = true
                                     secondTrackCustomOffset = ""
                                     secondTrackPreviewPage = 0
                                 }, modifier = Modifier.weight(1f),
@@ -813,6 +825,14 @@ internal fun PrivateSubtitleFileDialog(
                         val anchorShift = PrivateSubtitleTrackAnchorOffset.fromRows(
                             draft, stagedImport.imported,
                             primaryAnchorRow, secondaryAnchorRow)
+                        if (anchorSelectionNeedsApply) {
+                            Text("Je hebt de ankerregels gewijzigd. Kies " +
+                                "opnieuw berekenen, vul zelf een exact " +
+                                "verschil in of kies bewust een preset. " +
+                                "Tot dan kan deze koppeling niet worden bevestigd.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                         if (anchorShift != null) {
                             Text("Voorgestelde verschuiving op twee handmatig " +
                                 "gekozen startmomenten: " +
@@ -831,6 +851,7 @@ internal fun PrivateSubtitleFileDialog(
                                 if (anchorShift != null) {
                                     secondTrackCustomOffset =
                                         PrivateSubtitleOffset.formatSeconds(anchorShift)
+                                    anchorSelectionNeedsApply = false
                                     secondTrackPreviewPage = 0
                                 }
                             }) { Text("Neem deze twee startmomenten als verschuiving") }
@@ -894,11 +915,14 @@ internal fun PrivateSubtitleFileDialog(
             },
             confirmButton = {
                 TextButton(enabled = proposed != null && stillCurrent, onClick = {
-                    val latestOffset = if (
-                        importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES ||
-                        secondTrackCustomOffset.isBlank()
-                    ) secondTrackOffsetMs else PrivateSubtitleOffset.parseSeconds(
-                        secondTrackCustomOffset, allowZero = true)
+                    val latestOffset = when {
+                        importMode != SubtitleCombineMode.PAIR_OVERLAPPING_TIMES ->
+                            secondTrackOffsetMs
+                        anchorSelectionNeedsApply -> null
+                        secondTrackCustomOffset.isBlank() -> secondTrackOffsetMs
+                        else -> PrivateSubtitleOffset.parseSeconds(
+                            secondTrackCustomOffset, allowZero = true)
+                    }
                     val updated = latestOffset?.let {
                         PrivateSubtitleDocumentCombine.preview(
                             draft, stagedImport.imported, importMode, it)
