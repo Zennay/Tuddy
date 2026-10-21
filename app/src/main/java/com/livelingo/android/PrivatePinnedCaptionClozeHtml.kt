@@ -178,6 +178,7 @@ internal object PrivatePinnedCaptionClozeHtml {
             }
         }
         if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2 * 3) return null
+        val cardsPerRound = cards.size / pass.indices.size
 
         val out = StringBuilder(
             "<!doctype html><html lang=\"nl\"><head><meta charset=\"utf-8\">" +
@@ -208,11 +209,12 @@ internal object PrivatePinnedCaptionClozeHtml {
                 ".answers{display:none;break-before:page;page-break-before:always}" +
                 ".answers:target{display:block}" +
                 ".roundheading{border-bottom:2px solid #64748b;padding:9px 0}" +
+                ".roundnav a{display:inline-block;margin:6px 12px 6px 0}" +
                 ".answerlink{display:inline-block;margin:12px 0}" +
                 "@media print{@page{margin:14mm}body{padding:0}" +
                 "details,.work,textarea,.reset,.grade{display:none}" +
                 ".write,.printgrade,.answers{display:block}" +
-                ".answerlink{display:none}" +
+                ".answerlink,.roundnav{display:none}" +
                 ".card{break-inside:avoid}.roundheading.newpage{" +
                     "break-before:page;page-break-before:always}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
@@ -241,15 +243,24 @@ internal object PrivatePinnedCaptionClozeHtml {
                 else "Er is geen afdrukantwoordblad.</p>") +
                 "<section id=\"questions\" aria-label=\"Oefenvragen\"><h2>Vragen</h2>"
         )
+        if (pass.indices.size > 1) {
+            out.append("<nav class=\"roundnav\" aria-label=\"Kies oefenronde\">")
+            pass.indices.forEach { round ->
+                out.append("<a href=\"#round-").append(round + 1)
+                    .append("\">Ga naar ronde ").append(round + 1).append("</a>")
+            }
+            out.append("</nav>")
+        }
         cards.forEachIndexed { index, card ->
             val (question, answer, hint, roundIndex) = card
             if (index == 0 || cards[index - 1].roundIndex != roundIndex) {
                 out.append("<h2 class=\"roundheading")
                 if (index != 0) out.append(" newpage")
-                out.append("\">Oefenronde ").append(roundIndex + 1).append("</h2>")
+                out.append("\" id=\"round-").append(roundIndex + 1)
+                    .append("\">Oefenronde ").append(roundIndex + 1).append("</h2>")
             }
             out.append("<article class=\"card\"><b>Ronde ").append(roundIndex + 1)
-                .append(" · kaart ").append(index + 1)
+                .append(" · kaart ").append(index % cardsPerRound + 1)
                 .append("</b><p class=\"phrase\"><bdi dir=\"auto\">")
                 .append(escape(question)).append("</bdi></p>")
                 .append("<p class=\"hint\"><bdi dir=\"auto\">")
@@ -292,7 +303,7 @@ internal object PrivatePinnedCaptionClozeHtml {
             cards.forEachIndexed { index, card ->
                 val answer = card.answer
                 out.append("<p class=\"phrase\"><b>Ronde ").append(card.roundIndex + 1)
-                    .append(" · kaart ").append(index + 1)
+                    .append(" · kaart ").append(index % cardsPerRound + 1)
                     .append(".</b> <bdi dir=\"auto\">").append(escape(answer))
                     .append("</bdi></p>")
                 if (out.length > MAX_BYTES) return null
