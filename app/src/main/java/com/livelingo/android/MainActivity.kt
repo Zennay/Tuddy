@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PersistableBundle
+import android.provider.Settings
 import android.view.WindowManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -870,6 +871,18 @@ private fun TuddyScreen(
         speechPacks.cancel()
         speechPackReceipt = SpeechPackReceipt(tag, SpeechPackStage.UNKNOWN,
             "Tuddy is gestopt met volgen. Android kan een ingeplande download nog afronden; controleer later opnieuw.")
+    }
+
+    fun openSpeechSettings() {
+        val voiceInputSettings = Intent("android.settings.VOICE_INPUT_SETTINGS")
+        val target = if (voiceInputSettings.resolveActivity(context.packageManager) != null)
+            voiceInputSettings else Intent(Settings.ACTION_SETTINGS)
+        runCatching { context.startActivity(target) }
+            .onFailure {
+                speechPackReceipt = speechPackReceipt.copy(
+                    detail = "Android-spraakinstellingen konden niet worden geopend. Open ze handmatig via Instellingen."
+                )
+            }
     }
 
     fun checkTextPair() {
@@ -2340,6 +2353,7 @@ private fun TuddyScreen(
                 onCheckSpeech = { checkSpeechPackNow() },
                 onDownloadSpeech = { downloadSpeechPackNow() },
                 onCancelSpeech = { cancelSpeechPackFollow() },
+                onOpenSpeechSettings = { openSpeechSettings() },
                 onCheckText = { checkTextPair() },
                 onPrepareText = { prepareOfflinePair() },
                 onEditLanguages = {
