@@ -37,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -84,6 +86,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
     var prepared by remember { mutableStateOf(false) }
@@ -1528,10 +1531,18 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             SelectionContainer {
                                 Text(currentMarkSheet, style = MaterialTheme.typography.bodySmall)
                             }
-                            TextButton(onClick = {
-                                manualWordBatchInput = currentMarkSheet
-                                manualWordBatchOversized = false
-                            }) { Text("Vul huidige woordankers als eigen invoer in") }
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(onClick = {
+                                    clipboard.setText(AnnotatedString(currentMarkSheet))
+                                    notice = "Eigen woordankers naar het klembord gekopieerd. " +
+                                        "Een klembordapp kan die tekst synchroniseren."
+                                }) { Text("Kopieer woordankers") }
+                                TextButton(onClick = {
+                                    manualWordBatchInput = currentMarkSheet
+                                    manualWordBatchOversized = false
+                                }) { Text("Vul als invoer in") }
+                            }
                         }
                         OutlinedTextField(
                             value = manualWordBatchInput,
@@ -1551,6 +1562,20 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             minLines = 2,
                             maxLines = 5
                         )
+                        TextButton(onClick = {
+                            val pasted = clipboard.getText()?.text
+                            if (pasted == null) {
+                                notice = "Geen tekst op het klembord. Kopieer eerst eigen tijdankers."
+                            } else if (pasted.length > 512) {
+                                manualWordBatchInput = ""
+                                manualWordBatchOversized = true
+                                notice = "Klembordtekst te lang: maximaal 512 tekens; invoer gewist."
+                            } else {
+                                manualWordBatchInput = pasted
+                                manualWordBatchOversized = false
+                                notice = "Klembordtekst geladen. Controleer de volledige voorgestelde set."
+                            }
+                        }) { Text("Plak woordankers uit klembord…") }
                         val proposedMarkSheet = if (!manualWordBatchOversized) {
                             PrivateCueWordProgress.parseManualMarkSheet(
                                 manualWordBatchInput, active.text,
