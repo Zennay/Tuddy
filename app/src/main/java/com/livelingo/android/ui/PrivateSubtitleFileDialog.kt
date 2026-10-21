@@ -49,6 +49,8 @@ import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDocumentCombine
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
+import com.livelingo.android.PrivateTimedSubtitleSheet
+import com.livelingo.android.TimedSubtitleSheetFormat
 import com.livelingo.android.PrivateSubtitleTimelineNavigation
 import com.livelingo.android.SubtitleDraftFormat
 import com.livelingo.android.TargetCatalog
@@ -75,7 +77,8 @@ internal fun PrivateSubtitleFileDialog(
     saveCopyNotice: String?,
     onSaveCopyNoticeRead: () -> Unit,
     onSaveWorksheetCopy: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
-    onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit
+    onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
+    onSaveTimedSheet: (List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     var jumpToTime by remember { mutableStateOf("") }
@@ -98,6 +101,7 @@ internal fun PrivateSubtitleFileDialog(
     var editAsPairedLines by remember { mutableStateOf(false) }
     var editError by remember { mutableStateOf("") }
     var requestSave by remember { mutableStateOf<SubtitleDraftFormat?>(null) }
+    var requestTimedSheet by remember { mutableStateOf<TimedSubtitleSheetFormat?>(null) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
     var wrapOpen by remember { mutableStateOf(false) }
@@ -391,6 +395,17 @@ internal fun PrivateSubtitleFileDialog(
                     }
                     OutlinedButton(onClick = { requestSave = SubtitleDraftFormat.WEBVTT }) {
                         Text("Bewaar kopie VTT…")
+                    }
+                }
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(modifier = Modifier.weight(1f),
+                        onClick = { requestTimedSheet = TimedSubtitleSheetFormat.CSV }) {
+                        Text("Bewaar tijdcodes als CSV…")
+                    }
+                    OutlinedButton(modifier = Modifier.weight(1f),
+                        onClick = { requestTimedSheet = TimedSubtitleSheetFormat.TSV }) {
+                        Text("Bewaar tijdcodes als TSV…")
                     }
                 }
                 if (notice.isNotBlank()) Text(notice,
@@ -1191,6 +1206,69 @@ internal fun PrivateSubtitleFileDialog(
             },
             dismissButton = {
                 TextButton(onClick = { editIndex = null }) { Text("Annuleren") }
+            }
+        )
+    }
+
+    val chosenTimedSheet = requestTimedSheet
+    if (chosenTimedSheet != null) {
+        val snapshot = PrivateTimedSubtitleSheet.snapshot(draft, chosenTimedSheet)
+        val columns = PrivateTimedSubtitleSheet.columnCount(draft)
+        AlertDialog(
+            onDismissRequest = { requestTimedSheet = null },
+            title = { Text("Bewerkbare ondertiteltijdcodes als ${chosenTimedSheet.name}") },
+            text = {
+                Column(
+                    modifier = Modifier.heightIn(max = 520.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Geen verborgen herindeling: alle cues moeten één eigen " +
+                        "tekstregel (3 kolommen) of allemaal precies twee eigen " +
+                        "tekstregels (4 kolommen) hebben. " +
+                        "Gemengde en meerregelige cues worden niet ingekort; " +
+                        "bewaar die als SRT/VTT. Er wordt geen betekenis vertaald.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (snapshot == null) {
+                        Text("CSV/TSV niet beschikbaar: controleer de gelijke " +
+                            "kolomindeling, de maximale documentgrootte en " +
+                            "teksten die als spreadsheetformules zouden kunnen " +
+                            "worden uitgevoerd. Je oorspronkelijke concept is " +
+                            "ongewijzigd en SRT/VTT-opslag blijft beschikbaar.",
+                            color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text("${draft.size} originele cues · ${columns ?: 0} kolommen · " +
+                            "${snapshot.size} UTF-8 bytes. Dit is de volledige " +
+                            "werkelijke bestandsinhoud, inclusief tijdcodes.",
+                            style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            String(snapshot, Charsets.UTF_8),
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
+                                .verticalScroll(rememberScrollState()),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Text("Je kiest zelf een Android-bestandsprovider; die kan " +
+                        "extern synchroniseren. Origineel en live gesprek " +
+                        "worden niet gewijzigd. Controleer deze exacte preview " +
+                        "voordat je apart kiest om een kopie op te slaan.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = snapshot != null, onClick = {
+                    val current = PrivateTimedSubtitleSheet.snapshot(draft, chosenTimedSheet)
+                    if (snapshot == null || current == null ||
+                        !current.contentEquals(snapshot)) {
+                        notice = "De tijdlijn veranderde: open CSV/TSV-preview opnieuw."
+                    } else {
+                        onSaveTimedSheet(draft.toList(), chosenTimedSheet)
+                    }
+                    requestTimedSheet = null
+                }) { Text("Kies opslaglocatie…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { requestTimedSheet = null }) { Text("Annuleren") }
             }
         )
     }
