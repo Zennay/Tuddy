@@ -424,7 +424,7 @@ private fun TuddyScreen(
     var pendingArchiveSubtitleExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var archiveSearchQuery by remember { mutableStateOf("") }
     var pendingArchiveGeneration by remember { mutableStateOf<Int?>(null) }
-    // Explicitly opened SRT/VTT/LRC/CSV/TSV/SBV; not the live transcript.
+    // Explicitly opened timed subtitle text including user JSON3; never live speech.
     var pendingSubtitleOpenGeneration by remember { mutableStateOf<Int?>(null) }
     var subtitleFileCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var subtitlePasteOpen by remember { mutableStateOf(false) }
@@ -1789,8 +1789,9 @@ private fun TuddyScreen(
                     ) ?: PrivateLrcSubtitleDraft.preview(selected.text)
                         ?: PrivateTimedSubtitleSheet.readAuthored(selected.text)
                         ?: PrivateSbvSubtitleReader.read(selected.text)
+                        ?: PrivateYoutubeJson3SubtitleReader.read(selected.text)
                     if (parsed == null)
-                        null to "Geen geldig SRT/VTT/LRC/CSV/TSV/SBV-document: controleer " +
+                        null to "Geen geldig SRT/VTT/LRC/CSV/TSV/SBV/JSON3-document: controleer " +
                             "tijdcodes, tekstregels en maximaal 500 cues."
                     else parsed to ""
                 }

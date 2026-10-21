@@ -1,4 +1,4 @@
-# Lokale SRT, WebVTT, LRC, CSV, TSV en SBV openen
+# Lokale SRT, WebVTT, LRC, CSV, TSV, SBV en JSON3 openen
 
 Via **Gesprekstools → Open ondertitelbestand…** kiest de gebruiker zelf een
 SRT-, WebVTT-, LRC-, getimed CSV-/TSV- of YouTube SBV-tekstbestand met de Android-documentkiezer. Tuddy leest
@@ -115,6 +115,26 @@ de bevestigde preview. Cues met ongeldige regels, tijdcodes of
 lege tussenregels worden volledig geweigerd; SRT/VTT blijven mogelijk.
 De Android-provider kan extern synchroniseren, maar Tuddy doet dit
 niet zelf. Het originele bestand wordt niet overschreven.
+
+## YouTube JSON3-ondertitels uit een eigen bestand
+
+**Open ondertitelbestand…** ondersteunt ook expliciet geselecteerde YouTube
+timed-text **.json3**. Tuddy vraagt geen URL, YouTube-account of
+internetverbinding op. Het aangeleverde `events[].tStartMs` en
+`dDurationMs` bepalen uitsluitend de cue-start en -eindtijd;
+`segs[].utf8` wordt per event samengevoegd tot één tekstblok.
+Dit zijn geen bewezen woordtijden of spraak- en vertaalresultaten.
+Layout-events zonder tekst worden niet getoond. JSON3 is niet
+uitwisselbaar met een Tuddy-privégespreksarchief.
+
+Een geldig document bevat maximaal 256 KiB strikt leesbare UTF-8,
+3.000 JSON-events en 500 bruikbare cues met chronologische start,
+positieve duur, begrensde tekst en tijden die als SRT én VTT bewaard
+kunnen worden. Bij ongeldige inhoud wordt het volledige document
+geweigerd. De tekst staat alleen tijdelijk in de bestaande lokale
+ondertitel-editor; correcties en nieuwe SRT/VTT-kopieën zijn afzonderlijke
+gebruikeracties. Geen video, geluid, model, import-URL of automatische
+netwerkactie. De oorspronkelijke JSON3 blijft onaangeroerd.
 
 ## Veiligheid en privacy
 
