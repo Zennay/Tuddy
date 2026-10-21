@@ -5504,6 +5504,7 @@ private fun TuddyScreen(
                                         onClick = {
                                             previewTarget = previewSuggestion
                                             previewResult = null
+                                            targetQuery = ""
                                             targetOpen = false
                                         }
                                     )
