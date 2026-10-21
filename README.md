@@ -21,6 +21,21 @@ snapshots bij voor het volledige editorconcept en de gekozen
 exportbytes; originele files en live gesprek worden niet gewijzigd.
 [Privacy en details](docs/MANUAL_SUBTITLE_PASTE.md).
 
+## Nieuw: subtitle-drift corrigeren met twee ankerparen
+
+Als twee handmatig aangeleverde SRT/WebVTT-sporen **geleidelijk uit
+synchronisatie lopen**, kan Tuddy nu het tweede spoor lineair
+uitrekken of inkorten vanaf **twee door de gebruiker gekozen
+overeenkomende cueparen**. De aparte dialog toont de complete vier
+ankerzinnen en beide tijdafstanden; de daaropvolgende volledige
+samenvoegpreview toont vijf resultaatcues per pagina.
+De oorspronkelijke documenten en live transcriptie blijven intact.
+Het gecorrigeerde concept verschijnt pas na expliciet akkoord, met
+Undo/Redo en later een aparte Android SAF-bestandskeuze. Onmogelijke
+of niet veilig exporteerbare tijdlijnen worden geweigerd; dit is
+**geen automatische audio-uitlijning**.
+[Stapsgewijze uitleg](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: twee handmatige spraaksporen nauwkeurig synchroniseren
 
 Bij het toevoegen van een **tweede, eigen SRT/VTT-spoor** kan Tuddy
