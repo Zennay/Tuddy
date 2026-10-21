@@ -2507,23 +2507,67 @@ internal fun PrivateSubtitleFileDialog(
     }
     val merging = mergeIndex
     if (merging != null) {
+        val firstCue = draft.getOrNull(merging)
+        val nextCue = draft.getOrNull(merging + 1)
+        val mergedPreview = PrivateSubtitleDraftEditor.mergeWithNext(draft, merging)
+        val gapMs = if (firstCue != null && nextCue != null)
+            nextCue.startMillis - firstCue.endMillis else null
         AlertDialog(onDismissRequest = { mergeIndex = null },
             title = { Text("Volgende ondertitel samenvoegen?") },
-            text = { Text("De twee teksten worden samengevoegd in één cue, " +
-                "van het eerste begin tot het tweede einde. Dit is alleen " +
-                "een wijziging in je tijdelijke document, geen audio-uitlijning. " +
-                "Herstel zet het oorspronkelijke bestand terug.") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (firstCue != null && nextCue != null) {
+                        Text("Eerste cue · ${firstCue.startLabel} → ${firstCue.endLabel}",
+                            style = MaterialTheme.typography.labelMedium)
+                        Text(firstCue.text, style = MaterialTheme.typography.bodyMedium)
+                        Text("Volgende cue · ${nextCue.startLabel} → ${nextCue.endLabel}",
+                            style = MaterialTheme.typography.labelMedium)
+                        Text(nextCue.text, style = MaterialTheme.typography.bodyMedium)
+                        Text("Voorgesteld resultaat · ${firstCue.startLabel} → ${nextCue.endLabel}",
+                            style = MaterialTheme.typography.labelLarge)
+                        when {
+                            gapMs != null && gapMs > 0L -> Text(
+                                "Let op: tussen de cues zit ${gapMs} ms tijdgat. Na samenvoegen " +
+                                    "toont één cue beide tekstregels doorlopend over dat hele " +
+                                    "interval; de tijdscheiding verdwijnt.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall)
+                            gapMs != null && gapMs < 0L -> Text(
+                                "De cues overlappen ${-gapMs} ms. De samenvoeging verwijdert " +
+                                    "de afzonderlijke grens en loopt van het eerste begin tot " +
+                                    "het tweede einde.",
+                                style = MaterialTheme.typography.bodySmall)
+                            else -> Text("De cues sluiten exact op elkaar aan.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Text("De teksten worden met een regeleinde gecombineerd. Dit verandert " +
+                        "alleen je tijdelijke document; de bron wordt niet overschreven en " +
+                        "de wijziging kan met Herstel worden teruggedraaid.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (mergedPreview == null) {
+                        Text("Samenvoegen is niet mogelijk: de gecombineerde tekst of " +
+                            "volledige tijdlijn valt buiten de bestaande veilige SRT/VTT-grenzen.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(enabled = mergedPreview != null, onClick = {
                     val next = PrivateSubtitleDraftEditor.mergeWithNext(draft, merging)
-                    if (next == null) notice = "Samenvoegen geweigerd: te veel tekst of ongeldige tijd."
+                    if (next == null) notice = "Samenvoegen geweigerd: tekst of tijdlijn ongeldig."
                     else {
                         applyChange(next)
                         shownIndex = -1
-                        notice = "Beide regels tot één tijdelijke cue samengevoegd."
+                        notice = "Beide regels na controle van hun tijdsgrens samengevoegd."
+                        mergeIndex = null
                     }
-                    mergeIndex = null
-                }) { Text("Voeg samen") }
+                }) { Text("Voeg samen in tijdelijk concept") }
             },
             dismissButton = {
                 TextButton(onClick = { mergeIndex = null }) { Text("Annuleren") }
