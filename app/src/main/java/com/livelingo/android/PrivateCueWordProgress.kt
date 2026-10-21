@@ -16,7 +16,9 @@ internal object PrivateCueWordProgress {
     private const val MAX_WORDS = 300
     private const val MAX_CHARACTERS = 4096
     private const val MAX_MANUAL_MARKS = 16
-    private val words = Regex("\\S+")
+    // Preserve explicit Unicode whitespace and zero-width-space boundaries (U+200B);
+    // never infer new word boundaries for an unsegmented writing system.
+    private val words = Regex("""[^\s\u200B]+""")
 
     private fun ranges(text: String): List<IntRange>? {
         if (text.isBlank() || text.length > MAX_CHARACTERS) return null
