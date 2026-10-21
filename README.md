@@ -251,8 +251,262 @@ limieten, privacy en Undo/Redo-editor blijven intact.
 
 De privé-editor kan een letterlijke zoek/vervangactie beperken tot
 losse originele bronregels (`1-3,7,12`) en apart de eerste of tweede
-eigen tekstregel corrigeren. De bewerking heeft een paginavoorbeeld
-van **alle** gewijzigde tekst en blijft als één actie herstelbaar.
+eigen tekstregel corrigeren. Als hoofdlettergevoeligheid uitstaat,
+wordt Unicode-case-insensitive gematcht, ook voor niet-ASCII letters;
+vervangtekst met `## Nieuw: een SRT/VTT-ondertitel exact op tijd splitsen
+
+In de tijdelijke editor kun je nu een cue in twee tekstregels splitsen en
+de **exacte tijdgrens zelf invoeren** (bijvoorbeeld `01:23.500`). Bij
+bestaande meerregelige tekst wordt eerst de eigen regelovergang gebruikt;
+anders kiest Tuddy de dichtstbijzijnde witruimtegrens rond het tekstmidden.
+Laat de tijd leeg voor het midden van de bestaande cue. Een preview toont
+de exacte voor/na-tijdlijn van beide delen; elk deel duurt minimaal 0,6 seconde en de nieuwe
+grens mag het volgende cue-begin niet passeren. Ongeldige tijden of teksten
+blijven bewerkbaar in het dialoogvenster in plaats van de invoer te verliezen.
+De hele wijziging is één lokale Undo/Redo-stap; het bronbestand wordt niet
+overschreven en de grens wordt niet uit audio herkend.
+[Handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
+Bij **Samenvoegen** laat een extra preview beide originele tijdvakken zien
+en waarschuwt die expliciet wanneer een tijdgat verdwijnt of de cues
+elkaar overlappen. Het resultaat behoudt de volledige tijdsdekking tot de
+laatste van beide oorspronkelijke eindtijden. De bevestiging is één
+Undo/Redo-bewerking in de tijdelijke editor; de originele bestanden blijven
+onaangeroerd.
+
+---
+
+## Nieuw: herhaalde refreinen rechtstreeks uit eigen LRC-bestanden openen
+
+Tuddy importeert nu ook gewone LRC-regels met meerdere expliciete
+tijdstempels, zoals `[00:12.50][01:24.20]Mijn refrein`. Optioneel
+kun je vóór de eerste eigen tekst precies één `[offset:+500]` of
+`[offset:-250]`-header gebruiken om alle tijden expliciet maximaal
+30 seconden later of eerder te plaatsen. In Android zie je welke
+millisecondeverschuiving werkelijk is toegepast. Met
+**− 0,5 s**, **Offset 0** en **+ 0,5 s** pas je die header rechtstreeks
+aan in je tijdelijke, volledig herberekende LRC-concept. Je kunt ook
+een exacte verschuiving zoals `-125` of `+750` milliseconden
+invoeren en bewust bevestigen met **Pas toe**. Ongeldige
+wijzigingen worden geweigerd; je originele Android-bestand verandert
+niet. Meerdere of ongeldige offsetregels worden geweigerd. Iedere
+tijdstempel wordt een eigen ondertitel-cue met dezelfde zelfgeschreven
+tekst. De volledige reeks wordt chronologisch gesorteerd, waarna de
+eindtijden uit het volgende begin worden afgeleid. In de Android-preview
+staan de **uitgewerkte cue-nummers en tijden**, zodat selecteren geen
+bronregels verwart met herhaalde voorkomens. Boven de grens van 500 cues,
+meer dan 16 momenten op een regel of bij dubbele/ongeldige tijdstempels
+wordt het volledige document geweigerd. Geen gefingeerde vertaling,
+geluidsexport, netwerk of automatische audio-/woorduitlijning. De
+bestaande lokale editor en expliciete Android-bestandskeuze blijven
+verplicht.
+[Voorbeeld en handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
+
+## Nieuw: vier ondertitelbewerkingen op dezelfde tijdselectie
+
+Exporteren, tijdcodes verschuiven, ongewenste ondertitels
+verwijderen en letterlijke tekst corrigeren kunnen nu allemaal
+beginnen met een handmatig **Vanaf/Tot**-tijdvenster. De
+geselecteerde volledige oorspronkelijke cues worden zichtbaar
+omgezet naar regelnummers; toepassing of bestandsschrijven is
+altijd een afzonderlijke bewuste stap. De bestaande paginapreviews,
+tijdcodegrenzen en Terug/Opnieuw blijven behouden.
+[Meer informatie](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Hersteld: gefilterd bestand exporteren wist geen andere editorregels
+
+Wanneer je enkel geselecteerde SRT/VTT/CSV/TSV/LRC-regels naar een
+bewust gekozen Android-bestand schrijft, blijft de **volledige
+tijdelijke bewerkbare ondertiteltijdlijn** na terugkeer behouden.
+Alleen de bestandsinhoud wordt gefilterd. Oudere code heropende
+abusievelijk alleen de geselecteerde exportregels. De Activity
+houdt tijdens de expliciete bestandskeuze nu gescheiden RAM-
+snapshots bij voor het volledige editorconcept en de gekozen
+exportbytes; originele files en live gesprek worden niet gewijzigd.
+[Privacy en details](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: zelf tweetalige ondertitelregels vastzetten
+
+Tuddy kan twee door jou gekozen SRT/VTT-regels nu ook **bewust
+aan elkaar koppelen zonder voldoende tijdsoverlap**. Kies de
+oorspronkelijke regel uit elk spoor, controleer de volledige eigen
+teksten en tijdcodes, en bevestig. De bestaande documentbrede
+tijdmatcher koppelt de overige regels opnieuw, maar kan die
+handmatige combinatie niet overschrijven. Maximaal 32
+chronologisch consistente één-op-één-paren; dubbele of
+tegenstrijdige rijnummers, conflicterende uitgesloten cues en
+niet-exporteerbare resultaten worden geweigerd.
+
+Losse bronregels zijn met één knop over te nemen in de handmatige
+koppelvelden. Ook een automatisch voorgesteld paar kun je bewust
+vastzetten. Voor meerdere paren tegelijk accepteert de app strikt
+begrensde bronpaarreeksen zoals `1:2,3-5:7-9` met een volledige
+paginagewijze preview vóór expliciete overname. Alle handmatige
+keuzes zijn individueel óf gezamenlijk te herstellen;
+de complete bron-, paar- en resultaatpreview, Undo/Redo, RAM-
+privacy en expliciete aparte Android-bestandsopslag blijven gelden.
+**Geen automatische taalherkenning, spraakvertaling of echte
+audio-uitlijning.** Een handmatig gecombineerd paar gebruikt
+de **eerste spoor-tijdcodes**.
+[Uitleg en stappen](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: controleer en corrigeer handmatig ondertitelkoppelingen
+
+Bij het tijdelijk combineren van **twee eigen SRT/VTT-sporen**
+kiest Tuddy nu over **de volledige tijdlijn** zo veel mogelijk
+chronologische één-op-één koppelingen op basis van werkelijke
+overlappende tijdvakken. De volledige koppelingen zijn te
+beoordelen met hun oorspronkelijke bronregelnummers, volledige
+teksten en overlaptijd. Ook het aantal ongekoppelde regels
+in **beide** sporen staat in de preview. Je kunt nu **beide bronzinnen
+doorzoeken**, op het **exacte oorspronkelijke tweede-spoorregelnummer**
+filteren en **alle ongekoppelde originele regels** in beide sporen
+afzonderlijk bekijken (met tekst- en spoorfilters). In de volledige
+resultaatpreview kun je direct naar een resultaatregel springen.
+Voor tweepuntscorrectie kun je per bronspoor ook zoeken, naar originele
+regelnummers springen en lange oorspronkelijke cues volledig uitklappen.
+
+Een voorgestelde inhoudelijk onjuiste koppeling kan de gebruiker
+**handmatig uitsluiten**. Dat werkt per geselecteerd paar, per
+eigen bronregelnummers zoals `2-5,9` of na een bewuste selectie
+op **meerdere losse tijdvensters**. Zo'n regel uit het tweede spoor
+blijft altijd als een losse ondertitel bestaan, terwijl de overige
+koppelingen opnieuw worden gekozen. Afzonderlijk herstellen en
+alles herstellen kan zonder verlies van het originele bronbestand. De gewone volledige voor/na-preview,
+bestandsgrenzen, Undo/Redo en aparte Android SAF-save blijven
+van kracht. Er wordt geen spraak/audio geanalyseerd.
+[Zelf koppelingen nakijken](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: meerpunts synchronisatie van eigen ondertitels
+
+Tuddy ondersteunt nu naast één handmatige offset en twee
+ankerparen ook **2–8 bewust gekozen ankerparen** om een tweede
+door de gebruiker gekozen SRT/WebVTT-spoor **per tijdssegment**
+te corrigeren. In de native Android-dialog doorzoek je beide
+oorspronkelijke documenten, neem je exacte bronregelnummers
+over en voeg je tussenliggende ankers toe, of wijzig/verwijder
+je bestaande ankers. Tuddy toont de volledige bronteksten
+en originele begintijden en past strikt begrensde, met
+integer milliseconden berekende interpolatie op de tweede
+tijdlijn toe. Hierna volgt nog de volledige gekoppelde
+preview vóór afzonderlijke RAM-toepassing en Android SAF-save.
+
+Dit is **geen audioanalyse, spraakherkenning of automatische
+vertaling**. De originele documenten blijven ongewijzigd.
+[Meerpuntscorrectie en grenzen](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: subtitle-drift corrigeren met twee ankerparen
+
+Als twee handmatig aangeleverde SRT/WebVTT-sporen **geleidelijk uit
+synchronisatie lopen**, kan Tuddy nu het tweede spoor lineair
+uitrekken of inkorten vanaf **twee door de gebruiker gekozen
+overeenkomende cueparen**. De aparte dialog toont de complete vier
+ankerzinnen en beide tijdafstanden; de daaropvolgende volledige
+samenvoegpreview toont vijf resultaatcues per pagina.
+De oorspronkelijke documenten en live transcriptie blijven intact.
+Het gecorrigeerde concept verschijnt pas na expliciet akkoord, met
+Undo/Redo en later een aparte Android SAF-bestandskeuze. Onmogelijke
+of niet veilig exporteerbare tijdlijnen worden geweigerd; dit is
+**geen automatische audio-uitlijning**.
+[Stapsgewijze uitleg](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: twee handmatige spraaksporen nauwkeurig synchroniseren
+
+Bij het toevoegen van een **tweede, eigen SRT/VTT-spoor** kan Tuddy
+naast de vaste ±2/5/10-secondenpresets nu een **zelf ingetypte
+milliseconde-offset** van maximaal ±600 seconden toepassen.
+Als alternatief kiest de gebruiker **één beginregel in elk spoor**:
+de app toont het verschil tussen de bestaande begintijden, en neemt
+dat uitsluitend na een expliciete tik over. Er wordt geen media
+geanalyseerd, geen taal herkend en geen vertaling gegenereerd.
+
+De volledige samengevoegde ondertitellijst is **vijf cues per
+pagina** te bekijken, met begin/eindtijden, gekoppelde tekst en
+losstaande ongekoppelde regels. Identieke zelfgeschreven regels uit
+twee sporen blijven allebei zichtbaar. Wijziging van ankerregels
+vereist hernieuwde toestemming voor de verschuiving; een
+ongeldige tijdlijn kan niet worden toegepast. Alles blijft tijdelijk
+in RAM, met bestaande Undo/Redo en afzonderlijke Android SAF-save.
+[Uitgebreide handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: zelf instelbare tijdverschuiving in de ondertiteleditor
+
+Naast vaste verschuivingen kan de gebruiker nu zelf een positieve
+of negatieve verschuiving invoeren, tot **600 seconden** met maximaal
+drie decimalen (**1 ms resolutie**). Alleen bewust geselecteerde
+ondertitelregels veranderen; de volledige SRT/VTT-export-, tijdlijn-
+en Undo/Redo-beperkingen blijven intact. Ongeldige invoer en
+niet-exporteerbare tijdlijnen worden niet toegepast.
+[Werkwijze](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: meerdere losse tijdvensters in één bewerking
+
+Tuddy kan maximaal 16 **zelf ingevulde niet-overlappende tijdvensters**
+zoals `00:10-00:20;01:00-01:15` als één bronregelselectie
+gebruiken. Dat werkt voor **SRT/VTT/CSV/TSV/LRC-fragmentexport**,
+**gerichte tijdverschuiving**, **meerdere regels verwijderen** en
+**letterlijke vervanging in één of twee eigen tekstregels**.
+Volledige cues blijven in originele volgorde en verschijnen maximaal
+één keer. Er is geen automatische audio-uitlijning, cloudspraak of
+bestandswijziging zonder de bestaande aparte bevestigingen.
+[Uitleg en voorbeelden](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: eigen tijdvenster rechtstreeks naar ondertitelselectie
+
+Bij zowel **selectieve export** als **gerichte tijdverschuiving**
+kun je nu een eigen vanaf/tot-tijdvenster invullen.
+Tuddy selecteert op een expliciete knop alle **volledige**
+ondertitelregels die dat tijdvenster overlappen en toont daarna
+de oorspronkelijke regelnummers. De bestaande strenge preview,
+tijd-/formaatlimieten, Terug/Opnieuw en Android-bestandskeuze
+blijven intact; er wordt geen spraak of audio onderzocht.
+[Werkwijze](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: verschuif uitsluitend eigen gekozen tijdcodes
+
+Naast het verschuiven van de hele ondertiteltijdlijn ondersteunt
+de privé-editor nu **gerichte tijdcorrecties voor losse originele
+bronregels**, bijvoorbeeld `2-4,7,12`, met zes handmatige offsets.
+Voor iedere betrokken regel zie je de volledige oude/nieuwe
+tijdcodes en tekst in een doorbladerbaar voorbeeld. Teruglopende
+begintijden of overschreden exportlimieten worden geweigerd.
+Ongeselecteerde regels blijven exact ongewijzigd; correcties zijn
+in één Terug/Opnieuw-stap te herstellen. Geen automatische
+audio-uitlijning of bestandsopslag.
+[Uitleg](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: exporteer precieze ondertitelranges zonder te zoeken
+
+Selecteer in de tijdelijke ondertiteleditor nu zelf bronregels zoals
+`1-5,9,12-16` om alleen dat fragment te bewaren. Je kunt ook alle
+regels of juist de overige, niet-geselecteerde regels kiezen. Bij
+zoeken neemt de aparte exportknop bewust de **oorspronkelijke
+regelnummers uit alle zoekhits** als uitgangspunt. Een doorbladerbare
+bronregelpreview toont wat je geselecteerd hebt; daarna volgt de
+complete exacte bestandsinhoud voor SRT/VTT/CSV/TSV/LRC. De bestaande
+tijdkeuzes, formaatgrenzen en expliciete Android-opslag blijven gelden.
+[Handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: vijf formaten voor een zelfgekozen ondertitelfragment
+
+Doorzoek je tijdelijke ondertitelconcept en kies **Bewaar alleen
+gevonden regels…**. Je kunt nu uitsluitend die regels als
+**SRT, WebVTT, CSV, TSV of LRC** exporteren; behoud de eigen tijden
+of maak een compact fragment vanaf 00:00. Vooraf worden alle exacte
+UTF-8-bytes per deelpagina getoond en opnieuw vergeleken vóór de
+expliciete Android-bestandskeuze. CSV/TSV wordt geweigerd als
+tekstkolommen niet veilig en volledig behouden kunnen worden.
+LRC bewaart alleen eigen begintijden, geen eindtijden. De bestaande
+limieten, privacy en Undo/Redo-editor blijven intact.
+[Werkwijze](docs/MANUAL_SUBTITLE_PASTE.md).
+
+## Nieuw: gerichte ondertitelcorrecties en volledige SRT/VTT-bestandspreview
+
+ of backslashes blijft letterlijk. De bewerking
+heeft een paginavoorbeeld van **alle** gewijzigde tekst en blijft als
+één actie herstelbaar.
 Bestaande Van/Tot-correcties blijven bruikbaar zonder losse selectie.
 
 Ook de SRT- en WebVTT-export toont nu eerst de complete exacte
