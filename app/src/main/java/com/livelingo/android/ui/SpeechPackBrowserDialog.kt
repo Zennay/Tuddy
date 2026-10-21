@@ -165,6 +165,21 @@ internal fun SpeechPackBrowserDialog(
                         SpeechPackStage.ERROR, SpeechPackStage.UNKNOWN -> "Status onbekend"
                     }
                     Text(state, style = MaterialTheme.typography.bodySmall)
+                    if (receipt?.stage == SpeechPackStage.DOWNLOADABLE &&
+                        !scanning && downloadTag == null && speechServiceAvailable) {
+                        OutlinedButton(onClick = { confirmTag = option.tag },
+                            modifier = Modifier.fillMaxWidth()) {
+                            Text("Vraag lokaal spraakpakket via wifi aan…")
+                        }
+                    }
+                    if (receipt?.stage in setOf(
+                            SpeechPackStage.PENDING, SpeechPackStage.REQUESTED,
+                            SpeechPackStage.UNKNOWN, SpeechPackStage.ERROR
+                        ) && !scanning && downloadTag == null && speechServiceAvailable) {
+                        TextButton(onClick = { onCheckOne(option.tag) }) {
+                            Text("Controleer pakket opnieuw")
+                        }
+                    }
                     if (receipt != null && receipt.detail.isNotBlank()) {
                         Text(receipt.detail, style = MaterialTheme.typography.labelSmall)
                     }
@@ -175,9 +190,11 @@ internal fun SpeechPackBrowserDialog(
                     }
                 }
                 Text(
-                    "Kiezen activeert geen microfoon. Gebruik daarna 'Offline startcheck' " +
-                        "voor jouw gekozen taal en afzonderlijk het tekstmodel. " +
-                        "Kurmanji, Sorani en Pasjtoe hebben nog geen complete offline ASR.",
+                    "Pakketinstallatie gebeurt uitsluitend na je toestemming en wifi. " +
+                        "Stop volgen beëindigt alleen de waarneming; Android kan een " +
+                        "ingeplande download nog afronden. Kiezen activeert geen microfoon. " +
+                        "Controleer daarna het afzonderlijke tekstmodel. Kurmanji, " +
+                        "Sorani en Pasjtoe hebben nog geen complete offline ASR.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
