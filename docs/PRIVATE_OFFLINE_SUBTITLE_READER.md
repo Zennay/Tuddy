@@ -1,4 +1,4 @@
-# Lokale SRT, WebVTT, LRC, CSV, TSV en SBV openen
+# Lokale SRT, WebVTT, LRC, CSV, TSV, SBV en YouTube JSON3 openen
 
 Via **Gesprekstools → Open ondertitelbestand…** kiest de gebruiker zelf een
 SRT-, WebVTT-, LRC-, getimed CSV-/TSV- of YouTube SBV-tekstbestand met de Android-documentkiezer. Tuddy leest
@@ -91,6 +91,38 @@ Gebruikers kunnen de geïmporteerde regels lokaal lezen, corrigeren,
 als tweede spoor verwerken of met aparte bevestiging als SRT/VTT
 bewaren. Uit SBV blijven geen oorspronkelijke YouTube-metadata
 of audio-identiteit als geverifieerd bewijs bestaan.
+
+## YouTube JSON3-ondertitels uit een eigen bestand
+
+De Android-knop **Open ondertitelbestand…** accepteert nu ook expliciet
+gekozen YouTube timed-text `.json3`-ondertitels. Dit is een **lokaal
+gekozen bestand**: Tuddy heeft geen YouTube-API, URL, video-ID, account,
+cookie, internetverbinding of downloader nodig. JSON3 is nadrukkelijk
+iets anders dan het privégespreksarchief van Tuddy.
+
+Voorbeeld van de herkende JSON3-structuur:
+
+```json
+{"events":[{"tStartMs":1200,"dDurationMs":2500,"segs":[{"utf8":"Mijn eigen ondertitel"}]}]}
+```
+
+De `tStartMs` en `dDurationMs` komen rechtstreeks uit het bestand.
+Meerdere `segs[].utf8`-fragmenten binnen één event vormen **één cue**:
+dit bewijst geen werkelijke woordtijden, gesproken taal, vertaling,
+speaker of media-uitlijning. Layout-/styling-only events zonder tekst
+worden niet getoond. De volgorde en expliciete tijden van getoonde cues
+blijven behouden, met bestaande SRT/VTT-documentgrenzen. Het maximum is
+256 KiB geselecteerde UTF-8, 3.000 JSON-events en 500 getoonde cues;
+ongeldige duur, niet-chronologische starts, misvormde of te lange tekst
+weigerden de volledige import. De originele JSON3 is ongewijzigd.
+
+Na bewust kiezen staan de regels in de bestaande tijdelijke ondertitel-
+editor. Je kunt daar afzonderlijk zoeken, corrigeren, de tijdlijn bekijken
+en na aparte Android-opslagtoestemming **een nieuwe SRT/VTT-kopie**
+bewaren. JSON3 bevat niet altijd bruikbare oorspronkelijke eindtijden
+voor alle layout-events; Tuddy verzint daarom geen ontbrekende
+ondertitelcues. Dit is nog steeds geen echte hardware-/offline-
+spraakacceptatie.
 
 ## Veiligheid en privacy
 
