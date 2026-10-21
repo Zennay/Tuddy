@@ -10,6 +10,7 @@ internal enum class PinnedCaptionFormat(
     TSV("Leerkaarten · TSV", "text/tab-separated-values", "Tuddy-eigen-leerkaarten.tsv"),
     CSV("Leerkaarten · CSV", "text/csv", "Tuddy-eigen-leerkaarten.csv"),
     STUDY_HTML("Oefenblad · HTML", "text/html", "Tuddy-leerkaarten-oefenblad.html"),
+    FOLD_HTML("Vouwkaartjes · HTML", "text/html", "Tuddy-leerkaarten-vouwkaartjes.html"),
     JSON("Archief · JSON", "application/json", "Tuddy-selectie.json"),
     HTML("Afdrukbaar · HTML", "text/html", "Tuddy-selectie.html"),
     SRT("Ondertitelconcept · SRT", "application/x-subrip", "Tuddy-selectie-concept.srt"),
@@ -123,7 +124,8 @@ internal object PrivatePinnedCaptionExport {
         }
         if (format == PinnedCaptionFormat.TSV ||
             format == PinnedCaptionFormat.CSV ||
-            format == PinnedCaptionFormat.STUDY_HTML) {
+            format == PinnedCaptionFormat.STUDY_HTML ||
+            format == PinnedCaptionFormat.FOLD_HTML) {
             return selected.filter { row ->
                 row.caption.status == "Lokaal vertaald" &&
                     row.caption.translated.isNotBlank() &&
@@ -183,6 +185,8 @@ internal object PrivatePinnedCaptionExport {
                 PrivatePinnedCaptionStudyCsv.snapshot(rows, studyDirection, showLanguageTags)
             PinnedCaptionFormat.STUDY_HTML ->
                 PrivatePinnedCaptionStudyHtml.snapshot(rows, studyDirection, showLanguageTags)
+            PinnedCaptionFormat.FOLD_HTML ->
+                PrivatePinnedCaptionFoldHtml.snapshot(rows, studyDirection, showLanguageTags)
             PinnedCaptionFormat.JSON -> PrivateTranscriptJsonExport.snapshot(rows)
             PinnedCaptionFormat.HTML -> PrivatePrintableConversation.snapshot(rows, onlyFinished = false)
             PinnedCaptionFormat.SRT ->
@@ -321,6 +325,87 @@ internal object PrivatePinnedCaptionStudyCsv {
  * Questions appear first; answers are on a separate print page so they cannot
  * be accidentally exposed when distributing the question sheet.
  */
+/**
+ * Single-sided paper cards. Print and fold the right-hand answer panel behind
+ * the left-hand prompt; cut on the card borders. This avoids unreliable
+ * automatic duplex settings and never needs JavaScript or online storage.
+ */
+internal object PrivatePinnedCaptionFoldHtml {
+    private const val MAX_BYTES = 262_144
+    private fun escape(value: String): String = buildString(value.length) {
+        value.forEach { ch ->
+            append(when (ch) {
+                '&' -> "&amp;"
+                '<' -> "&lt;"
+                '>' -> "&gt;"
+                '"' -> "&quot;"
+                '\'' -> "&#39;"
+                else -> ch.toString()
+            })
+        }
+    }
+
+    fun snapshot(
+        rows: List<TranscriptExportRow>,
+        direction: PinnedStudyDirection,
+        showLanguageTags: Boolean = false
+    ): ByteArray? {
+        // Validate using the identical private TSV path and final capped
+        // selection, but don't show a spreadsheet-specific leading apostrophe
+        // on paper. A card is not a live web view or editable form.
+        if (PrivatePinnedCaptionStudyTsv.snapshot(rows, direction, showLanguageTags) == null)
+            return null
+        val cards = ArrayList<Pair<String, String>>()
+        for (row in rows) {
+            val source = PrivatePinnedCaptionStudyTsv.field(row.original, spreadsheetSafe = false)
+            val answer = PrivatePinnedCaptionStudyTsv.field(row.translated, spreadsheetSafe = false)
+            if (source.isBlank() || answer.isBlank()) return null
+            val front = if (showLanguageTags) "[" + row.sourceCode + "] " + source else source
+            val back = if (showLanguageTags) "[" + row.targetCode + "] " + answer else answer
+            if (direction != PinnedStudyDirection.TARGET_TO_SOURCE) cards.add(front to back)
+            if (direction != PinnedStudyDirection.SOURCE_TO_TARGET) cards.add(back to front)
+        }
+        if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2) return null
+
+        val out = StringBuilder(
+            "<!doctype html><html lang=\"nl\"><head><meta charset=\"utf-8\">" +
+                "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
+                "<meta name=\"referrer\" content=\"no-referrer\">" +
+                "<title>Tuddy · Vouwkaartjes</title>" +
+                "<style>body{font:16px system-ui,sans-serif;max-width:850px;margin:auto;" +
+                "padding:18px;color:#202020}p{line-height:1.5}" +
+                ".card{display:grid;grid-template-columns:1fr 1fr;border:1px dashed #555;" +
+                "min-height:95px;margin:10px 0;break-inside:avoid;page-break-inside:avoid}" +
+                ".side{padding:12px;overflow-wrap:anywhere;min-width:0}" +
+                ".front{border-right:1px dotted #555}" +
+                ".label{font:12px system-ui,sans-serif;letter-spacing:.04em;" +
+                "color:#444;margin-bottom:8px}" +
+                "@media print{@page{margin:12mm}body{padding:0}" +
+                ".card{min-height:30mm;break-inside:avoid}}" +
+                "</style></head><body><h1>Mijn tweetalige vouwkaartjes</h1>" +
+                "<p>Print op één zijde. Knip langs de gestippelde buitenrand;" +
+                " vouw de rechter betekenis achter de linker vraag. " +
+                "Eigen modelvertalingen en correcties zijn niet onafhankelijk" +
+                " geverifieerd. Deel geen gevoelige tekst zonder toestemming.</p>"
+        )
+        for ((index, card) in cards.withIndex()) {
+            out.append("<section class=\"card\"><div class=\"side front\">")
+                .append("<div class=\"label\">KAART ").append(index + 1)
+                .append(" · VOORKANT</div><bdi dir=\"auto\">")
+                .append(escape(card.first)).append("</bdi></div>")
+                .append("<div class=\"side back\"><div class=\"label\">VOUW ACHTER</div>")
+                .append("<bdi dir=\"auto\">").append(escape(card.second))
+                .append("</bdi></div></section>")
+            if (out.length > MAX_BYTES) return null
+        }
+        out.append("<p>Deze privé-HTML is door jou via Android bewaard." +
+            " De gekozen bestandsprovider kan je tekst synchroniseren." +
+            " Geen externe scripts, media of automatische datatransmissie.</p></body></html>")
+        return out.toString().toByteArray(Charsets.UTF_8)
+            .takeIf { it.size <= MAX_BYTES }
+    }
+}
+
 internal object PrivatePinnedCaptionStudyHtml {
     private const val MAX_BYTES = 262_144
 
