@@ -210,6 +210,7 @@ internal fun PrivateSubtitleFileDialog(
                 manualPairs = emptyList()
                 manualFirstRow = ""
                 manualSecondRow = ""
+                manualReviewPage = 0
                 excludeRowExpression = ""
                 excludeWindowExpression = ""
                 excludedReviewPage = 0
@@ -749,6 +750,7 @@ internal fun PrivateSubtitleFileDialog(
                 manualPairs = emptyList()
                 manualFirstRow = ""
                 manualSecondRow = ""
+                manualReviewPage = 0
                 excludeRowExpression = ""
                 excludeWindowExpression = ""
                 excludedReviewPage = 0
@@ -1042,7 +1044,7 @@ internal fun PrivateSubtitleFileDialog(
                             "Samenvoegen kan niet: maximaal 500 regels, geldige " +
                                 "tijdcodes en maximaal 256 KiB per export."
                         else if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES)
-                            "${proposed.pairedCount} regelparen met gedeelde tijdcodes, " +
+                            "${proposed.pairedCount} tijd- of handmatig gekozen bronparen, " +
                                 "${proposed.unpairedSecondTrack} regels uit tweede spoor apart; " +
                                 "${proposed.unpairedFirstTrack} regels uit eerste spoor " +
                                 "zonder tweede tekst. ${proposed.cues.size} regels in resultaat. " +
@@ -1214,9 +1216,16 @@ internal fun PrivateSubtitleFileDialog(
                             }) { Text("Neem volledige bronregels uit tijdvensters") }
                         val bulkIndices = PrivateSubtitleRowSelection.parse(
                             excludeRowExpression, stagedImport.imported.size)
+                        val overlapsPinned = bulkIndices?.any { zeroIndex ->
+                            manualPairs.any { it.secondaryRow == zeroIndex + 1 }
+                        } == true
                         if (excludeRowExpression.isNotBlank()) {
                             Text(
-                                if (bulkIndices == null)
+                                if (overlapsPinned)
+                                    "Deze selectie bevat al bewust vastgekoppelde " +
+                                        "bronregels. Herstel eerst die handmatige " +
+                                        "paren voordat je ze los kunt houden."
+                                else if (bulkIndices == null)
                                     "Geen geldige bronregelselectie. " +
                                         "Gebruik 1–${stagedImport.imported.size} " +
                                         "zonder dubbele of overlappende bereiken."
@@ -1225,11 +1234,13 @@ internal fun PrivateSubtitleFileDialog(
                                 style = MaterialTheme.typography.bodySmall)
                         }
                         OutlinedButton(modifier = Modifier.fillMaxWidth(),
-                            enabled = bulkIndices != null,
+                            enabled = bulkIndices != null && !overlapsPinned,
                             onClick = {
                                 val selected = PrivateSubtitleRowSelection.parse(
                                     excludeRowExpression, stagedImport.imported.size)
-                                if (selected != null && selected == bulkIndices) {
+                                if (selected != null && selected == bulkIndices &&
+                                    selected.none { row -> manualPairs.any {
+                                        it.secondaryRow == row + 1 } }) {
                                     excludedSecondRows =
                                         excludedSecondRows + selected.map { it + 1 }
                                     excludeRowExpression = ""
@@ -1433,7 +1444,12 @@ internal fun PrivateSubtitleFileDialog(
                                     val secondSourceStart = stagedImport.imported
                                         .getOrNull(link.secondarySourceRow - 1)?.startLabel
                                         ?: link.secondaryStart
-                                    Text("Spoor 1 · bronregel ${link.primarySourceRow} · " +
+                                    Text((if (link.manuallyChosen)
+                                        "✓ Bewust handmatig gekozen; " +
+                                            "de eerste-spoortijd bepaalt de " +
+                                            "tijdcodes van het gecombineerde paar.\n"
+                                        else "Automatisch voorgesteld uit tijdsoverlap.\n") +
+                                        "Spoor 1 · bronregel ${link.primarySourceRow} · " +
                                         "${link.primaryStart}\n${link.primaryText}\n" +
                                         "Spoor 2 · bronregel ${link.secondarySourceRow} · " +
                                         "origineel ${secondSourceStart} → " +
@@ -1444,13 +1460,23 @@ internal fun PrivateSubtitleFileDialog(
                                     OutlinedButton(
                                         modifier = Modifier.fillMaxWidth(),
                                         onClick = {
-                                            excludedSecondRows =
-                                                excludedSecondRows + link.secondarySourceRow
+                                            if (link.manuallyChosen) {
+                                                manualPairs = manualPairs.filterNot {
+                                                    it.primaryRow == link.primarySourceRow &&
+                                                        it.secondaryRow == link.secondarySourceRow
+                                                }
+                                                manualReviewPage = 0
+                                            } else {
+                                                excludedSecondRows =
+                                                    excludedSecondRows + link.secondarySourceRow
+                                            }
                                             pairReviewPage = 0
                                             excludedReviewPage = 0
                                             secondTrackPreviewPage = 0
                                         }) {
-                                        Text("Laat tweede bronregel " +
+                                        Text(if (link.manuallyChosen)
+                                            "Verwijder handmatig paar; laat tijdmatcher kiezen"
+                                        else "Laat tweede bronregel " +
                                             "${link.secondarySourceRow} als losse cue staan")
                                     }
                                 }
