@@ -94,17 +94,26 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "break-inside:avoid;page-break-inside:avoid}" +
                 ".phrase,.hint{unicode-bidi:plaintext;overflow-wrap:anywhere}" +
                 ".hint{background:#f2f5f8;padding:10px;border-radius:6px}" +
+                ".work{display:block;font-weight:600;margin:12px 0 4px}" +
+                "textarea{display:block;box-sizing:border-box;width:100%;min-height:84px;" +
+                "border:1px solid #64748b;border-radius:6px;padding:8px;" +
+                "font:inherit;resize:vertical;unicode-bidi:plaintext}" +
                 "summary{cursor:pointer;padding:8px 0}" +
-                ".write{border-bottom:1px solid #64748b;min-height:26px;margin-top:12px}" +
+                ".write{display:none;border-bottom:1px solid #64748b;" +
+                "min-height:66px;margin-top:12px}" +
                 ".answers{break-before:page;page-break-before:always}" +
                 "@media print{@page{margin:14mm}body{padding:0}" +
-                "details{display:none}.card{break-inside:avoid}}" +
+                "details,.work,textarea{display:none}.write{display:block}" +
+                ".card{break-inside:avoid}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
                 "<p>Moeilijkheid: " + escape(difficulty.title) + ". " +
                 "Vul de ontbrekende woorden in. Dit zijn uitsluitend " +
                 "zelfgekozen lokale zinnen, ongeverifieerde modelvertalingen " +
                 "of eigen correcties. Geen automatische taalcontrole." +
-                " De antwoorden staan op een nieuwe afdrukpagina.</p>" +
+                " Schrijf je antwoord direct in dit offline browserblad " +
+                "(niet automatisch nagekeken of door Tuddy opgeslagen). " +
+                "Sommige browsers kunnen zelf getypte velden herstellen. " +
+                "De antwoorden staan op een nieuwe afdrukpagina.</p>" +
                 "<section aria-label=\"Oefenvragen\"><h2>Vragen</h2>"
         )
         cards.forEachIndexed { index, (question, answer, hint) ->
@@ -113,6 +122,13 @@ internal object PrivatePinnedCaptionClozeHtml {
                 .append(escape(question)).append("</bdi></p>")
                 .append("<p class=\"hint\"><bdi dir=\"auto\">")
                 .append(escape(hint)).append("</bdi></p>")
+                .append("<label class=\"work\" for=\"typed-").append(index + 1)
+                .append("\">Mijn eigen antwoord (alleen tijdelijk in de browser)</label>")
+                .append("<textarea id=\"typed-").append(index + 1)
+                .append("\" rows=\"3\" dir=\"auto\" spellcheck=\"false\" " +
+                    "autocomplete=\"off\" autocorrect=\"off\" " +
+                    "aria-label=\"Mijn eigen antwoord voor kaart ").append(index + 1)
+                .append("\"></textarea>")
                 .append("<div class=\"write\" aria-hidden=\"true\"></div>")
                 .append("<details><summary>Bekijk volledig antwoord</summary>")
                 .append("<p class=\"phrase\"><bdi dir=\"auto\">")
