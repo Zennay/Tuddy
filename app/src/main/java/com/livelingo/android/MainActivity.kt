@@ -3809,24 +3809,27 @@ private fun TuddyScreen(
                                             style = MaterialTheme.typography.bodySmall)
                                     }
                                     if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML) {
-                                        val targetHint = PrivatePinnedCaptionClozeHtml.previewHint(
-                                            if (reverse) record.caption.original
-                                            else record.caption.translated,
-                                            if (!pinnedStudyLanguageTags) null
-                                            else if (reverse) record.caption.sourceCode
-                                            else record.caption.targetCode,
-                                            pinnedClozeDifficulty, pinnedClozeHintMode
-                                        )
-                                        Text("Aanvulhint (niet het antwoord): " + targetHint,
-                                            style = MaterialTheme.typography.bodySmall)
-                                        if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
-                                            Text("Omgekeerde aanvulhint: " +
-                                                PrivatePinnedCaptionClozeHtml.previewHint(
-                                                    record.caption.original,
-                                                    if (pinnedStudyLanguageTags)
-                                                        record.caption.sourceCode else null,
-                                                    pinnedClozeDifficulty, pinnedClozeHintMode
-                                                ), style = MaterialTheme.typography.bodySmall)
+                                        pinnedClozePass.indices.forEach { round ->
+                                            val targetHint = PrivatePinnedCaptionClozeHtml.previewHint(
+                                                if (reverse) record.caption.original
+                                                else record.caption.translated,
+                                                if (!pinnedStudyLanguageTags) null
+                                                else if (reverse) record.caption.sourceCode
+                                                else record.caption.targetCode,
+                                                pinnedClozeDifficulty, pinnedClozeHintMode, round
+                                            )
+                                            Text("Ronde ${round + 1} · aanvulhint: " + targetHint,
+                                                style = MaterialTheme.typography.bodySmall)
+                                            if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
+                                                Text("Ronde ${round + 1} · omgekeerd: " +
+                                                    PrivatePinnedCaptionClozeHtml.previewHint(
+                                                        record.caption.original,
+                                                        if (pinnedStudyLanguageTags)
+                                                            record.caption.sourceCode else null,
+                                                        pinnedClozeDifficulty,
+                                                        pinnedClozeHintMode, round
+                                                    ), style = MaterialTheme.typography.bodySmall)
+                                            }
                                         }
                                     }
                                 } else {
