@@ -195,9 +195,13 @@ internal fun SpeechPackBrowserDialog(
                         Text(receipt.detail, style = MaterialTheme.typography.labelSmall)
                     }
                     if (option.tag in requestedAttempts) {
-                        Text("Eerder expliciet via wifi aangevraagd. " +
-                            "Installatie is hiermee NIET bevestigd.",
-                            style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            if (receipt?.stage == SpeechPackStage.READY)
+                                "Eerder aangevraagd; Android bevestigt NU het exact lokale taalpakket."
+                            else "Eerder expliciet via wifi aangevraagd. " +
+                                "Installatie is hiermee NIET bevestigd.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         if (receipt == null || receipt.stage == SpeechPackStage.UNCHECKED) {
                             TextButton(
                                 enabled = !scanning && downloadTag == null &&
