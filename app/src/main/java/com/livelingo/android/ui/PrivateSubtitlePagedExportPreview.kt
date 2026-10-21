@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,7 +47,7 @@ internal fun PrivateSubtitlePagedExportPreview(bytes: ByteArray) {
             segments.add(source.substring(start, end))
             start = end
         }
-        segments.ifEmpty { listOf("") }
+        if (segments.isEmpty()) listOf("") else segments
     }
     var page by remember(source) { mutableIntStateOf(0) }
     val shown = page.coerceIn(0, pages.lastIndex)
@@ -67,9 +68,13 @@ internal fun PrivateSubtitlePagedExportPreview(bytes: ByteArray) {
                 Text("Volgende →")
             }
         }
-        Text(pages[shown],
-            modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
-                .verticalScroll(rememberScrollState()),
-            style = MaterialTheme.typography.bodySmall)
+        // Each page starts at the top, even when the previous page was
+        // scrolled near its end. Only the visible 3.2k-char segment is laid out.
+        key(shown) {
+            Text(pages[shown],
+                modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
+                    .verticalScroll(rememberScrollState()),
+                style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
