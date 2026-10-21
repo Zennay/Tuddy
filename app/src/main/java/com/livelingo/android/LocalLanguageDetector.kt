@@ -43,7 +43,8 @@ internal class LocalLanguageDetector {
 
     fun close() {
         generation++
-        identifier?.close()
+        val previous = identifier
         identifier = null
+        runCatching { previous?.close() }
     }
 }
