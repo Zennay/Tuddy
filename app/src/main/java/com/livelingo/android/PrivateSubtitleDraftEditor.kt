@@ -144,11 +144,19 @@ internal object PrivateSubtitleDraftEditor {
         val combined = first.text + "\n" + next.text
         if (next.endMillis <= first.startMillis ||
             revise(current, index, combined) == null) return null
-        return current.toMutableList().apply {
-            this[index] = first.copy(endMillis = next.endMillis,
-                endLabel = next.endLabel, text = combined)
+        // Preserve the union of both original cue intervals when they overlap:
+        // an earlier-ending second cue must not truncate the first cue's tail.
+        val mergedEndMillis = maxOf(first.endMillis, next.endMillis)
+        val mergedEndLabel = if (first.endMillis >= next.endMillis)
+            first.endLabel else next.endLabel
+        val result = current.toMutableList().apply {
+            this[index] = first.copy(endMillis = mergedEndMillis,
+                endLabel = mergedEndLabel, text = combined)
             removeAt(index + 1)
         }
+        if (snapshot(result, SubtitleDraftFormat.SRT) == null ||
+            snapshot(result, SubtitleDraftFormat.WEBVTT) == null) return null
+        return result
     }
 
     private fun stamp(time: Long, format: SubtitleDraftFormat): String {
