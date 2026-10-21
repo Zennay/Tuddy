@@ -90,9 +90,12 @@ internal object PrivatePlainTextSubtitleDraft {
         rows.forEachIndexed { index, row ->
             val rowNumber = index + 1
             if (row.isBlank()) return fail("Regel ${rowNumber} is leeg; behoud of herstel de rij.")
-            val columns = if (csv) PrivateTimedCsvColumns.parseRow(row)
-                ?: return fail("Regel ${rowNumber}: ongeldige CSV-aanhalingstekens of kolomindeling.")
-                else row.split('\t')
+            val columns = if (csv) {
+                PrivateTimedCsvColumns.parseRow(row)
+                    ?: return fail("Regel ${rowNumber}: ongeldige CSV-aanhalingstekens of kolomindeling.")
+            } else {
+                row.split('\t')
+            }
             if (columns.size != columnsNeeded)
                 return fail("Regel ${rowNumber}: verwacht precies ${columnsNeeded} " +
                     (if (csv) "CSV-velden" else "tabgescheiden velden") +
