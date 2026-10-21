@@ -1,3 +1,15 @@
+## Hersteld: gefilterd bestand exporteren wist geen andere editorregels
+
+Wanneer je enkel geselecteerde SRT/VTT/CSV/TSV/LRC-regels naar een
+bewust gekozen Android-bestand schrijft, blijft de **volledige
+tijdelijke bewerkbare ondertiteltijdlijn** na terugkeer behouden.
+Alleen de bestandsinhoud wordt gefilterd. Oudere code heropende
+abusievelijk alleen de geselecteerde exportregels. De Activity
+houdt tijdens de expliciete bestandskeuze nu gescheiden RAM-
+snapshots bij voor het volledige editorconcept en de gekozen
+exportbytes; originele files en live gesprek worden niet gewijzigd.
+[Privacy en details](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: eigen tijdvenster rechtstreeks naar ondertitelselectie
 
 Bij zowel **selectieve export** als **gerichte tijdverschuiving**
