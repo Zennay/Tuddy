@@ -1,3 +1,25 @@
+## Nieuw: drie niveaus voor de tweetalige aanvuloefening
+
+In **Aanvuloefening · HTML** kies je nu eerst expliciet hoeveel eigen
+antwoordwoorden je wilt afdekken. **Licht** maskeert ongeveer één van elke
+drie spatiegescheiden woorden, **Normaal** ongeveer de helft en **Uitdaging**
+ongeveer twee van iedere drie. Voor zinnen met slechts twee zulke woorden
+blijft precies het laatste woord verborgen; bij ongesegmenteerde schriftvormen
+blijft de gehele antwoordzijde een invulstreep. Alle verborgen woorden zijn
+alleen een **presentatiekeuze**; hun oorspronkelijke tekst en het volledige
+antwoordblad blijven exact behouden. Taalcodelabels worden nooit weggehaald.
+
+De native Android-dialoog toont voor iedere richting de invulhints van de
+gekozen moeilijkheid vóór het opslaan. De HTML vermeldt het niveau en
+bevat dezelfde gemaskeerde tekst. Als de gekozen moeilijkheid intussen
+verandert of de tijdelijke selectie wijzigt tijdens de externe
+Android-bestandskiezer, weigert Tuddy het oude bestand op te slaan.
+Bestaande lokale, ongeverifieerde woorden en privacyvoorwaarden blijven
+ongewijzigd: geen automatische score, geen audio, geen netwerk, geen
+studieprofiel of extra toestelrechten.
+
+---
+
 ## Nieuw: tweetalige aanvuloefening zonder netwerk
 
 Kies **★ gemarkeerd → Exporteer selectie… → Aanvuloefening · HTML**.
