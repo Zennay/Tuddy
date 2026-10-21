@@ -104,6 +104,7 @@ internal fun PrivateSubtitleFileDialog(
     onShareTtmlExcerpt: (List<PrivateSubtitleCue>) -> Unit,
     onShareAssExcerpt: (List<PrivateSubtitleCue>) -> Unit,
     onShareExcerpt: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
+    onSavePersonalPhrase: (String, String, String, String) -> Boolean,
     incomingSecondPaste: SubtitlePasteFileContent?,
     onChoosePasteDocument: (List<PrivateSubtitleCue>, SubtitlePasteFileContent) -> Unit,
     onSecondPasteConsumed: () -> Unit
@@ -137,6 +138,7 @@ internal fun PrivateSubtitleFileDialog(
     var requestSbvSave by remember { mutableStateOf(false) }
     var requestTtmlSave by remember { mutableStateOf(false) }
     var requestAssSave by remember { mutableStateOf(false) }
+    var personalPhraseSource by remember(cues) { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
     var removeOpen by remember { mutableStateOf(false) }
@@ -643,6 +645,13 @@ internal fun PrivateSubtitleFileDialog(
                     if (spokenNotice.isNotBlank()) {
                         Text(spokenNotice, style = MaterialTheme.typography.bodySmall)
                     }
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                        onClick = { personalPhraseSource = current.text }) {
+                        Text("＋ Als eigen Kurmanji/Sorani/Pasjtoe-zin bewaren…")
+                    }
+                    Text("Zelf taal en betekenis kiezen · geen automatische " +
+                        "vertaling of opslag uit dit ondertitelbestand.",
+                        style = MaterialTheme.typography.bodySmall)
                     PrivateSubtitleCueMenu(
                         canSplit = draft.size < 500,
                         canMerge = found[shownIndex].first < draft.lastIndex,
@@ -2861,6 +2870,18 @@ internal fun PrivateSubtitleFileDialog(
         )
     }
 
+
+    personalPhraseSource?.let { source ->
+        PrivateSubtitlePersonalPhraseDialog(
+            sourceText = source,
+            onSaveNew = onSavePersonalPhrase,
+            onSaved = {
+                personalPhraseSource = null
+                notice = "Eigen zin privé toegevoegd aan Mijn eigen zinnen."
+            },
+            onDismiss = { personalPhraseSource = null }
+        )
+    }
 
     if (requestAssSave) {
         val exactAss = PrivateAssSubtitleExport.snapshot(draft)

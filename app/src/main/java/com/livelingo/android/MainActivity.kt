@@ -3083,6 +3083,11 @@ private fun TuddyScreen(
                         }
                     }
                 },
+                onSavePersonalPhrase = { language, phrase, meaningLanguage, ownMeaning ->
+                    // Explicit one-cue note; no overwrite of an existing
+                    // user-authored meaning or implicit transcript capture.
+                    personalPhrases.saveNew(language, phrase, meaningLanguage, ownMeaning)
+                },
                 onShareTtmlExcerpt = { selectedCues ->
                     // Literal XML text only, never a source-file URI, grant,
                     // recording, account identifier or entire live transcript.
