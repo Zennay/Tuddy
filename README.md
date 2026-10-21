@@ -1,3 +1,17 @@
+## Nieuw: een SRT/VTT-ondertitel exact op tijd splitsen
+
+In de tijdelijke editor kun je nu een cue in twee tekstregels splitsen en
+de **exacte tijdgrens zelf invoeren** (bijvoorbeeld `01:23.500`). Laat
+het veld leeg voor het midden van de bestaande cue. Een preview toont de
+duur van beide delen; elk deel duurt minimaal 0,6 seconde en de nieuwe
+grens mag het volgende cue-begin niet passeren. Ongeldige tijden of teksten
+blijven bewerkbaar in het dialoogvenster in plaats van de invoer te verliezen.
+De hele wijziging is één lokale Undo/Redo-stap; het bronbestand wordt niet
+overschreven en de grens wordt niet uit audio herkend.
+[Handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
+
 ## Nieuw: herhaalde refreinen rechtstreeks uit eigen LRC-bestanden openen
 
 Tuddy importeert nu ook gewone LRC-regels met meerdere expliciete
