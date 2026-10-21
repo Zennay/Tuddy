@@ -10,6 +10,7 @@ internal enum class PrivatePracticeReportFormat(
     val mime: String, val filename: String, val title: String
 ) {
     HTML("text/html", "Tuddy-mijn-luisteroefening.html", "HTML"),
+    WORKSHEET_HTML("text/html", "Tuddy-mijn-luisterwerkblad.html", "HTML-oefenblad"),
     TXT("text/plain", "Tuddy-mijn-luisteroefening.txt", "TXT"),
     CSV("text/csv", "Tuddy-mijn-luisteroefening.csv", "CSV")
 }
@@ -17,6 +18,7 @@ internal enum class PrivatePracticeReportFormat(
 internal data class PendingPrivatePracticeReport(
     val summary: String,
     val format: PrivatePracticeReportFormat,
+    val selectionScope: PrivatePracticeRouteScope,
     val bytes: ByteArray
 )
 
@@ -56,9 +58,26 @@ internal object PrivatePrintablePracticeSummary {
         offsetMs: Long,
         passages: List<Pair<Long, Long>>,
         ratings: Map<Pair<Long, Long>, String>,
-        notes: Map<Pair<Long, Long>, String>
+        notes: Map<Pair<Long, Long>, String>,
+        scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL
     ): ByteArray? {
-        if (passages.isEmpty() || passages.size > 4) return null
+        if (passages.isEmpty() || passages.size > 4 ||
+            passages.distinct().size != passages.size || cues.size > 5_000) return null
+        val selected = privatePracticeRouteCandidates(passages, ratings, scope)
+        if (selected.isEmpty() || selected.any {
+                it.first < 0L || it.second <= it.first ||
+                    it.second - it.first > 300_000L
+            }) return null
+        // Reject arithmetic overflow instead of showing unrelated source lines
+        // when a user shifts a long subtitle document.
+        val shiftedCues = ArrayList<Pair<Long, Long>>(cues.size)
+        for (cue in cues) {
+            val first = runCatching { Math.addExact(cue.startMillis, offsetMs) }
+                .getOrNull() ?: return null
+            val last = runCatching { Math.addExact(cue.endMillis, offsetMs) }
+                .getOrNull() ?: return null
+            shiftedCues.add(first to last)
+        }
         fun clean(value: String, limit: Int): String {
             val readable = value.codePoints().toArray().asSequence()
                 .filter { point ->
@@ -80,9 +99,11 @@ internal object PrivatePrintablePracticeSummary {
             ) "'" + readable else readable
         }
         fun time(ms: Long): String {
-            val whole = ms.coerceAtLeast(0L) / 1000L
-            return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d",
-                whole / 3600L, (whole / 60L) % 60L, whole % 60L)
+            val safeMs = ms.coerceAtLeast(0L)
+            val whole = safeMs / 1000L
+            return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d.%03d",
+                whole / 3600L, (whole / 60L) % 60L, whole % 60L,
+                safeMs % 1000L)
         }
         fun row(vararg columns: String): String = columns.joinToString(",") {
             "\"" + it.replace("\"", "\"\"") + "\""
@@ -90,18 +111,22 @@ internal object PrivatePrintablePracticeSummary {
         val output = buildString {
             append(row("Fragment", "Begin (eigen tijd)", "Einde (eigen tijd)",
                 "Mijn beoordeling", "Mijn volgende oefenstap", "Ondertitelvoorbeeld"))
-            passages.forEachIndexed { index, span ->
-                val first = cues.indexOfFirst { it.startMillis + offsetMs == span.first }
-                val last = cues.indexOfLast { it.endMillis + offsetMs == span.second }
+            selected.forEachIndexed { index, span ->
+                val first = shiftedCues.indexOfFirst { it.first == span.first }
+                val last = shiftedCues.indexOfLast { it.second == span.second }
                 val matched = first >= 0 && last >= first &&
-                    cues.subList(first, last + 1).all {
-                        it.startMillis + offsetMs >= span.first &&
-                            it.endMillis + offsetMs <= span.second
+                    shiftedCues.subList(first, last + 1).all {
+                        it.first >= span.first && it.second <= span.second &&
+                            it.second > it.first
                     }
                 val preview = if (matched) {
                     val start = clean(cues[first].text, 90)
+                    val missing = last - first - 1
                     val end = if (first == last) "" else
-                        " … " + clean(cues[last].text, 90)
+                        if (missing == 0) " / " + clean(cues[last].text, 90)
+                        else " … [" + missing +
+                            " tussenliggende bronregels niet getoond] … " +
+                            clean(cues[last].text, 90)
                     start + end
                 } else "Alleen handmatig audiotijdvak; geen exacte brontekstmatch"
                 val rating = when (ratings[span]) {
