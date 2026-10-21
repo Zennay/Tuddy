@@ -82,6 +82,8 @@ internal fun SubtitlePasteDialog(
     }
     // Manually typed whole-track LRC offset. Stays transient in this dialog.
     var lrcOffsetInput by remember(initialDocument) { mutableStateOf("") }
+    var lrcSelectedShiftInput by remember(initialDocument) { mutableStateOf("") }
+    var lrcShiftPreviewPage by remember { mutableIntStateOf(0) }
     var splitMode by remember(initialDocument) {
         mutableStateOf(initialDocument?.format?.splitMode ?: PlainSubtitleSplitMode.LINES)
     }
@@ -199,6 +201,20 @@ internal fun SubtitlePasteDialog(
         else PrivateSubtitleRowSelection.formatSourceRows(
             filtered.map { it.index + 1 }, parsed.size
         )
+    }
+    // This is only an in-memory proposal; changing text, cue selection or
+    // offset invalidates it before an explicit second confirmation.
+    val lrcSelectedShiftMillis = lrcSelectedShiftInput.trim().toLongOrNull()
+    val lrcShiftProposal = remember(raw, chosenIndices, lrcSelectedShiftMillis, plainLines, lrcMode) {
+        if (!plainLines && lrcMode && chosenIndices != null &&
+            lrcSelectedShiftMillis != null) {
+            PrivateLrcSubtitleDraft.withShiftedRows(
+                raw, chosenIndices, lrcSelectedShiftMillis
+            )
+        } else null
+    }
+    val lrcShiftAfter = remember(lrcShiftProposal) {
+        lrcShiftProposal?.let(PrivateLrcSubtitleDraft::preview)
     }
     val pageSize = 15
     val countPages = maxOf(1, (filtered.size + pageSize - 1) / pageSize)
@@ -751,6 +767,91 @@ internal fun SubtitlePasteDialog(
                                 "Zoeken verandert deze selectie niet.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                    }
+                    if (!plainLines && lrcMode && chosenIndices != null) {
+                        Text(
+                            "Verschuif alleen de ${chosenIndices.size} bewust gekozen " +
+                                "chronologische LRC-cues; andere begintijden en alle " +
+                                "eigen woorden blijven ongewijzigd. Eindtijden volgen " +
+                                "opnieuw uit de volgende begintijd. De globale " +
+                                "[offset:]-header en metadata blijven staan.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = lrcSelectedShiftInput,
+                            onValueChange = {
+                                if (it.length <= 16) {
+                                    lrcSelectedShiftInput = it
+                                    lrcShiftPreviewPage = 0
+                                }
+                            },
+                            label = { Text("Alleen geselecteerde regels ± milliseconden") },
+                            placeholder = { Text("-750 of +1200 (maximaal ±30000)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (lrcSelectedShiftInput.isNotBlank()) {
+                            if (lrcShiftProposal == null || lrcShiftAfter == null) {
+                                Text(
+                                    "Geen veilige verschuiving mogelijk. Kies ±1–30000 ms; " +
+                                        "de nieuwe tijdcodes moeten uniek, oplopend en " +
+                                        "exporteerbaar blijven. Er is niets aangepast.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            } else {
+                                val after = lrcShiftAfter
+                                val previewPages = maxOf(1, (parsed.size + 4) / 5)
+                                val visiblePage = lrcShiftPreviewPage.coerceIn(0, previewPages - 1)
+                                Text(
+                                    "Volledige oude → nieuwe tijdlijn: " +
+                                        "${parsed.size} regels, pagina " +
+                                        "${visiblePage + 1}/${previewPages}. " +
+                                        "Ook het nieuwe einde van aangrenzende regels " +
+                                        "is zichtbaar; de eigen tekst blijft identiek.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                parsed.indices.drop(visiblePage * 5).take(5).forEach { index ->
+                                    val old = parsed[index]
+                                    val now = after[index]
+                                    Text(
+                                        "Regel ${index + 1}" +
+                                            (if (index in chosenIndices) " · geselecteerd" else "") +
+                                            "\n${old.startLabel} → ${old.endLabel}" +
+                                            "\nwordt ${now.startLabel} → ${now.endLabel}" +
+                                            "\n${old.text}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        enabled = visiblePage > 0,
+                                        onClick = { lrcShiftPreviewPage = visiblePage - 1 }
+                                    ) { Text("Vorige 5") }
+                                    OutlinedButton(
+                                        enabled = visiblePage + 1 < previewPages,
+                                        onClick = { lrcShiftPreviewPage = visiblePage + 1 }
+                                    ) { Text("Volgende 5") }
+                                }
+                                OutlinedButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = {
+                                        // The proposal is tied to the current RAM source and
+                                        // exact selection; no provider file is overwritten.
+                                        raw = lrcShiftProposal
+                                        lrcSelectedShiftInput = ""
+                                        lrcShiftPreviewPage = 0
+                                        page = 0
+                                        documentNotice = "Geselecteerde LRC-begintijden " +
+                                            "aangepast in het tijdelijke concept. " +
+                                            "Het originele gekozen bestand is intact."
+                                    }
+                                ) {
+                                    Text("Pas deze geselecteerde LRC-verschuiving bewust toe")
+                                }
+                            }
+                        }
                     }
                     OutlinedTextField(
                         value = search,
