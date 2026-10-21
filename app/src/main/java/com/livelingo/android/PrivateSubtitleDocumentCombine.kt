@@ -17,7 +17,9 @@ internal data class SubtitleCombinePreview(
     val pairedCount: Int = 0,
     val unpairedSecondTrack: Int = 0,
     val unpairedFirstTrack: Int = 0,
-    val pairedLinks: List<SubtitleCuePairingLink> = emptyList()
+    val pairedLinks: List<SubtitleCuePairingLink> = emptyList(),
+    val unpairedPrimaryRows: List<Int> = emptyList(),
+    val unpairedSecondaryRows: List<Int> = emptyList()
 )
 
 /**
@@ -66,7 +68,9 @@ internal object PrivateSubtitleDocumentCombine {
                 pairedCount = paired.pairedCount,
                 unpairedSecondTrack = paired.unpairedSecondTrack,
                 unpairedFirstTrack = paired.unpairedFirstTrack,
-                pairedLinks = paired.pairedLinks
+                pairedLinks = paired.pairedLinks,
+                unpairedPrimaryRows = paired.unpairedPrimaryRows,
+                unpairedSecondaryRows = paired.unpairedSecondaryRows
             )
         }
         val shifted = when (mode) {
