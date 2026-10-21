@@ -2544,7 +2544,7 @@ internal fun PrivateSubtitleFileDialog(
                             gapMs != null && gapMs < 0L -> Text(
                                 "De cues overlappen ${-gapMs} ms. De samenvoeging verwijdert " +
                                     "de afzonderlijke grens en loopt van het eerste begin tot " +
-                                    "het tweede einde.",
+                                    "de laatste van beide eindtijden (${mergedEndLabel}).",
                                 style = MaterialTheme.typography.bodySmall)
                             else -> Text("De cues sluiten exact op elkaar aan.",
                                 style = MaterialTheme.typography.bodySmall)
