@@ -49,3 +49,8 @@ These are archival references only; they are intentionally not part of the activ
 - `archive/v0.4/LiveLingo-Android/app/src/main/java/com/livelingo/android/MainViewModel.kt` — source SHA-256 `e899257ec4363af14403530c164e82d748152cbc3c4d9d3ca4b451a9933ec12e`.
 - `archive/v0.4/LiveLingo-Android/app/src/main/java/com/livelingo/android/model/Languages.kt` — source SHA-256 `ee4803911a2a6543bcd26053bcbfbf59c1740f94bad5060044a087fa0013190d`.
  All five historically missing modules—`LiveLingoScreen.kt`, `MainViewModel.kt`, `Languages.kt`, `OfflineTranslator.kt` and `OnDeviceSpeech.kt`—are now preserved verbatim under the archival source tree, outside the active Gradle source set. Issue #1 also remains open for the authorized physical Android 12+ airplane-mode acceptance; this snapshot does not satisfy that gate.
+
+
+## Non-test archive import — 21 October 2026
+
+The archival tree now preserves 19 of the ZIP's 23 regular files byte-for-byte: all historical product source files, Android/Gradle configuration, the original hosted workflow, README and language-support guide. The four historical test-source files were deliberately excluded under the current no-test-suite delivery policy. See [the import status](TUDDY_V0_4_ARCHIVE_IMPORT_STATUS.md). This remains a historical snapshot outside the active Gradle source set; it does not replace the current privacy/lifecycle implementation. Issue #1 remains open for authorized physical Android 12+ airplane-mode acceptance tied to an exact APK checksum.
