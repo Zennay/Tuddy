@@ -107,7 +107,11 @@ resultaat moet veilig als volledige SRT **én** WebVTT exporteerbaar zijn.
 
 Als het eigen LRC-document geldig is, zie je naast de chronologische
 cue-preview de actieve offset en drie knoppen: **− 0,5 s**,
-**Offset 0** en **+ 0,5 s**. Iedere tik past alleen de ene zichtbare
+**Offset 0** en **+ 0,5 s**. Je kunt ook **Exacte offset in ms**
+invullen, bijvoorbeeld `-125` of `+750`, en die bewust met **Pas toe**
+activeren. Alleen gehele waarden van -30000 tot +30000 milliseconden
+worden geaccepteerd. De invoer blijft tijdens het typen in RAM en
+wijzigt de tijdlijn pas na de bevestigingsknop. Iedere tik past alleen de ene zichtbare
 `[offset:...]`-header in je **tijdelijke invoer** aan. Bij een offset
 van nul verdwijnt die regel volledig; de zelfgeschreven zinnen en
 expliciete oorspronkelijke tijdstempels veranderen niet. De
