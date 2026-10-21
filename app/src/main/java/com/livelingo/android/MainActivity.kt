@@ -3698,6 +3698,20 @@ private fun TuddyScreen(
                                         Text("Omgekeerde kaart: " + meaning + " → " + source,
                                             style = MaterialTheme.typography.bodySmall)
                                     }
+                                    if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML) {
+                                        val targetHint = PrivatePinnedCaptionClozeHtml.previewHint(
+                                            if (reverse) record.caption.original
+                                            else record.caption.translated
+                                        )
+                                        Text("Aanvulhint (niet het antwoord): " + targetHint,
+                                            style = MaterialTheme.typography.bodySmall)
+                                        if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
+                                            Text("Omgekeerde aanvulhint: " +
+                                                PrivatePinnedCaptionClozeHtml.previewHint(
+                                                    record.caption.original
+                                                ), style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
                                 } else {
                                     Text(
                                         PrivatePinnedCaptionExport.preview(record.caption.original),
