@@ -2611,6 +2611,8 @@ See [offline text readiness](docs/OFFLINE_TEXT_MODEL_READINESS.md).
    `/Projects/LiveLingo/LiveLingo-Android-v0.4-Kurdish-Pashto.zip`;
    the imported conversation and phrasebook modules do NOT constitute a
    wholesale migration of its previous UI/viewmodel/speech architecture.
+   See [the v0.4 source migration map](docs/TUDDY_V0_4_SOURCE_MIGRATION.md)
+   for current equivalents and the remaining boundaries.
 3. Deliver separately licensed and on-device-tested free-form Kurdish
    Kurmanji, Sorani and Pashto **speech recognition AND translation**
    with native-speaker/medical/legal accuracy review. Five beginner phrases
