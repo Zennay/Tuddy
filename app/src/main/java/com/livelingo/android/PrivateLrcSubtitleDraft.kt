@@ -66,6 +66,95 @@ internal object PrivateLrcSubtitleDraft {
         return candidate.takeIf { preview(it) != null }
     }
 
+    /**
+     * Retimes only explicitly selected, chronological 0-based LRC cues.
+     * Multiple timestamp tags on one physical lyric line are edited separately.
+     * Metadata, all lyric text and the optional global [offset:] stay intact.
+     * An edit that would reorder or overlap cues is rejected completely.
+     */
+    fun withShiftedRows(
+        raw: String,
+        sourceIndices: List<Int>,
+        deltaMillis: Long
+    ): String? {
+        if (deltaMillis !in -30_000L..30_000L || deltaMillis == 0L) return null
+        val before = preview(raw) ?: return null
+        if (sourceIndices.isEmpty() || sourceIndices.size > before.size ||
+            sourceIndices.toSet().size != sourceIndices.size ||
+            sourceIndices.any { it !in before.indices }) return null
+
+        val normalized = raw.removePrefix("\uFEFF")
+            .replace("\r\n", "\n").replace('\r', '\n')
+        val lines = normalized.split('\n').toMutableList()
+        val globalOffset = declaredOffsetMillis(raw) ?: 0L
+        data class TimestampLocation(
+            val absoluteStart: Long,
+            val lineIndex: Int,
+            val from: Int,
+            val until: Int,
+            val authoredStart: Long
+        )
+        val locations = ArrayList<TimestampLocation>(before.size)
+        lines.forEachIndexed { lineIndex, originalLine ->
+            val line = originalLine.trim()
+            if (line.isEmpty() || metadata.matches(line) ||
+                offsetHeader.matches(line)) return@forEachIndexed
+            val prefix = originalLine.indexOf(line)
+            var cursor = 0
+            while (cursor < line.length && line[cursor] == '[') {
+                val tag = timestampTag.find(line, cursor)
+                    ?.takeIf { it.range.first == cursor } ?: break
+                val authored = tag.groupValues[1].toLong() * 60_000L +
+                    tag.groupValues[2].toLong() * 1_000L +
+                    tag.groupValues[3].padEnd(3, '0').toLong()
+                locations += TimestampLocation(
+                    authored + globalOffset, lineIndex,
+                    prefix + tag.range.first, prefix + tag.range.last + 1,
+                    authored
+                )
+                cursor = tag.range.last + 1
+            }
+        }
+        if (locations.size != before.size) return null
+        val chronological = locations.sortedBy { it.absoluteStart }
+        if (chronological.indices.any { i ->
+                chronological[i].absoluteStart != before[i].startMillis
+            }) return null
+        val selected = sourceIndices.toSet()
+        val changes = HashMap<Int, MutableList<Pair<TimestampLocation, String>>>()
+        chronological.forEachIndexed { index, position ->
+            if (index !in selected) return@forEachIndexed
+            val newAuthored = position.authoredStart + deltaMillis
+            val newAbsolute = position.absoluteStart + deltaMillis
+            if (newAuthored < 0L || newAuthored / 60_000L > 999L ||
+                newAbsolute !in 0L until MAX_TIME_MS) return null
+            val tag = String.format(
+                Locale.ROOT, "[%02d:%02d.%03d]",
+                newAuthored / 60_000L,
+                (newAuthored / 1_000L) % 60L,
+                newAuthored % 1_000L
+            )
+            changes.getOrPut(position.lineIndex) { mutableListOf() }
+                .add(position to tag)
+        }
+        for ((lineIndex, edits) in changes) {
+            var line = lines[lineIndex]
+            for ((position, tag) in edits.sortedByDescending { it.first.from }) {
+                line = line.replaceRange(position.from, position.until, tag)
+            }
+            lines[lineIndex] = line
+        }
+        val updatedText = lines.joinToString("\n")
+        val after = preview(updatedText) ?: return null
+        // Do not accept a successful parse that silently changed row identity.
+        if (after.size != before.size || before.indices.any { index ->
+                after[index].text != before[index].text ||
+                    after[index].startMillis != before[index].startMillis +
+                        (if (index in selected) deltaMillis else 0L)
+            }) return null
+        return updatedText
+    }
+
     fun preview(raw: String): List<PrivateSubtitleCue>? {
         val bytes = runCatching {
             StandardCharsets.UTF_8.newEncoder()
