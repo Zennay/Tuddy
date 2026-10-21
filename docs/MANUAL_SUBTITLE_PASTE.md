@@ -32,10 +32,12 @@ samengevoegde cue beide regels gedurende het hele interval zichtbaar maakt;
 de afzonderlijke tijdscheiding verdwijnt. Controleer daarom het resultaat
 vóór **Voeg samen in tijdelijk concept**.
 
-De bevestiging verandert alleen het RAM-concept en is met **Herstel**
-ongedaan te maken. Te lange tekst of een ongeldige volledige tijdlijn
-schakelt samenvoegen uit. Er wordt nooit automatisch opgeslagen en het
-oorspronkelijke SRT/VTT-bestand blijft intact.
+Het voorgestelde resultaat loopt van het eerste begin tot de **laatste
+van beide eindtijden**. Ook als de tweede cue eerder eindigt dan de eerste,
+blijft de bestaande tijdsdekking daardoor behouden. De bevestiging verandert
+alleen het RAM-concept en is met **Herstel** ongedaan te maken. Te lange
+tekst of een ongeldige volledige tijdlijn schakelt samenvoegen uit. Er wordt
+nooit automatisch opgeslagen en het oorspronkelijke SRT/VTT-bestand blijft intact.
 
 
 ## Eigen bestanden rechtstreeks kiezen via Android (SRT, VTT, LRC, CSV, TSV, TXT)
