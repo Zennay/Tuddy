@@ -169,11 +169,17 @@ internal object PrivateListeningWorksheet {
                 ".answer-key{display:none;break-before:page;page-break-before:always}" +
                 ".answer-key:target{display:block}" +
                 ".answerlink{display:inline-block;margin:10px 0}" +
+                ".printcontrol{display:inline-block;margin:12px 0;font-weight:600;" +
+                    "cursor:pointer}.printkey{vertical-align:middle;margin-right:8px}" +
                 ".line{display:none;border-bottom:1px solid #555;height:24px}" +
                 "p{overflow-wrap:anywhere}" +
-                "@media print{body{padding:0}details,form,.answerlink{display:none}" +
+                "@media print{body{padding:0}details,form,.answerlink," +
+                    ".printkey,.printcontrol{display:none}" +
                 ".print-rating{display:block}" +
-                ".answer-key,.line{display:block}" +
+                ".line{display:block}" +
+                ".answer-key,.answer-key:target{display:none}" +
+                ".printkey:checked ~ .answer-key," +
+                    ".printkey:checked ~ .answer-key:target{display:block}" +
                 "article{border:0;border-bottom:1px solid #999}}" +
                 "</style></head><body><main id=\"top\"><h1>" +
                 (if (audience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
@@ -183,7 +189,8 @@ internal object PrivateListeningWorksheet {
                 "hoort of begrijpt. " +
                 (if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
                     "Open de eigen bronregels daarna bewust om te vergelijken. " +
-                        "Ze komen bovendien op een aparte afdrukpagina. "
+                        "Bij het afdrukken verschijnt het complete bronregelblad " +
+                        "pas als je zelf het bijbehorende afdrukvakje aanvinkt. "
                 else "Dit leerlingenblad bevat geen oorspronkelijke bronregels, " +
                     "persoonlijke inschattingen of eigen notities. ") +
                 "Dit zijn handmatig gekozen fragmenttijden, " +
@@ -247,6 +254,10 @@ internal object PrivateListeningWorksheet {
             if (out.length > MAX_BYTES) return null
         }
         if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
+            out.append("<input id=\"print-listening-key\" class=\"printkey\" " +
+                    "type=\"checkbox\" aria-label=\"Print ook mijn bronregelblad\">" +
+                    "<label class=\"printcontrol\" for=\"print-listening-key\">" +
+                    "Print ook mijn bronregelblad (bewuste keuze)</label>")
             out.append("<a class=\"answerlink\" href=\"#bronregels\">" +
                 "Open compleet bronregelblad (bewuste keuze)</a>")
                 .append("<section class=\"answer-key\" id=\"bronregels\">" +
