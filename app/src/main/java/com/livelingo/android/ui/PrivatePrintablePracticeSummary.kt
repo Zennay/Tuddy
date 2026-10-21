@@ -80,9 +80,11 @@ internal object PrivatePrintablePracticeSummary {
             ) "'" + readable else readable
         }
         fun time(ms: Long): String {
-            val whole = ms.coerceAtLeast(0L) / 1000L
-            return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d",
-                whole / 3600L, (whole / 60L) % 60L, whole % 60L)
+            val safeMs = ms.coerceAtLeast(0L)
+            val whole = safeMs / 1000L
+            return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d.%03d",
+                whole / 3600L, (whole / 60L) % 60L, whole % 60L,
+                safeMs % 1000L)
         }
         fun row(vararg columns: String): String = columns.joinToString(",") {
             "\"" + it.replace("\"", "\"\"") + "\""
