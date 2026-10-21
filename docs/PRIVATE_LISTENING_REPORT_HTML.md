@@ -1,3 +1,25 @@
+## Vrij gekozen opdrachten per offline luisterfragment
+
+Bij **Mijn privé luisteroverzicht → Bewaar luisterwerkblad…** kies je
+nu zelf de **oefenopdracht** voor de A–B-fragmenten:
+**Letterlijk opschrijven**, **Kernwoorden herkennen**,
+**Zelf samenvatten** of **Zelf betekenis opschrijven**.
+De keuze wordt per geselecteerd fragment in het offline HTML-blad
+getoond. Leerlingenbestanden blijven zonder brontekst en zonder
+privébeoordelingen; zelfstudiebestanden houden hun bewust te
+openen bronregelblad. Er is geen automatische inhoudscontrole,
+spraakherkenning of modelvertaling.
+
+De invoervakken voor letterlijk uitschrijven en kernwoorden volgen
+de expliciet gekozen SRT/VTT-taalrichting en taalcode, bijvoorbeeld
+rechts-naar-links bij Pasjtoe/Sorani. Samenvatting en eigen
+betekenis blijven vrije tekstvelden met automatische richting.
+De documentkiezer bewaart de gekozen opdracht tijdelijk mee
+en weigert de opslag wanneer de opdracht tussentijds wijzigt.
+Er is geen sessieopslag van getypte browserantwoorden.
+
+---
+
 ## Nieuw · gedetailleerde bronregel-CSV voor eigen A–B-luisterfragmenten
 
 Naast de bestaande compacte CSV kun je in **Mijn privé luisteroverzicht**

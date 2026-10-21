@@ -123,6 +123,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     // The saved worksheet choice is independent of the guided playback queue.
     var worksheetScope by remember { mutableStateOf(PrivatePracticeRouteScope.ALL) }
     var worksheetAudience by remember { mutableStateOf(PrivateListeningWorksheetAudience.SELF_STUDY) }
+    var worksheetPrompt by remember { mutableStateOf(PrivateListeningWorksheetPrompt.TRANSCRIBE) }
     var practiceCsvPreviewOpen by remember { mutableStateOf(false) }
     var detailedCsvPreviewOpen by remember { mutableStateOf(false) }
     var detailedCsvPreviewPage by remember { mutableIntStateOf(0) }
@@ -176,7 +177,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     PrivateListeningWorksheet.snapshot(
                         cues, subtitleOffsetMs, savedPracticePassages,
                         passageRatings, passageNotes, worksheetScope, worksheetAudience,
-                        chosenSubtitleLanguage
+                        chosenSubtitleLanguage, worksheetPrompt
                     )
                 PrivatePracticeReportFormat.TXT ->
                     PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
@@ -195,6 +196,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 updatedSummary != pending.summary ||
                 pending.selectionScope != worksheetScope ||
                 pending.worksheetAudience != worksheetAudience ||
+                pending.worksheetPrompt != worksheetPrompt ||
                 updatedBytes == null ||
                 !updatedBytes.contentEquals(pending.bytes)
             ) {
@@ -223,7 +225,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                 PrivateListeningWorksheet.snapshot(
                     cues, subtitleOffsetMs, savedPracticePassages,
                     passageRatings, passageNotes, worksheetScope, worksheetAudience,
-                        chosenSubtitleLanguage
+                        chosenSubtitleLanguage, worksheetPrompt
                 )
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
             PrivatePracticeReportFormat.CSV ->
@@ -241,7 +243,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
             notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
         } else {
             pendingPracticeReport = PendingPrivatePracticeReport(
-                report, format, worksheetScope, worksheetAudience, payload)
+                report, format, worksheetScope, worksheetAudience,
+                worksheetPrompt, payload)
             practiceReportOpen = false
             savePracticeReport.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
@@ -279,6 +282,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         detailedCsvPreviewPage = 0
         pendingPracticeReport = null
         worksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY
+        worksheetPrompt = PrivateListeningWorksheetPrompt.TRANSCRIBE
         guidedActive = false
         guidedQueue = emptyList()
         guidedIndex = 0
@@ -1580,6 +1584,21 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 audience.title)
                         }
                     }
+                    HorizontalDivider()
+                    Text("Wat wil je per luisterfragment oefenen?",
+                        style = MaterialTheme.typography.titleSmall)
+                    PrivateListeningWorksheetPrompt.entries.forEach { prompt ->
+                        TextButton(modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive,
+                            onClick = { worksheetPrompt = prompt }) {
+                            Text((if (worksheetPrompt == prompt) "● " else "○ ") +
+                                prompt.title)
+                        }
+                    }
+                    Text(worksheetPrompt.instruction +
+                        " Je opdracht staat in het HTML-blad en verandert " +
+                        "geen audio of oorspronkelijke ondertitels.",
+                        style = MaterialTheme.typography.bodySmall)
                     Text(
                         if (worksheetAudience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
                             "Leerlingenbestand: bevat alleen de eigen A–B-tijdvakken " +

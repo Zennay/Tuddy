@@ -1,3 +1,14 @@
+## Offline luisteren · eigen opdracht kiezen
+
+Bij het eigen A–B-luisterwerkblad kun je nu kiezen tussen letterlijk
+uitschrijven, kernwoorden noteren, zelf samenvatten of zelf de betekenis
+opschrijven. De keuze verschijnt in het privé HTML-bestand of
+antwoordvrije leerlingenblad. Transcriptievelden volgen de expliciet
+ingestelde RTL/LTR-ondertiteltaal; er wordt niets automatisch vertaald
+of nagekeken. [Handleiding](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
 ## 21 oktober · volledige bronregels veilig bestuderen en als CSV bewaren
 
 Het zelfgekozen, offline **A–B-luisterwerkblad** toont maximaal 18 regels

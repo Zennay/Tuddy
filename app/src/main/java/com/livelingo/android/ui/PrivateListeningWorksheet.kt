@@ -16,6 +16,17 @@ internal enum class PrivateListeningWorksheetAudience(val title: String) {
     STUDENT_HANDOUT("Leerlingenblad · zonder bronregels of privébeoordeling")
 }
 
+/** The exercise is user-selected, never generated from recorded speech. */
+internal enum class PrivateListeningWorksheetPrompt(
+    val title: String, val instruction: String
+) {
+    TRANSCRIBE("Letterlijk opschrijven", "Schrijf op wat je precies hoort."),
+    KEYWORDS("Kernwoorden herkennen", "Noteer de belangrijkste woorden."),
+    SUMMARY("Zelf samenvatten", "Vat in eigen woorden samen wat je hoort."),
+    OWN_TRANSLATION("Zelf betekenis opschrijven",
+        "Schrijf zelf wat de woorden volgens jou betekenen; geen automatische vertaling.")
+}
+
 internal object PrivateListeningWorksheet {
     private const val MAX_BYTES = 131_072
     private const val MAX_CUES = 5_000
@@ -126,7 +137,8 @@ internal object PrivateListeningWorksheet {
         notes: Map<Pair<Long, Long>, String>,
         scope: PrivatePracticeRouteScope = PrivatePracticeRouteScope.ALL,
         audience: PrivateListeningWorksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY,
-        subtitleLanguageCode: String? = null
+        subtitleLanguageCode: String? = null,
+        prompt: PrivateListeningWorksheetPrompt = PrivateListeningWorksheetPrompt.TRANSCRIBE
     ): ByteArray? {
         if (passages.isEmpty() || passages.size > 4 ||
             passages.distinct().size != passages.size ||
@@ -229,8 +241,8 @@ internal object PrivateListeningWorksheet {
                 (if (audience == PrivateListeningWorksheetAudience.STUDENT_HANDOUT)
                     "Mijn luisterleerlingenblad"
                 else "Mijn privé luisterwerkblad") + "</h1>" +
-                "<p>Luister eerst naar je eigen A–B-fragment. Schrijf op wat je " +
-                "hoort of begrijpt. " +
+                "<p>Luister eerst naar je eigen A–B-fragment. " +
+                html(prompt.instruction) + " " +
                 (if (audience == PrivateListeningWorksheetAudience.SELF_STUDY)
                     "Open de eigen bronregels daarna bewust om te vergelijken. " +
                         "Bij het afdrukken verschijnt het complete bronregelblad " +
@@ -243,7 +255,8 @@ internal object PrivateListeningWorksheet {
                     "<p>Mijn bewust gekozen selectie: " + html(scope.title) + " (" +
                         selected.size + " van " + passages.size + " eigen fragmenten).</p>"
                 else "<p>Oefenfragmenten: " + selected.size + ".</p>") +
-                "<p>Bestemming: " + html(audience.title) + ".</p>"
+                "<p>Bestemming: " + html(audience.title) + ".</p>" +
+                "<p>Zelfgekozen opdracht: " + html(prompt.title) + ".</p>"
         )
         if (sections.size > 1) {
             out.append("<nav class=\"fragment-nav\" aria-label=\"Ga naar luisterfragment\">" +
@@ -260,12 +273,19 @@ internal object PrivateListeningWorksheet {
             if (audience == PrivateListeningWorksheetAudience.SELF_STUDY) {
                 out.append("<p>Eigen inschatting: ").append(html(part.rating)).append("</p>")
             }
-            out.append("<p>Wat hoor ik? Schrijf mijn eigen antwoord op:</p>")
+            val answerLanguage = if (
+                prompt == PrivateListeningWorksheetPrompt.TRANSCRIBE ||
+                prompt == PrivateListeningWorksheetPrompt.KEYWORDS
+            ) subtitleLanguageCode else null
+            out.append("<p>").append(html(prompt.instruction)).append("</p>")
                 .append("<form autocomplete=\"off\"><label for=\"answer-")
                 .append(part.number).append("\">Mijn eigen antwoord (alleen deze browser)</label>")
                 .append("<textarea id=\"answer-").append(part.number)
-                .append("\" rows=\"4\" dir=\"auto\" spellcheck=\"false\" " +
-                    "autocomplete=\"off\" autocorrect=\"off\"></textarea>")
+                .append("\" rows=\"4\" dir=\"")
+                .append(htmlDirection(answerLanguage))
+                .append("\"").append(htmlLanguageAttribute(answerLanguage))
+                .append(" spellcheck=\"false\" autocomplete=\"off\" " +
+                    "autocorrect=\"off\"></textarea>")
                 .append("<fieldset class=\"rating\"><legend>Mijn eigen luisterinschatting " +
                     "(optioneel, niet opgeslagen)</legend>")
                 .append("<label><input type=\"radio\" name=\"rating-").append(part.number)
