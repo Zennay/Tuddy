@@ -1,0 +1,9 @@
+# Save the offline readiness report as a local file
+
+From **Offline startcheck**, Tuddy can now offer **Bewaar apparaatrapport als tekstbestand…** in addition to the existing sensitive clipboard action. This is a product feature for keeping a device-local record of language setup, not an automated QA run or physical-device acceptance.
+
+The report contains the app version, exact build-source commit / GitHub run identity, Android API and device manufacturer/model, airplane-mode setting, manually selected language tags and **separate** Android on-device ASR/ML Kit text-model states. It explicitly reports **no transcript or audio included**.
+
+Nothing is written until the user opens a full scrollable preview, confirms the privacy warning and deliberately chooses an Android Storage Access Framework destination. The report is UTF-8 text and capped at 8 KiB. When the file picker returns, the entire source/target/device/model status is recalculated: any changed bytes refuse writing instead of silently sharing a different report. Tuddy retains no persistent copy and requests no new Android permission. The Activity keeps this one pending export callback alive while the document chooser backgrounds Tuddy. Canceling leaves the device unchanged. An external file provider may sync the report; deleting Tuddy data cannot retract that copy.
+
+**Important:** Android's report of an installed model does not establish real speech quality, network isolation, true airplane-mode end-to-end behavior, or language accuracy. The report contains no invented pass/fail declaration. P1 [issue #1](https://github.com/Zennay/Tuddy/issues/1) needs actual authorized Android 12+ offline phone evidence bound to a specific APK; P1 [issue #2](https://github.com/Zennay/Tuddy/issues/2) still needs rights-cleared/native-speaker-reviewed complete offline Kurdish Kurmanji, Sorani and Pashto ASR+MT. No release signing or production admission is implied.

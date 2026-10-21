@@ -619,6 +619,7 @@ private fun TuddyScreen(
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
+    var offlineReportPickerOpen by remember { mutableStateOf(false) }
     // Return to the explicit startcheck only after the user opened Android speech settings.
     var pendingSpeechSettingsReturnTag by remember { mutableStateOf<String?>(null) }
     var languageSupportOpen by remember { mutableStateOf(false) }
@@ -914,7 +915,7 @@ private fun TuddyScreen(
     }
 
     // User-triggered, privacy-safe diagnostics; never include caption/audio content.
-    fun copyOfflineReadinessReport(): Boolean = runCatching {
+    fun offlineReadinessReportSnapshot(): ByteArray? = runCatching {
         val appVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
         val airplaneMode = runCatching {
             Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
@@ -938,6 +939,12 @@ private fun TuddyScreen(
             appendLine("Listening at export: $listening")
             appendLine("Transcript/audio included: no")
         }
+        report.toByteArray(Charsets.UTF_8).takeIf { it.size in 1..8192 }
+    }.getOrNull()
+
+    fun copyOfflineReadinessReport(): Boolean = runCatching {
+        val report = offlineReadinessReportSnapshot()
+            ?.toString(Charsets.UTF_8) ?: return@runCatching false
         val board = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("Tuddy offline readiness (no transcript/audio)", report)
         clip.description.extras = PersistableBundle().apply {
@@ -2379,7 +2386,7 @@ private fun TuddyScreen(
                 installedTextModels = null
             }
             if (event == Lifecycle.Event.ON_STOP) {
-                offlineReadinessOpen = false
+                if (!offlineReportPickerOpen) offlineReadinessOpen = false
                 starterPhraseboardOpen = false
                 quickPhrasePickerOpen = false
                 flashcardsOpen = false
@@ -2680,6 +2687,9 @@ private fun TuddyScreen(
                     speechCatalogOpen = true
                 },
                 onCopyDiagnostics = { copyOfflineReadinessReport() },
+                onReportSnapshot = { offlineReadinessReportSnapshot() },
+                onReportPickerStarted = { offlineReportPickerOpen = true },
+                onReportPickerFinished = { offlineReportPickerOpen = false },
                 onCheckText = { checkTextPair() },
                 onPrepareText = { prepareOfflinePair() },
                 onEditLanguages = {

@@ -48,6 +48,9 @@ internal fun OfflineReadinessDialog(
     onOpenSpeechSettings: () -> Unit,
     onBrowseSpeechPacks: () -> Unit,
     onCopyDiagnostics: () -> Boolean,
+    onReportSnapshot: () -> ByteArray?,
+    onReportPickerStarted: () -> Unit,
+    onReportPickerFinished: () -> Unit,
     onCheckText: () -> Unit,
     onPrepareText: () -> Unit,
     onEditLanguages: () -> Unit,
@@ -177,6 +180,12 @@ internal fun OfflineReadinessDialog(
                 ) { Text("Kopieer diagnoserapport") }
                 if (diagnosticsMessage.value.isNotBlank())
                     Text(diagnosticsMessage.value, style = MaterialTheme.typography.bodySmall)
+                OfflineReadinessFileExportAction(
+                    enabled = !isListening,
+                    snapshot = onReportSnapshot,
+                    onPickerStarted = onReportPickerStarted,
+                    onPickerFinished = onReportPickerFinished
+                )
                 Text("Het rapport bevat alleen apparaat-, taal- en modelstatus; geen transcript of audio.",
                     style = MaterialTheme.typography.bodySmall)
                 if (!isListening) {
