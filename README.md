@@ -5,7 +5,9 @@
 In de optionele **geschatte woordvolger** kun je nu een doorbladerbare
 lijst met de woorden van de actieve SRT/VTT-regel openen. Eén tik springt
 naar het bijbehorende *geschatte* woordmoment; vorige/volgende-woord
-blijft werken. Alles gebruikt uitsluitend de eigen cue-tijdcodes:
+blijft werken. Bij lange regels kun je ook direct een **woordnummer**
+invoeren. De pagina en de naar rechts/links lopende woordtekst volgen
+je expliciete keuze. Alles gebruikt uitsluitend de eigen cue-tijdcodes:
 geen spraakherkenning, betrouwbare woordtiming of nieuwe permissies.
 [Handleiding](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
 
