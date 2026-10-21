@@ -1,3 +1,16 @@
+## Nieuw: eigen LRC-lyrics met beginmomenten importeren
+
+Kies in de bestaande ondertitelimport **LRC: eigen begintijden per regel**.
+Plak of selecteer via Android je eigen `[mm:ss.xx]Zin`-bestand. Tuddy
+bewaart de expliciete begintijden, leidt ieder eindmoment af van het
+**volgende begin** en schat alleen het laatste einde op **3 seconden**.
+Kies met de bestaande volledige zoekpreview welke regels je wilt openen,
+corrigeer tijden en exporteer desgewenst zelf een SRT/VTT-kopie.
+Geen verborgen offsets, geen automatische vertaling of gemeten
+audiowoorduitlijning; maximaal 500 eigen cues binnen de bestaande
+256-KiB- en privacygrenzen.
+[Uitleg](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: eigen ondertitel- en spreadsheetbestanden kiezen op Android
 
 De bestaande offline concepteditor ondersteunt nu naast plakken ook een

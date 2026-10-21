@@ -1,18 +1,49 @@
-# SRT/WebVTT, eigen tekst en documenten importeren
+# SRT/WebVTT, LRC, eigen tekst en documenten importeren
 
 Tuddy laat je handmatig een volledig SRT- of WebVTT-document plakken, zonder dat de app zelf je Android-klembord uitleest.
 
-## Eigen bestanden rechtstreeks kiezen via Android (SRT, VTT, CSV, TSV, TXT)
+## Eigen bestanden rechtstreeks kiezen via Android (SRT, VTT, LRC, CSV, TSV, TXT)
 
 Je hoeft een eigen bestand niet eerst met een andere app te openen en te kopiëren:
 
 1. Open **Plak eigen SRT/WebVTT-tekst…** of **Tweede ondertitelspoor zelf plakken…**. Kies onder de bestandsknop **SRT/VTT** voor een volledige ondertitel, of **Gewone zinnen** en de exacte CSV-/tabkolom- of tekstindeling van je bestand.
-2. Tik op **📂 Kies eigen UTF-8 SRT, VTT, CSV, TSV of TXT-document…**. Android opent de systeemeigen documentkiezer. Jij kiest welk document en welke bestandsprovider je wilt gebruiken; Tuddy leest niet automatisch je bestanden of het klembord.
+2. Tik op **📂 Kies eigen UTF-8 SRT, VTT, LRC, CSV, TSV of TXT-document…**. Android opent de systeemeigen documentkiezer. Jij kiest welk document en welke bestandsprovider je wilt gebruiken; Tuddy leest niet automatisch je bestanden of het klembord.
 3. Na de keuze leest Tuddy **maximaal 256 KiB** in het tijdelijke geheugen. De bestandsinhoud **vervangt het huidige eerste tekstvak**; eventueel eerder ingevulde losse betekenissen, oude zoekterm, selectie en paginapositie worden bewust gereset. Een afgebroken of geweigerde keuze behoudt je bestaande invoer.
 4. Controleer eerst de invoermodus en alle getoonde fouten, het exacte bronregelbereik en de doorzoekbare preview. Het gekozen bestand wordt alleen geaccepteerd door **dezelfde volledige parser en bestaande exportgrenzen** als bij handmatig plakken. Er wordt nog geen concept toegepast totdat je **Open gekozen regels** bevestigt.
 5. De code weigert onleesbare, lege, te grote, binaire of ongeldige UTF-8-documenten, inclusief verboden controletekens, zonder de huidige invoer te vervangen. Vervolgens gelden ongewijzigd de maximaal 500 cues, veilige tijden en SRT-/WebVTT-exportcontrole.
 
 Er worden geen leesrechten langdurig bewaard, geen bestand automatisch weggeschreven en geen nieuwe opslagpermissies aangevraagd. **Let op:** de door jou gekozen Android-bestandsprovider kan externe/cloudopslag gebruiken; Tuddy kan niet garanderen dat een gekozen provider offline blijft. De app verwerkt de geleverde tekst verder lokaal en vraagt geen eigen netwerkverbinding voor deze import. CSV met nieuwe regels **binnen een veld** wordt nog steeds geweigerd. Bestandsimport geeft geen ASR, automatische vertaling of echte audiotiming.
+
+## Eigen LRC-lyrics-tijdcodes omzetten naar een ondertitelconcept
+
+Selecteer **LRC: eigen begintijden per regel**. Typ/plak je eigen LRC-tekst,
+of kies een `.lrc`-bestand via de bestaande expliciete Android-documentkiezer.
+
+```text
+[ar:Eigen artiest (optionele metadata)]
+[00:01.25]Eerste zelfgeschreven zin
+[00:04.50]Tweede zelfgeschreven zin
+[00:07.00]Laatste zelfgeschreven zin
+```
+
+LRC biedt **begintijdcodes**, geen eindmomenten. Tuddy neemt iedere eigen
+beginwaarde over en gebruikt **de volgende begintijd als einde**. De laatste
+regel krijgt een **expliciet geschatte duur van drie seconden**, of minder
+wanneer de maximale veilige tijdgrens bereikt is. Dit is geen gemeten audio-
+of woorduitlijning. In de bestaande editor kun je de tijden handmatig
+controleren, corrigeren en apart als SRT of WebVTT opslaan.
+
+Het formaat moet strikt één tijdstempel `[mm:ss.xx]` of `[mm:ss.xxx]`
+per niet-lege regel bevatten, in oplopende volgorde. Maximaal 500 cues,
+800 tekens per tekstregel en maximaal 256 KiB volledig geldige UTF-8
+worden geaccepteerd. Lege regels worden genegeerd. Bekende informatieve
+LRC-metadata vóór de eerste cue (`ar`, `ti`, `al`, `by`, `length`) worden
+bewust genegeerd; onbekende directives, `offset`-verschuivingen en meerdere
+tijden op dezelfde regel zijn ongeldig in plaats van stilzwijgend
+geïnterpreteerd. Het hele resultaat moet geldig exporteerbaar zijn als
+SRT **én** WebVTT. De normale volledige preview, zoekfunctie, bronregelselectie
+en handmatige bevestiging blijven verplicht. Dit bewijst geen offline
+ASR/MT, taalinhoud of echt gesynchroniseerde audio.
 
 ## Direct openen
 

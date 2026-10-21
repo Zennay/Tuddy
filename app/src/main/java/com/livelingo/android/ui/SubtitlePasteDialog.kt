@@ -169,7 +169,7 @@ internal fun SubtitlePasteDialog(
                 raw, chosenStartMs, chosenDurationMs, splitMode,
                 if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) ownMeaning else ""
             )
-        else if (lrcMode) PrivateLrcSubtitleDraft.preview(raw)
+        else if (!plainLines && lrcMode) PrivateLrcSubtitleDraft.preview(raw)
         else if (!plainLines) PrivateSubtitleFileReader.read(raw.toByteArray(Charsets.UTF_8))
         else null
     }
