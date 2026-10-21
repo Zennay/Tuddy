@@ -101,6 +101,17 @@ internal object UnavailableTextLanguageCatalog {
             "Gebruikt de Perzische decoder-token als Sorani-workaround; niet geïntegreerd of geactiveerd."
     )
 
+    private val pashtoGhagResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "Nasimbahar/pashto-ghag-whisper-medium-asr",
+        url = "https://huggingface.co/Nasimbahar/pashto-ghag-whisper-medium-asr",
+        declaredLicense = "Apache-2.0 volgens modelkaart",
+        footprint = "3,06 GB; 0,8B parameters (FP32 volgens modelkaart)",
+        limitation = "Modelkaart rapporteert gebalanceerde gemiddelde WER 14,63% / CER 4,66% over drie held-out splits " +
+            "op 54,4 uur gevalideerde Pashto Common Voice 17.0. Zelfgerapporteerd, niet onafhankelijk herhaald; " +
+            "de footprint is te groot voor brede Android-dekking zonder quantisatie. Niet geïntegreerd of op Android getest."
+    )
+
     private val madladResearchCandidate = OfflineLanguageModelCandidate(
         category = "Tekstvertaling",
         title = "Google MADLAD-400-3B-MT",
@@ -179,7 +190,8 @@ internal object UnavailableTextLanguageCatalog {
                     limitation = "Modelkaart rapporteert zelf WER 43,83% op de eigen Pashto-ASR-dataset; dit is niet onafhankelijk herhaald. " +
                         "Datasetlicentie, splitsing, gewichtenherkomst, dialectdekking en Android-prestaties zijn niet geverifieerd. " +
                         "Niet geïntegreerd of op Android getest."
-                )
+                ),
+                pashtoGhagResearchCandidate
             ),
             translationCandidates = listOf(
                 nllbResearchCandidate,
