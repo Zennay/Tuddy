@@ -805,7 +805,11 @@ internal fun PrivateSubtitleFileDialog(
                 proposedIncoming != null
             ) PrivateSubtitleDocumentCombine.preview(
                 draft, proposedIncoming, importMode,
-                selectedPairOffset, excludedSecondRows, manualPairs
+                selectedPairOffset,
+                if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES)
+                    excludedSecondRows else emptySet(),
+                if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES)
+                    manualPairs else emptyList()
             ) else null
         }
         val previewRows = proposed?.cues.orEmpty()
@@ -1601,7 +1605,10 @@ internal fun PrivateSubtitleFileDialog(
                     val updated = if (latestOffset != null && latestIncoming != null)
                         PrivateSubtitleDocumentCombine.preview(
                             draft, latestIncoming, importMode, latestOffset,
-                            excludedSecondRows, manualPairs)
+                            if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES)
+                                excludedSecondRows else emptySet(),
+                            if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES)
+                                manualPairs else emptyList())
                     else null
                     if (draft != stagedImport.existing || updated == null ||
                         proposed == null || updated.cues != proposed.cues ||
