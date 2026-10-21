@@ -91,6 +91,13 @@ private data class PendingEditedSubtitleSave(
     val bytes: ByteArray
 )
 
+/** An exact user-selected LRC start-timestamp snapshot for a SAF handoff. */
+private data class PendingLrcSubtitleSave(
+    val session: Int,
+    val cues: List<PrivateSubtitleCue>,
+    val bytes: ByteArray
+)
+
 /** Exact user-consented timed spreadsheet saved after Android's provider choice. */
 private data class PendingTimedSubtitleSheetSave(
     val session: Int,
@@ -368,6 +375,9 @@ private fun TuddyScreen(
     }
     // A user-confirmed immutable copy survives the Android document picker only.
     var pendingSubtitleDraft by remember { mutableStateOf<PendingEditedSubtitleSave?>(null) }
+    var pendingLrcSubtitleSave by remember {
+        mutableStateOf<PendingLrcSubtitleSave?>(null)
+    }
     var pendingTimedSubtitleSheet by remember {
         mutableStateOf<PendingTimedSubtitleSheetSave?>(null)
     }
@@ -1455,6 +1465,34 @@ private fun TuddyScreen(
         ActivityResultContracts.CreateDocument("text/tab-separated-values")
     ) { uri -> completeTimedSubtitleSheetSave(uri) }
 
+    val saveLrcSubtitle = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingLrcSubtitleSave
+        pendingLrcSubtitleSave = null
+        if (pending != null && pending.session == generation) {
+            subtitleFileCues = pending.cues
+            val current = PrivateLrcSubtitleExport.snapshot(pending.cues)
+            editedSubtitleSaveNotice = when {
+                current == null || !current.contentEquals(pending.bytes) ->
+                    "LRC-opslag geweigerd: de bevestigde bron is niet meer geldig."
+                uri == null -> "LRC-bestandskeuze geannuleerd; concept heropend."
+                uri.scheme != "content" -> "Ongeldige locatie; geen LRC geschreven."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { out ->
+                            out.write(pending.bytes)
+                            out.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved) "Nieuwe LRC-kopie met eigen begintijden opgeslagen."
+                    else "LRC kon niet worden opgeslagen; het concept is heropend."
+                }
+            }
+        }
+    }
+
     val openTranscriptArchive = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1753,6 +1791,7 @@ private fun TuddyScreen(
             pendingArchiveGeneration = null
             pendingSubtitleDraft = null
             pendingTimedSubtitleSheet = null
+            pendingLrcSubtitleSave = null
             editedSubtitleSaveNotice = null
             pendingArchiveExcerpt = null
             archiveExcerptNotice = ""
@@ -2165,6 +2204,17 @@ private fun TuddyScreen(
                         saveEditedSubtitle.launch(if (format == SubtitleDraftFormat.WEBVTT)
                             "Tuddy-handmatig-ondertitelconcept.vtt"
                         else "Tuddy-handmatig-ondertitelconcept.srt")
+                    }
+                },
+                onSaveLrc = { editedCues ->
+                    val bytes = PrivateLrcSubtitleExport.snapshot(editedCues)
+                    if (bytes == null) {
+                        error = "Ongeldig LRC-concept: bewaar volledige tijden als SRT/VTT."
+                    } else {
+                        pendingLrcSubtitleSave = PendingLrcSubtitleSave(
+                            generation, editedCues.toList(), bytes
+                        )
+                        saveLrcSubtitle.launch("Tuddy-eigen-begintijden.lrc")
                     }
                 },
                 onSaveTimedSheet = { editedCues, format ->
@@ -3399,6 +3449,7 @@ private fun TuddyScreen(
                     OutlinedButton(onClick = {
                         generation++
                         pendingTimedSubtitleSheet = null
+                        pendingLrcSubtitleSave = null
                         pendingTranscriptExport = null
                         exportStatus = ""
                         previewArchiveRows = null

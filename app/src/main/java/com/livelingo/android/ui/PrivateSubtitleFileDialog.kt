@@ -49,6 +49,7 @@ import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDocumentCombine
 import com.livelingo.android.SubtitleCombineMode
 import com.livelingo.android.PrivateSubtitleDraftEditor
+import com.livelingo.android.PrivateLrcSubtitleExport
 import com.livelingo.android.PrivateTimedSubtitleSheet
 import com.livelingo.android.TimedSubtitleSheetFormat
 import com.livelingo.android.PrivateSubtitleTimelineNavigation
@@ -79,6 +80,7 @@ internal fun PrivateSubtitleFileDialog(
     onSaveWorksheetCopy: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     onSaveTimedSheet: (List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
+    onSaveLrc: (List<PrivateSubtitleCue>) -> Unit,
     incomingSecondPaste: SubtitlePasteFileContent?,
     onChoosePasteDocument: (List<PrivateSubtitleCue>, SubtitlePasteFileContent) -> Unit,
     onSecondPasteConsumed: () -> Unit
@@ -105,6 +107,7 @@ internal fun PrivateSubtitleFileDialog(
     var editError by remember { mutableStateOf("") }
     var requestSave by remember { mutableStateOf<SubtitleDraftFormat?>(null) }
     var requestTimedSheet by remember { mutableStateOf<TimedSubtitleSheetFormat?>(null) }
+    var requestLrcSave by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
     var wrapOpen by remember { mutableStateOf(false) }
@@ -411,6 +414,10 @@ internal fun PrivateSubtitleFileDialog(
                         Text("Bewaar tijdcodes als TSV…")
                     }
                 }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { requestLrcSave = true }
+                ) { Text("Bewaar eigen begintijden als LRC…") }
                 if (notice.isNotBlank()) Text(notice,
                     style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
@@ -1223,6 +1230,62 @@ internal fun PrivateSubtitleFileDialog(
         )
     }
 
+
+    if (requestLrcSave) {
+        val exactLrc = PrivateLrcSubtitleExport.snapshot(draft)
+        AlertDialog(
+            onDismissRequest = { requestLrcSave = false },
+            title = { Text("Eigen begintijden als LRC bewaren?") },
+            text = {
+                Column(
+                    modifier = Modifier.heightIn(max = 520.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("LRC bevat alleen de begintijd van één eigen tekstregel. " +
+                        "Eindtijden, overlap en woordmomenten passen niet in LRC " +
+                        "en worden NIET meegenomen. Voor exacte eindtijden " +
+                        "gebruik je SRT, VTT, CSV of TSV.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (exactLrc == null) {
+                        Text("Geen verliesvrije LRC-tekstregels mogelijk: gebruik " +
+                            "uitsluitend enkelregelige cues met strikt oplopende " +
+                            "begintijden, maximaal 999 minuten en 500 regels. " +
+                            "Het bestaande concept blijft ongewijzigd.",
+                            color = MaterialTheme.colorScheme.error)
+                    } else {
+                        Text("${draft.size} eigen regels · ${exactLrc.size} UTF-8 bytes. " +
+                            "Volledige werkelijke LRC-inhoud:",
+                            style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            String(exactLrc, Charsets.UTF_8),
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
+                                .verticalScroll(rememberScrollState()),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Text("Deze preview past niets toe op het live gesprek. " +
+                        "Alleen na jouw volgende expliciete keuze van een " +
+                        "Android-bestandsprovider wordt een nieuwe kopie " +
+                        "geschreven; die provider kan zelf extern synchroniseren.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = exactLrc != null, onClick = {
+                    val fresh = PrivateLrcSubtitleExport.snapshot(draft)
+                    if (exactLrc == null || fresh == null ||
+                        !fresh.contentEquals(exactLrc)) {
+                        notice = "Concept is veranderd: open de LRC-preview opnieuw."
+                    } else onSaveLrc(draft.toList())
+                    requestLrcSave = false
+                }) { Text("Kies opslaglocatie…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { requestLrcSave = false }) { Text("Annuleren") }
+            }
+        )
+    }
     val chosenTimedSheet = requestTimedSheet
     if (chosenTimedSheet != null) {
         val snapshot = PrivateTimedSubtitleSheet.snapshot(draft, chosenTimedSheet)
