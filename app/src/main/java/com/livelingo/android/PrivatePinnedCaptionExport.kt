@@ -59,6 +59,7 @@ internal data class PendingPinnedCaptionExport(
     val onlyPersonallyCorrected: Boolean,
     val showLanguageTags: Boolean,
     val clozeDifficulty: PinnedClozeDifficulty,
+    val clozeHintMode: PinnedClozeHintMode,
     val subtitleOptions: SubtitleDraftOptions,
     val bytes: ByteArray
 )
@@ -173,7 +174,8 @@ internal object PrivatePinnedCaptionExport {
         studyEdits: Map<Long, PinnedStudyCorrection> = emptyMap(),
         onlyPersonallyCorrected: Boolean = false,
         showLanguageTags: Boolean = false,
-        clozeDifficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL
+        clozeDifficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL,
+        clozeHintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK
     ): ByteArray? {
         if (selection.isEmpty() || selection.size > SessionCaptionPins.MAX_PINS ||
             selection.map { it.id }.distinct().size != selection.size
@@ -193,7 +195,7 @@ internal object PrivatePinnedCaptionExport {
                 PrivatePinnedCaptionFoldHtml.snapshot(rows, studyDirection, showLanguageTags)
             PinnedCaptionFormat.CLOZE_HTML ->
                 PrivatePinnedCaptionClozeHtml.snapshot(
-                    rows, studyDirection, showLanguageTags, clozeDifficulty)
+                    rows, studyDirection, showLanguageTags, clozeDifficulty, clozeHintMode)
             PinnedCaptionFormat.JSON -> PrivateTranscriptJsonExport.snapshot(rows)
             PinnedCaptionFormat.HTML -> PrivatePrintableConversation.snapshot(rows, onlyFinished = false)
             PinnedCaptionFormat.SRT ->
