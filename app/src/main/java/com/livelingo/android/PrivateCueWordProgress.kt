@@ -16,13 +16,32 @@ internal object PrivateCueWordProgress {
     private const val MAX_WORDS = 300
     private const val MAX_CHARACTERS = 4096
     private const val MAX_MANUAL_MARKS = 16
-    // Preserve explicit Unicode whitespace and zero-width-space boundaries (U+200B);
-    // never infer new word boundaries for an unsegmented writing system.
-    private val words = Regex("""[^\s\u200B]+""")
+    // Preserve the complete Unicode White_Space set plus the explicitly
+    // supported zero-width space (U+200B). Java regex \\s is ASCII-oriented
+    // by default and would miss NBSP/narrow-NBSP and other Unicode separators.
+    private fun isBoundary(codePoint: Int): Boolean =
+        codePoint == 0x200B || codePoint == 0x0085 ||
+            Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint)
 
     private fun ranges(text: String): List<IntRange>? {
         if (text.isBlank() || text.length > MAX_CHARACTERS) return null
-        val result = words.findAll(text).take(MAX_WORDS + 1).map { it.range }.toList()
+        val result = mutableListOf<IntRange>()
+        var tokenStart = -1
+        var offset = 0
+        while (offset < text.length) {
+            val codePoint = text.codePointAt(offset)
+            if (isBoundary(codePoint)) {
+                if (tokenStart >= 0) {
+                    result += tokenStart..(offset - 1)
+                    if (result.size > MAX_WORDS) return null
+                    tokenStart = -1
+                }
+            } else if (tokenStart < 0) {
+                tokenStart = offset
+            }
+            offset += Character.charCount(codePoint)
+        }
+        if (tokenStart >= 0) result += tokenStart..text.lastIndex
         return result.takeIf { it.isNotEmpty() && it.size <= MAX_WORDS }
     }
 
