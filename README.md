@@ -5,8 +5,11 @@ tijdstempels, zoals `[00:12.50][01:24.20]Mijn refrein`. Optioneel
 kun je vóór de eerste eigen tekst precies één `[offset:+500]` of
 `[offset:-250]`-header gebruiken om alle tijden expliciet maximaal
 30 seconden later of eerder te plaatsen. In Android zie je welke
-millisecondeverschuiving werkelijk is toegepast; meerdere of ongeldige
-offsetregels worden geweigerd. Iedere
+millisecondeverschuiving werkelijk is toegepast. Met
+**− 0,5 s**, **Offset 0** en **+ 0,5 s** pas je die header rechtstreeks
+aan in je tijdelijke, volledig herberekende LRC-concept. Ongeldige
+wijzigingen worden geweigerd; je originele Android-bestand verandert
+niet. Meerdere of ongeldige offsetregels worden geweigerd. Iedere
 tijdstempel wordt een eigen ondertitel-cue met dezelfde zelfgeschreven
 tekst. De volledige reeks wordt chronologisch gesorteerd, waarna de
 eindtijden uit het volgende begin worden afgeleid. In de Android-preview
