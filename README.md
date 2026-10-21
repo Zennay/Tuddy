@@ -4,7 +4,7 @@ Open een zelf gekozen .ass- of .ssa-bestand via **Open ondertitelbestand…**, d
 
 ## Nieuw: taalondersteuning zonder valse offlineclaims
 
-Open **Taal- en modelinstellingen → Bekijk alle taalondersteuning** voor één doorzoekbaar overzicht van ML Kit-tekstdoelen, Android-spraaklocale-kandidaten en talen die alleen een beperkte woordenpreview hebben of nog geen vrij offline model. De lijst onderscheidt taalkeuze van daadwerkelijk geïnstalleerde modellen; hij claimt geen toestelondersteuning of vertaalnauwkeurigheid. [Details](docs/LANGUAGE_SUPPORT_GUIDE.md).
+Open **Taal- en modelinstellingen → Bekijk alle taalondersteuning** voor één doorzoekbaar overzicht van ML Kit-tekstdoelen, Android-spraaklocale-kandidaten en talen die alleen een beperkte woordenpreview hebben of nog geen vrij offline model. De lijst onderscheidt taalkeuze van daadwerkelijk geïnstalleerde modellen; hij claimt geen toestelondersteuning of vertaalnauwkeurigheid. Bij de drie preview-only talen opent een knop de bestaande vijfwoordenpreview. [Details](docs/LANGUAGE_SUPPORT_GUIDE.md).
 
 ## Android Delen → Tuddy: ook LRC-lyrics met eigen tijdcodes
 
