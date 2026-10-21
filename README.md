@@ -35,7 +35,10 @@ niet-exporteerbare resultaten worden geweigerd.
 
 Losse bronregels zijn met één knop over te nemen in de handmatige
 koppelvelden. Ook een automatisch voorgesteld paar kun je bewust
-vastzetten. Alle handmatige keuzes zijn per paar te herstellen;
+vastzetten. Voor meerdere paren tegelijk accepteert de app strikt
+begrensde bronpaarreeksen zoals `1:2,3-5:7-9` met een volledige
+paginagewijze preview vóór expliciete overname. Alle handmatige
+keuzes zijn individueel óf gezamenlijk te herstellen;
 de complete bron-, paar- en resultaatpreview, Undo/Redo, RAM-
 privacy en expliciete aparte Android-bestandsopslag blijven gelden.
 **Geen automatische taalherkenning, spraakvertaling of echte
