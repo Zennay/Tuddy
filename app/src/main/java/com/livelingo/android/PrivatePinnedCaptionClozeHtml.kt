@@ -17,12 +17,12 @@ internal enum class PinnedClozeHintMode(val title: String) {
     LENGTH("Woordlengte als invulstrepen")
 }
 
-/** Space is applied to both the browser answer field and printed writing lines. */
+/** Space is applied to both the browser answer field and real paper writing lines. */
 internal enum class PinnedClozeAnswerSpace(
-    val title: String, val printHeightPx: Int, val browserRows: Int
+    val title: String, val printLines: Int, val browserRows: Int
 ) {
-    STANDARD("Normaal · twee schrijflijnen", 66, 3),
-    SPACIOUS("Ruim · vier schrijflijnen", 132, 5)
+    STANDARD("Normaal · twee schrijflijnen", 2, 3),
+    SPACIOUS("Ruim · vier schrijflijnen", 4, 5)
 }
 
 /** An explicit content audience; a student handout must not embed the answer. */
@@ -204,17 +204,23 @@ internal object PrivatePinnedCaptionClozeHtml {
                 ".reset{margin-top:8px;padding:7px 12px;border:1px solid #64748b;" +
                 "border-radius:5px;background:#fff;color:#182435;cursor:pointer}" +
                 "summary{cursor:pointer;padding:8px 0}" +
-                ".write{display:none;border-bottom:1px solid #64748b;" +
-                "min-height:" + answerSpace.printHeightPx + "px;margin-top:12px}" +
+                ".write{display:none;margin-top:12px}" +
+                ".writeline{height:32px;border-bottom:1px solid #64748b}" +
                 ".answers{display:none;break-before:page;page-break-before:always}" +
                 ".answers:target{display:block}" +
                 ".roundheading{border-bottom:2px solid #64748b;padding:9px 0}" +
                 ".roundnav a{display:inline-block;margin:6px 12px 6px 0}" +
                 ".answerlink{display:inline-block;margin:12px 0}" +
+                ".printcontrol{display:inline-block;margin:14px 0 0 8px;" +
+                    "font-weight:600;cursor:pointer}" +
+                ".printkey{margin-left:0;vertical-align:middle}" +
                 "@media print{@page{margin:14mm}body{padding:0}" +
                 "details,.work,textarea,.reset,.grade{display:none}" +
-                ".write,.printgrade,.answers{display:block}" +
-                ".answerlink,.roundnav{display:none}" +
+                ".write,.printgrade{display:block}" +
+                ".answers,.answers:target{display:none}" +
+                ".printkey:checked ~ .answers," +
+                    ".printkey:checked ~ .answers:target{display:block}" +
+                ".answerlink,.roundnav,.printkey,.printcontrol{display:none}" +
                 ".card{break-inside:avoid}.roundheading.newpage{" +
                     "break-before:page;page-break-before:always}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
@@ -239,7 +245,8 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "of voortgangsopslag. Wissen leegt ook je kaartbeoordeling. " +
                 "Sommige browsers kunnen zelf getypte velden herstellen. " +
                 (if (audience == PinnedClozeAudience.SELF_STUDY)
-                    "De antwoorden staan op een nieuwe afdrukpagina.</p>"
+                    "Het volledige antwoordblad wordt alleen meegeprint als je " +
+                    "het afdrukvakje eerst bewust aanvinkt.</p>"
                 else "Er is geen afdrukantwoordblad.</p>") +
                 "<section id=\"questions\" aria-label=\"Oefenvragen\"><h2>Vragen</h2>"
         )
@@ -283,7 +290,11 @@ internal object PrivatePinnedCaptionClozeHtml {
                     "Wis mijn antwoord en beoordeling</button></form>")
                 .append("<p class=\"printgrade\">Zelf beoordelen: &#9633; " +
                     "Nog oefenen &nbsp; &#9633; Ik wist het</p>")
-                .append("<div class=\"write\" aria-hidden=\"true\"></div>")
+            out.append("<div class=\"write\" aria-hidden=\"true\">")
+            repeat(answerSpace.printLines) {
+                out.append("<div class=\"writeline\"></div>")
+            }
+            out.append("</div>")
             if (audience == PinnedClozeAudience.SELF_STUDY) {
                 out.append("<details><summary>Bekijk volledig antwoord</summary>")
                     .append("<p class=\"phrase\"><bdi dir=\"auto\">")
@@ -294,6 +305,10 @@ internal object PrivatePinnedCaptionClozeHtml {
         }
         out.append("</section>")
         if (audience == PinnedClozeAudience.SELF_STUDY) {
+            out.append("<input id=\"print-answers\" class=\"printkey\" " +
+                    "type=\"checkbox\" aria-label=\"Print ook het antwoordblad\">" +
+                    "<label class=\"printcontrol\" for=\"print-answers\">" +
+                    "Print ook het antwoordblad (bewuste keuze)</label>")
             out.append("<a class=\"answerlink\" href=\"#all-answers\">" +
                 "Open volledige antwoordblad (bewuste keuze)</a>")
                 .append("<section class=\"answers\" id=\"all-answers\">" +
