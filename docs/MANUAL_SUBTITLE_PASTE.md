@@ -1108,6 +1108,35 @@ overschrijving of verkapte fallback. De toekomstig opgeslagen
 SRT/VTT-eindtijden volgen nog steeds uit het volgende LRC-begin
 (laatste eindtijd blijft geschat), niet uit opgenomen audio.
 
+## Meerdere foutieve LRC-begintijden in één bewuste correctie
+
+Als verscheidene eigen LRC-tijdstempels verkeerd zijn,
+gebruik **Meerdere eigen LRC-begintijden tegelijk corrigeren**.
+Schrijf maximaal 32 unieke oorspronkelijk genummerde cue's met
+hun nieuwe absolute `uu:mm:ss.mmm`-tijdcode, bijvoorbeeld:
+
+`1=00:00:02.000;4=00:01:07.250`
+
+Een puntkomma **of** een nieuwe regel scheidt toewijzingen.
+Met **Vul gekozen cues met huidige begintijden in** maakt Tuddy
+optioneel een bewerkbaar vertrekpunt van maximaal 32 reeds
+geselecteerde oorspronkelijke cues. Alleen bewust aangepaste
+waarden leveren een wijziging op; er wordt geen tijd berekend
+uit muziek, spraak of ondertitelbetekenis.
+
+De complete gewijzigde tijdlijn is per vijf regels te bekijken,
+met een directe sprong naar vorige of volgende gewijzigde
+begin-/eindtijd. De knop **Bevestig alle exacte LRC-tijdcorrecties**
+past alle opgegeven correcties **atomair** op de tijdelijke lokale
+LRC-tekst toe; eerdere waarden zijn via de bounded Undo/Redo
+terug te halen. Ongeldige nummers, dubbele nummers, meer dan
+32 opdrachten of 512 invoertekens, ongeldige tijden, een
+verandering die cues omwisselt, tijdcodebotsingen en
+onexporteerbare SRT/VTT-resultaten worden als geheel geweigerd.
+Een te lange plakactie wordt zichtbaar geweigerd en kan niet
+stilzwijgend een eerder geldige opdracht toepassen. Het
+door de gebruiker gekozen originele bestand blijft onveranderd.
+
 ## Eén oorspronkelijk LRC-begin exact corrigeren
 
 Wie slechts één verkeerd LRC-tijdstempel heeft, hoeft niet langer
