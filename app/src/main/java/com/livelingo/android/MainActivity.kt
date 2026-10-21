@@ -82,7 +82,6 @@ import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.TwoWayTypedConversationDialog
 import com.livelingo.android.ui.TypedConversationLine
 import com.livelingo.android.ui.CaptionLanguageCorrectionDialog
-import java.io.ByteArrayOutputStream
 import java.text.DateFormat
 import java.util.Date
 
@@ -1660,35 +1659,43 @@ private fun TuddyScreen(
         val intendedGeneration = pendingArchiveGeneration
         pendingArchiveGeneration = null
         if (uri != null && intendedGeneration != null && intendedGeneration == generation) {
-            val loaded = runCatching {
-                val stream = context.contentResolver.openInputStream(uri)
-                    ?: throw IllegalArgumentException("Cannot read selected document")
-                val bytes = stream.use { input ->
-                    val buffer = ByteArray(8192)
-                    val collected = ByteArrayOutputStream()
-                    while (true) {
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        if (count == 0) continue
-                        if (collected.size() + count > 262_144) throw IllegalArgumentException("Archive exceeds read limit")
-                        collected.write(buffer, 0, count)
+            // Android document providers may be network-backed or return zero
+            // bytes for a bulk read. Never block the UI thread or spin on a
+            // provider here; reuse the bounded, strict UTF-8 document reader.
+            coroutineScope.launch {
+                val (loaded, readNotice) = withContext(Dispatchers.IO) {
+                    if (uri.scheme != "content") {
+                        null to "Ongeldige Android-bestandslocatie."
+                    } else when (val result = PrivateSubtitleImportDocument.read(
+                        context.contentResolver, uri
+                    )) {
+                        is PrivateSubtitleImportDocument.Result.Rejected ->
+                            null to result.reason
+                        is PrivateSubtitleImportDocument.Result.Ready ->
+                            PrivateTranscriptArchive.read(
+                                result.text.toByteArray(Charsets.UTF_8)
+                            ) to "Geen geldig privégespreksarchief."
                     }
-                    collected.toByteArray()
                 }
-                PrivateTranscriptArchive.read(bytes)
-            }.getOrNull()
-            pendingArchiveExcerpt = null
-            archiveSubtitleConsentOpen = false
-            pendingArchiveSubtitleExport = null
-            archiveExcerptNotice = ""
-            if (loaded == null) {
-                previewArchiveRows = null
-                error = "Geen geldig privégespreksarchief. Het huidige gesprek is niet gewijzigd."
-            } else {
-                previewArchiveRows = loaded
-                archiveSearchQuery = ""
-                exportStatus = ""
-                error = ""
+                // A newer picker, erased session or background transition must
+                // never resurrect a private read-only archive on the screen.
+                if (intendedGeneration != generation ||
+                    pendingArchiveGeneration != null ||
+                    !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
+                    return@launch
+                pendingArchiveExcerpt = null
+                archiveSubtitleConsentOpen = false
+                pendingArchiveSubtitleExport = null
+                archiveExcerptNotice = ""
+                if (loaded == null) {
+                    previewArchiveRows = null
+                    error = readNotice + " Het huidige gesprek is niet gewijzigd."
+                } else {
+                    previewArchiveRows = loaded
+                    archiveSearchQuery = ""
+                    exportStatus = ""
+                    error = ""
+                }
             }
         }
     }
