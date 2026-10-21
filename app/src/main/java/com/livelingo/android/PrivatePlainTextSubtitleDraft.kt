@@ -7,7 +7,7 @@ import java.util.Locale
  * chosen synthetic durations. These are NOT speech timestamps, word alignment, or translations.
  * Only used after deliberate manual input; no audio, clipboard, or I/O.
  */
-internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS, TIMED_TEXT_COLUMNS, TIMED_PAIRED_COLUMNS, PAIRED_TEXTBOXES }
+internal enum class PlainSubtitleSplitMode { LINES, SENTENCES, PAIRED_COLUMNS, TIMED_TEXT_COLUMNS, TIMED_PAIRED_COLUMNS, TIMED_TEXT_CSV, TIMED_PAIRED_CSV, PAIRED_TEXTBOXES }
 
 internal data class TimedSubtitleInputInspection(
     val rowCount: Int,
@@ -75,7 +75,8 @@ internal object PrivatePlainTextSubtitleDraft {
      */
     private fun timedColumns(
         raw: String,
-        withMeaning: Boolean
+        withMeaning: Boolean,
+        csv: Boolean = false
     ): Pair<List<PrivateSubtitleCue>?, TimedSubtitleInputInspection> {
         val rows = pairedRows(raw)
         fun fail(reason: String) = null to TimedSubtitleInputInspection(rows.size, reason)
@@ -89,10 +90,13 @@ internal object PrivatePlainTextSubtitleDraft {
         rows.forEachIndexed { index, row ->
             val rowNumber = index + 1
             if (row.isBlank()) return fail("Regel ${rowNumber} is leeg; behoud of herstel de rij.")
-            val columns = row.split('\t')
+            val columns = if (csv) PrivateTimedCsvColumns.parseRow(row)
+                ?: return fail("Regel ${rowNumber}: ongeldige CSV-aanhalingstekens of kolomindeling.")
+                else row.split('\t')
             if (columns.size != columnsNeeded)
                 return fail("Regel ${rowNumber}: verwacht precies ${columnsNeeded} " +
-                    "tabgescheiden velden, kreeg ${columns.size}.")
+                    (if (csv) "CSV-velden" else "tabgescheiden velden") +
+                    ", kreeg ${columns.size}.")
             val start = PrivateSubtitleTimelineNavigation.timestamp(columns[0])
                 ?: return fail("Regel ${rowNumber}: ongeldige begintijd.")
             val end = PrivateSubtitleTimelineNavigation.timestamp(columns[1])
@@ -119,8 +123,8 @@ internal object PrivatePlainTextSubtitleDraft {
         return result to TimedSubtitleInputInspection(rows.size, null)
     }
 
-    fun inspectTimed(raw: String, withMeaning: Boolean): TimedSubtitleInputInspection =
-        timedColumns(raw, withMeaning).second
+    fun inspectTimed(raw: String, withMeaning: Boolean, csv: Boolean = false): TimedSubtitleInputInspection =
+        timedColumns(raw, withMeaning, csv).second
 
     private fun label(milliseconds: Long): String =
         String.format(Locale.ROOT, "%02d:%02d:%02d,%03d",
@@ -163,10 +167,22 @@ internal object PrivatePlainTextSubtitleDraft {
                 return null
             return cues
         }
-        if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS ||
-            splitMode == PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS) {
+        if (splitMode in setOf(
+                PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS,
+                PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS,
+                PlainSubtitleSplitMode.TIMED_TEXT_CSV,
+                PlainSubtitleSplitMode.TIMED_PAIRED_CSV
+            )) {
             return timedColumns(
-                raw, splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
+                raw,
+                splitMode in setOf(
+                    PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS,
+                    PlainSubtitleSplitMode.TIMED_PAIRED_CSV
+                ),
+                splitMode in setOf(
+                    PlainSubtitleSplitMode.TIMED_TEXT_CSV,
+                    PlainSubtitleSplitMode.TIMED_PAIRED_CSV
+                )
             ).first
         }
         // Never classify natural sentences as recognized speech: this merely
@@ -180,6 +196,8 @@ internal object PrivatePlainTextSubtitleDraft {
                 .map { it.trim() }.filter { it.isNotEmpty() }
             PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS -> return null // handled above
             PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS -> return null // handled above
+            PlainSubtitleSplitMode.TIMED_TEXT_CSV -> return null // handled above
+            PlainSubtitleSplitMode.TIMED_PAIRED_CSV -> return null // handled above
             PlainSubtitleSplitMode.PAIRED_TEXTBOXES -> return null // handled above
             PlainSubtitleSplitMode.PAIRED_COLUMNS -> pairedRows(raw).map { row ->
                     // Reject a blank source row rather than shifting displayed
