@@ -177,6 +177,7 @@ internal fun PrivateSubtitleFileDialog(
     var manualPairs by remember { mutableStateOf<List<SubtitleManualPair>>(emptyList()) }
     var manualFirstRow by remember { mutableStateOf("") }
     var manualSecondRow by remember { mutableStateOf("") }
+    var manualReviewPage by remember { mutableIntStateOf(0) }
     var excludeRowExpression by remember { mutableStateOf("") }
     var excludeWindowExpression by remember { mutableStateOf("") }
     var driftSelectorOpen by remember { mutableStateOf(false) }
@@ -1052,6 +1053,135 @@ internal fun PrivateSubtitleFileDialog(
                             "Controleer tijdcodes zelf; er is geen audio-/video-uitlijning.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
+                        Text("Koppel zelf twee volledige oorspronkelijke bronregels, " +
+                            "ook als tijdcodes onvoldoende overlappen. Dit is een " +
+                            "bewuste inhoudskeuze, geen automatische vertaling. " +
+                            "Het gecombineerde paar gebruikt tijdcodes van spoor 1.",
+                            style = MaterialTheme.typography.titleSmall)
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedTextField(
+                                modifier = Modifier.weight(1f),
+                                value = manualFirstRow,
+                                onValueChange = {
+                                    manualFirstRow =
+                                        it.filter { char -> char in '0'..'9' }.take(3)
+                                },
+                                label = { Text("Spoor 1 · bronregel") },
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                modifier = Modifier.weight(1f),
+                                value = manualSecondRow,
+                                onValueChange = {
+                                    manualSecondRow =
+                                        it.filter { char -> char in '0'..'9' }.take(3)
+                                },
+                                label = { Text("Spoor 2 · bronregel") },
+                                singleLine = true
+                            )
+                        }
+                        val manualPrimary = manualFirstRow.toIntOrNull()
+                        val manualSecondary = manualSecondRow.toIntOrNull()
+                        val candidate = if (manualPrimary != null &&
+                            manualSecondary != null &&
+                            manualPrimary in 1..draft.size &&
+                            manualSecondary in 1..stagedImport.imported.size &&
+                            manualPairs.size < 32 &&
+                            manualPairs.none { it.primaryRow == manualPrimary ||
+                                it.secondaryRow == manualSecondary } &&
+                            manualSecondary !in excludedSecondRows
+                        ) SubtitleManualPair(manualPrimary, manualSecondary) else null
+
+                        if (candidate != null) {
+                            val firstCue = draft[candidate.primaryRow - 1]
+                            val secondCue =
+                                stagedImport.imported[candidate.secondaryRow - 1]
+                            Text("Spoor 1 · bronregel ${candidate.primaryRow} · " +
+                                "${firstCue.startLabel} → ${firstCue.endLabel}\n" +
+                                firstCue.text + "\nSpoor 2 · originele bronregel " +
+                                "${candidate.secondaryRow} · " +
+                                "${secondCue.startLabel} → ${secondCue.endLabel}\n" +
+                                secondCue.text,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        val candidatePreview = remember(draft, proposedIncoming,
+                            selectedPairOffset, stillCurrent, excludedSecondRows,
+                            manualPairs, candidate) {
+                            if (candidate != null && stillCurrent &&
+                                selectedPairOffset != null && proposedIncoming != null
+                            ) PrivateSubtitleDocumentCombine.preview(
+                                draft, proposedIncoming,
+                                SubtitleCombineMode.PAIR_OVERLAPPING_TIMES,
+                                selectedPairOffset, excludedSecondRows,
+                                manualPairs + candidate
+                            ) else null
+                        }
+                        if (manualFirstRow.isNotBlank() &&
+                            manualSecondRow.isNotBlank() && candidatePreview == null) {
+                            Text("Deze keuze is niet mogelijk. Kies twee geldige " +
+                                "verschillende, nog niet vastgekoppelde bronregels; " +
+                                "de handmatige paren moeten in beide sporen " +
+                                "dezelfde volgorde houden. De volledige SRT/VTT-" +
+                                "exportgrenzen blijven verplicht.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = candidatePreview != null,
+                            onClick = {
+                                val exact = candidate
+                                if (exact != null && candidatePreview != null) {
+                                    manualPairs = manualPairs + exact
+                                    manualFirstRow = ""
+                                    manualSecondRow = ""
+                                    manualReviewPage = 0
+                                    pairReviewPage = 0
+                                    secondTrackPreviewPage = 0
+                                }
+                            }
+                        ) { Text("Voeg dit exacte eigen bronpaar toe aan het voorstel") }
+                        if (manualPairs.isNotEmpty()) {
+                            val orderedPins = manualPairs.sortedBy { it.primaryRow }
+                            val pageCount = maxOf(1, (orderedPins.size + 3) / 4)
+                            val page = manualReviewPage.coerceIn(0, pageCount - 1)
+                            Text("${orderedPins.size} bewust gekozen bronparen " +
+                                "(maximaal 32) · pagina ${page + 1}/$pageCount. " +
+                                "Verwijderen herberekent de overige tijd-overlapparen.",
+                                style = MaterialTheme.typography.bodySmall)
+                            orderedPins.drop(page * 4).take(4).forEach { pin ->
+                                val firstCue = draft[pin.primaryRow - 1]
+                                val secondCue =
+                                    stagedImport.imported[pin.secondaryRow - 1]
+                                Text("Spoor 1 · originele regel ${pin.primaryRow}\n" +
+                                    firstCue.text + "\nSpoor 2 · originele regel " +
+                                    "${pin.secondaryRow}\n" + secondCue.text,
+                                    style = MaterialTheme.typography.bodySmall)
+                                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                    onClick = {
+                                        manualPairs = manualPairs - pin
+                                        manualReviewPage = 0
+                                        pairReviewPage = 0
+                                        secondTrackPreviewPage = 0
+                                    }) {
+                                    Text("Herstel automatische koppeling voor dit paar")
+                                }
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween) {
+                                TextButton(enabled = page > 0,
+                                    onClick = { manualReviewPage = page - 1 }) {
+                                    Text("← Vorige handmatige")
+                                }
+                                TextButton(enabled = page < pageCount - 1,
+                                    onClick = { manualReviewPage = page + 1 }) {
+                                    Text("Volgende handmatige →")
+                                }
+                            }
+                        }
+                    }
                     if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
                         Text("Wil je meerdere originele regels uit spoor twee " +
                             "uitsluiten van koppeling? Ze blijven allemaal " +
