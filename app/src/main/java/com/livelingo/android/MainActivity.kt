@@ -296,6 +296,8 @@ private fun TuddyScreen(
     // Reuse ML Kit's bundled on-device language detector across live captions;
     // callbacks are invalidated when the screen leaves composition.
     val localLanguageDetector = remember { LocalLanguageDetector() }
+    // Keep a small, session-scoped cache of already-authorized local translators.
+    val localTranslatorPool = remember { LocalTranslatorPool() }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
         mutableStateOf(PrivateScreenShield.enabled(context))
@@ -760,10 +762,7 @@ private fun TuddyScreen(
                 OfflineTextStage.CHECKING -> Unit
                 OfflineTextStage.READY -> {
                     val translator = try {
-                        Translation.getClient(TranslatorOptions.Builder()
-                            .setSourceLanguage(from)
-                            .setTargetLanguage(targetCode)
-                            .build())
+                        localTranslatorPool.acquire(from, targetCode)
                     } catch (_: Exception) {
                         updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
                         return@check
@@ -771,12 +770,18 @@ private fun TuddyScreen(
                     try {
                         translator.translate(text)
                             .addOnSuccessListener { output ->
-                                updateLine(id, output, "Lokaal vertaald", token, revision)
-                                translator.close()
+                                try {
+                                    updateLine(id, output, "Lokaal vertaald", token, revision)
+                                } finally {
+                                    translator.close()
+                                }
                             }
                             .addOnFailureListener {
-                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                                translator.close()
+                                try {
+                                    updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                                } finally {
+                                    translator.close()
+                                }
                             }
                     } catch (_: Exception) {
                         translator.close()
@@ -889,6 +894,7 @@ private fun TuddyScreen(
             modelStorageNotice = message
             installedTextModels = null  // never keep presenting an old inventory
             if (success) {
+                localTranslatorPool.invalidate()
                 // The inventory and currently selected pair are independent;
                 // always re-read actual model status after storage changes.
                 textInventory.invalidate()
@@ -932,6 +938,7 @@ private fun TuddyScreen(
             translator.downloadModelIfNeeded(DownloadConditions.Builder().requireWifi().build())
                 .addOnSuccessListener {
                     translator.close()
+                    localTranslatorPool.invalidate()
                     preparingOfflineModel = false
                     if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                         offlineModelStatus = "Download afgerond; aanwezigheid opnieuw controleren…"
@@ -940,6 +947,7 @@ private fun TuddyScreen(
                 }
                 .addOnFailureListener {
                     translator.close()
+                    localTranslatorPool.invalidate()
                     preparingOfflineModel = false
                     if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                         offlineModelStatus = "Tekstmodel niet beschikbaar. Controleer wifi en opslag; probeer opnieuw."
@@ -947,6 +955,7 @@ private fun TuddyScreen(
                 }
         } catch (_: Exception) {
             translator.close()
+            localTranslatorPool.invalidate()
             preparingOfflineModel = false
             if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                 offlineModelStatus = "Tekstmodel kon niet worden voorbereid."
@@ -982,6 +991,7 @@ private fun TuddyScreen(
                 partialTranslation = text
                 return@Runnable
             }
+            interimTranslationBusy = true
             val translator = try {
                 Translation.getClient(TranslatorOptions.Builder()
                     .setSourceLanguage(sourceCode)
@@ -1833,12 +1843,13 @@ private fun TuddyScreen(
                     // infer word alignment, translations or speech from LRC.
                     val parsed = PrivateSubtitleFileReader.read(
                         selected.text.toByteArray(Charsets.UTF_8)
-                    ) ?: PrivateLrcSubtitleDraft.preview(selected.text)
+                    ) ?: PrivateAssSubtitleReader.read(selected.text)
+                        ?: PrivateLrcSubtitleDraft.preview(selected.text)
                         ?: PrivateTimedSubtitleSheet.readAuthored(selected.text)
                         ?: PrivateSbvSubtitleReader.read(selected.text)
                         ?: PrivateYoutubeJson3SubtitleReader.read(selected.text)
                     if (parsed == null)
-                        null to "Geen geldig SRT/VTT/LRC/CSV/TSV/SBV/JSON3-document: controleer " +
+                        null to "Geen geldig SRT/VTT/ASS/SSA/LRC/CSV/TSV/SBV/JSON3-document: controleer " +
                             "tijdcodes, tekstregels en maximaal 500 cues."
                     else parsed to ""
                 }
@@ -2010,6 +2021,7 @@ private fun TuddyScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) {
+                localTranslatorPool.invalidate()
                 modelStorage.invalidate()
                 modelStorageBusy = false
                 pendingModelDeletion = null
@@ -2118,6 +2130,7 @@ private fun TuddyScreen(
             pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
             localLanguageDetector.close()
+            localTranslatorPool.close()
             captionSpeaker.close()
         }
     }
@@ -2197,7 +2210,7 @@ private fun TuddyScreen(
                             shared.subtitleTimedSheetMode != null ->
                                 "Gedeelde CSV/TSV heeft expliciete begin- en eindtijden; " +
                                     "een tweede tekstkolom is geen geverifieerde vertaling. "
-                            else -> "Gedeelde SRT/WebVTT/SBV/JSON3 is alleen een tijdelijk voorstel. "
+                            else -> "Gedeelde SRT/WebVTT/ASS/SSA/SBV/JSON3 is alleen een tijdelijk voorstel. "
                         }) + "Controleer inhoud en tijdcodes en bevestig apart; " +
                             "er wordt niets automatisch opgeslagen of vertaald."
                     )
