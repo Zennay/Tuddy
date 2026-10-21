@@ -418,7 +418,10 @@ De samenvoegpreview toont hoeveel oorspronkelijke regels in
 **beide** sporen ongekoppeld blijven. Via **Controleer elke
 bronregel-koppeling** kun je voor alle voorgestelde paren in
 pagina's van vier de **oorspronkelijke rijnummers, volledige eigen
-teksten, starttijden en gedeelde milliseconden** bekijken.
+teksten, originele begintijd en aangepaste begintijd van spoor twee,
+en gedeelde milliseconden** bekijken. Dit blijft ook bij de aparte
+tweepuntscorrectie zichtbaar, zodat je het effect van de handmatige
+uitlijning op het werkelijke tweede bronbestand kunt beoordelen.
 Ongekoppelde regels uit het tweede spoor blijven als
 **zelfstandige ondertitelregels** bestaan; ongekoppelde regels
 uit het eerste spoor blijven ongewijzigd. Zelfs **identieke
