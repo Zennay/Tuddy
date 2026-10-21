@@ -1,3 +1,25 @@
+## Nieuw: afdrukken van bronantwoorden vereist nu een bewuste keuze
+
+Een offline **zelfstudie-luisterwerkblad** heeft onder de vragen een
+checkbox **Print ook mijn bronregelblad (bewuste keuze)**.
+De bronregels blijven via bewust openklappen op het scherm beschikbaar,
+maar het complete bronregelblad wordt **niet standaard meegeprint**.
+Ook als je al op de interne knop naar het bronregelblad hebt geklikt,
+blijft het bronregelblad uit het afdrukvoorbeeld zolang de checkbox
+niet is aangevinkt. Met vinkje krijgt de zelfgekozen SRT/VTT-brontekst
+een aparte afdrukpagina voor eigen controle.
+
+De **leerlingenversie zonder bronregels** verandert niet: daarin is
+geen brontekst/privébeoordeling aanwezig en kan een printinstelling
+dus ook geen verborgen antwoord alsnog tonen. Dit is geen garantie
+dat de inhoud van zelfstudie-HTML geheim is; dat bestand bevat
+bronregels en is alleen voor eigen gebruik. Voor delen kies je het
+aparte antwoordvrije leerlingenbestand. Deze verbetering werkt
+scriptvrij en offline, zonder nieuwe Android-machtigingen of
+wijzigingen in het bewaren van de sessie.
+
+---
+
 ## Nieuw: zelf invullen of zonder antwoordbronnen delen (luisterwerkblad)
 
 In **Mijn privé luisteroverzicht → Bewaar luisterwerkblad…** kun je nu
