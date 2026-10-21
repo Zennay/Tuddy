@@ -202,7 +202,7 @@ internal fun OfflineWordText(
                             "Ook Sorani/Pasjtoe-woorden kun je hier zelf selecteren " +
                             "en van een eigen, niet geverifieerde betekenis voorzien " +
                             "als de eigen-woordenfunctie beschikbaar is. " +
-                            "Geen automatische vertaling, AI-gok of online woordenboek; " +
+                            "Geen automatische vertaling; geen AI-gok of online woordenboek; " +
                             "niet gebruiken als medisch of juridisch advies.",
                         style = MaterialTheme.typography.bodySmall
                     )
