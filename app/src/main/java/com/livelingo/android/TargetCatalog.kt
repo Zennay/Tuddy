@@ -1,5 +1,6 @@
 package com.livelingo.android
 
+import java.text.Normalizer
 import java.util.Locale
 
 /**
@@ -31,12 +32,17 @@ object TargetCatalog {
     )
     private val aliases = mapOf(
         "ar" to "arabisch syrie syrië palestina palestine",
+        "be" to "wit-russisch belarussisch belarus",
         "fa" to "perzisch persian iran afghanistan",
-        "uk" to "oekraïens oekraïne",
+        "ht" to "haïtiaans creools creools",
         "nl" to "hollands nederlands",
+        "no" to "noors bokmål",
+        "tl" to "tagalog filipijns",
+        "uk" to "oekraïens oekraïne",
         "ur" to "pakistan",
         "tr" to "turks",
-        "ru" to "russisch"
+        "ru" to "russisch",
+        "zh" to "chinees mandarijn"
     )
     val targets: List<TextTarget> = codes.map { code ->
         val tag = when (code) {
@@ -52,11 +58,23 @@ object TargetCatalog {
         .thenBy { it.title })
 
     fun search(query: String): List<TextTarget> {
-        val term = query.trim().lowercase(Locale.ROOT)
-        if (term.isEmpty()) return targets
-        return targets.filter {
-            it.code.contains(term) || it.title.lowercase(Locale.ROOT).contains(term) ||
-                aliases[it.code]?.contains(term) == true
+        if (LanguageSearch.normalize(query).isEmpty()) return targets
+        return targets.filter { item ->
+            val tag = when (item.code) {
+                "no" -> "nb"
+                "tl" -> "fil"
+                else -> item.code
+            }
+            val locale = Locale.forLanguageTag(tag)
+            val candidates = listOf(
+                item.code,
+                item.title,
+                locale.getDisplayLanguage(Locale.forLanguageTag("nl")),
+                locale.getDisplayLanguage(Locale.ENGLISH),
+                locale.getDisplayLanguage(locale),
+                aliases[item.code].orEmpty()
+            )
+            LanguageSearch.matches(query, candidates)
         }
     }
 }

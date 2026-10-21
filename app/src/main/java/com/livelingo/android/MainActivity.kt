@@ -189,6 +189,35 @@ private val spoken = listOf(
     LanguageChoice("Русский", "ru-RU", "ru"),
     LanguageChoice("اردو · Urdu", "ur-PK", "ur")
 )
+
+private val spokenSearchAliases = mapOf(
+    "nl-NL" to "nederlands hollands dutch",
+    "en-US" to "engels english",
+    "de-DE" to "duits german",
+    "fr-FR" to "frans french",
+    "es-ES" to "spaans spanish",
+    "ar-SA" to "arabisch arabic",
+    "ar-SY" to "syrisch syrie syria levantijns",
+    "ar-PS" to "palestijns palestina palestine",
+    "fa-IR" to "perzisch persian farsi iran",
+    "uk-UA" to "oekraïens oekraïne ukrainian",
+    "tr-TR" to "turks turkish",
+    "ru-RU" to "russisch russian",
+    "ur-PK" to "urdu pakistan"
+)
+
+private fun searchSpokenLanguages(query: String): List<LanguageChoice> {
+    if (LanguageSearch.normalize(query).isEmpty()) return spoken
+    return spoken.filter { choice ->
+        val candidates = listOf(
+            choice.label,
+            choice.speechCode,
+            choice.translateCode,
+            spokenSearchAliases[choice.speechCode].orEmpty()
+        ) + LanguageSearch.localizedNames(choice.speechCode)
+        LanguageSearch.matches(query, candidates)
+    }
+}
 private data class Line(
     val id: Long,
     val original: String,
@@ -402,6 +431,7 @@ private fun TuddyScreen(
         mutableStateOf(LanguageChoice(catalog.title, catalog.code, catalog.code))
     }
     var sourceOpen by remember { mutableStateOf(false) }
+    var sourceQuery by remember { mutableStateOf("") }
     var targetOpen by remember { mutableStateOf(false) }
     var targetQuery by remember { mutableStateOf("") }
     // A deliberately separate offline phrase preview: never passed to ML Kit or ASR.
@@ -5419,12 +5449,28 @@ private fun TuddyScreen(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                 style = MaterialTheme.typography.bodySmall
                             )
-                            spoken.forEach {
+                            OutlinedTextField(
+                                value = sourceQuery,
+                                onValueChange = { sourceQuery = it },
+                                label = { Text("Zoek spreektaal") },
+                                modifier = Modifier.width(310.dp).padding(horizontal = 10.dp),
+                                singleLine = true
+                            )
+                            val matchingSpoken = searchSpokenLanguages(sourceQuery)
+                            if (matchingSpoken.isEmpty()) {
+                                Text(
+                                    "Geen spreektaal gevonden.",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            matchingSpoken.forEach {
                                 DropdownMenuItem(text = { Text(it.label) }, onClick = {
                                     stop()
                                     modelStorage.invalidate()
                                     installedTextModels = null
                                     source = it
+                                    sourceQuery = ""
                                     languageSettings.edit()
                                         .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, it.speechCode)
                                         .apply()
@@ -5443,7 +5489,7 @@ private fun TuddyScreen(
                             Text("Naar: ${target.label}", maxLines = 1)
                         }
                         DropdownMenu(expanded = targetOpen, onDismissRequest = { targetOpen = false }) {
-                            Text("59 talen · offline tekstmodellen", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                            Text("59 vertaaltalen · offline na modelvoorbereiding", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
                             OutlinedTextField(
                                 value = targetQuery,
                                 onValueChange = { targetQuery = it },
@@ -5451,7 +5497,15 @@ private fun TuddyScreen(
                                 modifier = Modifier.width(310.dp).padding(horizontal = 10.dp),
                                 singleLine = true
                             )
-                            TargetCatalog.search(targetQuery).take(35).forEach { choice ->
+                            val matchingTargets = TargetCatalog.search(targetQuery).take(35)
+                            if (matchingTargets.isEmpty()) {
+                                Text(
+                                    "Geen vertaaltaal gevonden.",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            matchingTargets.forEach { choice ->
                                 DropdownMenuItem(text = { Text(choice.title) }, onClick = {
                                     stop()
                                     modelStorage.invalidate()
