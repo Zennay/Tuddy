@@ -1,3 +1,16 @@
+## Nieuw: vijf formaten voor een zelfgekozen ondertitelfragment
+
+Doorzoek je tijdelijke ondertitelconcept en kies **Bewaar alleen
+gevonden regels…**. Je kunt nu uitsluitend die regels als
+**SRT, WebVTT, CSV, TSV of LRC** exporteren; behoud de eigen tijden
+of maak een compact fragment vanaf 00:00. Vooraf worden alle exacte
+UTF-8-bytes per deelpagina getoond en opnieuw vergeleken vóór de
+expliciete Android-bestandskeuze. CSV/TSV wordt geweigerd als
+tekstkolommen niet veilig en volledig behouden kunnen worden.
+LRC bewaart alleen eigen begintijden, geen eindtijden. De bestaande
+limieten, privacy en Undo/Redo-editor blijven intact.
+[Werkwijze](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: gerichte ondertitelcorrecties en volledige SRT/VTT-bestandspreview
 
 De privé-editor kan een letterlijke zoek/vervangactie beperken tot
