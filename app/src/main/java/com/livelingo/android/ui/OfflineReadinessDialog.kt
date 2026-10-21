@@ -46,6 +46,7 @@ internal fun OfflineReadinessDialog(
     onDownloadSpeech: () -> Unit,
     onCancelSpeech: () -> Unit,
     onOpenSpeechSettings: () -> Unit,
+    onBrowseSpeechPacks: () -> Unit,
     onCopyDiagnostics: () -> Boolean,
     onCheckText: () -> Unit,
     onPrepareText: () -> Unit,
@@ -154,6 +155,10 @@ internal fun OfflineReadinessDialog(
                         !checkingSpeech && !checkingText,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Controleer beide opnieuw") }
+                OutlinedButton(onClick = onBrowseSpeechPacks,
+                    enabled = !isListening, modifier = Modifier.fillMaxWidth()) {
+                    Text("Bekijk offline spreektaalpakketten")
+                }
                 OutlinedButton(onClick = onEditLanguages, modifier = Modifier.fillMaxWidth()) {
                     Text("Wijzig talen of bekijk details")
                 }

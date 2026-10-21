@@ -2840,3 +2840,15 @@ en bevestigen weigert de verouderde export. Sprekerlabels zijn nooit
 biometrisch herkend, geen echte persoonsidentiteit, niet gesynchroniseerd
 door Tuddy en niet in het normale archief opgeslagen. Een gekozen externe
 bestandsprovider kan documenten wel opslaan of synchroniseren.
+
+
+### Offline spreektaalpakketten in één overzicht
+
+Open **Offline startcheck → Bekijk offline spreektaalpakketten** en tik op
+**Controleer alle talen**. Tuddy vraagt de geïnstalleerde on-device
+Android-spraakdienst één voor één welke exacte regio-/taalpakketten aanwezig
+zijn, aangevraagd kunnen worden of niet lokaal worden ondersteund. Dit maakt
+een bruikbare bronkeuze eenvoudiger zonder dat de app cloudspraak opent of
+automatisch een model downloadt. Kies een bron en ga terug naar de afzonderlijke
+spraak- én tekststartcheck; de oude status wordt nooit overgenomen.
+Op Android 12 blijft de pakketstatus onbekend. [Uitleg](docs/OFFLINE_SPEECH_PACKS.md).
