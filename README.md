@@ -73,6 +73,24 @@ bestandsgrenzen, Undo/Redo en aparte Android SAF-save blijven
 van kracht. Er wordt geen spraak/audio geanalyseerd.
 [Zelf koppelingen nakijken](docs/MANUAL_SUBTITLE_PASTE.md).
 
+## Nieuw: meerpunts synchronisatie van eigen ondertitels
+
+Tuddy ondersteunt nu naast één handmatige offset en twee
+ankerparen ook **2–8 bewust gekozen ankerparen** om een tweede
+door de gebruiker gekozen SRT/WebVTT-spoor **per tijdssegment**
+te corrigeren. In de native Android-dialog doorzoek je beide
+oorspronkelijke documenten, neem je exacte bronregelnummers
+over en voeg je tussenliggende ankers toe, of wijzig/verwijder
+je bestaande ankers. Tuddy toont de volledige bronteksten
+en originele begintijden en past strikt begrensde, met
+integer milliseconden berekende interpolatie op de tweede
+tijdlijn toe. Hierna volgt nog de volledige gekoppelde
+preview vóór afzonderlijke RAM-toepassing en Android SAF-save.
+
+Dit is **geen audioanalyse, spraakherkenning of automatische
+vertaling**. De originele documenten blijven ongewijzigd.
+[Meerpuntscorrectie en grenzen](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: subtitle-drift corrigeren met twee ankerparen
 
 Als twee handmatig aangeleverde SRT/WebVTT-sporen **geleidelijk uit
