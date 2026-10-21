@@ -1,7 +1,12 @@
 ## Nieuw: herhaalde refreinen rechtstreeks uit eigen LRC-bestanden openen
 
 Tuddy importeert nu ook gewone LRC-regels met meerdere expliciete
-tijdstempels, zoals `[00:12.50][01:24.20]Mijn refrein`. Iedere
+tijdstempels, zoals `[00:12.50][01:24.20]Mijn refrein`. Optioneel
+kun je vóór de eerste eigen tekst precies één `[offset:+500]` of
+`[offset:-250]`-header gebruiken om alle tijden expliciet maximaal
+30 seconden later of eerder te plaatsen. In Android zie je welke
+millisecondeverschuiving werkelijk is toegepast; meerdere of ongeldige
+offsetregels worden geweigerd. Iedere
 tijdstempel wordt een eigen ondertitel-cue met dezelfde zelfgeschreven
 tekst. De volledige reeks wordt chronologisch gesorteerd, waarna de
 eindtijden uit het volgende begin worden afgeleid. In de Android-preview
