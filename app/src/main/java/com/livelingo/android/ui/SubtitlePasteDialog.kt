@@ -56,9 +56,15 @@ internal fun SubtitlePasteDialog(
     val timedInspection = remember(raw, plainLines, splitMode) {
         if (plainLines && splitMode in setOf(
             PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS,
-            PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
+            PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS,
+            PlainSubtitleSplitMode.TIMED_TEXT_CSV,
+            PlainSubtitleSplitMode.TIMED_PAIRED_CSV
         )) PrivatePlainTextSubtitleDraft.inspectTimed(
-            raw, splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS
+            raw,
+            splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS ||
+                splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_CSV,
+            splitMode == PlainSubtitleSplitMode.TIMED_TEXT_CSV ||
+                splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_CSV
         ) else null
     }
     val pairedInspection = remember(raw, ownMeaning, plainLines, splitMode) {
@@ -175,12 +181,38 @@ internal fun SubtitlePasteDialog(
                             "✓ " else "") +
                             "Vier kolommen: begin · einde · bron · betekenis")
                     }
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        splitMode = PlainSubtitleSplitMode.TIMED_TEXT_CSV
+                        page = 0
+                    }) {
+                        Text((if (splitMode == PlainSubtitleSplitMode.TIMED_TEXT_CSV)
+                            "✓ " else "") + "CSV: begintijd, eindtijd, eigen tekst")
+                    }
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        splitMode = PlainSubtitleSplitMode.TIMED_PAIRED_CSV
+                        page = 0
+                    }) {
+                        Text((if (splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_CSV)
+                            "✓ " else "") + "CSV: begintijd, eindtijd, bron, betekenis")
+                    }
                     if (splitMode == PlainSubtitleSplitMode.PAIRED_TEXTBOXES) {
                         Text(
                             "Plak originele zinnen in het eerste vak en je eigen " +
                                 "betekenissen in het tweede. Elke positie hoort bij elkaar. " +
                                 "Beide vakken moeten precies evenveel regels hebben; " +
                                 "lege regels worden niet stilzwijgend overgeslagen.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    if (splitMode == PlainSubtitleSplitMode.TIMED_TEXT_CSV ||
+                        splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_CSV) {
+                        Text(
+                            "Plak gewone komma-gescheiden CSV, één kaart per fysieke regel. " +
+                                "Zet een veld met komma tussen dubbele aanhalingstekens; " +
+                                "verdubbel binnenste aanhalingstekens. Tijdcodes met " +
+                                "decimale komma moeten ook tussen aanhalingstekens. " +
+                                "CSV met regelovergangen binnen een veld wordt geweigerd. " +
+                                "Bron en eventuele betekenis zijn alleen jouw eigen tekst.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -212,8 +244,12 @@ internal fun SubtitlePasteDialog(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    if (splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS &&
-                        splitMode != PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS) {
+                    if (splitMode !in setOf(
+                            PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS,
+                            PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS,
+                            PlainSubtitleSplitMode.TIMED_TEXT_CSV,
+                            PlainSubtitleSplitMode.TIMED_PAIRED_CSV
+                        )) {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             androidx.compose.foundation.layout.Box {
                                 OutlinedButton(modifier = Modifier.fillMaxWidth(),
@@ -286,6 +322,10 @@ internal fun SubtitlePasteDialog(
                             "Begin [TAB] einde [TAB] bron [TAB] betekenis"
                         splitMode == PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS ->
                             "Begin [TAB] einde [TAB] zelf geschreven tekst"
+                        splitMode == PlainSubtitleSplitMode.TIMED_TEXT_CSV ->
+                            "Begin,einde,tekst (CSV, 3 kolommen)"
+                        splitMode == PlainSubtitleSplitMode.TIMED_PAIRED_CSV ->
+                            "Begin,einde,bron,betekenis (CSV, 4 kolommen)"
                         else -> "Eigen tekst of zinnen"
                     }) },
                     modifier = Modifier.fillMaxWidth(),
@@ -357,7 +397,9 @@ internal fun SubtitlePasteDialog(
                         "${parsed.size} regels in de oorspronkelijke invoer. " +
                             (if (plainLines &&
                                 splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS &&
-                                splitMode != PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS)
+                                splitMode != PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS &&
+                                splitMode != PlainSubtitleSplitMode.TIMED_TEXT_CSV &&
+                                splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_CSV)
                                 "Tijdcodes zijn volledig geschat."
                              else "Tijdcodes komen uit de zelf geplakte bron."),
                         style = MaterialTheme.typography.titleSmall
