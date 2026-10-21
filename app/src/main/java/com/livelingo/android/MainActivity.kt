@@ -88,6 +88,14 @@ private data class PendingEditedSubtitleSave(
     val bytes: ByteArray
 )
 
+/** Exact user-consented timed spreadsheet saved after Android's provider choice. */
+private data class PendingTimedSubtitleSheetSave(
+    val session: Int,
+    val cues: List<PrivateSubtitleCue>,
+    val format: TimedSubtitleSheetFormat,
+    val bytes: ByteArray
+)
+
 /** One explicit HTML worksheet save handoff; never persisted by Tuddy. */
 private data class PendingSubtitleWorksheetSave(
     val session: Int,
@@ -341,6 +349,9 @@ private fun TuddyScreen(
     }
     // A user-confirmed immutable copy survives the Android document picker only.
     var pendingSubtitleDraft by remember { mutableStateOf<PendingEditedSubtitleSave?>(null) }
+    var pendingTimedSubtitleSheet by remember {
+        mutableStateOf<PendingTimedSubtitleSheetSave?>(null)
+    }
     var editedSubtitleSaveNotice by remember { mutableStateOf<String?>(null) }
     // The user selects one completed row from a read-only, unverified
     // imported archive. No clipboard/share side effects before consent.
@@ -1388,6 +1399,37 @@ private fun TuddyScreen(
         }
     }
 
+    val saveTimedSubtitleSheet = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val pending = pendingTimedSubtitleSheet
+        pendingTimedSubtitleSheet = null
+        if (pending != null && pending.session == generation) {
+            // The editor closes on Android ON_STOP; preserve only this
+            // user-approved bounded snapshot across the external picker.
+            subtitleFileCues = pending.cues
+            val current = PrivateTimedSubtitleSheet.snapshot(pending.cues, pending.format)
+            editedSubtitleSaveNotice = when {
+                current == null || !current.contentEquals(pending.bytes) ->
+                    "Spreadsheetkopie geweigerd: het tijdelijke concept is gewijzigd."
+                uri == null -> "CSV/TSV-opslag geannuleerd; concept heropend."
+                uri.scheme != "content" -> "Ongeldige locatie; geen CSV/TSV opgeslagen."
+                else -> {
+                    val saved = runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                            stream.write(pending.bytes)
+                            stream.flush()
+                            true
+                        } ?: false
+                    }.getOrDefault(false)
+                    if (saved) "Eigen tijdcodes bewaard als " +
+                        pending.format.name + "; tijdelijk concept blijft beschikbaar."
+                    else "CSV/TSV-opslag mislukt; concept en origineel blijven intact."
+                }
+            }
+        }
+    }
+
     val openTranscriptArchive = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -2020,6 +2062,21 @@ private fun TuddyScreen(
                         saveEditedSubtitle.launch(if (format == SubtitleDraftFormat.WEBVTT)
                             "Tuddy-handmatig-ondertitelconcept.vtt"
                         else "Tuddy-handmatig-ondertitelconcept.srt")
+                    }
+                },
+                onSaveTimedSheet = { editedCues, format ->
+                    val bytes = PrivateTimedSubtitleSheet.snapshot(editedCues, format)
+                    if (bytes == null) {
+                        error = "Geen veilige volledige CSV/TSV-kopie mogelijk."
+                    } else {
+                        pendingTimedSubtitleSheet = PendingTimedSubtitleSheetSave(
+                            generation, editedCues.toList(), format, bytes
+                        )
+                        saveTimedSubtitleSheet.launch(
+                            if (format == TimedSubtitleSheetFormat.CSV)
+                                "Tuddy-eigen-tijdcodes.csv"
+                            else "Tuddy-eigen-tijdcodes.tsv"
+                        )
                     }
                 }
             )
