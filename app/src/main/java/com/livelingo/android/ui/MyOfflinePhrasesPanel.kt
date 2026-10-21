@@ -35,6 +35,12 @@ import com.livelingo.android.PrivatePhraseTextPolicy
 import com.livelingo.android.PrivatePhraseTopics
 import com.livelingo.android.PrivatePrintablePhrasebook
 
+private data class PendingScopedTsv(
+    val language: String?,
+    val topic: String?,
+    val bytes: ByteArray
+)
+
 private data class PendingTopicPhrasebook(
     val language: String?,
     val topic: String?,
@@ -81,7 +87,10 @@ internal fun MyOfflinePhrasesPanel(
     var pasteLines by remember { mutableStateOf("") }
     var pasteError by remember { mutableStateOf("") }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
-    var pendingTsvExport by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingTsvExport by remember { mutableStateOf<PendingScopedTsv?>(null) }
+    var tsvConsent by remember { mutableStateOf(false) }
+    var tsvAllLanguages by remember { mutableStateOf(false) }
+    var tsvOnlySelectedTopic by remember { mutableStateOf(false) }
     var printableConsent by remember { mutableStateOf(false) }
     var printableAllLanguages by remember { mutableStateOf(false) }
     var printableOnlySelectedTopic by remember { mutableStateOf(false) }
@@ -120,17 +129,23 @@ internal fun MyOfflinePhrasesPanel(
         val snapshot = pendingTsvExport
         pendingTsvExport = null
         if (uri != null && snapshot != null) {
-            if (deck.exportTsvSnapshot()?.contentEquals(snapshot) != true) {
-                info = "Eigen zinnen zijn gewijzigd. Maak de TSV-lijst opnieuw."
+            // Recalculate after the external picker: never export newly added
+            // notes or notes moved into this topic behind the user's back.
+            val current = deck.entries()?.filter { note ->
+                (snapshot.language == null || note.language == snapshot.language) &&
+                    matchesTopic(note, snapshot.topic)
+            }?.let { deck.exportTsvSelectionSnapshot(it) }
+            if (current == null || !current.contentEquals(snapshot.bytes)) {
+                info = "Taal, thema of eigen zinnen zijn gewijzigd. Bekijk de export opnieuw."
             } else {
                 val saved = runCatching {
                     context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
-                        stream.write(snapshot)
+                        stream.write(snapshot.bytes)
                         stream.flush()
                         true
                     } ?: false
                 }.getOrDefault(false)
-                info = if (saved) "Zelfgeschreven zinnenlijst opgeslagen als UTF-8 TSV."
+                info = if (saved) "Gekozen zelfgeschreven zinnen opgeslagen als UTF-8 TSV."
                     else "TSV niet opgeslagen. Je eigen zinnen blijven behouden."
             }
         }
@@ -719,18 +734,15 @@ internal fun MyOfflinePhrasesPanel(
                     enabled = phrases?.isNotEmpty() == true,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
-                        val snapshot = deck.exportTsvSnapshot()
-                        if (snapshot == null) {
-                            info = "Geen geldige eigen zinnen voor TSV-export."
-                        } else {
-                            pendingTsvExport = snapshot
-                            createTsv.launch("tuddy-mijn-eigen-zinnen.tsv")
-                        }
+                        tsvAllLanguages = false
+                        tsvOnlySelectedTopic = selectedTopic != null
+                        tsvConsent = true
                     }
-                ) { Text("Exporteer mijn eigen zinnen (TSV)…") }
-                Text("Dit bestand kun je zelf bewerken en later via TSV-import " +
-                    "weer toevoegen of vervangen. Het bevat alleen je eigen, " +
-                    "niet onafhankelijk gecontroleerde zinnen.",
+                ) { Text("Exporteer gekozen zinnen als TSV…") }
+                Text("Kies vooraf welke taal en eventueel welke themagroep naar " +
+                    "TSV gaat. Controleer alle zinnen vóór je ze extern opslaat. " +
+                    "Het bestand is bewerkbaar en later opnieuw te importeren; " +
+                    "geen van de betekenissen is onafhankelijk gecontroleerd.",
                     style = MaterialTheme.typography.bodySmall)
                 Text("Gebruik zelfgeschreven UTF-8-zinnen met vier tabkolommen: " +
                     "language, phrase, meaningLanguage, ownMeaning. " +
@@ -901,6 +913,88 @@ internal fun MyOfflinePhrasesPanel(
                 TextButton(onClick = { eraseScheduleConsent = false }) {
                     Text("Annuleren")
                 }
+            }
+        )
+    }
+    if (tsvConsent) {
+        val topic = if (tsvOnlySelectedTopic) selectedTopic else null
+        val chosenLanguage = if (tsvAllLanguages) null else language
+        val included = phrases.orEmpty().filter { note ->
+            (chosenLanguage == null || note.language == chosenLanguage) &&
+                matchesTopic(note, topic)
+        }
+        AlertDialog(
+            onDismissRequest = { tsvConsent = false },
+            title = { Text("Eigen zinnen als TSV bewaren?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Kies de exacte taal- en themaselectie. Alleen onderstaande " +
+                        "${included.size} eigen zinnen en jouw zelfgeschreven betekenissen " +
+                        "komen in het bestand; niet het volledige gesprek of de " +
+                        "herhaalplanning. De export is geschikt voor de eigen " +
+                        "strikte TSV-import van Tuddy.",
+                        style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { tsvAllLanguages = !tsvAllLanguages }) {
+                        Text(if (tsvAllLanguages) "☑ Alle drie talen" else
+                            "☑ Alleen ${labels[language]}")
+                    }
+                    if (selectedTopic != null) {
+                        TextButton(onClick = {
+                            tsvOnlySelectedTopic = !tsvOnlySelectedTopic
+                        }) {
+                            Text(if (tsvOnlySelectedTopic)
+                                "☑ Alleen huidige themagroep" else
+                                "☐ Alle thema’s")
+                        }
+                    }
+                    included.forEachIndexed { index, note ->
+                        HorizontalDivider()
+                        Text("${index + 1}. ${labels[note.language]} · ${note.phrase}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (note.language == "ckb" ||
+                                    note.language == "ps") TextDirection.Rtl
+                                else TextDirection.Ltr
+                            ))
+                        Text("${note.meaningLanguage.uppercase()}: ${note.ownMeaning}",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = TextDirection.Ltr
+                            ))
+                    }
+                    Text("Je Android-bestandsprovider kan deze privézinnen buiten " +
+                        "Tuddy opslaan of synchroniseren. Externe kopieën worden niet " +
+                        "door ‘Wis gesprek’ verwijderd. Geen automatische of " +
+                        "native-speaker-gecontroleerde vertaling.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = included.isNotEmpty() && phrases != null,
+                    onClick = {
+                        val snapshot = deck.exportTsvSelectionSnapshot(included)
+                        if (snapshot == null) {
+                            info = "De geselecteerde zinnen zijn ongeldig of veranderd."
+                        } else {
+                            pendingTsvExport = PendingScopedTsv(
+                                chosenLanguage, topic, snapshot
+                            )
+                            tsvConsent = false
+                            createTsv.launch(
+                                if (topic != null) "Tuddy-eigen-zinnen-thema.tsv"
+                                else if (chosenLanguage == null) "Tuddy-eigen-zinnen-alle-talen.tsv"
+                                else "Tuddy-eigen-zinnen-${chosenLanguage}.tsv"
+                            )
+                        }
+                    }
+                ) { Text("Ik begrijp dit, kies opslag…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { tsvConsent = false }) { Text("Annuleren") }
             }
         )
     }
