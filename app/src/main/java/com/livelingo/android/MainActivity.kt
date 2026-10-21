@@ -2191,10 +2191,8 @@ private fun TuddyScreen(
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
-                closeSpeechCatalog()
-                stop()
-            }
+            if (event == Lifecycle.Event.ON_STOP) stop()
+            if (event == Lifecycle.Event.ON_STOP) closeSpeechCatalog()
             if (event == Lifecycle.Event.ON_STOP) {
                 localTranslatorPool.invalidate()
                 modelStorage.invalidate()
