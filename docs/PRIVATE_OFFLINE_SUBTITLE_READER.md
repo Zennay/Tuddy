@@ -1,7 +1,7 @@
-# Lokale SRT, WebVTT, LRC, CSV en TSV openen
+# Lokale SRT, WebVTT, LRC, CSV, TSV en SBV openen
 
 Via **Gesprekstools → Open ondertitelbestand…** kiest de gebruiker zelf een
-SRT-, WebVTT-, LRC-, getimed CSV- of getimed TSV-tekstbestand met de Android-documentkiezer. Tuddy leest
+SRT-, WebVTT-, LRC-, getimed CSV-/TSV- of YouTube SBV-tekstbestand met de Android-documentkiezer. Tuddy leest
 maximaal 256 KiB strikt geldige UTF-8 en toont maximaal 500 regels in
 een tijdelijke, doorzoekbare leesweergave. **Groot lezen** toont grotere
 tekst; vorige/volgende en de lijst werken ook bij eigen LRC-lyrics.
@@ -51,6 +51,32 @@ bevat geen koprij, en de importer verwacht ook geen koprij.
 De eigen tijdregels en eventuele tweede tekstkolom worden als
 ongeverifieerde inhoud behandeld; Tuddy voert geen formule uit.
 Alleen een expliciet gekozen nieuwe kopie kan de data bewaren.
+
+## YouTube SBV / SubViewer handmatig openen
+
+Een bewust gekozen YouTube SBV-bestand gebruikt eigen begin- en eindtijden,
+zoals:
+
+```text
+0:00:01.000,0:00:03.500
+Hier staat een eigen ondertitel.
+
+0:00:04.000,0:00:06.000
+Dit is de volgende.
+```
+
+**Open ondertitelbestand…** en **Tweede ondertitelbestand toevoegen…**
+herkennen deze strikt begrensde, blanco-regel-gescheiden tekst.
+Alleen het exacte tijdformaat `H:MM:SS.mmm,H:MM:SS.mmm`,
+niet-lege tekstblokken en chronologisch oplopende starts worden geaccepteerd.
+Bij ongeldige of dubbele tijdvakken met niet-positieve duur wordt het
+hele bestand geweigerd. Een import neemt uitsluitend door de gebruiker
+aangeleverde teksten en begin-/eindtijden over; de app opent nooit zelf
+een YouTube-video, URL of automatisch downloadbare ondertitels.
+Gebruikers kunnen de geïmporteerde regels lokaal lezen, corrigeren,
+als tweede spoor verwerken of met aparte bevestiging als SRT/VTT
+bewaren. Uit SBV blijven geen oorspronkelijke YouTube-metadata
+of audio-identiteit als geverifieerd bewijs bestaan.
 
 ## Veiligheid en privacy
 
