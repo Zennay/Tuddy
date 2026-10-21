@@ -1,5 +1,6 @@
 package com.livelingo.android
 
+import java.text.Normalizer
 import java.util.Locale
 
 /**
@@ -31,12 +32,17 @@ object TargetCatalog {
     )
     private val aliases = mapOf(
         "ar" to "arabisch syrie syrië palestina palestine",
+        "be" to "wit-russisch belarussisch belarus",
         "fa" to "perzisch persian iran afghanistan",
-        "uk" to "oekraïens oekraïne",
+        "ht" to "haïtiaans creools creools",
         "nl" to "hollands nederlands",
+        "no" to "noors bokmål",
+        "tl" to "tagalog filipijns",
+        "uk" to "oekraïens oekraïne",
         "ur" to "pakistan",
         "tr" to "turks",
-        "ru" to "russisch"
+        "ru" to "russisch",
+        "zh" to "chinees mandarijn"
     )
     val targets: List<TextTarget> = codes.map { code ->
         val tag = when (code) {
@@ -51,12 +57,42 @@ object TargetCatalog {
     }.sortedWith(compareBy<TextTarget> { preferred.indexOf(it.code).let { idx -> if (idx < 0) 100 else idx } }
         .thenBy { it.title })
 
+    private val dutchLocale = Locale.forLanguageTag("nl")
+
+    /**
+     * Normalize accents and Unicode combining marks so users can type either
+     * the native spelling (e.g. Français) or a plain keyboard spelling (Francais).
+     */
+    private fun normalizeSearch(value: String): String =
+        Normalizer.normalize(value.lowercase(Locale.ROOT), Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "")
+            .replace('_', '-')
+            .trim()
+            .replace(Regex("\\s+"), " ")
+
+    /**
+     * Search the code, native/English label, Dutch localized language name,
+     * and aliases. Locale tags are normalized to the actual ML Kit codes for
+     * Norwegian Bokmål and Filipino, while model availability stays unchanged.
+     */
     fun search(query: String): List<TextTarget> {
-        val term = query.trim().lowercase(Locale.ROOT)
+        val term = normalizeSearch(query)
         if (term.isEmpty()) return targets
-        return targets.filter {
-            it.code.contains(term) || it.title.lowercase(Locale.ROOT).contains(term) ||
-                aliases[it.code]?.contains(term) == true
+        return targets.filter { target ->
+            val tag = when (target.code) {
+                "no" -> "nb"
+                "tl" -> "fil"
+                else -> target.code
+            }
+            val locale = Locale.forLanguageTag(tag)
+            listOf(
+                target.code,
+                target.title,
+                locale.getDisplayLanguage(dutchLocale),
+                locale.getDisplayLanguage(Locale.ENGLISH),
+                locale.getDisplayLanguage(locale),
+                aliases[target.code].orEmpty()
+            ).any { normalizeSearch(it).contains(term) }
         }
     }
 }
