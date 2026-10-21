@@ -62,6 +62,9 @@ internal object SharedPlainTextIntent {
         if (candidate != null) {
             val bytes = candidate.toByteArray(Charsets.UTF_8)
             if (bytes.isNotEmpty() && bytes.size <= PrivateSubtitleFileReader.MAX_BYTES) {
+                if (candidate.contains("[Events]", ignoreCase = true) &&
+                    PrivateAssSubtitleReader.read(candidate) != null)
+                    return IncomingSharedText(null, null, candidate)
                 if (candidate.contains("-->") &&
                     PrivateSubtitleFileReader.read(bytes) != null)
                     return IncomingSharedText(null, null, candidate)
