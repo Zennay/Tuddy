@@ -1,3 +1,34 @@
+## Nieuw: enkelzijdig afdrukbare vouwkaartjes
+
+Naast TSV/CSV en het interactieve HTML-oefenblad heeft de expliciete
+**Alleen gemarkeerde regels bewaren**-dialoog nu **Vouwkaartjes · HTML**.
+Het bestand toont per geselecteerde, afgeronde vertaalzin de **bronzijde links**
+en de **betekenis rechts** in één omlijnde kaart. Print het document op
+**één zijde**, knip langs de buitenrand en **vouw de rechter betekenis
+achter de linker bronzijde**. Er zijn geen onbetrouwbare duplexinstellingen,
+externe scripts, fonts of netwerkverbinding nodig.
+
+De bestaande instellingen blijven werken: bron→vertaling,
+vertaling→bron of beide richtingen; taalrichtingfilter; optionele
+taalcodelabels; uitsluitend je **zelf gecorrigeerde betekenissen** of
+alle afgeronde lokale vertalingen. Dubbele betekenisparen worden op
+dezelfde manier beperkt als bij TSV/CSV en het andere HTML-oefenblad.
+Aanhalingstekens en HTML-tekens worden veilig ge-escaped en elke
+kaartzijde kan automatisch een rechts-naar-links-tekstrichting kiezen.
+Een beginnend reken- of plusteken wordt op papier getoond **zonder**
+de extra spreadsheet-apostrof die bij TSV/CSV juist noodzakelijk is.
+
+Het resultaat bevat alleen bewust gemarkeerde tekst en nooit ruwe
+audio, audio-bestandsnamen of automatisch herkende tijdstempels.
+Tuddy valideert de inhoud en herberekent het bestand nadat de
+Android-documentkiezer sluit; gewijzigde of ingetrokken keuzes
+kunnen dus niet stilzwijgend oude inhoud wegschrijven. Een gekozen
+Android-provider kan de afgedrukte inhoud natuurlijk wel synchroniseren.
+Dit zijn uitsluitend lokale modelvertalingen of **eigen correcties**,
+geen onafhankelijk geverifieerde woordenlijst.
+
+---
+
 # Gemarkeerde zinnen bewust apart exporteren
 
 Tuddy bewaart een live gesprek uitsluitend tijdelijk in het appgeheugen.
