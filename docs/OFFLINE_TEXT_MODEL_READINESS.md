@@ -50,7 +50,7 @@ support, Wi-Fi-only user-initiated requests and on-device lifecycle.
 
 ## Kurdish Kurmanji, Sorani and Pashto
 
-The target-language picker recognizes common Kurdish and Pashto names and explains that these entries remain phrase-preview only until a fully licensed, native-speaker-reviewed offline engine is available. For a specific dialect search, the empty state also preselects that language in the existing five-phrase preview.
+The target-language picker recognizes common Kurdish and Pashto names, including supported native-script spellings, and explains that these entries remain phrase-preview only until a fully licensed, native-speaker-reviewed offline engine is available. For a specific dialect search, the empty state also preselects that language in the existing five-phrase preview and clears the query.
 
 The five fixed beginner phrases remain a manual preview. These languages
 are not represented as full ML Kit translation targets in the selector;
