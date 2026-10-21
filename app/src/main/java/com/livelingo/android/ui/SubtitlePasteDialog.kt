@@ -470,9 +470,11 @@ internal fun SubtitlePasteDialog(
                 } else {
                     Text(
                         if (lrcMode)
-                            "LRC: één [mm:ss.xx]-begintijd per eigen regel. " +
-                                "Elk einde wordt de volgende begintijd; de laatste " +
-                                "eindtijd is geschat op 3 seconden, niet gemeten."
+                            "LRC: één of meerdere [mm:ss.xx]-momenten vóór een " +
+                                "eigen tekstregel; refreinen mogen dezelfde tekst op " +
+                                "andere tijden herhalen. Elk moment wordt een aparte " +
+                                "chronologische cue. Het volgende begin bepaalt " +
+                                "het einde; het laatste eind is 3 s geschat."
                         else "Voorzie iedere cue van begin- en eindtijd (volledig SRT/VTT). " +
                             "Er wordt geen audio-uitlijning geclaimd.",
                         style = MaterialTheme.typography.bodySmall
@@ -580,9 +582,11 @@ internal fun SubtitlePasteDialog(
                                 "betekenis bevatten. Drie kolommen: begin/einde/bron; " +
                                 "vier kolommen: begin/einde/bron/betekenis. " +
                                 "Alle velden moeten expliciet geldig zijn."
-                        else if (lrcMode) "Ongeldig LRC: één oplopende [mm:ss.xx] " +
-                            "per niet-lege regel (max. 500 regels, 800 tekens); " +
-                            "geen offsets of dubbele tijdstempels."
+                        else if (lrcMode) "Ongeldig LRC: gebruik 1–16 aaneengesloten " +
+                            "[mm:ss.xx]-tijden vóór dezelfde tekst. Maximaal 500 " +
+                            "afzonderlijke cues, 800 teksttekens per regel; " +
+                            "dubbele tijden, onbekende offsets of ongeldige " +
+                            "tekst worden geweigerd."
                         else "Geen volledig geldig SRT/WebVTT-document: " +
                             "controleer tijdcodes en maximaal 500 regels.",
                         color = MaterialTheme.colorScheme.error,
@@ -590,15 +594,19 @@ internal fun SubtitlePasteDialog(
                     )
                 } else {
                     Text(
-                        "${parsed.size} regels in de oorspronkelijke invoer. " +
+                        "${parsed.size} " +
+                            (if (lrcMode) "chronologisch uitgewerkte LRC-cues. " +
+                                "Meerdere tijden per bronregel zijn afzonderlijke cues. "
+                            else "regels in de oorspronkelijke invoer. ") +
                             (if (plainLines &&
                                 splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_COLUMNS &&
                                 splitMode != PlainSubtitleSplitMode.TIMED_TEXT_COLUMNS &&
                                 splitMode != PlainSubtitleSplitMode.TIMED_TEXT_CSV &&
                                 splitMode != PlainSubtitleSplitMode.TIMED_PAIRED_CSV)
                                 "Tijdcodes zijn volledig geschat."
-                             else if (lrcMode) "Beginmomenten uit LRC; " +
-                                 "de laatste eindtijd is 3 s geschat."
+                             else if (lrcMode) "Elke LRC-cue heeft een expliciet " +
+                                 "bronbegin; eindtijden volgen uit het volgende " +
+                                 "begin (laatste +3 s, geschat)."
                              else "Tijdcodes komen uit de zelf geplakte bron."),
                         style = MaterialTheme.typography.titleSmall
                     )
@@ -637,8 +645,11 @@ internal fun SubtitlePasteDialog(
                     )
                     Text(
                         "Als dit veld is ingevuld, vervangt het de selectie Van/Tot. " +
-                            "Je kiest alleen jouw originele regelnummers; " +
-                            "dubbele of overlappende regels worden geweigerd.",
+                            (if (lrcMode)
+                                "Kies de uitgewerkte, chronologisch genummerde " +
+                                    "LRC-cues, niet de oorspronkelijke fysieke tekstregels. "
+                            else "Je kiest alleen jouw originele regelnummers. ") +
+                            "Dubbele of overlappende regels worden geweigerd.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     if (chosenIndices == null) {
@@ -650,7 +661,9 @@ internal fun SubtitlePasteDialog(
                     } else {
                         Text(
                             "Exact ${chosenIndices.size} regels geselecteerd uit ${parsed.size} " +
-                                "(bronvolgorde). Zoeken verandert deze selectie niet.",
+                                (if (lrcMode) "(chronologische LRC-cuevolgorde). "
+                                 else "(bronvolgorde). ") +
+                                "Zoeken verandert deze selectie niet.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
