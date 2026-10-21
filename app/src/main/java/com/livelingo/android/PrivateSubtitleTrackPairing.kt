@@ -30,8 +30,8 @@ internal data class SubtitleTrackPairingPreview(
     val unpairedSecondTrack: Int,
     val unpairedFirstTrack: Int,
     val pairedLinks: List<SubtitleCuePairingLink>,
-    val unpairedPrimaryRows: List<Int>,
-    val unpairedSecondaryRows: List<Int>
+    val unpairedPrimaryRows: List<Int> = emptyList(),
+    val unpairedSecondaryRows: List<Int> = emptyList()
 )
 
 internal object PrivateSubtitleTrackPairing {
