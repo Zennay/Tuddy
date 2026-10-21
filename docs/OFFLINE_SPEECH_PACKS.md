@@ -81,3 +81,8 @@ Source: Android 13+ `SpeechRecognizer.checkRecognitionSupport()`;
 Android 13+ `triggerModelDownload(Intent)`; Android 14+
 `triggerModelDownload(Intent,Executor,ModelDownloadListener)`.
 Documentation: https://developer.android.com/reference/android/speech/SpeechRecognizer
+
+
+## Privacy-safe readiness diagnostics
+
+The offline readiness dialog includes an explicit **Kopieer diagnoserapport** action. The report contains the app version, Android API/device model, selected language codes, speech-service availability, and speech/text-model readiness states. It never includes transcript text or audio. Copying is user-triggered and marks the clipboard content as sensitive; the user can review it before sharing.
