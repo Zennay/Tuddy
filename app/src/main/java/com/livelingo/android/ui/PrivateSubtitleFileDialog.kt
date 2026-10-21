@@ -44,6 +44,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PrivateSubtitleBatchReplace
 import com.livelingo.android.PrivateSubtitleBulkRemoval
 import com.livelingo.android.PrivateSubtitleRowSelection
+import com.livelingo.android.PrivateSubtitleTimeWindowRows
 import com.livelingo.android.SubtitleReplaceField
 import com.livelingo.android.PrivateSubtitleLineWrap
 import com.livelingo.android.PrivateSubtitleClip
@@ -114,6 +115,8 @@ internal fun PrivateSubtitleFileDialog(
     var batchOpen by remember { mutableStateOf(false) }
     var removeOpen by remember { mutableStateOf(false) }
     var removeRows by remember { mutableStateOf("") }
+    var removeWindowStart by remember { mutableStateOf("") }
+    var removeWindowEnd by remember { mutableStateOf("") }
     var removeReviewPage by remember { mutableIntStateOf(0) }
     var wrapOpen by remember { mutableStateOf(false) }
     var wrapWidth by remember { mutableIntStateOf(42) }
@@ -379,6 +382,8 @@ internal fun PrivateSubtitleFileDialog(
                     enabled = draft.size > 1,
                     onClick = {
                         removeRows = ""
+                        removeWindowStart = ""
+                        removeWindowEnd = ""
                         removeReviewPage = 0
                         removeOpen = true
                     }
@@ -1012,6 +1017,33 @@ internal fun PrivateSubtitleFileDialog(
                             Text("Neem ${found.size} gevonden regels als verwijderselectie")
                         }
                     }
+                    Text("Of neem bewust volledige regels uit een tijdvenster. " +
+                        "Hun oorspronkelijke tijdcodes blijven onverkort " +
+                        "zichtbaar vóór verwijdering.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = removeWindowStart,
+                            onValueChange = { removeWindowStart = it.take(13) },
+                            label = { Text("Vanaf mm:ss") },
+                            modifier = Modifier.weight(1f), singleLine = true)
+                        OutlinedTextField(
+                            value = removeWindowEnd,
+                            onValueChange = { removeWindowEnd = it.take(13) },
+                            label = { Text("Tot mm:ss") },
+                            modifier = Modifier.weight(1f), singleLine = true)
+                    }
+                    val timeSelection = PrivateSubtitleTimeWindowRows.expression(
+                        draft, removeWindowStart, removeWindowEnd)
+                    OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                        enabled = timeSelection != null,
+                        onClick = {
+                            if (timeSelection != null) {
+                                removeRows = timeSelection
+                                removeReviewPage = 0
+                            }
+                        }) { Text("Gebruik overlappende tijdvensterregels") }
                     if (proposed == null) {
                         Text("Geen geldige verwijdering. Controleer regelnummers " +
                             "(1–${draft.size}), dubbelen en behoud minstens één regel.",
