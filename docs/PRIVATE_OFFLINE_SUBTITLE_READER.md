@@ -177,6 +177,26 @@ De originele provider-URI wordt niet in intent-/stateopslag bewaard;
 er worden geen blijvende documentrechten gevraagd. Een externe
 bestandsprovider kan zelfstandig synchroniseren.
 
+## Zelf een beperkt ondertitelfragment delen
+
+Via **Bewerkbare ondertitel-editor → Kies zelf bronregels om te bewaren…**
+of vanuit gevonden tekstregels kun je de oorspronkelijke regels,
+hun exacte tijdcodes en eventueel een compact tijdsfragment kiezen.
+In dezelfde volledige preview is de knop **Deel selectie…**
+beschikbaar wanneer het voorgestelde SRT- of WebVTT-fragment uit
+**maximaal 24 cues en 16 KiB UTF-8** bestaat.
+
+Tuddy controleert het exacte geselecteerde fragment opnieuw en geeft
+pas na deze aparte bewuste tik letterlijke `text/plain` door aan het
+standaard Android-deelmenu. Jij kiest vervolgens zelf de externe app.
+**De ontvangende app kan de tekst en persoonsgegevens bewaren of
+doorsturen.** Er wordt geen live-gesprek, microfoonaudio, bron-URI,
+bestandstoegang, accountinformatie of onbedoeld restant uit andere
+ondertitelregels meegegeven. CSV, TSV, LRC en volledige documenten
+blijven via de bestaande aparte Android-opslagroute beschikbaar.
+Het concept en de originele bron blijven ongewijzigd. Wanneer
+geen deeldoel beschikbaar is, krijgt de gebruiker een foutmelding.
+
 ## Veiligheid en privacy
 
 Dit is uitsluitend het bewust gekozen document, nooit de actuele
