@@ -134,6 +134,21 @@ blijven. Bestaande TSV-, SRT- en WebVTT-import, de volledige preview,
 zoekfunctie en het kiezen van meerdere losse bronregelbereiken blijven
 beschikbaar. Alleen expliciet gekozen rijen komen in de tijdelijke editor.
 De Android-bestandskeuze bij later opslaan blijft een aparte handeling.
+## Gevonden zinnen bewust als een eigen selectie overnemen
+
+Bij het zoeken in de preview kun je nu op **Gebruik gevonden regels als selectie**
+tikken. Tuddy vertaalt de momenteel **zichtbare zoekresultatenset** naar
+een compacte, bewerkbare lijst originele bronnummers (bijvoorbeeld
+`1-3,7,9-11`). De bestaande paginaweergave van 15 items beperkt dit niet:
+alle resultaten binnen je huidige gekozen bronselectie tellen mee.
+De selectie wordt **niet** automatisch aangepast als je de zoekterm
+wijzigt; daarvoor moet je de knop bewust opnieuw gebruiken.
+**Doorzoek opnieuw alle bronregels** zet de bronselectie terug naar
+de volledige invoer. Je kunt de automatisch voorgestelde nummers vóór
+het openen altijd zelf aanpassen in **Losse regels (optioneel)**.
+Alle bronregels worden bij definitieve bevestiging opnieuw gelezen
+en gecontroleerd. Zoeken noch deze selectieknoppen maken bestanden,
+starten ASR of openen automatisch de editor.
 ## Meer dan één los bronregelbereik importeren
 
 De plakpreview ondersteunt nu **Losse regels (optioneel)** voor bewust
