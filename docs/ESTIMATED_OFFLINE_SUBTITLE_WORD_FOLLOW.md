@@ -1,3 +1,40 @@
+## Eigen woordankers hergebruiken met kopieerbare tijdcodetekst
+
+Bij **Handmatige woordankers** kun je de huidige set nu als gewone
+selecteerbare tekst bekijken en eventueel met Android kopiëren. Bijvoorbeeld:
+`2=00:00:12.250;5=00:00:13.900`. Dit bevat uitsluitend eigen
+woordnummers en de handmatig aangebrachte **absolute** tijdcodes:
+geen audio, transcriptietekst, account of verborgen woordenkaartdata.
+
+Wil je een eerder bewaarde eigen reeks opnieuw gebruiken, plak deze in
+**Woord=uu:mm:ss.mmm** bij **de juiste actieve ondertitel**. Scheid
+paren met een puntkomma of regeleinde. Er mogen maximaal **16
+verschillende oorspronkelijke woordnummers** (2 t/m het werkelijke
+aantal van die cue) staan; de totale invoer is maximaal 512 tekens.
+Elke tijdcode gebruikt `uu:mm:ss.mmm` met hele milliseconden. Alle
+posities moeten **binnen de actieve cue** passen en samen met het
+begin/einde ervan een strikt oplopende reeks vormen. Te grote paste
+wist bewust eerder geldige invoer, zodat die niet alsnog als voorstel
+kan worden toegepast. Onjuiste, dubbele of onmogelijke invoer wordt
+integraal geweigerd, zonder gedeeltelijke ankers te plaatsen.
+
+Tuddy toont de volledige **voorgestelde set** voordat je op
+**Bevestig en vervang ankers van deze ondertitel** tikt. De knop
+vervangt alleen de tijdelijke ankers van die ene cue; bestaande
+andere cues en hun originele SRT/VTT/geluid blijven ongemoeid.
+Wisselen van ondertitel of audio en het sluiten van de speler
+wist de tijdelijke invoer en actieve sessie-ankers. Er is geen
+automatische permanente opslag of netwerkverzoek. Wie de tekst via
+een Android-klembordapp kopieert, moet er rekening mee houden dat
+die app zelf gegevens kan synchroniseren.
+
+Deze tijden zijn volledig door de gebruiker gekozen en vormen
+**geen gemeten audio-uitlijning**. Herhalen, direct springen en de
+meeloop-highlight gebruiken na bevestiging dezelfde al bestaande
+tijdinterpolatie tussen handmatige ankers.
+
+---
+
 # Zelf handmatig woordtijdankers plaatsen (optioneel)
 
 ## Expliciete woordgrenzen zonder automatische segmentatie
