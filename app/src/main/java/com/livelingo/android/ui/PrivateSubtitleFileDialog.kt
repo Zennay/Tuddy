@@ -167,6 +167,9 @@ internal fun PrivateSubtitleFileDialog(
     var pairReviewOpen by remember { mutableStateOf(false) }
     var unmatchedReviewOpen by remember { mutableStateOf(false) }
     var unmatchedReviewPage by remember { mutableIntStateOf(0) }
+    var unmatchedReviewQuery by remember { mutableStateOf("") }
+    var unmatchedReviewTrack by remember { mutableIntStateOf(0) }
+    var resultPreviewJump by remember { mutableStateOf("") }
     var pairReviewQuery by remember { mutableStateOf("") }
     var pairReviewSecondaryRow by remember { mutableStateOf("") }
     var excludedSecondRows by remember { mutableStateOf(setOf<Int>()) }
@@ -1148,14 +1151,49 @@ internal fun PrivateSubtitleFileDialog(
                         if (unmatchedReviewOpen) {
                             // Keep original document row indices. This read-only
                             // review does not alter matching, exclusions or files.
-                            val unmatched = proposed.unpairedPrimaryRows.map { 1 to it } +
+                            val allUnmatched = proposed.unpairedPrimaryRows.map { 1 to it } +
                                 proposed.unpairedSecondaryRows.map { 2 to it }
+                            val unmatched = allUnmatched.filter { (track, row) ->
+                                (unmatchedReviewTrack == 0 || track == unmatchedReviewTrack) &&
+                                    (unmatchedReviewQuery.isBlank() ||
+                                        (if (track == 1) draft.getOrNull(row - 1)
+                                        else stagedImport.imported.getOrNull(row - 1))
+                                            ?.text?.contains(unmatchedReviewQuery.trim(),
+                                                ignoreCase = true) == true)
+                            }
                             val pageCount = maxOf(1, (unmatched.size + 4) / 5)
                             val shownPage = unmatchedReviewPage.coerceIn(0, pageCount - 1)
-                            Text("Oorspronkelijke, niet-gekoppelde volledige " +
-                                "bronregels · pagina ${shownPage + 1}/$pageCount. " +
-                                "De bronwaarden zijn ongewijzigd. De tweede " +
-                                "spoor-tijdcorrectie is in de resultaatpreview te zien.",
+                            OutlinedTextField(
+                                modifier = Modifier.fillMaxWidth(),
+                                value = unmatchedReviewQuery,
+                                onValueChange = {
+                                    unmatchedReviewQuery = it.take(100)
+                                    unmatchedReviewPage = 0
+                                },
+                                label = { Text("Zoek in losse originele brontekst") },
+                                singleLine = true
+                            )
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                listOf(0 to "Beide", 1 to "Spoor 1",
+                                    2 to "Spoor 2").forEach { (track, label) ->
+                                    OutlinedButton(modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            unmatchedReviewTrack = track
+                                            unmatchedReviewPage = 0
+                                        }) {
+                                        Text((if (unmatchedReviewTrack == track) "✓ "
+                                            else "") + label)
+                                    }
+                                }
+                            }
+                            Text("${unmatched.size} van ${allUnmatched.size} losse " +
+                                "originele bronregels · pagina ${shownPage + 1}/$pageCount. " +
+                                "De tweede spoor-tijdcorrectie is afzonderlijk " +
+                                "in de resultaatpreview te zien.",
+                                style = MaterialTheme.typography.bodySmall)
+                            if (unmatched.isEmpty()) Text(
+                                "Geen ongekoppelde bronregel met deze zoekkeuze.",
                                 style = MaterialTheme.typography.bodySmall)
                             unmatched.drop(shownPage * 5).take(5).forEach { (track, row) ->
                                 val cue = if (track == 1) draft.getOrNull(row - 1)
@@ -1282,6 +1320,29 @@ internal fun PrivateSubtitleFileDialog(
                         Text("Volledige resultaat-preview, vijf cues per pagina " +
                             "(niet alleen de tekstparen): pagina ${shownPairPage + 1}/" +
                             "$previewPages.", style = MaterialTheme.typography.titleSmall)
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedTextField(
+                                modifier = Modifier.weight(1f),
+                                value = resultPreviewJump,
+                                onValueChange = {
+                                    resultPreviewJump =
+                                        it.filter { char -> char in '0'..'9' }.take(3)
+                                },
+                                label = { Text("Ga naar resultaatregel") },
+                                singleLine = true
+                            )
+                            val destination = resultPreviewJump.toIntOrNull()
+                            OutlinedButton(
+                                enabled = destination != null &&
+                                    destination in 1..previewRows.size,
+                                onClick = {
+                                    val chosen = resultPreviewJump.toIntOrNull()
+                                    if (chosen != null && chosen in 1..previewRows.size)
+                                        secondTrackPreviewPage = (chosen - 1) / 5
+                                }
+                            ) { Text("Ga") }
+                        }
                         previewRows.drop(shownPairPage * 5).take(5)
                             .forEachIndexed { localIndex, cue ->
                                 val sourceNumber = shownPairPage * 5 + localIndex + 1
