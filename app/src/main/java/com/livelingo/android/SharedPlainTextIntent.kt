@@ -78,6 +78,13 @@ internal object SharedPlainTextIntent {
                 // the original full document in a preview-only RAM draft.
                 if (PrivateSbvSubtitleReader.read(candidate) != null)
                     return IncomingSharedText(null, null, candidate)
+                // A complete, deliberately shared JSON3 caption sheet is a
+                // preview-only subtitle draft. Limit Intent/Compose work to
+                // 64 KiB; larger sources belong in the async document picker.
+                if (candidate.length <= 65_536 &&
+                    bytes.size <= 65_536 &&
+                    PrivateYoutubeJson3SubtitleReader.read(candidate) != null)
+                    return IncomingSharedText(null, null, candidate)
                 val timed = PrivateTimedSubtitleSheet.readAuthored(candidate)
                 if (timed != null) {
                     val paired = timed.first().text.contains('\n')
