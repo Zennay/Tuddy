@@ -51,6 +51,7 @@ import com.livelingo.android.PrivateSubtitleTimeWindowRows
 import com.livelingo.android.SubtitleReplaceField
 import com.livelingo.android.PrivateSubtitleLineWrap
 import com.livelingo.android.PrivateSubtitleClip
+import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDocumentCombine
 import com.livelingo.android.SubtitleManualPair
@@ -105,6 +106,7 @@ internal fun PrivateSubtitleFileDialog(
     onShareAssExcerpt: (List<PrivateSubtitleCue>) -> Unit,
     onShareExcerpt: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     onSavePersonalPhrase: (String, String, String, String) -> Boolean,
+    onSavePersonalPhraseBatch: (List<PersonalPhrase>) -> Boolean,
     incomingSecondPaste: SubtitlePasteFileContent?,
     onChoosePasteDocument: (List<PrivateSubtitleCue>, SubtitlePasteFileContent) -> Unit,
     onSecondPasteConsumed: () -> Unit
@@ -139,6 +141,7 @@ internal fun PrivateSubtitleFileDialog(
     var requestTtmlSave by remember { mutableStateOf(false) }
     var requestAssSave by remember { mutableStateOf(false) }
     var personalPhraseSource by remember(cues) { mutableStateOf<String?>(null) }
+    var batchPhraseOpen by remember(cues) { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
     var removeOpen by remember { mutableStateOf(false) }
@@ -459,6 +462,11 @@ internal fun PrivateSubtitleFileDialog(
                         practiceOpen = true
                     }
                 ) { Text("▣ Oefen deze gevonden ondertitelregels…") }
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    enabled = draft.isNotEmpty(),
+                    onClick = { batchPhraseOpen = true }) {
+                    Text("＋ Maak meerdere eigen Kurmanji/Sorani/Pasjtoe-oefenzinnen…")
+                }
                 PrivateSubtitleWorksheetExportAction(
                     selected = found.map { it.second }.take(24),
                     onExport = { chosen -> onSaveWorksheetCopy(draft.toList(), chosen) }
@@ -2871,6 +2879,21 @@ internal fun PrivateSubtitleFileDialog(
     }
 
 
+    if (batchPhraseOpen) {
+        // Preserve the exact source draft reviewed inside the modal.
+        val batchSource = draft.toList()
+        PrivateSubtitlePhraseBatchDialog(
+            cues = batchSource,
+            onSaveBatch = { notes ->
+                draft == batchSource && onSavePersonalPhraseBatch(notes)
+            },
+            onSaved = { count ->
+                batchPhraseOpen = false
+                notice = count.toString() + " eigen, nagelezen oefenzinnen privé opgeslagen."
+            },
+            onDismiss = { batchPhraseOpen = false }
+        )
+    }
     personalPhraseSource?.let { source ->
         PrivateSubtitlePersonalPhraseDialog(
             sourceText = source,

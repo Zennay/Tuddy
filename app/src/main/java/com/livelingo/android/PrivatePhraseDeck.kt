@@ -226,6 +226,25 @@ internal class PrivatePhraseDeck(context: Context) {
     }
 
     /**
+     * Explicit whole-batch adoption of user-authored study notes. There is
+     * exactly one preferences transaction, never a loop of partial saves.
+     * All notes must be new, valid and unique against the current deck.
+     */
+    @Synchronized
+    fun saveNewBatch(batch: List<PersonalPhrase>): Boolean {
+        if (batch.size !in 1..10 || batch.any { !valid(it) }) return false
+        fun key(note: PersonalPhrase): String =
+            note.language + "|" + note.phrase.lowercase(Locale.ROOT)
+        val incoming = batch.map(::key)
+        if (incoming.toSet().size != incoming.size) return false
+        val current = decode() ?: return false
+        if (current.size + batch.size > MAX_ROWS) return false
+        val storedKeys = current.map(::key).toSet()
+        if (incoming.any { it in storedKeys }) return false
+        return write(current + batch)
+    }
+
+    /**
      * Replace one existing user-written sentence with one atomic preferences
      * write. The old record snapshot must still match; duplicate language/phrase
      * identities are rejected by the same whole-deck validator as normal saves.
