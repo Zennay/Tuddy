@@ -1637,8 +1637,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             savedPracticePassages, passageRatings, worksheetScope)
                         visiblePassages.forEachIndexed { index, bounds ->
                             HorizontalDivider()
-                            Text("Fragment ${index + 1} · ${anchorClock(bounds.first)} – " +
-                                anchorClock(bounds.second),
+                            Text("Fragment ${index + 1} · ${clock(bounds.first)} – " +
+                                clock(bounds.second),
                                 style = MaterialTheme.typography.labelMedium)
                             val selectedPrompt = perFragmentPrompts[bounds]
                             Text("Actief: " + (selectedPrompt ?: worksheetPrompt).title,
