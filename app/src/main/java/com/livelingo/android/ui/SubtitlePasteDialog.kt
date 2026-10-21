@@ -91,6 +91,9 @@ internal fun SubtitlePasteDialog(
     var lrcExactRowInput by remember(initialDocument) { mutableStateOf("") }
     var lrcExactTimeInput by remember(initialDocument) { mutableStateOf("") }
     var lrcExactPreviewPage by remember { mutableIntStateOf(0) }
+    var lrcBatchInput by remember(initialDocument) { mutableStateOf("") }
+    var lrcBatchPreviewPage by remember { mutableIntStateOf(0) }
+    var lrcBatchTooLarge by remember { mutableStateOf(false) }
     // Only deliberate in-dialog LRC timing actions are undoable here.
     // Bounded to eight RAM snapshots (each input is already <=256 KiB).
     var lrcUndo by remember(initialDocument) { mutableStateOf(emptyList<String>()) }
@@ -270,6 +273,14 @@ internal fun SubtitlePasteDialog(
     }
     val lrcExactAfter = remember(lrcExactProposal) {
         lrcExactProposal?.let(PrivateLrcSubtitleDraft::preview)
+    }
+    val lrcBatchProposal = remember(raw, lrcBatchInput, plainLines, lrcMode) {
+        if (!plainLines && lrcMode)
+            PrivateLrcSubtitleDraft.withExactCueBatch(raw, lrcBatchInput)
+        else null
+    }
+    val lrcBatchAfter = remember(lrcBatchProposal) {
+        lrcBatchProposal?.let(PrivateLrcSubtitleDraft::preview)
     }
     val pageSize = 15
     val countPages = maxOf(1, (filtered.size + pageSize - 1) / pageSize)
@@ -991,6 +1002,137 @@ internal fun SubtitlePasteDialog(
                                 ) {
                                     Text("Pas deze geselecteerde LRC-verschuiving bewust toe")
                                 }
+                            }
+                        }
+                    }
+                    if (!plainLines && lrcMode) {
+                        Text(
+                            "Meerdere eigen LRC-begintijden tegelijk corrigeren: " +
+                                "schrijf bronnummer = exacte tijd, gescheiden door " +
+                                "een puntkomma of een nieuwe regel. Voorbeeld: " +
+                                "1=00:00:02.000;4=00:01:07.250. Maximaal 32 " +
+                                "expliciete regels; geen automatische audio-uitlijning.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedButton(
+                            enabled = chosenIndices != null &&
+                                chosenIndices.isNotEmpty() &&
+                                chosenIndices.size <= 32,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                val indices = chosenIndices ?: return@OutlinedButton
+                                val proposed = indices.joinToString(";") { index ->
+                                    "${index + 1}=${parsed[index].startLabel}"
+                                }
+                                if (proposed.length <= 512) {
+                                    lrcBatchInput = proposed
+                                    lrcBatchPreviewPage = indices.first() / 5
+                                    lrcBatchTooLarge = false
+                                } else {
+                                    lrcBatchTooLarge = true
+                                }
+                            }
+                        ) { Text("Vul gekozen cues met huidige begintijden in") }
+                        OutlinedTextField(
+                            value = lrcBatchInput,
+                            onValueChange = { text ->
+                                if (text.length <= 512) {
+                                    lrcBatchInput = text
+                                    lrcBatchTooLarge = false
+                                    lrcBatchPreviewPage = 0
+                                } else lrcBatchTooLarge = true
+                            },
+                            label = { Text("Bronnummer=tijd; bronnummer=tijd (1–32)") },
+                            minLines = 2,
+                            maxLines = 5,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (lrcBatchTooLarge) {
+                            Text(
+                                "Meer dan 512 tekens: de wijziging is geweigerd, " +
+                                    "de eerdere invoer staat nog zichtbaar.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        if (lrcBatchInput.isNotBlank()) {
+                            if (lrcBatchProposal == null || lrcBatchAfter == null) {
+                                Text(
+                                    "Nog geen geldige multi-cuecorrectie. " +
+                                        "Gebruik unieke bestaande bronnummers, maximaal " +
+                                        "32 tijdstempels, nieuwe tijden en een gehele " +
+                                        "chronologische, exporteerbare uitkomst. " +
+                                        "Geen eerdere tekst of tijd wordt gewijzigd.",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            } else {
+                                val after = lrcBatchAfter
+                                val count = maxOf(1, (parsed.size + 4) / 5)
+                                val visible = lrcBatchPreviewPage.coerceIn(0, count - 1)
+                                val changed = parsed.indices.filter { index ->
+                                    parsed[index].startMillis != after[index].startMillis ||
+                                        parsed[index].endMillis != after[index].endMillis
+                                }.map { it / 5 }.distinct()
+                                Text(
+                                    "Complete gecombineerde tijdlijn: pagina " +
+                                        "${visible + 1}/${count}. Bekijk alle gewijzigde " +
+                                        "én ongewijzigde regels vóór bevestiging.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        enabled = changed.any { it < visible },
+                                        onClick = {
+                                            changed.lastOrNull { it < visible }?.let {
+                                                lrcBatchPreviewPage = it
+                                            }
+                                        }
+                                    ) { Text("← Wijziging") }
+                                    OutlinedButton(
+                                        enabled = changed.any { it > visible },
+                                        onClick = {
+                                            changed.firstOrNull { it > visible }?.let {
+                                                lrcBatchPreviewPage = it
+                                            }
+                                        }
+                                    ) { Text("Wijziging →") }
+                                }
+                                parsed.indices.drop(visible * 5).take(5).forEach { index ->
+                                    val old = parsed[index]
+                                    val now = after[index]
+                                    Text(
+                                        "Regel ${index + 1}" +
+                                            (if (old.startMillis != now.startMillis)
+                                                " · aangepast" else "") +
+                                            "\n${old.startLabel} → ${old.endLabel}" +
+                                            "\nwordt ${now.startLabel} → ${now.endLabel}" +
+                                            "\n${old.text}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        enabled = visible > 0,
+                                        onClick = { lrcBatchPreviewPage = visible - 1 }
+                                    ) { Text("Vorige 5") }
+                                    OutlinedButton(
+                                        enabled = visible + 1 < count,
+                                        onClick = { lrcBatchPreviewPage = visible + 1 }
+                                    ) { Text("Volgende 5") }
+                                }
+                                OutlinedButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = {
+                                        commitLrcTiming(lrcBatchProposal)
+                                        lrcBatchInput = ""
+                                        lrcBatchPreviewPage = 0
+                                        lrcBatchTooLarge = false
+                                        documentNotice = "Alle expliciete LRC-tijdcorrecties " +
+                                            "samen toegepast op het tijdelijke concept. " +
+                                            "De originele providerbron blijft intact."
+                                    }
+                                ) { Text("Bevestig alle exacte LRC-tijdcorrecties") }
                             }
                         }
                     }
