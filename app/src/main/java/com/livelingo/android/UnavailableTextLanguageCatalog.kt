@@ -79,6 +79,28 @@ internal object UnavailableTextLanguageCatalog {
             "Niet geïntegreerd of geactiveerd."
     )
 
+    private val kurmanjiWav2VecResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "salamhasan/wav2vec2-large-xlsr-kurmanji",
+        url = "https://huggingface.co/salamhasan/wav2vec2-large-xlsr-kurmanji",
+        declaredLicense = "Apache-2.0 volgens modelkaart; toegang gated",
+        footprint = "0,3B parameters; exacte bestandsgrootte niet geverifieerd",
+        limitation = "Modeltoegang vereist eerst akkoord met het delen van contactgegevens. " +
+            "Modelkaart rapporteert zelf WER 32,98% en CER 7,97% op Common Voice 8.0; alleen gelezen Latijnse spraak is beschreven. " +
+            "Niet onafhankelijk herhaald, niet op Android getest en niet geïntegreerd."
+    )
+
+    private val soraniApacheResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "SECT19N/whisper-small-ckb-merged",
+        url = "https://huggingface.co/SECT19N/whisper-small-ckb-merged",
+        declaredLicense = "Apache-2.0 volgens modelkaart; toegang gated",
+        footprint = "0,2B parameters; exacte bestandsgrootte niet geverifieerd",
+        limitation = "Modeltoegang vereist eerst akkoord met het delen van contactgegevens. " +
+            "Modelkaart rapporteert zelf WER 7,96% op Common Voice 24.0; dit is niet onafhankelijk herhaald of op Android gevalideerd. " +
+            "Gebruikt de Perzische decoder-token als Sorani-workaround; niet geïntegreerd of geactiveerd."
+    )
+
     private val madladResearchCandidate = OfflineLanguageModelCandidate(
         category = "Tekstvertaling",
         title = "Google MADLAD-400-3B-MT",
@@ -109,7 +131,8 @@ internal object UnavailableTextLanguageCatalog {
                     limitation = "Niet geïntegreerd of op Android getest. Trainingsdatarechten, " +
                         "dialectnauwkeurigheid, latency en geheugenbeslag zijn niet geverifieerd."
                 ),
-                kurmanjiCompactResearchCandidate
+                kurmanjiCompactResearchCandidate,
+                kurmanjiWav2VecResearchCandidate
             ),
             translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
@@ -133,7 +156,8 @@ internal object UnavailableTextLanguageCatalog {
                 ),
                 soraniTinyResearchCandidate,
                 soraniBaseResearchCandidate,
-                soraniSmallResearchCandidate
+                soraniSmallResearchCandidate,
+                soraniApacheResearchCandidate
             ),
             translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
