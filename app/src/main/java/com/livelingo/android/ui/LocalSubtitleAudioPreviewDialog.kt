@@ -129,6 +129,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var completedGuidedRoute by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
     var completedGuidedRounds by remember { mutableIntStateOf(0) }
     var practiceReportOpen by remember { mutableStateOf(false) }
+    // Export-only selection: guided audio playback retains its own scope.
+    var worksheetScope by remember { mutableStateOf(PrivatePracticeRouteScope.ALL) }
     var practiceCsvPreviewOpen by remember { mutableStateOf(false) }
     // An immutable user-approved document lives only while the Android
     // destination chooser is open; never retain the audio URI or audio bytes.
@@ -176,16 +178,22 @@ internal fun LocalSubtitleAudioPreviewDialog(
             val updatedBytes = when (pending.format) {
                 PrivatePracticeReportFormat.HTML ->
                     PrivatePrintablePracticeSummary.snapshot(updatedSummary)
+                PrivatePracticeReportFormat.WORKSHEET_HTML ->
+                    PrivateListeningWorksheet.snapshot(
+                        cues, subtitleOffsetMs, savedPracticePassages,
+                        passageRatings, passageNotes, worksheetScope
+                    )
                 PrivatePracticeReportFormat.TXT ->
                     PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
                 PrivatePracticeReportFormat.CSV ->
                     PrivatePrintablePracticeSummary.snapshotCsv(
                         cues, subtitleOffsetMs, savedPracticePassages,
-                        passageRatings, passageNotes
+                        passageRatings, passageNotes, worksheetScope
                     )
             }
             if (!prepared || savedPracticePassages.isEmpty() ||
-                updatedSummary != pending.summary || updatedBytes == null ||
+                updatedSummary != pending.summary ||
+                pending.selectionScope != worksheetScope || updatedBytes == null ||
                 !updatedBytes.contentEquals(pending.bytes)
             ) {
                 notice = "Mijn luisteroefening is gewijzigd. Bekijk en bewaar opnieuw."
@@ -209,17 +217,23 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val report = exportablePracticeSummary()
         val payload = when (format) {
             PrivatePracticeReportFormat.HTML -> PrivatePrintablePracticeSummary.snapshot(report)
+            PrivatePracticeReportFormat.WORKSHEET_HTML ->
+                PrivateListeningWorksheet.snapshot(
+                    cues, subtitleOffsetMs, savedPracticePassages,
+                    passageRatings, passageNotes, worksheetScope
+                )
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
             PrivatePracticeReportFormat.CSV ->
                 PrivatePrintablePracticeSummary.snapshotCsv(
                     cues, subtitleOffsetMs, savedPracticePassages,
-                    passageRatings, passageNotes
+                    passageRatings, passageNotes, worksheetScope
                 )
         }
         if (payload == null) {
             notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
         } else {
-            pendingPracticeReport = PendingPrivatePracticeReport(report, format, payload)
+            pendingPracticeReport = PendingPrivatePracticeReport(
+                report, format, worksheetScope, payload)
             practiceReportOpen = false
             savePracticeReport.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
@@ -248,6 +262,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         completedGuidedRoute = emptyList()
         completedGuidedRounds = 0
         practiceReportOpen = false
+        worksheetScope = PrivatePracticeRouteScope.ALL
         practiceCsvPreviewOpen = false
         pendingPracticeReport = null
         guidedActive = false
@@ -1680,6 +1695,28 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             "er gaan geen audio-opnamen of audiobestandsnamen mee.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Text("Kies welke eigen fragmenten op mijn luisterwerkblad en CSV staan:",
+                        style = MaterialTheme.typography.titleSmall)
+                    PrivatePracticeRouteScope.entries.forEach { scope ->
+                        val amount = privatePracticeRouteCandidates(
+                            savedPracticePassages, passageRatings, scope
+                        ).size
+                        TextButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive && amount > 0,
+                            onClick = { worksheetScope = scope }
+                        ) {
+                            Text((if (worksheetScope == scope) "● " else "○ ") +
+                                scope.title + " (" + amount + ")")
+                        }
+                    }
+                    TextButton(
+                        enabled = !guidedActive &&
+                            privatePracticeRouteCandidates(
+                                savedPracticePassages, passageRatings, worksheetScope
+                            ).isNotEmpty(),
+                        onClick = { choosePracticeReport(PrivatePracticeReportFormat.WORKSHEET_HTML) }
+                    ) { Text("Bewaar luisterwerkblad · vragen en aparte bronregels…") }
                     TextButton(
                         enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.TXT) }
@@ -1692,9 +1729,14 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             else "Bekijk mijn volledige CSV vóór opslaan")
                     }
                     if (practiceCsvPreviewOpen) {
+                        Text("CSV-selectie: " + worksheetScope.title + " (" +
+                            privatePracticeRouteCandidates(
+                                savedPracticePassages, passageRatings, worksheetScope
+                            ).size + " fragmenten).",
+                            style = MaterialTheme.typography.bodySmall)
                         val csvPreview = PrivatePrintablePracticeSummary.snapshotCsv(
                             cues, subtitleOffsetMs, savedPracticePassages,
-                            passageRatings, passageNotes
+                            passageRatings, passageNotes, worksheetScope
                         )?.toString(Charsets.UTF_8)
                         SelectionContainer {
                             Text(
@@ -1706,9 +1748,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         }
                     }
                     TextButton(
-                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        enabled = !guidedActive &&
+                            privatePracticeRouteCandidates(
+                                savedPracticePassages, passageRatings, worksheetScope
+                            ).isNotEmpty(),
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.CSV) }
-                    ) { Text("Bewaar mijn oefenfragmenten als CSV…") }
+                    ) { Text("Bewaar geselecteerde oefenfragmenten als CSV…") }
                     SelectionContainer {
                         Text(
                             practiceSummaryText,
