@@ -3088,6 +3088,11 @@ private fun TuddyScreen(
                     // user-authored meaning or implicit transcript capture.
                     personalPhrases.saveNew(language, phrase, meaningLanguage, ownMeaning)
                 },
+                onSavePersonalPhraseBatch = { notes ->
+                    // One atomic all-or-nothing private transaction.
+                    // Never overwrite existing authored meanings.
+                    personalPhrases.saveNewBatch(notes)
+                },
                 onShareTtmlExcerpt = { selectedCues ->
                     // Literal XML text only, never a source-file URI, grant,
                     // recording, account identifier or entire live transcript.
