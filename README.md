@@ -2852,3 +2852,14 @@ een bruikbare bronkeuze eenvoudiger zonder dat de app cloudspraak opent of
 automatisch een model downloadt. Kies een bron en ga terug naar de afzonderlijke
 spraak- én tekststartcheck; de oude status wordt nooit overgenomen.
 Op Android 12 blijft de pakketstatus onbekend. [Uitleg](docs/OFFLINE_SPEECH_PACKS.md).
+
+
+### Spraakinstellingen en trage Android-spraakdiensten
+
+Na **Offline startcheck → Open Android spraakinstellingen** keer je automatisch
+terug naar de startcheck als de app nog actief is. Tuddy leest dan opnieuw
+de spraak- en tekstmodelstatus, maar start geen opname, modeldownload of cloud.
+In het overzicht van alle on-device spraakpakketten kan een onbereikbare
+Android-spraakdienst de lijst niet eindeloos blokkeren: na 8 seconden toont
+Tuddy *onbekend* voor die taal en gaat het overzicht verder. Je kunt de
+controle altijd stoppen. [Handleiding](docs/OFFLINE_SPEECH_PACKS.md).

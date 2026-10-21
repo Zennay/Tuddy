@@ -110,3 +110,23 @@ telemetrie of permanent modelregister. Android 12 kan geen individuele
 spraakpaketten detecteren en toont dus uitsluitend een onbekende status;
 een Android-locale-kandidaat bewijst nooit volledige offline taalondersteuning.
 Kurmanji, Sorani en Pasjtoe blijven uitsluitend handmatige vijf-zinnenpreview.
+
+
+## Veilig verder na Android-spraakinstellingen
+
+Na een bewuste tik op **Open Android spraakinstellingen** bewaart Tuddy
+uitsluitend in tijdelijk app-geheugen de geselecteerde spreektaal.
+Bij terugkeer naar de nog draaiende app opent automatisch opnieuw de
+offline startcheck en worden het gekozen spraakpakket en het bestaande
+lokale tekstmodelpaar **alleen-lezen** gecontroleerd. Er start geen microfoon,
+automatische modeldownload of netwerkspraak. Bij volledig afsluiten van de
+app vervalt deze handoff. De instellingenknop is ook bereikbaar wanneer
+Android `downloadbaar`, `in behandeling`, `alleen online`, `niet ondersteund`
+of een downloadfout meldt. Dat betekent nooit dat de taal offline werkt.
+
+Het overzicht van alle spraakpakketten slaat een onbeantwoorde aanvraag
+na **8 seconden** over met status *onbekend*. Daardoor blokkeert één
+niet-reagerende Android-spraakdienst niet de rest van de taalkeuzes.
+Bij **Stop controle**, sluiten en achtergrond gaan worden de tijdslimieten
+en tijdelijke on-device herkenningsdienst opgeruimd. Geen van deze
+acties start een download of bewijst offline accuratesse op een toestel.

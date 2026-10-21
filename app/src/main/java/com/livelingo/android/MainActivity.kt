@@ -598,6 +598,7 @@ private fun TuddyScreen(
     // A second recognizer controller is used only for read-only browsing;
     // the active source and its download receipt must never be overwritten by a scan.
     val speechCatalogController = remember(context) { OnDeviceSpeechPackController(context) }
+    val speechCatalogTimeoutHandler = remember { Handler(Looper.getMainLooper()) }
     val speechCatalogReceipts = remember { mutableStateMapOf<String, SpeechPackReceipt>() }
     var speechCatalogOpen by remember { mutableStateOf(false) }
     var speechCatalogBusy by remember { mutableStateOf(false) }
@@ -606,6 +607,8 @@ private fun TuddyScreen(
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
+    // Return to the explicit startcheck only after the user opened Android speech settings.
+    var pendingSpeechSettingsReturnTag by remember { mutableStateOf<String?>(null) }
     var languageSupportOpen by remember { mutableStateOf(false) }
     // Secondary export/history actions are collapsed on compact screens.
     var conversationToolsOpen by remember { mutableStateOf(false) }
@@ -887,12 +890,15 @@ private fun TuddyScreen(
         val voiceInputSettings = Intent("android.settings.VOICE_INPUT_SETTINGS")
         val target = if (voiceInputSettings.resolveActivity(context.packageManager) != null)
             voiceInputSettings else Intent(Settings.ACTION_SETTINGS)
-        runCatching { context.startActivity(target) }
-            .onFailure {
-                speechPackReceipt = speechPackReceipt.copy(
-                    detail = "Android-spraakinstellingen konden niet worden geopend. Open ze handmatig via Instellingen."
-                )
-            }
+        runCatching {
+            context.startActivity(target)
+            pendingSpeechSettingsReturnTag = source.speechCode
+        }.onFailure {
+            pendingSpeechSettingsReturnTag = null
+            speechPackReceipt = speechPackReceipt.copy(
+                detail = "Android-spraakinstellingen konden niet worden geopend. Open ze handmatig via Instellingen."
+            )
+        }
     }
 
     // User-triggered, privacy-safe diagnostics; never include caption/audio content.
@@ -1149,6 +1155,7 @@ private fun TuddyScreen(
     }
 
     fun closeSpeechCatalog() {
+        speechCatalogTimeoutHandler.removeCallbacksAndMessages(null)
         speechCatalogEpoch++
         speechCatalogController.cancel()
         speechCatalogBusy = false
@@ -1176,11 +1183,25 @@ private fun TuddyScreen(
                 return
             }
             val tag = spoken[index].speechCode
+            // Some vendor recognition services never call back. Bound each locale
+            // rather than leaving the entire list stalled on one broken package.
+            val watchdog = Runnable {
+                if (scanEpoch == speechCatalogEpoch && speechCatalogOpen &&
+                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                    speechCatalogController.cancel()
+                    speechCatalogReceipts[tag] = SpeechPackReceipt(tag, SpeechPackStage.UNKNOWN,
+                        "De lokale spraakdienst antwoordde niet binnen 8 seconden.")
+                    speechCatalogScanned = index + 1
+                    next(index + 1)
+                }
+            }
+            speechCatalogTimeoutHandler.postDelayed(watchdog, 8_000L)
             speechCatalogController.check(tag) { receipt ->
                 if (scanEpoch != speechCatalogEpoch || !speechCatalogOpen ||
                     !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return@check
                 speechCatalogReceipts[tag] = receipt
                 if (receipt.stage != SpeechPackStage.CHECKING) {
+                    speechCatalogTimeoutHandler.removeCallbacks(watchdog)
                     speechCatalogScanned = index + 1
                     next(index + 1)
                 }
@@ -2191,6 +2212,18 @@ private fun TuddyScreen(
     // Activity remaining composed in the background must NOT keep the mic open.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                val requestedTag = pendingSpeechSettingsReturnTag
+                if (requestedTag != null) {
+                    pendingSpeechSettingsReturnTag = null
+                    if (requestedTag == source.speechCode && !listening) {
+                        offlineReadinessOpen = true
+                        // Read-only refresh. Never re-open a microphone or download a model.
+                        checkSpeechPackNow()
+                        checkTextPair()
+                    }
+                }
+            }
             if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) closeSpeechCatalog()
             if (event == Lifecycle.Event.ON_STOP) {
@@ -2250,6 +2283,7 @@ private fun TuddyScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            pendingSpeechSettingsReturnTag = null
             generation++
             modelStorage.invalidate()
             starterPhraseboardOpen = false
@@ -2454,6 +2488,14 @@ private fun TuddyScreen(
                 onStopScan = {
                     speechCatalogEpoch++
                     speechCatalogController.cancel()
+                    speechCatalogTimeoutHandler.removeCallbacksAndMessages(null)
+                    speechCatalogReceipts.entries.toList().forEach { (tag, receipt) ->
+                        if (receipt.stage == SpeechPackStage.CHECKING) {
+                            speechCatalogReceipts[tag] = receipt.copy(
+                                stage = SpeechPackStage.UNKNOWN,
+                                detail = "Controle handmatig gestopt; probeer het later opnieuw.")
+                        }
+                    }
                     speechCatalogBusy = false
                 },
                 onSelect = { tag -> selectBrowserSpeechSource(tag) },
