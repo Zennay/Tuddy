@@ -57,6 +57,28 @@ internal fun SpeechPackBrowserDialog(
     }
     val ready = options.count { receipts[it.tag]?.stage == SpeechPackStage.READY }
     val offered = options.count { receipts[it.tag]?.stage == SpeechPackStage.DOWNLOADABLE }
+    val offeredTag = confirmTag
+    if (offeredTag != null) {
+        val offeredName = options.firstOrNull { it.tag == offeredTag }?.label ?: offeredTag
+        AlertDialog(
+            onDismissRequest = { confirmTag = null },
+            title = { Text("Vraag offline spraakpakket aan?") },
+            text = { Text("Alleen het Android-spraakpakket voor " + offeredName +
+                " (" + offeredTag + ") wordt op jouw verzoek via wifi aangevraagd. " +
+                "Android beheert de download. Geen automatische bulkdownloads, " +
+                "geen microfoon, geen cloudspraak. Een download is pas bruikbaar " +
+                "wanneer Android na afloop een lokaal geïnstalleerd pakket meldt.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmTag = null
+                    onPrepare(offeredTag)
+                }) { Text("Via wifi aanvragen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmTag = null }) { Text("Annuleren") }
+            }
+        )
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Offline spreektaalpakketten") },
@@ -91,6 +113,11 @@ internal fun SpeechPackBrowserDialog(
                     ) { Text("Controleer alle talen") }
                     if (scanning) {
                         OutlinedButton(onClick = onStopScan) { Text("Stop controle") }
+                    }
+                    if (downloadTag != null) {
+                        OutlinedButton(onClick = onCancelFollow) {
+                            Text("Stop pakketvoortgang volgen")
+                        }
                     }
                 }
                 OutlinedTextField(
