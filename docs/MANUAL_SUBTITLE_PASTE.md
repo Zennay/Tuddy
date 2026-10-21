@@ -592,6 +592,63 @@ de goedgekeurde preview vergeleken. De bestaande SRT/VTT-
 exportgrenzen, Undo/Redo en aparte Android SAF-save gelden
 ook hier.
 
+### Meerdere tijdankers voor ondertitels met ongelijk verloop
+
+De bestaande keuze voor één exacte offset en de optie voor twee
+handmatig gekozen ankerparen blijven werken. Voor sporen waarvan
+het tijdverloop **in verschillende gedeelten een ander tempo**
+heeft, kies je in **Combineer twee teksten bij overlappende
+tijdcodes** de nieuwe knop **Meerdere tijdankers: corrigeer
+2–8 bronparen…**.
+
+1. Selecteer zelf twee tot acht bij elkaar horende
+   oorspronkelijke bronregelparen uit de eerste en tweede
+   SRT-/WebVTT-sporen. De lijsten van beide sporen zijn
+   tekstdoorzoekbaar en tonen telkens drie oorspronkelijke regels
+   met het echte originele bronnummer en de complete tekst op
+   verzoek. Een tik op **Neem oorspronkelijke regel over** vult
+   enkel een invoerveld in; hij koppelt niets automatisch.
+2. Klik **Voeg dit bronankerpaar bewust toe** om een extra,
+   chronologisch passende overeenkomst te plaatsen, ook tussen
+   twee bestaande ankers. Met **Wijzig beide oorspronkelijke
+   rijen** kun je een bestaand anker vervangen en met
+   **Verwijder alleen anker** een extra anker herstellen.
+   Minimaal twee ankerparen blijven nodig.
+3. De app toont voor ieder zelfgekozen anker **beide volledige
+   oorspronkelijke teksten én begintijdstempels**. Voor ieder
+   opeenvolgend paar toont hij de originele tweede-spoor-duur
+   en de gewenste eerste-spoor-duur. De app berekent geen
+   bij elkaar horende inhoud of taal: dat beoordeel je zelf.
+4. De begrensde **segmentgewijze lineaire interpolatie**
+   verplaatst alle begin- en eindtijden van het tweede
+   spoor. Voor cues vóór het eerste of na het laatste anker
+   blijft de verhouding van het dichtstbijzijnde segment
+   van toepassing. Per anker mag het oorspronkelijke
+   tijdverschil maximaal **±600 seconden** zijn en per
+   aangrenzend segment is de schaal beperkt tot
+   **0,5×–2×**, met strikt stijgende originele bronnummers
+   én anker-begintijden. De app weigert omgekeerde, verdwenen
+   of te korte tijdvakken en volledige kopieën die niet in
+   zowel SRT als VTT veilig exporteerbaar zijn.
+5. **Neem alle tijdankers over** slaat nog niets op.
+   Controleer eerst de volledige samengevoegde tijdlijn en
+   de afzonderlijke originele ongekoppelde bronregels.
+   Met de andere knop **Voeg alleen toe aan tijdelijk
+   concept** bevestig je de op dat moment geheel
+   opnieuw berekende combinatie. Dezelfde bronbestanden,
+   ankerkeuzes, eventuele handmatige inhoudelijke koppelingen
+   en uitgesloten rijen worden opnieuw gecontroleerd.
+   Bewaren vereist later apart een bewuste Android-bestandskeuze.
+
+De twee routes voor **tijd** en **inhoudelijke** koppeling zijn
+verschillend: segmentankers verschuiven alleen tijdcodes van
+het tweede spoor; een afzonderlijk handmatig bronpaar bepaalt
+welke originele teksten op één tweetalige cue komen. Bij zo'n
+tweetalige cue blijven de tijden van **spoor één** leidend.
+Deze route werkt zonder internet, audioherkenning, automatische
+vertaling of ongevraagde bestandsopslag. Een gekozen externe
+Android-documentprovider kan zelf synchroniseren.
+
 ### Tijdverloop corrigeren met twee handmatig gekozen ankerparen
 
 Als twee ondertitelsporen **aan het begin samenvallen maar verderop
