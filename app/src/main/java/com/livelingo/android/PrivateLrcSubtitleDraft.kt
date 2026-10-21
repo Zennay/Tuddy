@@ -17,7 +17,25 @@ internal object PrivateLrcSubtitleDraft {
     // Consecutive [mm:ss.xx] tags refer to the *same* lyric in repeated choruses.
     private val timestampTag = Regex("""\[(\d{1,3}):([0-5]\d)\.(\d{2,3})\]""")
     private const val MAX_TIMESTAMPS_PER_LINE = 16
+    // User-provided whole-track calibration, not discovered from audio.
+    private const val MAX_OFFSET_MS = 30_000L
+    private val offsetHeader = Regex("""^\[offset:([+-]?[0-9]{1,5})\]$""")
     private val metadata = Regex("""^\[(?:ar|ti|al|by|length):[^\r\n\[\]]{0,200}\]$""")
+
+    /**
+     * Only a header before the first lyric can move cues.
+     * The Android preview calls this only for a successfully parsed document.
+     */
+    fun declaredOffsetMillis(raw: String): Long? {
+        val lines = raw.removePrefix("\uFEFF")
+            .replace("\r\n", "\n").replace('\r', '\n').lineSequence()
+        for (source in lines) {
+            val line = source.trim()
+            if (line.isEmpty() || metadata.matches(line)) continue
+            return offsetHeader.matchEntire(line)?.groupValues?.get(1)?.toLongOrNull()
+        }
+        return null
+    }
 
     fun preview(raw: String): List<PrivateSubtitleCue>? {
         val bytes = runCatching {
@@ -37,10 +55,21 @@ internal object PrivateLrcSubtitleDraft {
         if (rows.size > MAX_ROWS) return null
         val times = mutableListOf<Pair<Long, String>>()
         var header = true
+        var offsetMs = 0L
+        var offsetWasDeclared = false
         for (rawLine in rows) {
             val line = rawLine.trim()
             if (line.isEmpty()) continue
             if (header && metadata.matches(line)) continue
+            if (header && line.startsWith("[offset:")) {
+                if (offsetWasDeclared) return null
+                val millis = offsetHeader.matchEntire(line)?.groupValues?.get(1)
+                    ?.toLongOrNull() ?: return null
+                if (millis !in -MAX_OFFSET_MS..MAX_OFFSET_MS) return null
+                offsetWasDeclared = true
+                offsetMs = millis
+                continue
+            }
             header = false
 
             // LRC allows repeated occurrences of one lyric in a single row:
@@ -54,8 +83,9 @@ internal object PrivateLrcSubtitleDraft {
                 val minute = match.groupValues[1].toLong()
                 val second = match.groupValues[2].toLong()
                 val fraction = match.groupValues[3].padEnd(3, '0').toLong()
-                val start = minute * 60_000L + second * 1_000L + fraction
-                if (start >= MAX_TIME_MS) return null
+                val authoredStart = minute * 60_000L + second * 1_000L + fraction
+                val start = authoredStart + offsetMs
+                if (start !in 0L until MAX_TIME_MS) return null
                 starts.add(start)
                 if (starts.size > MAX_TIMESTAMPS_PER_LINE ||
                     times.size + starts.size > MAX_CUES) return null
