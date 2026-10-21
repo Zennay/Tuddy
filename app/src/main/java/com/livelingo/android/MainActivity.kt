@@ -1399,9 +1399,7 @@ private fun TuddyScreen(
         }
     }
 
-    val saveTimedSubtitleSheet = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("text/plain")
-    ) { uri ->
+    fun completeTimedSubtitleSheetSave(uri: Uri?) {
         val pending = pendingTimedSubtitleSheet
         pendingTimedSubtitleSheet = null
         if (pending != null && pending.session == generation) {
@@ -1429,6 +1427,14 @@ private fun TuddyScreen(
             }
         }
     }
+
+    // Let Android's document provider classify each interoperable format.
+    val saveTimedSubtitleCsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri -> completeTimedSubtitleSheetSave(uri) }
+    val saveTimedSubtitleTsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/tab-separated-values")
+    ) { uri -> completeTimedSubtitleSheetSave(uri) }
 
     val openTranscriptArchive = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -2072,11 +2078,9 @@ private fun TuddyScreen(
                         pendingTimedSubtitleSheet = PendingTimedSubtitleSheetSave(
                             generation, editedCues.toList(), format, bytes
                         )
-                        saveTimedSubtitleSheet.launch(
-                            if (format == TimedSubtitleSheetFormat.CSV)
-                                "Tuddy-eigen-tijdcodes.csv"
-                            else "Tuddy-eigen-tijdcodes.tsv"
-                        )
+                        if (format == TimedSubtitleSheetFormat.CSV)
+                            saveTimedSubtitleCsv.launch("Tuddy-eigen-tijdcodes.csv")
+                        else saveTimedSubtitleTsv.launch("Tuddy-eigen-tijdcodes.tsv")
                     }
                 }
             )
