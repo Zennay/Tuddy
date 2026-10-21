@@ -99,6 +99,7 @@ internal fun PrivateSubtitleFileDialog(
     onSaveLrc: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onSaveSbv: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     onSaveTtml: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
+    onShareTtmlExcerpt: (List<PrivateSubtitleCue>) -> Unit,
     onShareExcerpt: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     incomingSecondPaste: SubtitlePasteFileContent?,
     onChoosePasteDocument: (List<PrivateSubtitleCue>, SubtitlePasteFileContent) -> Unit,
@@ -711,6 +712,12 @@ internal fun PrivateSubtitleFileDialog(
             },
             onSaveSbv = { exportCues ->
                 onSaveSbv(draft.toList(), exportCues.toList())
+            },
+            onSaveTtml = { exportCues ->
+                onSaveTtml(draft.toList(), exportCues.toList())
+            },
+            onShareTtmlExcerpt = { exportCues ->
+                onShareTtmlExcerpt(exportCues.toList())
             },
             onShareExcerpt = { exportCues, format ->
                 onShareExcerpt(exportCues.toList(), format)

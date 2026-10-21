@@ -30,11 +30,12 @@ import com.livelingo.android.PrivateSubtitleTimeWindowRows
 import com.livelingo.android.PrivateTimedSubtitleSheet
 import com.livelingo.android.PrivateLrcSubtitleExport
 import com.livelingo.android.PrivateSbvSubtitleExport
+import com.livelingo.android.PrivateTtmlSubtitleExport
 import com.livelingo.android.SubtitleDraftFormat
 import com.livelingo.android.SubtitleExcerptTiming
 import com.livelingo.android.TimedSubtitleSheetFormat
 
-private enum class SubtitleExcerptSaveFormat { SRT, WEBVTT, CSV, TSV, LRC, SBV }
+private enum class SubtitleExcerptSaveFormat { SRT, WEBVTT, CSV, TSV, LRC, SBV, TTML }
 
 /**
  * One explicit selection, tied to the unfiltered immutable editor draft.
@@ -49,6 +50,8 @@ internal fun PrivateSubtitleExcerptDialog(
     onSaveTimedSheet: (List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
     onSaveLrc: (List<PrivateSubtitleCue>) -> Unit,
     onSaveSbv: (List<PrivateSubtitleCue>) -> Unit,
+    onSaveTtml: (List<PrivateSubtitleCue>) -> Unit,
+    onShareTtmlExcerpt: (List<PrivateSubtitleCue>) -> Unit,
     onShareExcerpt: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -83,6 +86,7 @@ internal fun PrivateSubtitleExcerptDialog(
                 PrivateTimedSubtitleSheet.snapshot(cues, TimedSubtitleSheetFormat.TSV)
             SubtitleExcerptSaveFormat.LRC -> PrivateLrcSubtitleExport.snapshot(cues)
             SubtitleExcerptSaveFormat.SBV -> PrivateSbvSubtitleExport.snapshot(cues)
+            SubtitleExcerptSaveFormat.TTML -> PrivateTtmlSubtitleExport.snapshot(cues)
         }
     }
 
@@ -92,8 +96,13 @@ internal fun PrivateSubtitleExcerptDialog(
         SubtitleExcerptSaveFormat.WEBVTT -> SubtitleDraftFormat.WEBVTT
         else -> null
     }
-    val sharePreview = if (shareFormat != null && proposed != null)
-        PrivateSubtitleOutgoingShare.text(proposed, shareFormat) else null
+    val sharePreview = when {
+        proposed == null -> null
+        format == SubtitleExcerptSaveFormat.TTML ->
+            PrivateSubtitleOutgoingShare.ttmlText(proposed)
+        shareFormat != null -> PrivateSubtitleOutgoingShare.text(proposed, shareFormat)
+        else -> null
+    }
     val durationMs = if (proposed != null)
         proposed.maxOf { it.endMillis } - proposed.first().startMillis else 0L
     val pageCount = maxOf(1, ((selectedIndices?.size ?: 0) + 5) / 6)
@@ -239,8 +248,9 @@ internal fun PrivateSubtitleExcerptDialog(
                     "tussen cues. Dat is geen echte audio-uitlijning. " +
                     "CSV/TSV vereist uniforme eigen tekstkolommen en " +
                     "veilige spreadsheetwaarden; LRC bevat alleen " +
-                    "begintijden. SBV behoudt begin- én eindtijden " +
-                    "van de bewust geselecteerde regels.",
+                    "begintijden. SBV en TTML behouden begin- en eindtijden " +
+                    "van de bewust geselecteerde regels. TTML is tekst-only " +
+                    "XML zonder styling, media of scripts.",
                     style = MaterialTheme.typography.bodySmall)
                 if (bytes == null) {
                     Text("Deze selectie kan niet volledig en veilig als " +
@@ -255,7 +265,7 @@ internal fun PrivateSubtitleExcerptDialog(
                         style = MaterialTheme.typography.titleSmall)
                     PrivateSubtitlePagedExportPreview(bytes)
                 }
-                Text("Delen kan uitsluitend met een geselecteerd SRT/VTT-fragment " +
+                Text("Delen kan met een geselecteerd SRT/VTT- of TTML-tekstfragment " +
                     "(maximaal 24 regels en 16 KiB). De externe app die je daarna " +
                     "zelf kiest, ontvangt de LETTERLIJKE ondertiteltekst, inclusief " +
                     "eventuele persoonsgegevens. Er gaat nooit een bestand, " +
@@ -291,6 +301,7 @@ internal fun PrivateSubtitleExcerptDialog(
                             onSaveTimedSheet(fresh.toList(), TimedSubtitleSheetFormat.TSV)
                         SubtitleExcerptSaveFormat.LRC -> onSaveLrc(fresh.toList())
                         SubtitleExcerptSaveFormat.SBV -> onSaveSbv(fresh.toList())
+                        SubtitleExcerptSaveFormat.TTML -> onSaveTtml(fresh.toList())
                     }
                 }
             }) { Text("Kies opslaglocatie…") }
@@ -302,13 +313,21 @@ internal fun PrivateSubtitleExcerptDialog(
                         .parse(expression, allCues.size)
                         ?.map { allCues[it] }
                         ?.let { PrivateSubtitleFilteredExcerpt.prepare(it, timing) }
-                    val fresh = if (refreshed != null && shareFormat != null)
-                        PrivateSubtitleOutgoingShare.text(refreshed, shareFormat)
-                    else null
-                    if (fresh != null && fresh == sharePreview &&
-                        refreshed != null && shareFormat != null) {
+                    val fresh = when {
+                        refreshed == null -> null
+                        format == SubtitleExcerptSaveFormat.TTML ->
+                            PrivateSubtitleOutgoingShare.ttmlText(refreshed)
+                        shareFormat != null ->
+                            PrivateSubtitleOutgoingShare.text(refreshed, shareFormat)
+                        else -> null
+                    }
+                    if (fresh != null && fresh == sharePreview && refreshed != null) {
                         onDismiss()
-                        onShareExcerpt(refreshed.toList(), shareFormat)
+                        if (format == SubtitleExcerptSaveFormat.TTML) {
+                            onShareTtmlExcerpt(refreshed.toList())
+                        } else if (shareFormat != null) {
+                            onShareExcerpt(refreshed.toList(), shareFormat)
+                        }
                     }
                 }) { Text("Deel selectie…") }
                 TextButton(onClick = onDismiss) { Text("Annuleren") }

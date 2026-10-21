@@ -1,3 +1,7 @@
+## Nieuw: gekozen TTML-ondertitelclips bewaren en delen
+
+Selecteer in de ondertiteleditor bronregels of tijdvensters, kies TTML en bewaar de gekozen regels als een afzonderlijk `.ttml`-bestand. Of deel maximaal 24 gekozen TTML-cues als letterlijke XML-tekst (16 KiB), met aparte bevestiging. Bronbestand, overige tekst, audio en oorspronkelijke timing blijven intact, tenzij je zelf een compact fragment vanaf nul kiest. [Details](docs/TTML_DFXP_SUBTITLE_IMPORT.md).
+
 ## Nieuw: lokale TTML-kopie bewaren
 
 Je kunt nu in de tijdelijke ondertiteleditor na een volledige preview een **nieuwe TTML-kopie** opslaan. De bewaarde tekst en begin-/eindtijden moeten exact door Tuddy's beperkte parser teruggelezen kunnen worden; anders wordt de uitvoer geweigerd. Android vraagt altijd eerst een opslaglocatie. [Beperkingen en voorbeeld](docs/TTML_DFXP_SUBTITLE_IMPORT.md).
