@@ -125,6 +125,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var worksheetAudience by remember { mutableStateOf(PrivateListeningWorksheetAudience.SELF_STUDY) }
     var practiceCsvPreviewOpen by remember { mutableStateOf(false) }
     var detailedCsvPreviewOpen by remember { mutableStateOf(false) }
+    var detailedCsvPreviewPage by remember { mutableIntStateOf(0) }
     // An immutable user-approved document lives only while the Android
     // destination chooser is open; never retain the audio URI or audio bytes.
     var pendingPracticeReport by remember {
@@ -275,6 +276,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         practiceReportOpen = false
         practiceCsvPreviewOpen = false
         detailedCsvPreviewOpen = false
+        detailedCsvPreviewPage = 0
         pendingPracticeReport = null
         worksheetAudience = PrivateListeningWorksheetAudience.SELF_STUDY
         guidedActive = false
@@ -1657,9 +1659,38 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             cues, subtitleOffsetMs, savedPracticePassages,
                             passageRatings, passageNotes, worksheetScope
                         )?.toString(Charsets.UTF_8)
+                        // Each CSV row is one line; user-authored newlines are
+                        // normalized before encoding, so pagination cannot split
+                        // a quoted cell or truncate the bytes actually saved.
+                        val rows = detailPreview?.trimEnd('\r', '\n')?.split("\r\n")
+                        val pageCount = if (rows.isNullOrEmpty()) 0 else
+                            (rows.size + 11) / 12
+                        val currentPage = detailedCsvPreviewPage.coerceIn(
+                            0, (pageCount - 1).coerceAtLeast(0)
+                        )
+                        Text(
+                            if (pageCount > 0)
+                                "Bronregels CSV · pagina ${currentPage + 1} van $pageCount" +
+                                    " · het hele bestand wordt bewaard"
+                            else "Geen veilig exporteerbare bronregel-CSV.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (pageCount > 1) {
+                            Row {
+                                TextButton(
+                                    enabled = currentPage > 0,
+                                    onClick = { detailedCsvPreviewPage = currentPage - 1 }
+                                ) { Text("Vorige CSV-pagina") }
+                                TextButton(
+                                    enabled = currentPage + 1 < pageCount,
+                                    onClick = { detailedCsvPreviewPage = currentPage + 1 }
+                                ) { Text("Volgende CSV-pagina") }
+                            }
+                        }
                         SelectionContainer {
                             Text(
-                                detailPreview ?: "Geen veilig exporteerbare bronregel-CSV.",
+                                rows?.drop(currentPage * 12)?.take(12)?.joinToString("\n")
+                                    ?: "Geen veilig exporteerbare bronregel-CSV.",
                                 modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
                                     .verticalScroll(rememberScrollState()),
                                 style = MaterialTheme.typography.bodySmall
