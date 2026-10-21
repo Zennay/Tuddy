@@ -103,6 +103,12 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var wordJumpNumber by remember { mutableStateOf("") }
     var wordRangeFrom by remember { mutableStateOf("") }
     var wordRangeTo by remember { mutableStateOf("") }
+    // Strictly session-only, user-tapped start anchors for visible source words.
+    // Never inferred from the audio or written back to the subtitle provider.
+    var wordTimingMarks by remember(cues, audioUri) {
+        mutableStateOf<Map<Int, Map<Int, Long>>>(emptyMap())
+    }
+    var manualWordNumber by remember { mutableStateOf("") }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var rangeStartIndex by remember { mutableIntStateOf(-1) }
     var rangeEndIndex by remember { mutableIntStateOf(-1) }
@@ -479,6 +485,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val shifted = (subtitleOffsetMs + deltaMs).coerceIn(-30_000L, 30_000L)
         if (shifted == subtitleOffsetMs) return
         subtitleOffsetMs = shifted
+        // Old marks belong to previous displayed cue clocks.
+        wordTimingMarks = emptyMap()
         wordReplayBounds = null
         loopCueIndex = -1
         rangeStartIndex = -1
@@ -665,20 +673,25 @@ internal fun LocalSubtitleAudioPreviewDialog(
         displayTimeMs >= cueStart(it) && displayTimeMs < cueEnd(it)
     } else -1
     val active = cues.getOrNull(activeIndex)
+    val activeWordMarks = wordTimingMarks[activeIndex].orEmpty()
     val estimatedCueWord = if (estimatedWordFollow && active != null) {
         PrivateCueWordProgress.estimate(
-            active.text, cueStart(active), cueEnd(active), displayTimeMs
+            active.text, cueStart(active), cueEnd(active), displayTimeMs,
+            activeWordMarks
         )
     } else null
     val wordJumpChoices = if (wordJumpListOpen && estimatedCueWord != null &&
         active != null) {
-        PrivateCueWordProgress.choices(active.text, cueStart(active), cueEnd(active))
+        PrivateCueWordProgress.choices(
+            active.text, cueStart(active), cueEnd(active), activeWordMarks
+        )
     } else null
     LaunchedEffect(activeIndex, estimatedWordFollow) {
         wordJumpPage = 0
         wordJumpNumber = ""
         wordRangeFrom = ""
         wordRangeTo = ""
+        manualWordNumber = ""
         if (!estimatedWordFollow) {
             wordJumpListOpen = false
             wordReplayBounds = null
@@ -1371,7 +1384,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     if (estimatedWordFollow && estimatedCueWord != null && active != null) {
                         val replayWindow = PrivateCueWordProgress.estimatedWordReplayWindow(
                             active.text, cueStart(active), cueEnd(active),
-                            estimatedCueWord.index
+                            estimatedCueWord.index, activeWordMarks
                         )?.takeIf { it.second <= durationMs }
                         Text(
                             "Geschat woord ${estimatedCueWord.index + 1} van ${estimatedCueWord.count}",
@@ -1387,7 +1400,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 onClick = {
                                     PrivateCueWordProgress.estimatedWordStart(
                                         active.text, cueStart(active), cueEnd(active),
-                                        estimatedCueWord.index - 1
+                                        estimatedCueWord.index - 1, activeWordMarks
                                     )?.let(::seekTo)
                                 }
                             ) { Text("◀ Vorig woord") }
@@ -1401,7 +1414,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 onClick = {
                                     PrivateCueWordProgress.estimatedWordStart(
                                         active.text, cueStart(active), cueEnd(active),
-                                        estimatedCueWord.index + 1
+                                        estimatedCueWord.index + 1, activeWordMarks
                                     )?.let(::seekTo)
                                 }
                             ) { Text("Volgend ▶") }
@@ -1439,6 +1452,58 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         Text("De woordstappen springen naar geschatte momenten; " +
                             "ze volgen geen gemeten uitspraak of audioanalyse.",
                             style = MaterialTheme.typography.labelSmall)
+                        HorizontalDivider()
+                        Text("Handmatige woordankers · alleen deze audiosessie",
+                            style = MaterialTheme.typography.labelLarge)
+                        Text("Kies eerst een woordnummer (2 t/m " +
+                            "${estimatedCueWord.count}) en tik tijdens het luisteren op " +
+                            "Markeer op huidige audiotijd. Woord 1 begint volgens je " +
+                            "eigen cue-tijdcode. Tussen eigen markeringen worden " +
+                            "overige woorden alleen geschat, nooit herkend.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            value = manualWordNumber,
+                            onValueChange = { value ->
+                                if (value.length <= 3 && value.all(Char::isDigit))
+                                    manualWordNumber = value
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Origineel woordnummer voor tijdanker") },
+                            singleLine = true
+                        )
+                        val desiredMark = manualWordNumber.toIntOrNull()?.minus(1)
+                        val markedTimes = if (desiredMark != null &&
+                            activeIndex >= 0 && prepared && dragPositionMs < 0L &&
+                            positionMs >= cueStart(active) &&
+                            positionMs < cueEnd(active)) {
+                            PrivateCueWordProgress.withManualMark(
+                                active.text, cueStart(active), cueEnd(active),
+                                activeWordMarks, desiredMark, positionMs
+                            )
+                        } else null
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive && markedTimes != null,
+                            onClick = {
+                                if (markedTimes != null) {
+                                    wordReplayBounds = null
+                                    wordTimingMarks = wordTimingMarks +
+                                        (activeIndex to markedTimes)
+                                    notice = "Woordanker ${desiredMark!! + 1} vastgelegd op " +
+                                        "${clock(positionMs)} (handmatig, niet gemeten)."
+                                }
+                            }
+                        ) { Text("Markeer dit woord op huidige audiotijd") }
+                        if (activeWordMarks.isNotEmpty()) {
+                            Text("${activeWordMarks.size} van maximaal 16 eigen woordankers. " +
+                                "Deze veranderen alleen visuele woordstappen en herhaalpunten.",
+                                style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = {
+                                wordTimingMarks = wordTimingMarks - activeIndex
+                                wordReplayBounds = null
+                                notice = "Eigen woordankers voor deze ondertitel gewist."
+                            }) { Text("Herstel gelijkmatige woordschatting voor deze regel") }
+                        }
                         TextButton(onClick = {
                             wordJumpListOpen = !wordJumpListOpen
                             wordJumpPage = estimatedCueWord.index / 9
@@ -1546,7 +1611,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             val phraseWindow = if (firstWord != null && lastWord != null) {
                                 PrivateCueWordProgress.estimatedPhraseReplayWindow(
                                     active.text, cueStart(active), cueEnd(active),
-                                    firstWord - 1, lastWord - 1
+                                    firstWord - 1, lastWord - 1, activeWordMarks
                                 )?.takeIf { it.second <= durationMs }
                             } else null
                             if (phraseWindow != null) {
