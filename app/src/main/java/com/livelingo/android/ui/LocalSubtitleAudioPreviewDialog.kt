@@ -1383,9 +1383,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     }
                     if (estimatedWordFollow) {
                         Text(
-                            "LET OP · alleen gelijkmatig verdeeld over de bestaande " +
-                                "SRT/VTT-tijdcode, niet echt herkende of uitgelijnde " +
-                                "spraakwoorden. Zet uit om op woordkaarten te tikken.",
+                            "LET OP · woorden worden tussen eigen tijdankers of " +
+                                "cuegrenzen slechts geschat, niet echt herkend of " +
+                                "met spraak uitgelijnd. Zet uit voor woordkaarten.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -1455,8 +1455,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             else "↻ Herhaal alleen dit geschatte woordfragment")
                         }
                         Text("Herhaalbaar alleen bij geschatte vensters van minstens " +
-                            "0,75 s. Dit gebruikt uitsluitend je ondertiteltijdcodes, " +
-                            "geen woorddetectie of audioanalyse.",
+                            "0,75 s. Alleen je ondertiteltijdcodes en eventuele eigen " +
+                            "tijdankers bepalen de grenzen; geen woorddetectie of audioanalyse.",
                             style = MaterialTheme.typography.bodySmall)
                         Text("De woordstappen springen naar geschatte momenten; " +
                             "ze volgen geen gemeten uitspraak of audioanalyse.",
@@ -1714,9 +1714,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                         }
                                     }
                                 }
-                            Text("Alle tijden zijn gelijkmatige schattingen uit jouw " +
-                                "SRT/VTT; geen woordherkenning, audio-uitlijning " +
-                                "of nieuwe opname.",
+                            Text("Woordtijden volgen jouw cuegrenzen en eventueel handmatig " +
+                                "geplaatste ankers; tussenliggende woorden zijn alleen " +
+                                "geschat. Geen woordherkenning, audio-uitlijning of opname.",
                                 style = MaterialTheme.typography.labelSmall)
                         }
                     }
