@@ -68,6 +68,17 @@ jobs:
           git rev-parse HEAD > "$out/source-commit.txt"
           test "$(cat "$out/source-commit.txt")" = "$EXPECTED_SHA"
           cat "$out/app-debug.apk.sha256"
+          apk_sha="$(cut -d\x27 \x27 -f1 "$out/app-debug.apk.sha256")"
+          apk_bytes="$(stat -c%s "$out/app-debug.apk")"
+          {
+            echo "source_sha=$EXPECTED_SHA"
+            echo "workflow_run_id=$GITHUB_RUN_ID"
+            echo "workflow_run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "event_name=$GITHUB_EVENT_NAME"
+            echo "ref=$GITHUB_REF"
+            echo "apk_sha256=$apk_sha"
+            echo "apk_bytes=$apk_bytes"
+          } > "$out/build-manifest.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: Tuddy-debug-apk
@@ -75,6 +86,7 @@ jobs:
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/app-debug.apk.sha256
             app/build/outputs/apk/debug/source-commit.txt
+            app/build/outputs/apk/debug/build-manifest.txt
           retention-days: 14
           if-no-files-found: error
 
