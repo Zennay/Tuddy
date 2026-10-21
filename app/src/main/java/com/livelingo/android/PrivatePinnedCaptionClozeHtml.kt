@@ -17,6 +17,14 @@ internal enum class PinnedClozeHintMode(val title: String) {
     LENGTH("Woordlengte als invulstrepen")
 }
 
+/** Space is applied to both the browser answer field and printed writing lines. */
+internal enum class PinnedClozeAnswerSpace(
+    val title: String, val printHeightPx: Int, val browserRows: Int
+) {
+    STANDARD("Normaal · twee schrijflijnen", 66, 3),
+    SPACIOUS("Ruim · vier schrijflijnen", 132, 5)
+}
+
 internal object PrivatePinnedCaptionClozeHtml {
     private const val MAX_BYTES = 262_144
 
@@ -108,7 +116,8 @@ internal object PrivatePinnedCaptionClozeHtml {
         direction: PinnedStudyDirection,
         showLanguageTags: Boolean = false,
         difficulty: PinnedClozeDifficulty = PinnedClozeDifficulty.NORMAL,
-        hintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK
+        hintMode: PinnedClozeHintMode = PinnedClozeHintMode.BLANK,
+        answerSpace: PinnedClozeAnswerSpace = PinnedClozeAnswerSpace.STANDARD
     ): ByteArray? {
         // Same exact source-data and language-label validation as TSV.
         // Printed text must not gain spreadsheet formula-safety apostrophes.
@@ -149,16 +158,19 @@ internal object PrivatePinnedCaptionClozeHtml {
                 "textarea{display:block;box-sizing:border-box;width:100%;min-height:84px;" +
                 "border:1px solid #64748b;border-radius:6px;padding:8px;" +
                 "font:inherit;resize:vertical;unicode-bidi:plaintext}" +
+                ".reset{margin-top:8px;padding:7px 12px;border:1px solid #64748b;" +
+                "border-radius:5px;background:#fff;color:#182435;cursor:pointer}" +
                 "summary{cursor:pointer;padding:8px 0}" +
                 ".write{display:none;border-bottom:1px solid #64748b;" +
-                "min-height:66px;margin-top:12px}" +
+                "min-height:" + answerSpace.printHeightPx + "px;margin-top:12px}" +
                 ".answers{break-before:page;page-break-before:always}" +
                 "@media print{@page{margin:14mm}body{padding:0}" +
-                "details,.work,textarea{display:none}.write{display:block}" +
+                "details,.work,textarea,.reset{display:none}.write{display:block}" +
                 ".card{break-inside:avoid}}" +
                 "</style></head><body><main><h1>Tweetalige aanvuloefening</h1>" +
                 "<p>Moeilijkheid: " + escape(difficulty.title) + ". " +
                 "Invulhint: " + escape(hintMode.title) + ". " +
+                "Schrijfruimte: " + escape(answerSpace.title) + ". " +
                 "Vul de ontbrekende woorden in. Dit zijn uitsluitend " +
                 "zelfgekozen lokale zinnen, ongeverifieerde modelvertalingen " +
                 "of eigen correcties. Geen automatische taalcontrole." +
@@ -174,13 +186,16 @@ internal object PrivatePinnedCaptionClozeHtml {
                 .append(escape(question)).append("</bdi></p>")
                 .append("<p class=\"hint\"><bdi dir=\"auto\">")
                 .append(escape(hint)).append("</bdi></p>")
-                .append("<label class=\"work\" for=\"typed-").append(index + 1)
+                .append("<form autocomplete=\"off\"><label class=\"work\" for=\"typed-").append(index + 1)
                 .append("\">Mijn eigen antwoord (alleen tijdelijk in de browser)</label>")
                 .append("<textarea id=\"typed-").append(index + 1)
-                .append("\" rows=\"3\" dir=\"auto\" spellcheck=\"false\" " +
+                .append("\" rows=\"").append(answerSpace.browserRows)
+                .append("\" dir=\"auto\" spellcheck=\"false\" " +
                     "autocomplete=\"off\" autocorrect=\"off\" " +
                     "aria-label=\"Mijn eigen antwoord voor kaart ").append(index + 1)
                 .append("\"></textarea>")
+                .append("<button class=\"reset\" type=\"reset\">" +
+                    "Wis mijn antwoord op deze kaart</button></form>")
                 .append("<div class=\"write\" aria-hidden=\"true\"></div>")
                 .append("<details><summary>Bekijk volledig antwoord</summary>")
                 .append("<p class=\"phrase\"><bdi dir=\"auto\">")
