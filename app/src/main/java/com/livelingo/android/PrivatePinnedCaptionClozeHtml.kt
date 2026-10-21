@@ -30,8 +30,12 @@ internal object PrivatePinnedCaptionClozeHtml {
     }
 
     /** Same gaps as the exported HTML, for the Android consent preview. */
-    fun previewHint(text: String): String =
-        missingWords(PrivatePinnedCaptionStudyTsv.field(text, spreadsheetSafe = false))
+    fun previewHint(text: String, languageCode: String? = null): String {
+        val words = missingWords(
+            PrivatePinnedCaptionStudyTsv.field(text, spreadsheetSafe = false)
+        )
+        return if (languageCode == null) words else "[" + languageCode + "] " + words
+    }
 
     fun snapshot(
         rows: List<TranscriptExportRow>,
@@ -42,15 +46,20 @@ internal object PrivatePinnedCaptionClozeHtml {
         // Printed text must not gain spreadsheet formula-safety apostrophes.
         if (PrivatePinnedCaptionStudyTsv.snapshot(rows, direction, showLanguageTags) == null)
             return null
-        val cards = ArrayList<Pair<String, String>>()
+        // Prompt, exact complete answer, and what is visible before revealing it.
+        val cards = ArrayList<Triple<String, String, String>>()
         rows.forEach { row ->
             val source = PrivatePinnedCaptionStudyTsv.field(row.original, spreadsheetSafe = false)
             val target = PrivatePinnedCaptionStudyTsv.field(row.translated, spreadsheetSafe = false)
             if (source.isBlank() || target.isBlank()) return null
             val front = if (showLanguageTags) "[" + row.sourceCode + "] " + source else source
             val back = if (showLanguageTags) "[" + row.targetCode + "] " + target else target
-            if (direction != PinnedStudyDirection.TARGET_TO_SOURCE) cards.add(front to back)
-            if (direction != PinnedStudyDirection.SOURCE_TO_TARGET) cards.add(back to front)
+            if (direction != PinnedStudyDirection.TARGET_TO_SOURCE)
+                cards.add(Triple(front, back, previewHint(target,
+                    if (showLanguageTags) row.targetCode else null)))
+            if (direction != PinnedStudyDirection.SOURCE_TO_TARGET)
+                cards.add(Triple(back, front, previewHint(source,
+                    if (showLanguageTags) row.sourceCode else null)))
         }
         if (cards.isEmpty() || cards.size > SessionCaptionPins.MAX_PINS * 2) return null
 
@@ -80,12 +89,12 @@ internal object PrivatePinnedCaptionClozeHtml {
                 " De antwoorden staan op een nieuwe afdrukpagina.</p>" +
                 "<section aria-label=\"Oefenvragen\"><h2>Vragen</h2>"
         )
-        cards.forEachIndexed { index, (question, answer) ->
+        cards.forEachIndexed { index, (question, answer, hint) ->
             out.append("<article class=\"card\"><b>Kaart ").append(index + 1)
                 .append("</b><p class=\"phrase\"><bdi dir=\"auto\">")
                 .append(escape(question)).append("</bdi></p>")
                 .append("<p class=\"hint\"><bdi dir=\"auto\">")
-                .append(escape(missingWords(answer))).append("</bdi></p>")
+                .append(escape(hint)).append("</bdi></p>")
                 .append("<div class=\"write\" aria-hidden=\"true\"></div>")
                 .append("<details><summary>Bekijk volledig antwoord</summary>")
                 .append("<p class=\"phrase\"><bdi dir=\"auto\">")
@@ -93,7 +102,7 @@ internal object PrivatePinnedCaptionClozeHtml {
             if (out.length > MAX_BYTES) return null
         }
         out.append("</section><section class=\"answers\"><h2>Antwoordblad</h2>")
-        cards.forEachIndexed { index, (_, answer) ->
+        cards.forEachIndexed { index, (_, answer, _) ->
             out.append("<p class=\"phrase\"><b>").append(index + 1)
                 .append(".</b> <bdi dir=\"auto\">").append(escape(answer))
                 .append("</bdi></p>")
