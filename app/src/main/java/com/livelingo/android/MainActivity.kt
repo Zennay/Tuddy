@@ -613,6 +613,7 @@ private fun TuddyScreen(
     val speechCatalogReceipts = remember { mutableStateMapOf<String, SpeechPackReceipt>() }
     var speechCatalogOpen by remember { mutableStateOf(false) }
     var speechCatalogBusy by remember { mutableStateOf(false) }
+    var speechCatalogDownloadTag by remember { mutableStateOf<String?>(null) }
     var speechCatalogScanned by remember { mutableIntStateOf(0) }
     var speechCatalogEpoch by remember { mutableIntStateOf(0) }
     var follow by remember { mutableStateOf(true) }
@@ -1169,6 +1170,7 @@ private fun TuddyScreen(
         speechCatalogTimeoutHandler.removeCallbacksAndMessages(null)
         speechCatalogEpoch++
         speechCatalogController.cancel()
+        speechCatalogDownloadTag = null
         speechCatalogBusy = false
         speechCatalogOpen = false
         speechCatalogReceipts.clear()
@@ -1176,7 +1178,8 @@ private fun TuddyScreen(
     }
 
     fun scanSpeechCatalog() {
-        if (!speechCatalogOpen || speechCatalogBusy || listening || !offlineAvailable) return
+        if (!speechCatalogOpen || speechCatalogBusy || speechCatalogDownloadTag != null ||
+            listening || !offlineAvailable) return
         speechCatalogController.cancel()
         speechCatalogEpoch++
         val scanEpoch = speechCatalogEpoch
@@ -2552,6 +2555,7 @@ private fun TuddyScreen(
                 currentTag = source.speechCode,
                 receipts = speechCatalogReceipts,
                 scanning = speechCatalogBusy,
+                downloadTag = speechCatalogDownloadTag,
                 scannedCount = speechCatalogScanned,
                 speechServiceAvailable = offlineAvailable,
                 onScan = { scanSpeechCatalog() },
@@ -2568,6 +2572,9 @@ private fun TuddyScreen(
                     }
                     speechCatalogBusy = false
                 },
+                onPrepare = { tag -> downloadCatalogSpeechPack(tag) },
+                onCancelFollow = { cancelCatalogDownloadFollow() },
+                onCheckOne = { tag -> checkCatalogSpeechPack(tag) },
                 onCopyCatalog = { copySpeechCatalogReport() },
                 onSelect = { tag -> selectBrowserSpeechSource(tag) },
                 onDismiss = { closeSpeechCatalog() }
