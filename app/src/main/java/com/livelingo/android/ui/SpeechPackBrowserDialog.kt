@@ -12,9 +12,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.SpeechPackReceipt
@@ -33,9 +38,18 @@ internal fun SpeechPackBrowserDialog(
     speechServiceAvailable: Boolean,
     onScan: () -> Unit,
     onStopScan: () -> Unit,
+    onCopyCatalog: () -> Boolean,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var query by remember { mutableStateOf("") }
+    var onlyReady by remember { mutableStateOf(false) }
+    var copyNotice by remember { mutableStateOf("") }
+    val visibleOptions = options.filter { option ->
+        (!onlyReady || receipts[option.tag]?.stage == SpeechPackStage.READY) &&
+            (query.isBlank() || option.label.contains(query, ignoreCase = true) ||
+                option.tag.contains(query, ignoreCase = true))
+    }
     val ready = options.count { receipts[it.tag]?.stage == SpeechPackStage.READY }
     val offered = options.count { receipts[it.tag]?.stage == SpeechPackStage.DOWNLOADABLE }
     AlertDialog(
@@ -74,7 +88,32 @@ internal fun SpeechPackBrowserDialog(
                         OutlinedButton(onClick = onStopScan) { Text("Stop controle") }
                     }
                 }
-                options.forEach { option ->
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it.take(40) },
+                    label = { Text("Zoek spreektaal of regiocode") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextButton(onClick = { onlyReady = !onlyReady }) {
+                    Text(if (onlyReady) "Toon ook onbekende talen" else "Toon alleen aanwezig")
+                }
+                OutlinedButton(
+                    onClick = {
+                        copyNotice = if (onCopyCatalog())
+                            "Pakketoverzicht gekopieerd; bevat geen transcript of audio."
+                        else "Kopiëren is niet gelukt."
+                    },
+                    enabled = !scanning && receipts.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Kopieer pakketoverzicht") }
+                if (copyNotice.isNotBlank()) {
+                    Text(copyNotice, style = MaterialTheme.typography.bodySmall)
+                }
+                if (visibleOptions.isEmpty()) {
+                    Text("Geen talen in deze selectie.", style = MaterialTheme.typography.bodySmall)
+                }
+                visibleOptions.forEach { option ->
                     HorizontalDivider()
                     Text(
                         "${option.label} (${option.tag})" +
