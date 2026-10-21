@@ -6,6 +6,13 @@ package com.livelingo.android
  * two known corresponding cue pairs; we only map their authored start times.
  * No audio/media analysis, automatic matching, translation or permanent write.
  */
+internal data class PrivateSubtitleDriftSelection(
+    val firstPrimaryRow: String,
+    val firstSecondaryRow: String,
+    val lastPrimaryRow: String,
+    val lastSecondaryRow: String
+)
+
 internal data class PrivateSubtitleDriftPreview(
     val adjustedSecondary: List<PrivateSubtitleCue>,
     val firstPrimary: PrivateSubtitleCue,
