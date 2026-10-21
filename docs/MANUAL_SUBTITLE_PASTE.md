@@ -325,6 +325,24 @@ kan extern/cloudgesynchroniseerd zijn; Tuddy schrijft niet op de
 achtergrond en vraagt geen blijvende URI-toegang. **Dit is een
 handmatige lyrics-uitwisseling, geen bewijs van accurate audiotiming.**
 
+## Lange CSV/TSV- en LRC-exportvoorbeelden zonder vastlopende interface
+
+Wanneer je een groot eigen ondertitelconcept exporteert, wordt er **niet
+meer één gigantisch tekstblok** in het bevestigingsvenster getekend.
+Het venster toont nu de **werkelijke bestandsbytes als UTF-8-tekst
+in doorbladerbare, begrensde gedeelten**. Tik op **Vorige** en
+**Volgende** om alle delen van het volledige exportdocument te bekijken.
+De pagina's behouden originele regelovergangen; de scrollpositie start
+bij een volgende pagina opnieuw bovenaan. Het weergegeven gedeelte is
+alleen een voorbeeld: na de aparte Android-documentkeuze wordt altijd
+de **complete vooraf bevestigde snapshot** opnieuw berekend en
+opgeslagen, niet alleen de getoonde pagina.
+
+Deze leesbaarheidverbetering geldt zowel voor drie-/vierkoloms
+**CSV/TSV** als eigen **LRC**-beginmomenten. De bestaande maximaal
+500-cue- en 256-KiB-grenzen, broncontroles en expliciete toestemming
+blijven ongewijzigd. Het zegt niets over echte ASR of audio-uitlijning.
+
 ## CSV/TSV met eigen tijdcodes weer opslaan en opnieuw importeren
 
 Na bewerken van een tijdelijke ondertiteltijdlijn kun je nu naast SRT
