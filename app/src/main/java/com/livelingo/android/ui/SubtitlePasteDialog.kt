@@ -69,6 +69,7 @@ internal fun SubtitlePasteDialog(
     onDismiss: () -> Unit,
     onAccept: (List<PrivateSubtitleCue>) -> Unit,
     onChooseDocument: (SubtitlePasteFileContent) -> Unit,
+    onSaveEditedLrcSource: ((SubtitlePasteFileContent) -> Unit)? = null,
     initialDocument: SubtitlePasteFileContent? = null
 ) {
     var raw by remember(initialDocument) { mutableStateOf(initialDocument?.text.orEmpty()) }
@@ -700,6 +701,38 @@ internal fun SubtitlePasteDialog(
                         style = MaterialTheme.typography.titleSmall
                     )
                     if (lrcMode) {
+                        if (onSaveEditedLrcSource != null) {
+                            Text(
+                                "Bewaar de volledige eigen LRC-brontekst inclusief " +
+                                    "refreintags, zelfgeschreven lyrics, metadata " +
+                                    "en eventuele [offset:]. Deze kopie is anders " +
+                                    "dan opnieuw uit de afgeleide SRT/VTT-cues " +
+                                    "gebouwde LRC; de oorspronkelijke bron " +
+                                    "wordt niet overschreven.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    onSaveEditedLrcSource(SubtitlePasteFileContent(
+                                        text = raw,
+                                        format = SubtitlePasteFormat(plainLines, lrcMode, splitMode),
+                                        ownMeaning = ownMeaning,
+                                        startMs = startMs,
+                                        durationMs = durationMs,
+                                        manualTiming = manualTiming,
+                                        startSeconds = startSecondsInput,
+                                        durationSeconds = durationSecondsInput,
+                                        firstRow = firstRow,
+                                        lastRow = lastRow,
+                                        explicitRows = explicitRows,
+                                        search = search
+                                    ))
+                                }
+                            ) {
+                                Text("Bewaar deze volledige LRC-bron als nieuw .lrc-bestand…")
+                            }
+                        }
                         val declaredOffset = PrivateLrcSubtitleDraft.declaredOffsetMillis(raw)
                         Text(
                             if (declaredOffset == null)
