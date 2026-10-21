@@ -76,6 +76,7 @@ import com.livelingo.android.ui.FocusCaptionLine
 import com.livelingo.android.ui.SessionCaptionStudyDialog
 import com.livelingo.android.ui.LiveInterimWordFocus
 import com.livelingo.android.ui.OfflineStarterPhraseboard
+import com.livelingo.android.ui.OfflinePersonalPhraseTurnsDialog
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
@@ -466,6 +467,7 @@ private fun TuddyScreen(
     var personalPhrasesOpen by remember { mutableStateOf(false) }
     var quickPhrasePickerOpen by remember { mutableStateOf(false) }
     var starterPhraseboardOpen by remember { mutableStateOf(false) }
+    var offlinePersonalTurnsOpen by remember { mutableStateOf(false) }
     var starterPhraseboardTarget by remember { mutableStateOf("kmr") }
     var flashcardsOpen by remember { mutableStateOf(false) }
     var previewSource by remember { mutableStateOf("nl") }
@@ -5189,6 +5191,16 @@ private fun TuddyScreen(
                 onDismiss = { flashcardsOpen = false }
             )
         }
+        if (offlinePersonalTurnsOpen) {
+            OfflinePersonalPhraseTurnsDialog(
+                initialLanguage = previewTarget,
+                onManagePhrases = {
+                    offlinePersonalTurnsOpen = false
+                    personalPhrasesOpen = true
+                },
+                onDismiss = { offlinePersonalTurnsOpen = false }
+            )
+        }
         if (starterPhraseboardOpen) {
             OfflineStarterPhraseboard(
                 initialTarget = starterPhraseboardTarget,
@@ -5576,6 +5588,11 @@ private fun TuddyScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("⇄ Tweeweg-tekstgesprek · zonder microfoon") }
+                TextButton(
+                    enabled = !listening,
+                    onClick = { offlinePersonalTurnsOpen = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("⇄ Offline gesprek met mijn eigen Kurmanji/Sorani/Pasjtoe-zinnen") }
                 TextButton(
                     onClick = {
                         if (listening) stop()
