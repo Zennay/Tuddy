@@ -39,4 +39,33 @@ internal object PrivateSubtitleRowSelection {
         }
         return marks.indices.filter { marks[it] }.takeIf { it.isNotEmpty() }
     }
+
+    /** Compact the visible original 1-based row numbers for deliberate editing. */
+    fun formatSourceRows(rows: List<Int>, sourceRows: Int): String? {
+        if (sourceRows !in 1..MAX_CUES || rows.isEmpty() || rows.size > MAX_CUES)
+            return null
+        val sorted = rows.sorted()
+        if (sorted.first() < 1 || sorted.last() > sourceRows ||
+            sorted.zipWithNext().any { (a, b) -> a == b }) return null
+        val parts = ArrayList<String>()
+        var start = sorted.first()
+        var previous = start
+        for (row in sorted.drop(1)) {
+            if (row == previous + 1) {
+                previous = row
+            } else {
+                parts += if (start == previous) "$start" else "$start-$previous"
+                start = row
+                previous = row
+            }
+        }
+        parts += if (start == previous) "$start" else "$start-$previous"
+        val expression = parts.joinToString(",")
+        if (expression.length > MAX_EXPRESSION_LENGTH) return null
+        // Never display an expression that fails the same parser used at consent.
+        return expression.takeIf { parsed ->
+            parse(parsed, sourceRows) == sorted.map { it - 1 }
+        }
+    }
+
 }
