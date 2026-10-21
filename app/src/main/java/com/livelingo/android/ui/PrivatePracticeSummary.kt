@@ -42,10 +42,12 @@ internal fun privatePracticeSummary(
     notes: Map<Pair<Long, Long>, String> = emptyMap()
 ): String {
     fun clock(millis: Long): String {
-        val seconds = millis.coerceAtLeast(0L) / 1000L
+        val safeMillis = millis.coerceAtLeast(0L)
+        val seconds = safeMillis / 1000L
         return String.format(
-            Locale.ROOT, "%02d:%02d:%02d",
-            seconds / 3600L, (seconds / 60L) % 60L, seconds % 60L
+            Locale.ROOT, "%02d:%02d:%02d.%03d",
+            seconds / 3600L, (seconds / 60L) % 60L, seconds % 60L,
+            safeMillis % 1000L
         )
     }
 
