@@ -43,23 +43,35 @@ internal object PrivateSubtitleCorrectionScript {
         fromRow: Int,
         throughRow: Int,
         field: SubtitleReplaceField,
-        explicitRows: String
+        explicitRows: String,
+        skipUnmatched: Boolean = false
     ): SubtitleBatchPreview? {
         val rules = parse(script) ?: return null
         var current = cues
         var replacements = 0
+        var skipped = 0
+        val ruleChanges = ArrayList<Int>(rules.size)
         for (rule in rules) {
-            // Every rule must have a real effect, or the all-or-nothing draft
-            // is rejected rather than silently pretending a correction ran.
+            // A missing phrase may be skipped only when explicitly requested;
+            // malformed ranges, malformed cues and unsafe resulting text are
+            // always rejected by the same complete draft validation.
             val result = PrivateSubtitleBatchReplace.preview(
                 current, rule.search, rule.replacement, matchCase,
-                fromRow, throughRow, field, explicitRows, wholeWords
+                fromRow, throughRow, field, explicitRows, wholeWords,
+                allowNoChange = skipUnmatched
             ) ?: return null
+            if (result.changedCues == 0) skipped++
+            ruleChanges.add(result.replacements)
             current = result.updated
             replacements += result.replacements
         }
         val changed = current.indices.count { current[it].text != cues[it].text }
         if (changed == 0) return null
-        return SubtitleBatchPreview(current, changed, replacements)
+        return SubtitleBatchPreview(
+            current, changed, replacements,
+            appliedRules = rules.size - skipped,
+            skippedRules = skipped,
+            ruleChanges = ruleChanges
+        )
     }
 }

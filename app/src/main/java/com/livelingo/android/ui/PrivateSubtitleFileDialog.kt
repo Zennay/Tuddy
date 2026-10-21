@@ -141,6 +141,7 @@ internal fun PrivateSubtitleFileDialog(
     var batchMatchCase by remember { mutableStateOf(false) }
     var batchWholeWords by remember { mutableStateOf(false) }
     var batchUseScript by remember { mutableStateOf(false) }
+    var batchSkipUnmatched by remember { mutableStateOf(false) }
     var batchScript by remember { mutableStateOf("") }
     var batchScriptOversized by remember { mutableStateOf(false) }
     var batchField by remember { mutableStateOf(SubtitleReplaceField.ALL_TEXT) }
@@ -2203,7 +2204,8 @@ internal fun PrivateSubtitleFileDialog(
         // A changed search, translation line, or selected range always starts
         // review at the first actual changed cue, not an old preview page.
         LaunchedEffect(draft, batchFind, batchWith, batchMatchCase, batchWholeWords,
-            batchField, batchFirstRow, batchLastRow, batchExplicitRows, batchUseScript, batchScript) {
+            batchField, batchFirstRow, batchLastRow, batchExplicitRows,
+            batchUseScript, batchScript, batchSkipUnmatched) {
             batchReviewPage = 0
         }
         val scopeFrom = batchFirstRow.toIntOrNull()
@@ -2215,7 +2217,8 @@ internal fun PrivateSubtitleFileDialog(
             val last = if (explicitBatch) draft.size else scopeTo!!
             if (batchUseScript) PrivateSubtitleCorrectionScript.preview(
                 draft, batchScript, batchMatchCase, batchWholeWords,
-                first, last, batchField, batchExplicitRows
+                first, last, batchField, batchExplicitRows,
+                skipUnmatched = batchSkipUnmatched
             ) else PrivateSubtitleBatchReplace.preview(
                 draft, batchFind, batchWith, batchMatchCase, first, last,
                 batchField, batchExplicitRows, batchWholeWords
@@ -2384,6 +2387,17 @@ internal fun PrivateSubtitleFileDialog(
                                 }
                             }) { Text("Plak correctieregels") }
                         }
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Checkbox(checked = batchSkipUnmatched,
+                                onCheckedChange = { batchSkipUnmatched = it })
+                            Text("Sla niet-gevonden tekstcorrecties over")
+                        }
+                        Text("Standaard moet iedere regel echt iets aanpassen. " +
+                            "Met deze optie mogen ontbrekende zoektermen " +
+                            "worden overgeslagen; ongeldige tekst, onveilige " +
+                            "tijdlijnen of ongeldige regelselecties worden " +
+                            "nooit overgeslagen.", style = MaterialTheme.typography.bodySmall)
                         Text("Kopiëren en klembordlezen gebeuren uitsluitend " +
                             "na je eigen tik. Er is geen automatisch clipboard- " +
                             "of netwerkgebruik door Tuddy.",
@@ -2426,6 +2440,19 @@ internal fun PrivateSubtitleFileDialog(
                              else "${scopeFrom}–${scopeTo}."),
 
                         style = MaterialTheme.typography.bodyMedium)
+                    if (batchUseScript && proposed != null) {
+                        Text("Correctieregels: ${proposed.appliedRules} toegepast, " +
+                            "${proposed.skippedRules} overgeslagen.",
+                            style = MaterialTheme.typography.labelMedium)
+                        val parsedRules = PrivateSubtitleCorrectionScript.parse(batchScript)
+                        parsedRules?.forEachIndexed { index, rule ->
+                            val count = proposed.ruleChanges.getOrNull(index) ?: 0
+                            Text("${index + 1}. ${rule.search} → ${rule.replacement} " +
+                                (if (count == 0) "· overgeslagen"
+                                else "· $count vervangingen"),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                     if (changes.isNotEmpty()) {
                         Text("Previewpagina ${reviewPage + 1} van ${reviewPageCount} " +
                             "· ${changes.size} veranderde regels (volledige tekst)",
@@ -2464,7 +2491,8 @@ internal fun PrivateSubtitleFileDialog(
                         val last = if (explicitConfirmed) draft.size else confirmedTo!!
                         if (batchUseScript) PrivateSubtitleCorrectionScript.preview(
                             draft, batchScript, batchMatchCase, batchWholeWords,
-                            first, last, batchField, batchExplicitRows
+                            first, last, batchField, batchExplicitRows,
+                            skipUnmatched = batchSkipUnmatched
                         ) else PrivateSubtitleBatchReplace.preview(
                             draft, batchFind, batchWith, batchMatchCase,
                             first, last, batchField, batchExplicitRows, batchWholeWords

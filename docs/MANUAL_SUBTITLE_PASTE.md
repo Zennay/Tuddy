@@ -413,6 +413,17 @@ een geldig oud begin van de tekst over te nemen. Iedere geplakte reeks
 vereist opnieuw volledige validatie, een bladerbare preview en aparte
 bevestiging.
 
+Voor herbruikbare recepten die niet bij elk document alle foutwoorden
+bevatten, kun je **Sla niet-gevonden tekstcorrecties over** kiezen.
+Standaard blijft de bestaande strikte werkwijze actief: elke regel
+moet een verandering maken. Met overslaan mag een valide regel
+zonder treffers worden overgeslagen; er moet uiteindelijk minstens
+één echte wijziging zijn. De preview toont dan per opgegeven
+regel het aantal vervangingen of **overgeslagen**, plus het totaal.
+Ongeldige of niet als SRT/VTT exporteerbare resultaten worden ook
+met dit vinkje nooit geaccepteerd. De complete einduitkomst blijft
+één expliciet bevestigde Undo/Redo-handeling.
+
 **Van/Tot**, expliciete oorspronkelijke bronregels of geselecteerde
 tijdvensters, **alleen eerste/tweede tekstregel**, hoofdlettergevoeligheid
 en **Alleen volledige woorden** gelden voor álle ingevoerde regels.

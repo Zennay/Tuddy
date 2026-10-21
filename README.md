@@ -2008,6 +2008,12 @@ providerbron wordt niet overschreven. Onmogelijke tijden, gewijzigde
 chronologische cue-identiteit en niet als SRT én VTT exporteerbare
 uitkomsten worden volledig geweigerd. Er wordt geen audio gelezen,
 spraak herkend, automatisch vertaald of cloudfallback gestart.
+Hergebruik een eigen reeks op documenten waar niet alle foutwoorden
+voorkomen: de optionele instelling **Sla niet-gevonden
+tekstcorrecties over** toont per regel wat daadwerkelijk veranderde,
+maar weigert nog steeds onveilige correcties en een volledig
+resultaat zonder wijziging.
+
 Eigen correctiereeksen kunnen nu ook via aparte **Kopieer**- en
 **Plak**-knoppen op het Android-klembord worden hergebruikt.
 Niets wordt automatisch gelezen; externe klembordapps kunnen

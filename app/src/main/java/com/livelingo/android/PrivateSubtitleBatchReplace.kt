@@ -11,7 +11,10 @@ import java.util.regex.Pattern
 internal data class SubtitleBatchPreview(
     val updated: List<PrivateSubtitleCue>,
     val changedCues: Int,
-    val replacements: Int
+    val replacements: Int,
+    val appliedRules: Int = 1,
+    val skippedRules: Int = 0,
+    val ruleChanges: List<Int> = emptyList()
 )
 
 internal enum class SubtitleReplaceField { ALL_TEXT, FIRST_LINE, SECOND_LINE }
@@ -26,7 +29,8 @@ internal object PrivateSubtitleBatchReplace {
         throughRow: Int = cues.size,
         field: SubtitleReplaceField = SubtitleReplaceField.ALL_TEXT,
         explicitRows: String = "",
-        wholeWords: Boolean = false
+        wholeWords: Boolean = false,
+        allowNoChange: Boolean = false
     ): SubtitleBatchPreview? {
         if (cues.isEmpty() || cues.size > 500 ||
             fromRow !in 1..cues.size || throughRow !in fromRow..cues.size ||
@@ -105,7 +109,7 @@ internal object PrivateSubtitleBatchReplace {
             occurrences += matches
             cue.copy(text = edited)
         }
-        if (affected == 0 ||
+        if ((affected == 0 && !allowNoChange) ||
             PrivateSubtitleDraftEditor.snapshot(draft, SubtitleDraftFormat.SRT) == null ||
             PrivateSubtitleDraftEditor.snapshot(draft, SubtitleDraftFormat.WEBVTT) == null)
             return null
