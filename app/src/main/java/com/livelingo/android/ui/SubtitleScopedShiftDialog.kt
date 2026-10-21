@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleRowSelection
+import com.livelingo.android.PrivateSubtitleTimeWindowRows
 import com.livelingo.android.PrivateSubtitleScopedShift
 
 /**
@@ -42,6 +43,8 @@ internal fun SubtitleScopedShiftDialog(
     var rows by remember(draft) { mutableStateOf(initialFound.orEmpty()) }
     var offset by remember(draft) { mutableStateOf(500L) }
     var page by remember(draft) { mutableIntStateOf(0) }
+    var windowStart by remember(draft) { mutableStateOf("") }
+    var windowEnd by remember(draft) { mutableStateOf("") }
     val preview = PrivateSubtitleScopedShift.preview(draft, rows, offset)
     val pageCount = maxOf(1, ((preview?.movedRows?.size ?: 0) + 4) / 5)
     val shown = page.coerceIn(0, pageCount - 1)
@@ -72,6 +75,30 @@ internal fun SubtitleScopedShiftDialog(
                         Text("Selecteer ${foundSourceRows.size} gevonden bronregels")
                     }
                 }
+                Text("Of selecteer volledige cues op basis van een " +
+                    "zelf ingevuld overlappend tijdvenster (geen audioanalyse):",
+                    style = MaterialTheme.typography.bodySmall)
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    OutlinedTextField(value = windowStart,
+                        onValueChange = { windowStart = it.take(13) },
+                        label = { Text("Vanaf mm:ss") },
+                        modifier = Modifier.weight(1f), singleLine = true)
+                    OutlinedTextField(value = windowEnd,
+                        onValueChange = { windowEnd = it.take(13) },
+                        label = { Text("Tot mm:ss") },
+                        modifier = Modifier.weight(1f), singleLine = true)
+                }
+                val selectedWindow = PrivateSubtitleTimeWindowRows.expression(
+                    draft, windowStart, windowEnd)
+                OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                    enabled = selectedWindow != null,
+                    onClick = {
+                        if (selectedWindow != null) {
+                            rows = selectedWindow
+                            page = 0
+                        }
+                    }) { Text("Selecteer cues die tijdvenster overlappen") }
                 Text("Handmatige verschuiving:",
                     style = MaterialTheme.typography.labelMedium)
                 listOf(
