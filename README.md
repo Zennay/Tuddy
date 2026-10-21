@@ -21,6 +21,16 @@ snapshots bij voor het volledige editorconcept en de gekozen
 exportbytes; originele files en live gesprek worden niet gewijzigd.
 [Privacy en details](docs/MANUAL_SUBTITLE_PASTE.md).
 
+## Nieuw: zelf instelbare tijdverschuiving in de ondertiteleditor
+
+Naast vaste verschuivingen kan de gebruiker nu zelf een positieve
+of negatieve verschuiving invoeren, tot **600 seconden** met maximaal
+drie decimalen (**1 ms resolutie**). Alleen bewust geselecteerde
+ondertitelregels veranderen; de volledige SRT/VTT-export-, tijdlijn-
+en Undo/Redo-beperkingen blijven intact. Ongeldige invoer en
+niet-exporteerbare tijdlijnen worden niet toegepast.
+[Werkwijze](docs/MANUAL_SUBTITLE_PASTE.md).
+
 ## Nieuw: meerdere losse tijdvensters in één bewerking
 
 Tuddy kan maximaal 16 **zelf ingevulde niet-overlappende tijdvensters**
