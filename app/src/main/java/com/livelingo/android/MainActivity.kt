@@ -2260,6 +2260,11 @@ private fun TuddyScreen(
         if (languageSupportOpen) {
             LanguageSupportDialog(
                 spokenCandidates = spoken.map { it.label + " (" + it.speechCode + ")" },
+                onPreviewLanguage = { code ->
+                    languageSupportOpen = false
+                    starterPhraseboardTarget = code
+                    starterPhraseboardOpen = true
+                },
                 onDismiss = { languageSupportOpen = false }
             )
         }
