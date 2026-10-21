@@ -1,3 +1,27 @@
+## Nieuw: direct invullen en zelfgekozen invulhints zonder internet
+
+De geëxporteerde **Aanvuloefening · HTML** is nu ook op de telefoon of laptop
+als invulwerkblad te gebruiken: typ je eigen antwoord in het tekstvak onder
+elke hint en open alleen wanneer je wilt het volledige antwoord. Er is geen
+automatische nakijkfunctie, JavaScript, formulierverzending, netwerkbron of
+nieuwe app-toestemming. Bij **afdrukken** verdwijnen tekstvakken en verschijnen
+schrijflijnen; het antwoordblad blijft op een aparte pagina. Tuddy bewaart
+getypte browserantwoorden niet, al kan de browser zelf formuliertekst herstellen.
+Een extern gekozen bestandsprovider kan het HTML-bestand wel synchroniseren.
+
+Naast **Licht / Normaal / Uitdaging** kies je in Android voortaan het soort hint:
+**Alleen invulstrepen**, **Eerste teken van verborgen woorden** of
+**Woordlengte als invulstrepen**. Dit zijn uitsluitend hints voor door
+witruimte gescheiden woorden; voor ongesegmenteerde scripts blijft de
+hele antwoordzijde verborgen. Lengtehints tonen maximaal 16 strepen per
+woord, geen automatische taalanalyse. Je ziet de daadwerkelijke hint voor
+het opslaan, in het HTML-bestand staat de gekozen optie vermeld, en
+verandering van de optie tijdens de bestandskiezer blokkeert oude opslag.
+Originele zinnen, eigen correcties, de exacte antwoordteksten en
+selectie-/privacygrenzen blijven ongewijzigd.
+
+---
+
 ## Nieuw: drie niveaus voor de tweetalige aanvuloefening
 
 In **Aanvuloefening · HTML** kies je nu eerst expliciet hoeveel eigen
