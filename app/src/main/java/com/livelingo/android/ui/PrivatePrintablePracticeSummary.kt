@@ -14,7 +14,9 @@ internal enum class PrivatePracticeReportFormat(
     TXT("text/plain", "Tuddy-mijn-luisteroefening.txt", "TXT"),
     CSV("text/csv", "Tuddy-mijn-luisteroefening.csv", "CSV"),
     DETAILED_CSV("text/csv", "Tuddy-mijn-bronregels-per-fragment.csv",
-        "CSV · bronregels per fragment")
+        "CSV · bronregels per fragment"),
+    STUDENT_CSV("text/csv", "Tuddy-luister-leerlingenblad-zonder-bronregels.csv",
+        "CSV · leerlingenblad zonder bronregels")
 }
 
 internal data class PendingPrivatePracticeReport(
@@ -263,6 +265,47 @@ internal object PrivatePrintablePracticeSummary {
         }
         return out.toString().toByteArray(Charsets.UTF_8)
             .takeIf { it.size <= 131_072 }
+    }
+
+
+    /**
+     * A separate, genuinely answer-free spreadsheet handout. Unlike personal
+     * CSV reports, this accepts NO subtitles, ratings/notes values, audio URI
+     * or private assessment text. Ratings select locally which A–B cards are
+     * included, but are never written into the student file.
+     */
+    fun snapshotStudentCsv(
+        passages: List<Pair<Long, Long>>,
+        ratings: Map<Pair<Long, Long>, String>,
+        scope: PrivatePracticeRouteScope,
+        prompt: PrivateListeningWorksheetPrompt,
+        perFragmentPrompts: Map<Pair<Long, Long>, PrivateListeningWorksheetPrompt>
+    ): ByteArray? {
+        if (passages.isEmpty() || passages.size > 4 ||
+            passages.distinct().size != passages.size ||
+            passages.any { it.first < 0L || it.second <= it.first ||
+                it.second - it.first > 300_000L }) return null
+        val selected = privatePracticeRouteCandidates(passages, ratings, scope)
+        if (selected.isEmpty()) return null
+        fun clock(millis: Long): String {
+            val seconds = millis / 1000L
+            return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d.%03d",
+                seconds / 3600L, (seconds / 60L) % 60L, seconds % 60L,
+                millis % 1000L)
+        }
+        fun row(vararg cells: String) = cells.joinToString(",") { cell ->
+            "\"" + cell.replace("\"", "\"\"") + "\""
+        } + "\r\n"
+        val output = buildString {
+            append(row("Fragment", "Eigen A-B begin", "Eigen A-B einde",
+                "Oefenvraag (zelf gekozen)", "Mijn eigen antwoord"))
+            selected.forEachIndexed { index, span ->
+                append(row((index + 1).toString(), clock(span.first),
+                    clock(span.second),
+                    (perFragmentPrompts[span] ?: prompt).instruction, ""))
+            }
+        }
+        return output.toByteArray(Charsets.UTF_8).takeIf { it.size <= MAX_BYTES }
     }
 
     fun snapshotText(summary: String): ByteArray? =
