@@ -22,6 +22,18 @@ synchroniseert of slaat zonder aparte toestemming op.
 
 # Tuddy 🎙️
 
+## Nieuw: eigen starttijd en kaartduur voor tekst zonder tijdcodes
+
+De handmatige tekst- en twee-kolomsimport heeft naast vaste presets
+nu ook **Aangepaste begin- en duurinstelling…**: stel de start in van
+0 tot 21600 seconden en kies 0,5–30 seconden per kaart met een
+decimale punt of komma (maximaal millisecondeprecisie). De uitgebreide
+scrollpreview laat de **geschatte** timing vóór overname zien.
+Bestaande SRT/VTT- en drie-/vierkoloms CSV/TSV-tijden blijven
+ongewijzigd; dit is geen echte audio-uitlijning of herkenning.
+[Handleiding](docs/MANUAL_SUBTITLE_PASTE.md).
+
+---
 ## Nieuw: bestaande tijdcodes uit CSV-spreadsheets plakken
 
 Naast de bestaande tabgescheiden import kun je eigen transcriptregels
