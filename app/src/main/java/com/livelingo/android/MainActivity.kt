@@ -227,6 +227,7 @@ private fun TuddyScreen(
     var pinnedClozeAnswerSpace by remember { mutableStateOf(PinnedClozeAnswerSpace.STANDARD) }
     var pinnedClozeAudience by remember { mutableStateOf(PinnedClozeAudience.SELF_STUDY) }
     var pinnedClozePass by remember { mutableStateOf(PinnedClozePass.FIRST) }
+    var pinnedClozeCardOrder by remember { mutableStateOf(PinnedClozeCardOrder.SOURCE) }
     var pinnedOnlyPersonalStudy by remember { mutableStateOf(false) }
     var pinnedStudyLanguageTags by remember { mutableStateOf(false) }
     var pinnedLanguagePair by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -1250,7 +1251,8 @@ private fun TuddyScreen(
                 pending.languagePair, pending.studyDirection,
                 pinnedStudyEdits.toMap(), pending.onlyPersonallyCorrected,
                 pending.showLanguageTags, pending.clozeDifficulty, pending.clozeHintMode,
-                pending.clozeAnswerSpace, pending.clozeAudience, pending.clozePass
+                pending.clozeAnswerSpace, pending.clozeAudience, pending.clozePass,
+                pending.clozeCardOrder
             )
             if (pending.generation != generation || listening ||
                 pending.format != pinnedExportFormat ||
@@ -1265,6 +1267,7 @@ private fun TuddyScreen(
                 pending.clozeAnswerSpace != pinnedClozeAnswerSpace ||
                 pending.clozeAudience != pinnedClozeAudience ||
                 pending.clozePass != pinnedClozePass ||
+                pending.clozeCardOrder != pinnedClozeCardOrder ||
                 pending.subtitleOptions != pinnedSubtitleOptions ||
                 currentSelection != pending.selection || currentBytes == null ||
                 !currentBytes.contentEquals(pending.bytes)
@@ -3450,13 +3453,13 @@ private fun TuddyScreen(
             val computedPreview = remember(selection, pinnedExportScope,
                 pinnedExportFormat, pinnedSubtitleOptions, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
-                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass
+                pinnedOnlyPersonalStudy, pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder
             ) {
                 PrivatePinnedCaptionExport.snapshot(
                     selection, pinnedExportFormat, pinnedSubtitleOptions,
                     pinnedExportScope, pinnedLanguagePair, pinnedStudyDirection,
                     pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
-                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass
+                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder
                 )
             }
             AlertDialog(
@@ -3573,6 +3576,22 @@ private fun TuddyScreen(
                                             pass.title)
                                     }
                                 }
+                                HorizontalDivider()
+                                Text("In welke volgorde wil je de kaarten?",
+                                    style = MaterialTheme.typography.titleSmall)
+                                PinnedClozeCardOrder.entries.forEach { cardOrder ->
+                                    TextButton(onClick = {
+                                        pinnedClozeCardOrder = cardOrder
+                                        pinnedExportNotice = ""
+                                    }) {
+                                        Text((if (pinnedClozeCardOrder == cardOrder) "● "
+                                            else "○ ") + cardOrder.title)
+                                    }
+                                }
+                                Text("Afwisselend: ronde 1 in bronvolgorde, ronde 2 " +
+                                    "achterstevoren en ronde 3 met verschoven begin. " +
+                                    "Eén kaart kan uiteraard niet van positie wisselen.",
+                                    style = MaterialTheme.typography.bodySmall)
                                 Text("Bij meerdere rondes komen dezelfde zinnen terug " +
                                     "met andere ontbrekende woorden. De volgorde ligt " +
                                     "vast; er worden geen nieuwe vertalingen gemaakt.",
@@ -3704,6 +3723,7 @@ private fun TuddyScreen(
                                             " (" + pinnedClozeDifficulty.title + "; " +
                                                 pinnedClozeHintMode.title + "; " + pinnedClozeAnswerSpace.title + "; " + pinnedClozeAudience.title +
                                                 "; " + pinnedClozePass.title +
+                                                "; " + pinnedClozeCardOrder.title +
                                                 ") met invulwoorden " +
                                                 (if (pinnedClozeAudience == PinnedClozeAudience.SELF_STUDY)
                                                     "en optioneel afdrukbaar antwoordblad. "
@@ -3883,7 +3903,7 @@ private fun TuddyScreen(
                                 selection, format, options, scope, languagePair,
                                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
                                 pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
-                                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass
+                                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder
                             )
                             if (bytes == null) {
                                 pinnedExportNotice = "Geen geldige selectie voor dit formaat. " +
@@ -3893,7 +3913,7 @@ private fun TuddyScreen(
                                     generation, selection, format, scope,
                                     languagePair, pinnedStudyDirection,
                                     pinnedStudyEdits.toMap(), pinnedOnlyPersonalStudy,
-                                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass,
+                                    pinnedStudyLanguageTags, pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder,
                                     options, bytes
                                 )
                                 exportStatus = ""
@@ -3929,7 +3949,7 @@ private fun TuddyScreen(
                 pinnedSubtitleOptions, pinnedExportScope, pinnedLanguagePair,
                 pinnedStudyDirection, pinnedStudyEdits.toMap(),
                 pinnedOnlyPersonalStudy, pinnedStudyLanguageTags,
-                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass
+                pinnedClozeDifficulty, pinnedClozeHintMode, pinnedClozeAnswerSpace, pinnedClozeAudience, pinnedClozePass, pinnedClozeCardOrder
             )
             val previewLines = remember(exactBytes?.contentHashCode(),
                 exactBytes?.size
