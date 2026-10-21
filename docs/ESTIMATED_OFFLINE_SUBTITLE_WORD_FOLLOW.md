@@ -1,3 +1,29 @@
+## Nieuw: één geschat woordfragment herhalen
+
+In de optionele geschatte woordvolger kun je op **↻ Herhaal alleen dit geschatte
+woordfragment** tikken. Tuddy berekent het kleine A–B-venster vanuit het
+**huidige eigen SRT/VTT-woordnummer en de zelfgekozen cue-begin- en eindtijd**.
+Er is geen ASR, woordherkenning, fonetische segmentering of gemeten
+geluidstiming. Dit is een handmatig gekozen ruwe lees- en luisterherhaling.
+
+Om herhalen van extreem korte, onnauwkeurige vensters te voorkomen is
+de knop alleen beschikbaar bij **minimaal 750 milliseconden** per geschat
+woord en een volledig geldig venster binnen de daadwerkelijk gekozen audio.
+De knop **Stop geschatte woordherhaling** heft het tijdelijke venster op.
+Zoals bij de bestaande A–B-herhaling druk je zelf op Afspelen als het geluid
+gepauzeerd is; de app start geen opname. Een handmatige sprong buiten
+het fragment, het uitschakelen van de woordvolger, het kiezen van een
+gewone A–B-/cue-/markeringsoefening, het wijzigen van de tijdelijke
+ondertiteltijdverschuiving of het sluiten van de audiospeler heft de
+woordherhaling op. De bestaande limiet voor handmatig aantal
+herhalingen blijft gelden; niets wordt naar opslag weggeschreven.
+
+Dit is nadrukkelijk **geen bewijs** dat het geïsoleerde geluidsfragment
+precies het getoonde woord bevat. De foutmarge komt uit de gekozen
+tijdcodes en niet uit echte woord-/audio-uitlijning.
+
+---
+
 # Gescheiden tijdcodewoordvolger bij je eigen audio
 
 ## Meteen naar een zelfgekozen woord in de actieve regel
