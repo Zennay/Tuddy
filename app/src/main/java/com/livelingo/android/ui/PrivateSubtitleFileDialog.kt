@@ -2527,7 +2527,9 @@ internal fun PrivateSubtitleFileDialog(
                         Text("Volgende cue · ${nextCue.startLabel} → ${nextCue.endLabel}",
                             style = MaterialTheme.typography.labelMedium)
                         Text(nextCue.text, style = MaterialTheme.typography.bodyMedium)
-                        Text("Voorgesteld resultaat · ${firstCue.startLabel} → ${nextCue.endLabel}",
+                        val mergedEndLabel = if (firstCue.endMillis >= nextCue.endMillis)
+                            firstCue.endLabel else nextCue.endLabel
+                        Text("Voorgesteld resultaat · ${firstCue.startLabel} → ${mergedEndLabel}",
                             style = MaterialTheme.typography.labelLarge)
                         when {
                             gapMs != null && gapMs > 0L -> Text(
