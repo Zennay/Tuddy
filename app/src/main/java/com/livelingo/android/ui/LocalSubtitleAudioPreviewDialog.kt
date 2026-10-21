@@ -109,6 +109,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         mutableStateOf<Map<Int, Map<Int, Long>>>(emptyMap())
     }
     var manualWordNumber by remember { mutableStateOf("") }
+    var manualWordBatchInput by remember { mutableStateOf("") }
+    var manualWordBatchOversized by remember { mutableStateOf(false) }
     var wordAnchorListOpen by remember { mutableStateOf(false) }
     var loopCueIndex by remember { mutableIntStateOf(-1) }
     var rangeStartIndex by remember { mutableIntStateOf(-1) }
@@ -693,6 +695,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         wordRangeFrom = ""
         wordRangeTo = ""
         manualWordNumber = ""
+        manualWordBatchInput = ""
+        manualWordBatchOversized = false
         wordAnchorListOpen = false
         if (!estimatedWordFollow) {
             wordJumpListOpen = false
@@ -1508,6 +1512,94 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 }
                             }
                         ) { Text("Markeer dit woord op huidige audiotijd") }
+                        HorizontalDivider()
+                        Text("Handmatige woordankers hergebruiken via eigen tekst",
+                            style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            "Kopieer desgewenst onderstaande tekst met de Android-" +
+                                "selectie; je klembord-app kan de tekst synchroniseren. " +
+                                "Plakken vervangt pas na jouw aparte bevestiging " +
+                                "de ankers van deze ene actieve ondertitel.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        val currentMarkSheet =
+                            PrivateCueWordProgress.formatManualMarkSheet(activeWordMarks)
+                        if (currentMarkSheet != null) {
+                            SelectionContainer {
+                                Text(currentMarkSheet, style = MaterialTheme.typography.bodySmall)
+                            }
+                            TextButton(onClick = {
+                                manualWordBatchInput = currentMarkSheet
+                                manualWordBatchOversized = false
+                            }) { Text("Vul huidige woordankers als eigen invoer in") }
+                        }
+                        OutlinedTextField(
+                            value = manualWordBatchInput,
+                            onValueChange = { value ->
+                                if (value.length <= 512) {
+                                    manualWordBatchInput = value
+                                    manualWordBatchOversized = false
+                                } else {
+                                    // Never accept a previously valid prefix
+                                    // after an oversized clipboard paste.
+                                    manualWordBatchInput = ""
+                                    manualWordBatchOversized = true
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Woord=uu:mm:ss.mmm; woord=uu:mm:ss.mmm") },
+                            minLines = 2,
+                            maxLines = 5
+                        )
+                        val proposedMarkSheet = if (!manualWordBatchOversized) {
+                            PrivateCueWordProgress.parseManualMarkSheet(
+                                manualWordBatchInput, active.text,
+                                cueStart(active), cueEnd(active)
+                            )
+                        } else null
+                        if (manualWordBatchOversized) {
+                            Text("Te veel tekst geplakt: maximaal 512 tekens. " +
+                                "Eerdere invoer is bewust gewist.",
+                                style = MaterialTheme.typography.bodySmall)
+                        } else if (manualWordBatchInput.isNotBlank() &&
+                            proposedMarkSheet == null) {
+                            Text("Ongeldige ankers: gebruik 2=00:00:12.250;" +
+                                "5=00:00:13.900 en maximaal 16 unieke, " +
+                                "strikt oplopende tijden binnen deze ondertitel.",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (proposedMarkSheet != null) {
+                            Text(
+                                "Voorstel · vervang alle ankers voor deze regel (" +
+                                    proposedMarkSheet.size + "):",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            SelectionContainer {
+                                Text(
+                                    PrivateCueWordProgress.formatManualMarkSheet(
+                                        proposedMarkSheet
+                                    ).orEmpty(),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !guidedActive && proposedMarkSheet != null &&
+                                activeIndex >= 0,
+                            onClick = {
+                                if (proposedMarkSheet != null && activeIndex >= 0) {
+                                    wordReplayBounds = null
+                                    wordTimingMarks = wordTimingMarks +
+                                        (activeIndex to proposedMarkSheet)
+                                    manualWordBatchInput = ""
+                                    manualWordBatchOversized = false
+                                    notice = "Mijn " + proposedMarkSheet.size +
+                                        " woordankers bewust vervangen voor deze regel; " +
+                                        "geen echte audio-uitlijning."
+                                }
+                            }
+                        ) { Text("Bevestig en vervang ankers van deze ondertitel") }
                         if (activeWordMarks.isNotEmpty()) {
                             Text("${activeWordMarks.size} van maximaal 16 eigen woordankers. " +
                                 "Deze veranderen alleen visuele woordstappen en herhaalpunten.",
