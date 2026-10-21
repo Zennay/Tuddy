@@ -822,15 +822,28 @@ internal fun PrivateSubtitleFileDialog(
                                 }, modifier = Modifier.weight(1f),
                                 label = { Text("Regel tweede spoor") }, singleLine = true)
                         }
-                        val anchorShift = PrivateSubtitleTrackAnchorOffset.fromRows(
+                        val anchorPreview = PrivateSubtitleTrackAnchorOffset.preview(
                             draft, stagedImport.imported,
                             primaryAnchorRow, secondaryAnchorRow)
+                        val anchorShift = anchorPreview?.offsetMillis
                         if (anchorSelectionNeedsApply) {
                             Text("Je hebt de ankerregels gewijzigd. Kies " +
                                 "opnieuw berekenen, vul zelf een exact " +
                                 "verschil in of kies bewust een preset. " +
                                 "Tot dan kan deze koppeling niet worden bevestigd.",
                                 color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (anchorPreview != null) {
+                            Text("Eerste spoor, bronregel ${anchorPreview.primaryRow}: " +
+                                "${anchorPreview.primaryCue.startLabel} → " +
+                                "${anchorPreview.primaryCue.endLabel}\n" +
+                                anchorPreview.primaryCue.text,
+                                style = MaterialTheme.typography.bodySmall)
+                            Text("Tweede spoor, bronregel ${anchorPreview.secondaryRow}: " +
+                                "${anchorPreview.secondaryCue.startLabel} → " +
+                                "${anchorPreview.secondaryCue.endLabel}\n" +
+                                anchorPreview.secondaryCue.text,
                                 style = MaterialTheme.typography.bodySmall)
                         }
                         if (anchorShift != null) {
