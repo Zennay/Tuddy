@@ -183,7 +183,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     )
             }
             if (!prepared || savedPracticePassages.isEmpty() ||
-                updatedSummary != pending.summary || updatedBytes == null ||
+                updatedSummary != pending.summary ||
+                pending.selectionScope != worksheetScope || updatedBytes == null ||
                 !updatedBytes.contentEquals(pending.bytes)
             ) {
                 notice = "Mijn luisteroefening is gewijzigd. Bekijk en bewaar opnieuw."
@@ -222,7 +223,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
         if (payload == null) {
             notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
         } else {
-            pendingPracticeReport = PendingPrivatePracticeReport(report, format, payload)
+            pendingPracticeReport = PendingPrivatePracticeReport(
+                report, format, worksheetScope, payload)
             practiceReportOpen = false
             savePracticeReport.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
