@@ -1177,6 +1177,79 @@ private fun TuddyScreen(
         speechCatalogScanned = 0
     }
 
+    // The catalog uses ONE transient on-device controller for either scanning
+    // or a single user-requested package operation, never both concurrently.
+    // Stop only detaches the app's observer: Android may keep its download.
+    fun cancelCatalogDownloadFollow() {
+        val tag = speechCatalogDownloadTag ?: return
+        speechCatalogEpoch++
+        speechCatalogTimeoutHandler.removeCallbacksAndMessages(null)
+        speechCatalogController.cancel()
+        speechCatalogDownloadTag = null
+        speechCatalogReceipts[tag] = SpeechPackReceipt(tag, SpeechPackStage.UNKNOWN,
+            "Tuddy volgt dit pakket niet meer. Een Android-download kan nog doorlopen; controleer later opnieuw.")
+    }
+
+    fun checkCatalogSpeechPack(tag: String) {
+        if (listening || !offlineAvailable || !speechCatalogOpen ||
+            speechCatalogBusy || speechCatalogDownloadTag != null ||
+            spoken.none { it.speechCode == tag } ||
+            !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
+        speechCatalogController.cancel()
+        speechCatalogEpoch++
+        val token = speechCatalogEpoch
+        speechCatalogDownloadTag = tag
+        // A broken Android speech service cannot leave the single-language UI
+        // stuck indefinitely. A late vendor callback is invalidated on timeout.
+        val timeout = Runnable {
+            if (speechCatalogEpoch == token && speechCatalogDownloadTag == tag) {
+                speechCatalogController.cancel()
+                speechCatalogEpoch++
+                speechCatalogDownloadTag = null
+                speechCatalogReceipts[tag] = SpeechPackReceipt(tag, SpeechPackStage.UNKNOWN,
+                    "Android reageerde niet binnen 8 seconden op deze pakketcontrole.")
+            }
+        }
+        speechCatalogTimeoutHandler.postDelayed(timeout, 8_000L)
+        speechCatalogController.check(tag) { receipt ->
+            if (token != speechCatalogEpoch || !speechCatalogOpen ||
+                speechCatalogDownloadTag != tag ||
+                !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
+                return@check
+            speechCatalogReceipts[tag] = receipt
+            if (receipt.stage != SpeechPackStage.CHECKING) {
+                speechCatalogTimeoutHandler.removeCallbacks(timeout)
+                speechCatalogDownloadTag = null
+            }
+        }
+    }
+
+    fun downloadCatalogSpeechPack(tag: String) {
+        if (listening || !offlineAvailable || !speechCatalogOpen ||
+            speechCatalogBusy || speechCatalogDownloadTag != null ||
+            spoken.none { it.speechCode == tag } ||
+            speechCatalogReceipts[tag]?.stage != SpeechPackStage.DOWNLOADABLE ||
+            !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
+        speechCatalogController.cancel()
+        speechCatalogEpoch++
+        val token = speechCatalogEpoch
+        speechCatalogDownloadTag = tag
+        // OnDeviceSpeechPackController enforces active Wi-Fi and uses Android's
+        // on-device recognizer; never a network recognizer or app-hosted URL.
+        speechCatalogController.download(tag) { receipt ->
+            if (token != speechCatalogEpoch || !speechCatalogOpen ||
+                speechCatalogDownloadTag != tag ||
+                !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
+                return@download
+            speechCatalogReceipts[tag] = receipt
+            if (receipt.stage !in setOf(
+                    SpeechPackStage.CHECKING, SpeechPackStage.DOWNLOADING
+                )) {
+                speechCatalogDownloadTag = null
+            }
+        }
+    }
+
     fun scanSpeechCatalog() {
         if (!speechCatalogOpen || speechCatalogBusy || speechCatalogDownloadTag != null ||
             listening || !offlineAvailable) return
