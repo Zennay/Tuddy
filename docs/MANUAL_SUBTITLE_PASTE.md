@@ -530,6 +530,31 @@ De bronfile, onbewerkte regels en live transcriptie veranderen niet.
 De gekozen bestandsprovider kan zelf cloudsynchronisatie aanbieden.
 Dit is geen automatische vertaling of gecontroleerde audio-uitlijning.
 
+## Verplaats alleen geselecteerde ondertitel-tijdcodes
+
+In de tijdelijke editor kies je **⏱ Alleen gekozen bronregels in tijd
+verschuiven…**. Typ één of meerdere originele regelnummers, bijvoorbeeld
+`2-4,7,12`. Bij een actieve zoekopdracht kun je alle gevonden
+oorspronkelijke bronnummers bewust overnemen. Kies vervolgens
+**−5, −2, −0,5, +0,5, +2 of +5 seconden**. Alle oorspronkelijke
+teksten en alle niet-geselecteerde cue-tijden blijven ongewijzigd.
+
+De volledige tijdlijn wordt na de voorgestelde wijziging opnieuw
+gecontroleerd: een negatief begin, te laat einde, omgekeerde of
+nulduur, teruglopende begins bij grensregels of onveilige SRT/VTT
+wordt geweigerd. Overlappende opeenvolgende cues worden geteld
+en getoond, maar al aanwezige overlap blijft toegestaan volgens de
+bestaande ondertitelexportregels. Het dialoogvenster toont voor
+**iedere gekozen bronregel** in pagina's van vijf de volledige eigen
+tekst én de oorspronkelijke en nieuwe begin-/eindtijd. Er is geen
+afleiding van audio of herkenning van spreker/taal.
+
+Pas de verschuiving bewust toe met **Verschuif gekozen regels
+tijdelijk**. De hele correctie is één **Terug/Opnieuw**-stap en
+schrijft nog niets naar je bronbestand. Een nieuw bestand bewaren
+vraagt later afzonderlijk om jouw Android-bestandsprovider. Er zijn
+geen nieuwe permissies, accounts of netwerkverzoeken.
+
 ## Grenzen en privacy
 
 - Geen automatische clipboard-lezing, eigen netwerkclient, ASR, vertaling, cloudfallback of extra permissies. Bij bestandskeuze kan de externe Android-provider zelf een netwerkverbinding of cloudopslag gebruiken.
