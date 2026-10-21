@@ -164,6 +164,7 @@ internal fun PrivateSubtitleFileDialog(
     var secondTrackPreviewPage by remember { mutableIntStateOf(0) }
     var pairReviewPage by remember { mutableIntStateOf(0) }
     var pairReviewOpen by remember { mutableStateOf(false) }
+    var excludedSecondRows by remember { mutableStateOf(setOf<Int>()) }
     var driftSelectorOpen by remember { mutableStateOf(false) }
     var selectedDrift by remember { mutableStateOf<PrivateSubtitleDriftSelection?>(null) }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
@@ -190,6 +191,9 @@ internal fun PrivateSubtitleFileDialog(
                 secondTrackPreviewPage = 0
                 driftSelectorOpen = false
                 selectedDrift = null
+                excludedSecondRows = emptySet()
+                pairReviewPage = 0
+                pairReviewOpen = false
                 notice = ""
             } else {
                 notice = "Het concept veranderde tijdens de bestandskeuze. Kies opnieuw."
@@ -713,6 +717,9 @@ internal fun PrivateSubtitleFileDialog(
                 secondTrackPreviewPage = 0
                 driftSelectorOpen = false
                 selectedDrift = null
+                excludedSecondRows = emptySet()
+                pairReviewPage = 0
+                pairReviewOpen = false
                 notice = ""
                 pasteSecondOpen = false
                 onSecondPasteConsumed()
@@ -749,11 +756,12 @@ internal fun PrivateSubtitleFileDialog(
             selectedDrift != null && importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES
         ) drift?.adjustedSecondary else stagedImport.imported
         val proposed = remember(draft, proposedIncoming,
-            importMode, selectedPairOffset, stillCurrent) {
+            importMode, selectedPairOffset, stillCurrent, excludedSecondRows) {
             if (stillCurrent && selectedPairOffset != null &&
                 proposedIncoming != null
             ) PrivateSubtitleDocumentCombine.preview(
-                draft, proposedIncoming, importMode, selectedPairOffset
+                draft, proposedIncoming, importMode,
+                selectedPairOffset, excludedSecondRows
             ) else null
         }
         val previewRows = proposed?.cues.orEmpty()
@@ -1003,6 +1011,21 @@ internal fun PrivateSubtitleFileDialog(
                             "Controleer tijdcodes zelf; er is geen audio-/video-uitlijning.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES &&
+                        excludedSecondRows.isNotEmpty()) {
+                        Text("${excludedSecondRows.size} origineel gekozen " +
+                            "bronregels uit het tweede spoor blijven bewust " +
+                            "ongekoppeld: " +
+                            excludedSecondRows.sorted().joinToString(", ") +
+                            ". Hun volledige tekst blijft als losse cue bewaard.",
+                            style = MaterialTheme.typography.bodySmall)
+                        OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                excludedSecondRows = emptySet()
+                                pairReviewPage = 0
+                                secondTrackPreviewPage = 0
+                            }) { Text("Herstel alle handmatige koppelingen") }
+                    }
                     if (proposed != null &&
                         importMode == SubtitleCombineMode.PAIR_OVERLAPPING_TIMES) {
                         OutlinedButton(modifier = Modifier.fillMaxWidth(),
@@ -1030,6 +1053,17 @@ internal fun PrivateSubtitleFileDialog(
                                         "${link.secondaryStart}\n${link.secondaryText}\n" +
                                         "Overlappende tijd: ${link.overlapMillis} ms.",
                                         style = MaterialTheme.typography.bodySmall)
+                                    OutlinedButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            excludedSecondRows =
+                                                excludedSecondRows + link.secondarySourceRow
+                                            pairReviewPage = 0
+                                            secondTrackPreviewPage = 0
+                                        }) {
+                                        Text("Laat tweede bronregel " +
+                                            "${link.secondarySourceRow} als losse cue staan")
+                                    }
                                 }
                             Row(modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween) {
@@ -1100,7 +1134,8 @@ internal fun PrivateSubtitleFileDialog(
                     ) latestDrift?.adjustedSecondary else stagedImport.imported
                     val updated = if (latestOffset != null && latestIncoming != null)
                         PrivateSubtitleDocumentCombine.preview(
-                            draft, latestIncoming, importMode, latestOffset)
+                            draft, latestIncoming, importMode, latestOffset,
+                            excludedSecondRows)
                     else null
                     if (draft != stagedImport.existing || updated == null ||
                         proposed == null || updated.cues != proposed.cues ||
