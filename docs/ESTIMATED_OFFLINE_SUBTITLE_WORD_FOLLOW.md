@@ -1,3 +1,27 @@
+## Nieuw: aaneengesloten woordgroep bewust als één fragment herhalen
+
+Open **Kies direct een woord uit deze ondertitel** terwijl de optionele
+woordvolger aanstaat. Vul **Van woord** en **Tot en met** in, bijvoorbeeld
+`3` en `7`. Tik op **↻ Herhaal gekozen woordgroep** om de geschatte
+tijdspanne van die vijf aaneengesloten woorden binnen dezelfde actieve
+ondertitel te herhalen. De bestaande knop **Stop geschatte
+woordherhaling** stopt zowel een enkel woord als de gekozen groep.
+
+Beide oorspronkelijke woordnummers moeten bestaan in de huidige
+ondertitel en oplopend zijn. Een ongeldige selectie heeft geen
+herhaalknop; de knop werkt alleen voor een geschat audiovenster van
+**0,75 tot 120 seconden** dat geheel binnen de geopende audio valt.
+Bij wisselen naar een andere ondertitel worden de eigen woordkeuzes
+gewist. Een gewone cue-/A–B-oefening, gewijzigde tijdverschuiving,
+andere audio of uitschakelen van de modus beëindigt de woordherhaling.
+
+Deze tijdspanne komt **uitsluitend uit een evenredige deling van eigen
+SRT/VTT-cuetijden**, niet uit daadwerkelijke audiodetectie. De keuze
+wordt alleen in de huidige Android-spelersessie gehouden, zonder opname,
+cloud, nieuwe toestemming of permanent oefenresultaat.
+
+---
+
 ## Nieuw: één geschat woordfragment herhalen
 
 In de optionele geschatte woordvolger kun je op **↻ Herhaal alleen dit geschatte
