@@ -160,7 +160,7 @@ internal fun SubtitleTrackDriftSelectorDialog(
     )
 }
 
-/** Browse the source without silently changing the explicit anchor selection. */
+/** Browse up to 500 original cues without mutating either explicit anchor selection. */
 @Composable
 private fun SubtitleTrackAnchorBrowser(
     label: String,
@@ -171,16 +171,74 @@ private fun SubtitleTrackAnchorBrowser(
     onLast: (String) -> Unit
 ) {
     var page by remember(cues) { mutableIntStateOf(0) }
-    val maxPage = if (cues.isEmpty()) 0 else (cues.size - 1) / 3
+    var search by remember(cues) { mutableStateOf("") }
+    var jumpToRow by remember(cues) { mutableStateOf("") }
+    var expandedRows by remember(cues) { mutableStateOf(emptySet<Int>()) }
+
+    // Search is a local display-only filter, never a cue deletion or reindexing.
+    // Every selection continues to use the original 1-based source row.
+    val visible = cues.withIndex().filter { item ->
+        search.isBlank() || item.value.text.contains(search.trim(), ignoreCase = true)
+    }
+    val maxPage = if (visible.isEmpty()) 0 else (visible.size - 1) / 3
     val shownPage = page.coerceIn(0, maxPage)
-    Text("$label · pagina ${shownPage + 1}/${maxPage + 1}",
+    Text("$label · ${visible.size} van ${cues.size} originele regels · " +
+        "pagina ${shownPage + 1}/${maxPage + 1}",
         style = MaterialTheme.typography.titleSmall)
-    cues.withIndex().drop(shownPage * 3).take(3).forEach { item ->
-        val row = (item.index + 1).toString()
-        val cue = item.value
-        Text("Regel $row · ${cue.startLabel} → ${cue.endLabel}\n" +
-            cue.text.replace('\n', ' ').take(95),
+    OutlinedTextField(
+        modifier = Modifier.fillMaxWidth(),
+        value = search,
+        onValueChange = {
+            search = it.take(100)
+            page = 0
+        },
+        label = { Text("Zoek in oorspronkelijke tekst") },
+        placeholder = { Text("Exact woord of zinsdeel") },
+        singleLine = true
+    )
+    Row(modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        OutlinedTextField(
+            modifier = Modifier.weight(1f),
+            value = jumpToRow,
+            onValueChange = { jumpToRow = it.filter { c -> c in '0'..'9' }.take(3) },
+            label = { Text("Ga naar originele regel") },
+            singleLine = true
+        )
+        val destination = jumpToRow.toIntOrNull()
+        OutlinedButton(
+            enabled = destination != null && destination in 1..cues.size,
+            onClick = {
+                val row = jumpToRow.toIntOrNull() ?: return@OutlinedButton
+                if (row in 1..cues.size) {
+                    // A direct jump reveals that row even when the old filter hid it.
+                    search = ""
+                    page = (row - 1) / 3
+                }
+            }
+        ) { Text("Ga") }
+    }
+    if (visible.isEmpty()) {
+        Text("Geen bronregels gevonden. Pas de zoektekst aan; de gekozen " +
+            "ankerparen blijven ongewijzigd.",
             style = MaterialTheme.typography.bodySmall)
+    }
+    visible.drop(shownPage * 3).take(3).forEach { item ->
+        val rowNumber = item.index + 1
+        val row = rowNumber.toString()
+        val cue = item.value
+        val expanded = rowNumber in expandedRows
+        Text("Originele regel $row · ${cue.startLabel} → ${cue.endLabel}\n" +
+            (if (expanded) cue.text else cue.text.replace('\n', ' ').take(95)),
+            style = MaterialTheme.typography.bodySmall)
+        if (cue.text.length > 95 || cue.text.contains('\n')) {
+            TextButton(onClick = {
+                expandedRows = if (expanded) expandedRows - rowNumber
+                    else expandedRows + rowNumber
+            }) {
+                Text(if (expanded) "Verkort regel $row" else "Lees volledige regel $row")
+            }
+        }
         Row(modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(modifier = Modifier.weight(1f),
