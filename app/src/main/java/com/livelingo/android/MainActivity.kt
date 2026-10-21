@@ -293,6 +293,11 @@ private fun TuddyScreen(
     onViewedSubtitleConsumed: (Long) -> Unit
 ) {
     val context = LocalContext.current
+    // Cache only a few local source/target translator clients for live captions.
+    val localTranslatorPool = remember { LocalTranslatorPool() }
+    DisposableEffect(localTranslatorPool) {
+        onDispose { localTranslatorPool.close() }
+    }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
         mutableStateOf(PrivateScreenShield.enabled(context))
@@ -755,28 +760,17 @@ private fun TuddyScreen(
             when (receipt.stage) {
                 OfflineTextStage.CHECKING -> Unit
                 OfflineTextStage.READY -> {
-                    val translator = try {
-                        Translation.getClient(TranslatorOptions.Builder()
-                            .setSourceLanguage(from)
-                            .setTargetLanguage(targetCode)
-                            .build())
-                    } catch (_: Exception) {
-                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                        return@check
-                    }
-                    try {
-                        translator.translate(text)
-                            .addOnSuccessListener { output ->
-                                updateLine(id, output, "Lokaal vertaald", token, revision)
-                                translator.close()
-                            }
-                            .addOnFailureListener {
-                                updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                                translator.close()
-                            }
-                    } catch (_: Exception) {
-                        translator.close()
-                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                    localTranslatorPool.translate(from, targetCode, text) { result ->
+                        if (translationStillRelevant(id, token, revision)) {
+                            result.fold(
+                                onSuccess = { output ->
+                                    updateLine(id, output, "Lokaal vertaald", token, revision)
+                                },
+                                onFailure = {
+                                    updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                                }
+                            )
+                        }
                     }
                 }
                 OfflineTextStage.MISSING -> updateLine(
