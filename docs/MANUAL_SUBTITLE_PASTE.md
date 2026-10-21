@@ -5,12 +5,12 @@ Tuddy laat je handmatig een volledig SRT- of WebVTT-document plakken, zonder dat
 ## Een ondertitel op een zelf gekozen tijdstip splitsen
 
 In **Eigen ondertitelconcept · SRT/WebVTT** kies je bij een regel **Splitsen**.
-De editor vult twee tekststukken voor je voor: bij bestaande
-meerregelige tekst heeft een eigen regelovergang voorrang; anders kiest
-Tuddy de dichtstbijzijnde witruimtegrens rond het tekstmidden. Je kunt
-beide delen vóór bevestiging vrij aanpassen. Laat **Exacte splitsingstijd**
-leeg om de cue precies in het midden te delen, of voer zelf een tijdcode
-in zoals `01:23.500` of
+De editor vult twee tekststukken voor je voor: bij bestaande meerregelige
+tekst heeft een handmatige regelovergang voorrang, anders kiest Tuddy de
+dichtstbijzijnde witruimtegrens rond het tekstmidden. Je kunt beide delen
+vóór bevestiging vrij aanpassen. Laat **Exacte splitsingstijd** leeg om de
+cue precies in het midden te delen, of voer zelf een tijdcode in zoals
+`01:23.500` of
 `00:01:23.500`. Komma en punt zijn toegestaan voor milliseconden.
 
 De preview toont de huidige cue en de duur van beide voorgestelde delen.
@@ -38,7 +38,6 @@ blijft de bestaande tijdsdekking daardoor behouden. De bevestiging verandert
 alleen het RAM-concept en is met **Herstel** ongedaan te maken. Te lange
 tekst of een ongeldige volledige tijdlijn schakelt samenvoegen uit. Er wordt
 nooit automatisch opgeslagen en het oorspronkelijke SRT/VTT-bestand blijft intact.
-
 
 ## Eigen bestanden rechtstreeks kiezen via Android (SRT, VTT, LRC, CSV, TSV, TXT)
 
