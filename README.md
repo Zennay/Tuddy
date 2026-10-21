@@ -1,3 +1,23 @@
+## Nieuw op PR #225: een eigen geschatte woordgroep herhalen
+
+Bij **▶ Eigen audio met tijdcodes afspelen** en de optionele
+**Geschatte woordvolger** kan je nu onder **Kies direct een woord**
+een aaneengesloten woordgroep afbakenen met twee eigen woordnummers,
+of **Start/Eind = huidig woord** aantikken tijdens het luisteren.
+De exacte geselecteerde originele tekst is vooraf zichtbaar.
+**↻ Herhaal gekozen woordgroep** speelt de begrensde ruwe tijdspanne
+van 0,75–120 seconden opnieuw af via de bestaande lokale A–B-herhaling.
+Oplopende, bestaande woordnummers en audio binnen hetzelfde cuevenster
+zijn verplicht; niets wordt opgeslagen of opgenomen.
+
+De woordvolger kan nu ook **tussen twee ondertitelregels** uitgezet
+worden. Al deze tijden zijn uitsluitend gelijkmatig over eigen
+SRT/VTT-regels geschat, niet gemeten of door ASR uitgelijnd.
+Geen nieuwe machtigingen, externe AI of cloud.
+[Bediening en beperkingen](docs/ESTIMATED_OFFLINE_SUBTITLE_WORD_FOLLOW.md).
+
+---
+
 ## Nieuw: handmatig geschat woordfragment herhalen en volledig privé-luisterwerkblad
 
 In de eigen SRT/VTT-audiospeler laat de optionele geschatte woordvolger
