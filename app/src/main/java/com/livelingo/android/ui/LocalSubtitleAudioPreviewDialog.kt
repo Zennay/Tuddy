@@ -120,6 +120,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
     var completedGuidedRoute by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
     var completedGuidedRounds by remember { mutableIntStateOf(0) }
     var practiceReportOpen by remember { mutableStateOf(false) }
+    var practiceCsvPreviewOpen by remember { mutableStateOf(false) }
     // An immutable user-approved document lives only while the Android
     // destination chooser is open; never retain the audio URI or audio bytes.
     var pendingPracticeReport by remember {
@@ -168,6 +169,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     PrivatePrintablePracticeSummary.snapshot(updatedSummary)
                 PrivatePracticeReportFormat.TXT ->
                     PrivatePrintablePracticeSummary.snapshotText(updatedSummary)
+                PrivatePracticeReportFormat.CSV ->
+                    PrivatePrintablePracticeSummary.snapshotCsv(
+                        cues, subtitleOffsetMs, savedPracticePassages,
+                        passageRatings, passageNotes
+                    )
             }
             if (!prepared || savedPracticePassages.isEmpty() ||
                 updatedSummary != pending.summary || updatedBytes == null ||
@@ -195,6 +201,11 @@ internal fun LocalSubtitleAudioPreviewDialog(
         val payload = when (format) {
             PrivatePracticeReportFormat.HTML -> PrivatePrintablePracticeSummary.snapshot(report)
             PrivatePracticeReportFormat.TXT -> PrivatePrintablePracticeSummary.snapshotText(report)
+            PrivatePracticeReportFormat.CSV ->
+                PrivatePrintablePracticeSummary.snapshotCsv(
+                    cues, subtitleOffsetMs, savedPracticePassages,
+                    passageRatings, passageNotes
+                )
         }
         if (payload == null) {
             notice = "Geen bruikbaar privé luisteroverzicht om te bewaren."
@@ -228,6 +239,7 @@ internal fun LocalSubtitleAudioPreviewDialog(
         completedGuidedRoute = emptyList()
         completedGuidedRounds = 0
         practiceReportOpen = false
+        practiceCsvPreviewOpen = false
         pendingPracticeReport = null
         guidedActive = false
         guidedQueue = emptyList()
@@ -1481,8 +1493,8 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         "je klembord- of toetsenbord-app kan een kopie dan lezen.",
                         style = MaterialTheme.typography.bodySmall)
                     Text(
-                        "Je kunt het overzicht als afdrukbare HTML of als leesbare " +
-                            "TXT-notitie opslaan. Externe Android-opslag kan synchroniseren; " +
+                        "Je kunt het overzicht als afdrukbare HTML, TXT-notitie of " +
+                            "CSV met je eigen fragmentbeoordelingen opslaan. Externe Android-opslag kan synchroniseren; " +
                             "er gaan geen audio-opnamen of audiobestandsnamen mee.",
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -1490,6 +1502,31 @@ internal fun LocalSubtitleAudioPreviewDialog(
                         enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
                         onClick = { choosePracticeReport(PrivatePracticeReportFormat.TXT) }
                     ) { Text("Bewaar als privé TXT-notitie…") }
+                    TextButton(
+                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        onClick = { practiceCsvPreviewOpen = !practiceCsvPreviewOpen }
+                    ) {
+                        Text(if (practiceCsvPreviewOpen) "Verberg volledige CSV-inhoud"
+                            else "Bekijk mijn volledige CSV vóór opslaan")
+                    }
+                    if (practiceCsvPreviewOpen) {
+                        val csvPreview = PrivatePrintablePracticeSummary.snapshotCsv(
+                            cues, subtitleOffsetMs, savedPracticePassages,
+                            passageRatings, passageNotes
+                        )?.toString(Charsets.UTF_8)
+                        SelectionContainer {
+                            Text(
+                                csvPreview ?: "Er is geen geldige CSV om te bewaren.",
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    TextButton(
+                        enabled = savedPracticePassages.isNotEmpty() && !guidedActive,
+                        onClick = { choosePracticeReport(PrivatePracticeReportFormat.CSV) }
+                    ) { Text("Bewaar mijn oefenfragmenten als CSV…") }
                     SelectionContainer {
                         Text(
                             practiceSummaryText,
