@@ -3477,7 +3477,8 @@ private fun TuddyScreen(
                             }
                         }
                         if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
-                            pinnedExportFormat == PinnedCaptionFormat.CSV)) {
+                            pinnedExportFormat == PinnedCaptionFormat.CSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML)) {
                             HorizontalDivider()
                             Text("Kies hoe je de tweetalige modelvertalingen wilt oefenen",
                                 style = MaterialTheme.typography.titleSmall)
@@ -3519,11 +3520,15 @@ private fun TuddyScreen(
                                 "Alleen daadwerkelijk voltooide lokale vertalingen komen in " +
                                     "de kaarten. Geen onvoltooide betekenissen, automatische " +
                                     "kwaliteitscontrole of leerprofiel. Handmatig importeren " +
-                                    (if (pinnedExportFormat == PinnedCaptionFormat.CSV)
-                                        "als UTF-8 CSV met komma's, aanhalingstekens en twee " +
-                                            "velden (voor- en achterkant)."
-                                    else "als UTF-8 TSV met twee tabgescheiden velden " +
-                                            "(voor- en achterkant)."),
+                                    (when (pinnedExportFormat) {
+                                        PinnedCaptionFormat.CSV ->
+                                            "als UTF-8 CSV met twee gequote kolommen."
+                                        PinnedCaptionFormat.STUDY_HTML ->
+                                            "als zelfstandig HTML-oefenblad: alle vragen eerst, " +
+                                                "antwoorden op een aparte afdrukpagina."
+                                        else -> "als UTF-8 TSV met twee tabgescheiden velden " +
+                                            "(voor- en achterkant)."
+                                    }),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -3563,7 +3568,8 @@ private fun TuddyScreen(
                         }
                         Text(
                             if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
-                            pinnedExportFormat == PinnedCaptionFormat.CSV))
+                            pinnedExportFormat == PinnedCaptionFormat.CSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML))
                                 "${included.size} unieke, werkelijk vertaalde paren van " +
                                     "${selection.size} markeringen (identieke paren worden " +
                                     "niet dubbel geëxporteerd)."
@@ -3574,13 +3580,19 @@ private fun TuddyScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
-                            pinnedExportFormat == PinnedCaptionFormat.CSV)) {
+                            pinnedExportFormat == PinnedCaptionFormat.CSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML)) {
                             val cards = included.size *
                                 (if (pinnedStudyDirection == PinnedStudyDirection.BOTH) 2 else 1)
                             Text(
                                 "$cards studiekaarten in " +
-                                    (if (pinnedExportFormat == PinnedCaptionFormat.CSV)
-                                        "CSV" else "TSV") + " met twee tekstkolommen. " +
+                                    (when (pinnedExportFormat) {
+                                        PinnedCaptionFormat.CSV -> "CSV"
+                                        PinnedCaptionFormat.STUDY_HTML -> "HTML"
+                                        else -> "TSV"
+                                    }) + (if (pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML)
+                                        " als afdrukbaar vragen- en antwoordenblad. "
+                                    else " met twee tekstkolommen. ") +
                                     (if (pinnedOnlyPersonalStudy)
                                         "Alleen handmatig gecorrigeerde antwoorden; " +
                                             "nog steeds niet onafhankelijk geverifieerd."
@@ -3636,7 +3648,8 @@ private fun TuddyScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 if ((pinnedExportFormat == PinnedCaptionFormat.TSV ||
-                            pinnedExportFormat == PinnedCaptionFormat.CSV)) {
+                            pinnedExportFormat == PinnedCaptionFormat.CSV ||
+                            pinnedExportFormat == PinnedCaptionFormat.STUDY_HTML)) {
                                     val originalRow = selection.firstOrNull {
                                         it.id == record.id
                                     }?.caption
