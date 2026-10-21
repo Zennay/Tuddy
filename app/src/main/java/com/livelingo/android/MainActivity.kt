@@ -2606,6 +2606,7 @@ private fun TuddyScreen(
                     speechCatalogOpen = true
                 },
                 onCopyDiagnostics = { copyOfflineReadinessReport() },
+                onReportSnapshot = { offlineReadinessReportSnapshot() },
                 onCheckText = { checkTextPair() },
                 onPrepareText = { prepareOfflinePair() },
                 onEditLanguages = {
