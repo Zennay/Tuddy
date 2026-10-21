@@ -1,3 +1,243 @@
+## Privé luisteren: apart leerlingen-CSV zonder antwoorden of brontekst
+
+In **Mijn privé luisteroverzicht → Leerlingenblad** is nu naast het HTML-werkblad ook een **volledige, lokaal voorgestelde leerlingen-CSV** beschikbaar. Elke rij toont alleen een bewust geselecteerd eigen A–B-tijdvak, de gekozen opdracht en een lege antwoordcel. Niet inbegrepen zijn ondertitelregels, luisterbeoordelingen, persoonlijke notities of audio. Privé TXT/CSV/HTML-exportknoppen blijven in de leerlingenmodus gesloten; voor een eigen brontekstrapport kies je bewust **Zelfstudie**. Na Androids bestandskiezer controleert Tuddy opnieuw de volledige bestandsbytes en actuele gebruikerskeuze. [Gebruik en privacygrenzen](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Offline luisteren · eigen opdracht kiezen
+
+Een werkblad kan nu ook **per geselecteerd A–B-fragment** een andere
+oefenopdracht bevatten. De algemene keuze blijft de standaard;
+de gebruiker stelt maximaal vier afwijkende opdrachten bewust
+per fragment in en controleert de export vóór opslaan.
+
+Bij het eigen A–B-luisterwerkblad kun je nu kiezen tussen letterlijk
+uitschrijven, kernwoorden noteren, zelf samenvatten of zelf de betekenis
+opschrijven. De keuze verschijnt in het privé HTML-bestand of
+antwoordvrije leerlingenblad. Transcriptievelden volgen de expliciet
+ingestelde RTL/LTR-ondertiteltaal; er wordt niets automatisch vertaald
+of nagekeken. [Handleiding](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## 21 oktober · volledige bronregels veilig bestuderen en als CSV bewaren
+
+Het zelfgekozen, offline **A–B-luisterwerkblad** toont maximaal 18 regels
+in de kleine vragen-preview, maar zet **alle volledig passende brontekstregels**
+in het afzonderlijke, bewust te openen bronregelblad. Lange regels worden
+alleen in de korte preview ingekort; in het volledige bronregelblad
+wordt te grote input veilig geweigerd in plaats van onvolledig
+gepresenteerd. Zonder print-opt-in blijft dat antwoordblad buiten
+de afdruk; leerlingenbestanden bevatten geen brontekst.
+
+Daarnaast is er **Bekijk volledige bronregel-CSV vóór opslaan**:
+een per 12 rijen doorbladerbaar CSV-document met één rij per
+volledig binnen jouw eigen A–B-tijdvak passende ondertitelregel,
+oorspronkelijke bronregel,
+tijdcodes en eventuele eigen beoordeling/notitie. Via **Bewaar alle
+passende bronregels als CSV…** kies je daarna zelf een Android-provider.
+De bestaande compacte CSV blijft bestaan. Alle bronwaarden zijn
+als tekst beschermd tegen spreadsheetformules; geen automatische
+audio-uitlijning of netwerkfunctie. Bij terugkeer uit de Android-
+bestandskiezer controleert Tuddy opnieuw de exacte goedgekeurde bytes.
+
+[Volledige gebruiksuitleg](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## 21 oktober · volledig luisterbronregelblad en correcte A–B-CSV
+
+In de **offline luisteroefening** geeft de uitklapbare preview nog steeds
+maximaal 18 brontekstregels weer, maar het apart te openen/optioneel
+te printen **volledige bronregelblad** bevat nu alle ondertitelregels
+die geheel binnen het door jou gekozen A–B-fragment liggen. Bij meer
+dan één fragment kun je via de schermlinks direct naar een fragment
+springen. Het antwoordblad wordt standaard **niet** afgedrukt; de
+leerlingenexport bevat nog steeds helemaal geen bronregels. Bij een
+te groot werkblad wordt de volledige export geweigerd, niet afgekapt.
+
+Ook de eigen **CSV-ondertitelvoorbeelden** tonen nu ondertitelregels
+die geheel binnen de zelfgekozen audiogrenzen vallen, zelfs wanneer
+die markeringen niet op exact dezelfde milliseconde als een SRT/VTT-cue
+liggen. De CSV vermeldt hoeveel passende tussenregels zijn weggelaten,
+zonder een echte audio-uitlijning te claimen. Alleen expliciete Android
+SAF-opslag; geen nieuwe netwerkroute of machtiging.
+
+[Handleiding luisterwerkblad](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: schermlezers volgen je zelfgekozen ondertiteltaal in het luisterwerkblad
+
+Wanneer je zelf de taal van je ondertiteltekst kiest, neemt het afdrukbare
+luisterwerkblad die taal mee in de HTML-bronregels. De regels krijgen een
+gevalideerd taalattribuut en passende LTR/RTL-richting, zodat bijvoorbeeld
+Sorani en Pasjtoe niet als Nederlandse tekst worden voorgelezen. Er wordt
+geen taal automatisch herkend; zonder expliciete keuze blijft de richting
+afhankelijk van de tekst.
+
+[Handleiding](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: afdrukken van bronantwoorden vereist nu een bewuste keuze
+
+Een offline **zelfstudie-luisterwerkblad** heeft onder de vragen een
+checkbox **Print ook mijn bronregelblad (bewuste keuze)**.
+De bronregels blijven via bewust openklappen op het scherm beschikbaar,
+maar het complete bronregelblad wordt **niet standaard meegeprint**.
+Ook als je al op de interne knop naar het bronregelblad hebt geklikt,
+blijft het bronregelblad uit het afdrukvoorbeeld zolang de checkbox
+niet is aangevinkt. Met vinkje krijgt de zelfgekozen SRT/VTT-brontekst
+een aparte afdrukpagina voor eigen controle.
+
+De **leerlingenversie zonder bronregels** verandert niet: daarin is
+geen brontekst/privébeoordeling aanwezig en kan een printinstelling
+dus ook geen verborgen antwoord alsnog tonen. Dit is geen garantie
+dat de inhoud van zelfstudie-HTML geheim is; dat bestand bevat
+bronregels en is alleen voor eigen gebruik. Voor delen kies je het
+aparte antwoordvrije leerlingenbestand. Deze verbetering werkt
+scriptvrij en offline, zonder nieuwe Android-machtigingen of
+wijzigingen in het bewaren van de sessie.
+
+---
+
+## Nieuw: zelf invullen of zonder antwoordbronnen delen (luisterwerkblad)
+
+In **Mijn privé luisteroverzicht → Bewaar luisterwerkblad…** kun je nu
+kiezen tussen **Zelfstudie · bronregels zelf onthullen** en
+**Leerlingenblad · zonder bronregels of privébeoordeling**. De keuze werkt
+naast **Alle / Nog oefenen / Nog niet beoordeeld** en verandert je
+bestaande audioroute niet. Er wordt geen audio meegestuurd.
+
+Het zelfstandige offline HTML-luisterwerkblad heeft per geselecteerd
+A–B-fragment een **antwoordveld**, een handmatige keuze **Nog oefenen /
+Ging goed / Makkelijk** en **Wis mijn antwoord en inschatting**.
+Het browserantwoord en de zelfbeoordeling zijn tijdelijk; Tuddy bewaart
+deze niet en controleert geen uitspraak of betekenis. Bij printen
+verschijnen schrijflijnen en lege zelfbeoordelingsvakjes, geen ingevulde
+browserformulieren. De browser kan eventueel zelf eerder getypte velden
+herstellen. Het bestand bevat geen JavaScript of netwerkbronnen.
+
+De **zelfstudieversie** onthult eigen SRT/VTT-bronregels pas via een
+bewuste uitklapactie. Het complete bronregelblad is op het scherm
+aanvankelijk verborgen en wordt pas getoond na **Open compleet
+bronregelblad**; bij afdrukken staat het op een aparte pagina.
+De **leerlingenversie** bevat géén eigen bronregelteks­ten, verborgen
+bronsleutel, privébeoordelingen, eigen oefennotities of selectiefiltertitel
+in de HTML. Alleen gekozen audiotijdvakken, lege invulvelden en lege
+beoordelingsopties komen mee; een gekozen tijdvak of aantal fragmenten
+kan nog persoonlijke context zijn, dus controleer zelf wat je deelt.
+De Android-bestandskiezer suggereert bij de leerlingenversie de naam
+`Tuddy-luister-leerlingenblad-zonder-bronregels.html`.
+
+Het eigen luisteroverzicht is nu ook verticaal scrollbaar op kleine
+Android-schermen. Tijdens een bewuste opslag vergelijkt Tuddy
+**alle actuele exportbytes en zowel selectie als doelgroep** met de
+vooraf goedgekeurde inhoud. Zijn die veranderd, dan wordt de oude
+export geweigerd. Een door de gebruiker gekozen bestandsprovider kan
+een bestand wel synchroniseren. Dit is uitsluitend handmatige
+SRT/VTT-bronstudie met eigen A–B-tijdkeuze, geen geverifieerde
+audio-uitlijning of transcriptie.
+
+---
+
+## Nieuw: exact geselecteerde privé-luister-CSV zonder verborgen regels
+
+De selectie **Alle / Nog oefenen / Nog niet beoordeeld** geldt nu ook
+voor de CSV-export. Android toont de echte geselecteerde rijen en weigert
+de bewaarde versie na een verandering van selectie, zelfs wanneer
+verschillende filters toevallig dezelfde rijen opleveren. De zelfstandige
+HTML-luisterwerkbladexport gebruikt eveneens dezelfde categorie vóór én
+na de bestandskiezer. Een CSV-bronexcerpt meldt exact hoeveel
+tussenliggende regels zijn weggelaten, zonder vermeende audio-uitlijning.
+Ongeldige tijdverschuivingen worden geweigerd en het privé-luisteroverzicht
+kan geen valse cue-koppelingen meer tonen door integer-overloop.
+Geen audio, netwerk, automatische scores of permanente oefenresultaten.
+[Meer uitleg](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: offline luisterwerkblad met ingeklapte bronregels en afdrukversie
+
+Maak in de eigen SRT/VTT-audiospeler maximaal vier A–B-fragmenten en
+kies bij **Mijn privé oefenoverzicht** nu ook **Bewaar luisterwerkblad…**.
+In het scriptvrije HTML-bestand kun je eerst luisteren en notities maken;
+per fragment onthul je pas zelf de bronondertiteltekst. Kies onafhankelijk
+van de afspeelroute **alle**, alleen **nog oefenen**, of **onbeoordeelde**
+fragmenten voor dat bestand. Lege categorieën zijn niet exporteerbaar.
+Bij afdrukken
+staan de vragen met schrijfruimte voorop en de gekozen SRT/VTT-bronregels
+op een aparte zelfcontrolepagina. Lange passages vermelden zichtbaar
+hoeveel tussenliggende regels zijn weggelaten. Eigen beoordeling en
+oefennotitie gaan mee, nooit audio, URI of spraakherkenningsresultaten.
+De bestaande expliciete Android-bestandskeuze en byte-hercontrole
+blijven verplicht. [Details](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+# Tuddy 🎙️
+
+## Nieuw: beter leesbare eigen passages in privé-luisterverslagen
+
+Voor geselecteerde A–B-fragmenten toont Tuddy nu maximaal acht
+bijbehorende originele SRT/VTT-bronregels afzonderlijk met hun
+bronnummers; voor grotere passages worden de niet-getoonde regels
+expliciet geteld. Lange zinnen worden zichtbaar en op hele
+Unicode-tekens ingekort. Dit komt in het privé-overzicht en de
+bewuste HTML/TXT-export, niet als verborgen audio-analyse.
+[Handleiding](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: exacte milliseconden op eigen A–B-luisterkaartjes
+
+Eigen gekozen audiofragmenten behouden nu ook in de HTML-, TXT- en
+CSV-export de volledige **uu:mm:ss.mmm**-precisie. De eerdere weergave
+op hele seconden maakte korte of dichtbije passages lastig van elkaar
+te onderscheiden. De wijziging wijzigt geen audio, ondertitelbestanden,
+opslagrechten of (niet-gevalideerde) bronuitlijning.
+[Uitleg](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+## Nieuw: mijn A–B-luisterkaarten als CSV voor eigen overzichten
+
+Naast HTML en TXT heeft het tijdelijke privé-luisteroverzicht nu een
+**volledige CSV-preview** en een afzonderlijke, bewuste **Bewaar CSV…**-keuze.
+De zes kolommen bevatten eigen fragmenttijden, zelfbeoordeling, eigen notities
+en alleen een begrensd ondertitelvoorbeeld, nooit audio of een audio-URI.
+Het UTF-8-bestand is begrensd, spreadsheetformula-veilig, kan door een
+Android-provider gesynchroniseerd worden en wordt na de documentkiezer
+exact opnieuw gecontroleerd op gewijzigde brondata. Het is geen
+automatisch begrip-/uitspraakrapport.
+[Details](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+
+## Nieuw: mijn offline luisteroefenoverzicht zelf als HTML of TXT bewaren
+
+Bekijk na je eigen SRT/VTT-audiooefening **Mijn privé oefenoverzicht**
+met maximaal vier A–B-fragmenten, handmatig gekozen beoordelingen,
+een optionele eigen oefennotitie (maximaal 240 tekens) per fragment
+en uitsluitend écht afgeronde begeleide rondes. Met **Bewaar zelf HTML…**
+kun je dit bestaande overzicht nu afzonderlijk als offline afdrukbaar
+HTML-bestand óf als eenvoudige UTF-8 TXT-notitie bewaren. Tuddy neemt geen audio of audio-URI mee en controleert
+bij terugkeer uit de bestandskiezer dat het overzicht niet gewijzigd is.
+De opslagprovider kan de tekst zelf synchroniseren; tijdcodes zijn niet
+automatisch met audio gecontroleerd.
+De begeleide A–B-route heeft nu ook een aparte keuze **Nog niet
+beoordeeld** naast alle fragmenten en de zelf als lastig gemarkeerde
+fragmenten; een lege selectie kan niet worden afgespeeld.
+Het privé-overzicht geeft ook een eigen vervolgrondje met eerst de
+door jou als lastig beoordeelde en daarna nog onbeoordeelde fragmenten.
+Oefennotities bewaren Unicode-tekens zonder emoji halverwege af te kappen.
+[Bediening en privacy](docs/PRIVATE_LISTENING_REPORT_HTML.md).
+
+---
+
+
 ## Offline invuloefeningen: direct naar kaarten en antwoord met vraagcontext
 
 In het zelfstandige **Aanvuloefening · HTML** kun je zonder scripts of internet met **Vorige kaart / Volgende kaart** door een heel oefenboek bladeren. Op het zelfstudie-antwoordblad staan nu **de oorspronkelijke vraag en het volledige antwoord samen**, met overeenkomstig ronde-/kaartnummer en een teruglink naar de vraag. Bij afdrukken verdwijnt de navigatie en blijft het antwoordblad alleen beschikbaar na de bestaande bewuste printkeuze. Een **leerlingenblad** bevat ook nu geen volledige antwoorden. De bestaande expliciete Android-export en maximale uitvoergrootte blijven gehandhaafd. [Details](docs/PINNED_CAPTION_MULTI_EXPORT.md).
