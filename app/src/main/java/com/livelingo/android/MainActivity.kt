@@ -3762,12 +3762,27 @@ private fun TuddyScreen(
                                         PrivatePinnedCaptionExport.preview(record.caption.translated)
                                     val reverse = pinnedStudyDirection ==
                                         PinnedStudyDirection.TARGET_TO_SOURCE
-                                    Text("Voorzijde: " + (if (reverse) meaning else source),
+                                    val studentCopy = pinnedExportFormat ==
+                                        PinnedCaptionFormat.CLOZE_HTML &&
+                                        pinnedClozeAudience == PinnedClozeAudience.STUDENT_HANDOUT
+                                    Text((if (studentCopy) "Zichtbare opdrachtzin: "
+                                        else "Voorzijde: ") +
+                                        (if (reverse) meaning else source),
                                         style = MaterialTheme.typography.bodySmall)
-                                    Text("Achterzijde: " + (if (reverse) source else meaning),
-                                        style = MaterialTheme.typography.bodySmall)
+                                    if (studentCopy) {
+                                        Text("De volledige achterkant komt NIET in het " +
+                                            "leerlingenbestand of de HTML-bron terecht. " +
+                                            "Alleen de gekozen invulhint wordt getoond.",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        Text("Achterzijde: " + (if (reverse) source else meaning),
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
                                     if (pinnedStudyDirection == PinnedStudyDirection.BOTH) {
-                                        Text("Omgekeerde kaart: " + meaning + " → " + source,
+                                        Text(if (studentCopy)
+                                            "Ook omgekeerd: opdrachtzin " + meaning +
+                                                " (volledig antwoord blijft achterwege)"
+                                        else "Omgekeerde kaart: " + meaning + " → " + source,
                                             style = MaterialTheme.typography.bodySmall)
                                     }
                                     if (pinnedExportFormat == PinnedCaptionFormat.CLOZE_HTML) {
@@ -3859,7 +3874,11 @@ private fun TuddyScreen(
                                     Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                                         addCategory(Intent.CATEGORY_OPENABLE)
                                         type = format.mimeType
-                                        putExtra(Intent.EXTRA_TITLE, format.fileName)
+                                        putExtra(Intent.EXTRA_TITLE,
+                                            if (format == PinnedCaptionFormat.CLOZE_HTML &&
+                                                pinnedClozeAudience == PinnedClozeAudience.STUDENT_HANDOUT)
+                                                "Tuddy-leerlingenblad-zonder-antwoorden.html"
+                                            else format.fileName)
                                     }
                                 )
                             }
