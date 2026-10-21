@@ -58,6 +58,23 @@ internal object PrivateCueWordProgress {
         return startAt(startMs, endMs, index, tokens.size)
     }
 
+    /**
+     * A very short, explicitly requested replay region within the same authored
+     * subtitle cue. Not a detected spoken word; reject windows under 750ms so
+     * MediaPlayer seek/loop controls cannot pretend to give phoneme precision.
+     */
+    fun estimatedWordReplayWindow(
+        text: String, startMs: Long, endMs: Long, index: Int
+    ): Pair<Long, Long>? {
+        if (!safeWindow(startMs, endMs)) return null
+        val tokens = ranges(text) ?: return null
+        if (index !in tokens.indices || endMs - startMs < tokens.size) return null
+        val begin = startAt(startMs, endMs, index, tokens.size)
+        val finish = if (index == tokens.lastIndex) endMs
+            else startAt(startMs, endMs, index + 1, tokens.size)
+        return (begin to finish).takeIf { (a, b) -> b > a && b - a >= 750L }
+    }
+
     /** All explicitly selectable estimated positions for one visible cue. */
     fun choices(text: String, startMs: Long, endMs: Long): List<EstimatedCueWord>? {
         if (!safeWindow(startMs, endMs)) return null
