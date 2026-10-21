@@ -20,6 +20,16 @@ internal object PrivateSubtitleOutgoingShare {
         }
     }
 
+    /** A deliberately selected unstyled ASS text excerpt, never a file/URI. */
+    fun assText(cues: List<PrivateSubtitleCue>): String? {
+        if (cues.size !in 1..MAX_SHARED_CUES) return null
+        val bytes = PrivateAssSubtitleExport.snapshot(cues) ?: return null
+        if (bytes.size > MAX_SHARED_BYTES) return null
+        val text = bytes.toString(Charsets.UTF_8)
+        return text.takeIf { it.isNotBlank() &&
+            it.toByteArray(Charsets.UTF_8).contentEquals(bytes) }
+    }
+
     fun text(cues: List<PrivateSubtitleCue>, format: SubtitleDraftFormat): String? {
         if (cues.size !in 1..MAX_SHARED_CUES) return null
         val bytes = PrivateSubtitleDraftEditor.snapshot(cues, format) ?: return null

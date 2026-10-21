@@ -3060,6 +3060,29 @@ private fun TuddyScreen(
                         saveTtmlSubtitle.launch("Tuddy-eigen-tijdvakken.ttml")
                     }
                 },
+                onShareAssExcerpt = { selectedCues ->
+                    // Explicit, small literal ASS text selection only. No
+                    // attachment, URI permission, microphone or transcript dump.
+                    val payload = PrivateSubtitleOutgoingShare.assText(selectedCues)
+                    if (payload == null) {
+                        error = "ASS-delen geweigerd: alleen exacte centiseconden, " +
+                            "maximaal 24 regels en 16 KiB zijn toegestaan."
+                    } else {
+                        val outbound = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, payload)
+                        }
+                        val chooser = Intent.createChooser(
+                            outbound, "Deel geselecteerde eigen ASS-tekst"
+                        )
+                        if (!runCatching {
+                                context.startActivity(chooser)
+                                true
+                            }.getOrDefault(false)) {
+                            error = "Android kon geen deelmenu openen; niets gedeeld."
+                        }
+                    }
+                },
                 onShareTtmlExcerpt = { selectedCues ->
                     // Literal XML text only, never a source-file URI, grant,
                     // recording, account identifier or entire live transcript.
