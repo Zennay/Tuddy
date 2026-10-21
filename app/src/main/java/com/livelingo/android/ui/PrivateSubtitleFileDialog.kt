@@ -80,9 +80,9 @@ internal fun PrivateSubtitleFileDialog(
     saveCopyNotice: String?,
     onSaveCopyNoticeRead: () -> Unit,
     onSaveWorksheetCopy: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
-    onSaveCopy: (List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
-    onSaveTimedSheet: (List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
-    onSaveLrc: (List<PrivateSubtitleCue>) -> Unit,
+    onSaveCopy: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>, SubtitleDraftFormat) -> Unit,
+    onSaveTimedSheet: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>, TimedSubtitleSheetFormat) -> Unit,
+    onSaveLrc: (List<PrivateSubtitleCue>, List<PrivateSubtitleCue>) -> Unit,
     incomingSecondPaste: SubtitlePasteFileContent?,
     onChoosePasteDocument: (List<PrivateSubtitleCue>, SubtitlePasteFileContent) -> Unit,
     onSecondPasteConsumed: () -> Unit
@@ -578,9 +578,17 @@ internal fun PrivateSubtitleFileDialog(
         PrivateSubtitleExcerptDialog(
             allCues = draft.toList(),
             initialSourceRows = excerptSourceRows,
-            onSaveCopy = onSaveCopy,
-            onSaveTimedSheet = onSaveTimedSheet,
-            onSaveLrc = onSaveLrc,
+            // Export ONLY selected rows, but retain the full authored editor
+            // timeline across Android's external DocumentsUI/ON_STOP.
+            onSaveCopy = { exportCues, format ->
+                onSaveCopy(draft.toList(), exportCues.toList(), format)
+            },
+            onSaveTimedSheet = { exportCues, format ->
+                onSaveTimedSheet(draft.toList(), exportCues.toList(), format)
+            },
+            onSaveLrc = { exportCues ->
+                onSaveLrc(draft.toList(), exportCues.toList())
+            },
             onDismiss = { excerptOpen = false }
         )
     }
@@ -1442,7 +1450,7 @@ internal fun PrivateSubtitleFileDialog(
                     if (exactLrc == null || fresh == null ||
                         !fresh.contentEquals(exactLrc)) {
                         notice = "Concept is veranderd: open de LRC-preview opnieuw."
-                    } else onSaveLrc(draft.toList())
+                    } else onSaveLrc(draft.toList(), draft.toList())
                     requestLrcSave = false
                 }) { Text("Kies opslaglocatie…") }
             },
@@ -1498,7 +1506,7 @@ internal fun PrivateSubtitleFileDialog(
                         !current.contentEquals(snapshot)) {
                         notice = "De tijdlijn veranderde: open CSV/TSV-preview opnieuw."
                     } else {
-                        onSaveTimedSheet(draft.toList(), chosenTimedSheet)
+                        onSaveTimedSheet(draft.toList(), draft.toList(), chosenTimedSheet)
                     }
                     requestTimedSheet = null
                 }) { Text("Kies opslaglocatie…") }
@@ -1546,7 +1554,7 @@ internal fun PrivateSubtitleFileDialog(
                     if (exactSnapshot == null || current == null ||
                         !current.contentEquals(exactSnapshot)) {
                         notice = "Concept veranderd: controleer de SRT/VTT-preview opnieuw."
-                    } else onSaveCopy(draft.toList(), chosenFormat)
+                    } else onSaveCopy(draft.toList(), draft.toList(), chosenFormat)
                     requestSave = null
                 }) { Text("Kies opslaglocatie…") }
             },
