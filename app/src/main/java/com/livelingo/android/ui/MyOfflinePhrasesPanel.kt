@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.IncomingPersonalCsvDocument
 import java.io.ByteArrayOutputStream
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -61,6 +62,8 @@ private data class PendingTopicPhrasebook(
 internal fun MyOfflinePhrasesPanel(
     deck: PrivatePhraseDeck,
     initialLanguage: String,
+    incomingCsvDocument: IncomingPersonalCsvDocument? = null,
+    onIncomingCsvConsumed: (Long) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     var language by remember { mutableStateOf(initialLanguage.takeIf {
@@ -803,7 +806,12 @@ internal fun MyOfflinePhrasesPanel(
                     }) { Text("Herstel back-up…") }
                 }
                 PrivatePhraseArchiveAction(deck = deck, onChanged = { revision++ })
-                PrivatePhraseTopicCsvAction(deck = deck, onChanged = { revision++ })
+                PrivatePhraseTopicCsvAction(
+                    deck = deck,
+                    onChanged = { revision++ },
+                    incomingDocument = incomingCsvDocument,
+                    onIncomingDocumentConsumed = onIncomingCsvConsumed
+                )
                 OutlinedButton(
                     enabled = phrases?.isNotEmpty() == true,
                     onClick = {
