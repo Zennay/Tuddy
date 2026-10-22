@@ -1,3 +1,15 @@
+## Nieuw: verberg in één tik beide tafelhelften
+
+In de offline tweepersoons-tafelweergaven kun je beide teksten direct
+**afschermen** zonder een oefensessie of gesprek te wissen. Lokale
+voorlezing stopt en blijft geblokkeerd totdat je de teksten bewust
+weer zichtbaar maakt. Antwoorden worden niet ongemerkt onthuld.
+De functie bewaart geen instelling en vergrendelt het toestel niet.
+[Persoonlijke kaarten](docs/PRIVATE_PHRASE_FACE_TO_FACE.md) ·
+[Tijdelijk gesprek](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: tafelmodus op kleinere schermen en scherm bewust aanhouden
 
 Beide tweepersoonsweergaven hebben nu een **scrollbare bedieningsstrook**
