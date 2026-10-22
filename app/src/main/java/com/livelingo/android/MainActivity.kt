@@ -905,8 +905,10 @@ private fun TuddyScreen(
                     sessionDiagnostics = when (status) {
                         "Lokaal vertaald" -> sessionDiagnostics.copy(
                             localTranslations = sessionDiagnostics.localTranslations + 1,
-                            lastTranslationLatencyMs =
-                                (SystemClock.elapsedRealtime() - beganAt).coerceAtLeast(0L)
+                            translationLatenciesMs = (
+                                sessionDiagnostics.translationLatenciesMs +
+                                    (SystemClock.elapsedRealtime() - beganAt).coerceAtLeast(0L)
+                            ).takeLast(10)
                         )
                         "Model ontbreekt" -> sessionDiagnostics.copy(
                             missingTextModels = sessionDiagnostics.missingTextModels + 1
@@ -1093,7 +1095,7 @@ private fun TuddyScreen(
             appendLine("Text model detail: ${textReceipt.detail}")
             appendLine("Listening at export: $listening")
             appendLine("Session counters: RAM only; not physical validation")
-            sessionDiagnostics.asReportLines().forEach(::appendLine)
+            sessionDiagnostics.asReportLines().forEach { appendLine(it) }
             appendLine("Transcript/audio included: no")
         }
         report.toByteArray(Charsets.UTF_8).takeIf { it.size in 1..8192 }
