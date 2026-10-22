@@ -1,3 +1,28 @@
+## Nieuw: eigen vertaalcorrecties bewust delen zonder tussentijds bestand
+
+In **Mijn eigen correcties meenemen → Kies zinnen voor export…** kun je
+met zoeken en het taalpaarfilter exact de gewenste, zelfgeschreven
+correcties aanvinken. Via **Bekijk geselecteerde JSON en deel bewust…**
+krijg je eerst de **complete JSON-tekst** en het aantal gekozen zinnen
+te zien. Pas na een tweede expliciete bevestiging opent Android Delen.
+
+De ontvanger kan de JSON-tekst in Tuddy via **Mijn eigen correcties
+meenemen → Plak eigen JSON of CSV…** handmatig plakken. De bestaande
+strikte parser toont eerst een selectief importvoorbeeld voordat de
+ontvanger bewust samenvoegt of vervangt. Het klembord wordt niet
+automatisch gelezen.
+
+Als correcties intussen zijn veranderd, wordt de deelactie geweigerd:
+controleer de selectie opnieuw. Niets wordt automatisch opgeslagen,
+gedeeld of naar de cloud gestuurd door Tuddy. De zelfgekozen ontvangende
+app kan de tekst wél opslaan, uploaden of doorsturen; Tuddy kan die kopie
+niet terughalen. De gedeelde correcties zijn menselijke, niet
+onafhankelijk geverifieerde vertaalvoorstellen — geen actieve lokale
+spraak- of vertaalmodellen. Zonder delen blijven ze alleen tijdelijk in
+de app-sessie.
+
+---
+
 ## Nieuw: APK-checksum zonder 64 tekens overtypen
 
 In **Offline startcheck → Leg fysieke offline-waarnemingen vast** kun je

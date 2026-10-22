@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,6 +47,12 @@ import java.io.ByteArrayOutputStream
  * No app-internal disk cache, implicit backup, analytics or remote service.
  * The user's selected document provider MAY sync to cloud; always disclose it.
  */
+private data class SessionCorrectionSharePreview(
+    val originalEntries: List<SessionTranslationCorrection>,
+    val chosenEntries: List<SessionTranslationCorrection>,
+    val json: ByteArray
+)
+
 @Composable
 internal fun SessionCorrectionTransferDialog(
     entries: List<SessionTranslationCorrection>,
@@ -58,8 +65,9 @@ internal fun SessionCorrectionTransferDialog(
     var pendingCsvExport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingHtmlExport by remember { mutableStateOf<ByteArray?>(null) }
     var exportSelectionOpen by remember { mutableStateOf(false) }
+    var sharePreview by remember { mutableStateOf<SessionCorrectionSharePreview?>(null) }
     var pasteOpen by remember { mutableStateOf(false) }
-    var pastedCsv by remember { mutableStateOf("") }
+    var pastedCorrections by remember { mutableStateOf("") }
     var preview by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
     var selectedRows by remember { mutableStateOf(emptySet<Int>()) }
     var importSearch by remember { mutableStateOf("") }
@@ -261,29 +269,30 @@ internal fun SessionCorrectionTransferDialog(
                 OutlinedButton(
                     onClick = {
                         pasteOpen = !pasteOpen
-                        if (!pasteOpen) pastedCsv = ""
+                        if (!pasteOpen) pastedCorrections = ""
                     },
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth()
-                ) { Text(if (pasteOpen) "Sluit plakveld" else "Plak eigen correcties-CSV…") }
+                ) { Text(if (pasteOpen) "Sluit plakveld" else "Plak eigen JSON of CSV…") }
                 if (pasteOpen) {
                     Text(
-                        "Plak bewust een eigen CSV inclusief de kolomkoppen. " +
-                            "Tuddy leest je klembord niet automatisch, slaat deze " +
-                            "tekst niet op en toont eerst een importvoorbeeld.",
+                        "Plak bewust de complete Tuddy-JSON uit Android Delen " +
+                            "of een eigen CSV inclusief de kolomkoppen. Tuddy " +
+                            "leest het klembord niet automatisch, bewaart de " +
+                            "tekst niet en toont eerst een importvoorbeeld.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedTextField(
-                        value = pastedCsv,
+                        value = pastedCorrections,
                         onValueChange = { candidate ->
                             if (candidate.toByteArray(Charsets.UTF_8).size <=
-                                SessionTranslationCorrectionCsv.MAX_BYTES) {
-                                pastedCsv = candidate
+                                SessionTranslationCorrectionTransfer.MAX_BYTES) {
+                                pastedCorrections = candidate
                             } else {
-                                notice = "CSV-plaktekst is groter dan 48 KB en geweigerd."
+                                notice = "Correctie-JSON/CSV is groter dan 48 KB en geweigerd."
                             }
                         },
-                        label = { Text("Eigen CSV-tekst (maximaal 48 KB)") },
+                        label = { Text("Eigen Tuddy-JSON of CSV (maximaal 48 KB)") },
                         modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp),
                         minLines = 3,
                         maxLines = 6,
@@ -291,25 +300,25 @@ internal fun SessionCorrectionTransferDialog(
                     )
                     Button(
                         onClick = {
-                            val decoded = SessionTranslationCorrectionCsv.decode(
-                                pastedCsv.toByteArray(Charsets.UTF_8)
-                            )
+                            val bytes = pastedCorrections.toByteArray(Charsets.UTF_8)
+                            val decoded = SessionTranslationCorrectionTransfer.decode(bytes)
+                                ?: SessionTranslationCorrectionCsv.decode(bytes)
                             if (decoded == null) {
-                                notice = "Ongeldige CSV: controleer de vier exacte " +
-                                    "kolommen en maximaal 40 unieke correcties. " +
-                                    "Er is niets gewijzigd."
+                                notice = "Ongeldige JSON/CSV: verwacht volledige Tuddy-JSON " +
+                                    "of vier exacte CSV-kolommen, met maximaal " +
+                                    "40 unieke correcties. Er is niets gewijzigd."
                             } else {
                                 preview = decoded
                                 selectedRows = decoded.indices.toSet()
-                                pastedCsv = ""
+                                pastedCorrections = ""
                                 pasteOpen = false
                                 notice = "Controleer eerst alle geplakte correcties. " +
                                     "Kies daarna bewust samenvoegen of vervangen."
                             }
                         },
-                        enabled = !busy && pastedCsv.isNotBlank(),
+                        enabled = !busy && pastedCorrections.isNotBlank(),
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Toon importvoorbeeld van geplakte CSV") }
+                    ) { Text("Toon importvoorbeeld van geplakte JSON/CSV") }
                 }
                 if (notice.isNotBlank()) Text(
                     notice, style = MaterialTheme.typography.bodySmall
@@ -522,6 +531,18 @@ internal fun SessionCorrectionTransferDialog(
                     saveCsv.launch("tuddy-geselecteerde-vertaalcorrecties.csv")
                 }
             },
+            onShareJson = { chosen ->
+                val frozen = chosen.toList()
+                val bytes = SessionTranslationCorrectionTransfer.encode(frozen)
+                if (bytes == null) {
+                    notice = "Selectie kan niet veilig als JSON gedeeld worden."
+                } else {
+                    // The complete source list is frozen to reject concurrent edits.
+                    sharePreview = SessionCorrectionSharePreview(entries.toList(), frozen, bytes)
+                    exportSelectionOpen = false
+                    notice = ""
+                }
+            },
             onExportHtml = { chosen, showAnswers ->
                 val bytes = SessionCorrectionPrintableWorksheet.create(chosen, showAnswers)
                 if (bytes == null) {
@@ -536,6 +557,73 @@ internal fun SessionCorrectionTransferDialog(
                 }
             },
             onDismiss = { exportSelectionOpen = false }
+        )
+    }
+
+    val sharing = sharePreview
+    if (sharing != null) {
+        AlertDialog(
+            onDismissRequest = { sharePreview = null },
+            title = { Text("Controleer vóór delen · eigen correcties") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 470.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "${sharing.chosenEntries.size} handmatige, niet geverifieerde " +
+                            "taalcorrecties geselecteerd. Dit is de VOLLEDIGE JSON " +
+                            "die Android aan de gekozen app beschikbaar stelt.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        sharing.json.toString(Charsets.UTF_8),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        "Een door jou gekozen externe app kan deze zinnen bewaren, " +
+                            "uploaden of verder delen. Tuddy kan dat niet ongedaan " +
+                            "maken. Er wordt geen spraakopname, automatische vertaling " +
+                            "of modelpakket meegestuurd.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val fresh = SessionTranslationCorrectionTransfer.encode(
+                        sharing.chosenEntries
+                    )
+                    if (entries != sharing.originalEntries || fresh == null ||
+                        !fresh.contentEquals(sharing.json)) {
+                        notice = "Correcties zijn gewijzigd of niet meer exporteerbaar. " +
+                            "Selecteer en controleer opnieuw; niets gedeeld."
+                    } else {
+                        val launched = runCatching {
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, sharing.json.toString(Charsets.UTF_8))
+                            }
+                            val chooser = Intent.createChooser(
+                                send, "Deel uitsluitend mijn gekozen Tuddy-correcties"
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(chooser)
+                            true
+                        }.getOrDefault(false)
+                        notice = if (launched)
+                            "Android Delen geopend met exact deze zelfgekozen JSON."
+                        else "Er is geen deelapp beschikbaar; niets gedeeld."
+                    }
+                    sharePreview = null
+                }) { Text("Ik begrijp dit · open Android Delen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { sharePreview = null }) {
+                    Text("Annuleren · niets delen")
+                }
+            }
         )
     }
 }
