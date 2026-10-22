@@ -472,7 +472,7 @@ internal fun TwoWayTypedConversationDialog(
                         OutlinedButton(
                             enabled = !preparing,
                             onClick = {
-                                speaker.stop()
+                                clearSpeech()
                                 speechNotice = ""
                                 favoriteModelsOpen = true
                             },
@@ -545,7 +545,7 @@ internal fun TwoWayTypedConversationDialog(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !preparing,
                     onClick = {
-                        speaker.stop()
+                        clearSpeech()
                         speechNotice = ""
                         preparedMeaningPickerOpen = true
                     }
@@ -569,6 +569,7 @@ internal fun TwoWayTypedConversationDialog(
                     enabled = !preparing && from != to &&
                         OfflineTypedCaptionPolicy.normalize(draft) != null,
                     onClick = {
+                        clearSpeech()
                         val normalized = OfflineTypedCaptionPolicy.normalize(draft)
                         if (normalized != null && onSend(normalized, from, to)) {
                             draft = ""
@@ -592,7 +593,7 @@ internal fun TwoWayTypedConversationDialog(
                     "legt je eigen betekenis vast.",
                     style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick = {
-                    speaker.stop()
+                    clearSpeech()
                     speechNotice = ""
                     readerOpen = true
                 }, modifier = Modifier.fillMaxWidth()) {
@@ -607,7 +608,7 @@ internal fun TwoWayTypedConversationDialog(
                         it.original != it.translated &&
                         it.original.length <= 400 && it.translated.length <= 400 },
                     onClick = {
-                        speaker.stop()
+                        clearSpeech()
                         speechNotice = ""
                         studyOpen = true
                     },
@@ -730,7 +731,7 @@ internal fun TwoWayTypedConversationDialog(
                 }
                                 if (recentLines.isNotEmpty()) {
                     TextButton(onClick = {
-                        speaker.stop()
+                        clearSpeech()
                         speechNotice = "Voorlezen gestopt."
                     }, modifier = Modifier.fillMaxWidth()) { Text("■ Stop lokale stem") }
                 }
@@ -749,7 +750,10 @@ internal fun TwoWayTypedConversationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                clearSpeech()
+                onDismiss()
+            }) {
                 Text("Terug naar gesprek")
             }
         }
