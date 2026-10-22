@@ -707,15 +707,22 @@ internal class PrivatePhraseDeck(context: Context) {
             val editor = prefs.edit()
             for (name in fields) {
                 val original = before.entries[name]
-                when {
-                    original == null -> editor.remove(name)
-                    name == KEY && original is String ->
+                if (original == null) {
+                    editor.remove(name)
+                } else when (name) {
+                    KEY -> {
+                        if (original !is String) return false
                         editor.putString(name, original)
-                    name == REVIEW_OPT_IN && original is Boolean ->
+                    }
+                    REVIEW_OPT_IN -> {
+                        if (original !is Boolean) return false
                         editor.putBoolean(name, original)
-                    original is Set<*> && original.all { it is String } ->
-                        editor.putStringSet(name, original.filterIsInstance<String>().toSet())
-                    else -> return false
+                    }
+                    else -> {
+                        val strings = original as? Set<*> ?: return false
+                        if (strings.any { it !is String }) return false
+                        editor.putStringSet(name, strings.filterIsInstance<String>().toSet())
+                    }
                 }
             }
             editor.commit()
