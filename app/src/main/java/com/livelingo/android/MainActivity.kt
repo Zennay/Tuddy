@@ -260,6 +260,14 @@ private fun searchSpokenLanguages(query: String): List<LanguageChoice> {
         LanguageSearch.matches(query, candidates)
     }
 }
+/** One temporary, exact-caption identity for deliberate personal note adoption. */
+private data class PendingLivePhraseCapture(
+    val captionId: Long,
+    val original: String,
+    val revision: Int,
+    val generation: Int
+)
+
 private data class Line(
     val id: Long,
     val original: String,
@@ -711,6 +719,14 @@ private fun TuddyScreen(
     var meaningDraft by remember { mutableStateOf("") }
     var meaningNotice by remember { mutableStateOf("") }
     var meaningIndexOpen by remember { mutableStateOf(false) }
+    // Captions never become permanent phrasebook entries without the user's
+    // own two text fields and a separate explicit save confirmation.
+    var pendingLivePhraseCapture by remember { mutableStateOf<PendingLivePhraseCapture?>(null) }
+    var capturedPhraseLanguage by remember { mutableStateOf("kmr") }
+    var capturedPhraseText by remember { mutableStateOf("") }
+    var capturedMeaningLanguage by remember { mutableStateOf("nl") }
+    var capturedMeaningText by remember { mutableStateOf("") }
+    var capturedPhraseNotice by remember { mutableStateOf("") }
     // One explicitly chosen row; keep its original and revision so confirmation
     // cannot accidentally delete a different or subsequently corrected caption.
     var pendingSingleCaptionDelete by remember {
@@ -2472,6 +2488,9 @@ private fun TuddyScreen(
                 sessionCaptionStudyStartId = null
                 presentedCaptionId = null
                 meaningIndexOpen = false
+                pendingLivePhraseCapture = null
+                capturedPhraseText = ""
+                capturedMeaningText = ""
                 quickTypedOpen = false
                 twoWayTypedOpen = false // forget private typed draft on background
                 sharedTextToTwoWay = null
@@ -2562,6 +2581,9 @@ private fun TuddyScreen(
             pinnedExportOpen = false
             editingCaptionId = null
             captionCorrectionDraft = ""
+            pendingLivePhraseCapture = null
+            capturedPhraseText = ""
+            capturedMeaningText = ""
             pendingSingleCaptionDelete = null
             pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
@@ -2935,6 +2957,124 @@ private fun TuddyScreen(
                         quickTypedOpen = false
                         draftFromExternalShare = false
                         manualText = ""
+                    }) { Text("Annuleren") }
+                }
+            )
+        }
+        val phraseCapture = pendingLivePhraseCapture
+        if (phraseCapture != null) {
+            val sourceRow = lines.firstOrNull { it.id == phraseCapture.captionId }
+            val stillSameCaption = !listening && generation == phraseCapture.generation &&
+                sourceRow != null && sourceRow.original == phraseCapture.original &&
+                sourceRow.translationRevision == phraseCapture.revision
+            val personalSentence = capturedPhraseText.trim()
+            val personalMeaning = capturedMeaningText.trim()
+            val fieldsValid = PrivatePhraseTextPolicy.valid(personalSentence, 120) &&
+                PrivatePhraseTextPolicy.valid(personalMeaning, 180)
+            val duplicate = personalPhrases.entries()?.any {
+                it.language == capturedPhraseLanguage &&
+                    it.phrase.equals(personalSentence, ignoreCase = true)
+            } == true
+            AlertDialog(
+                onDismissRequest = {
+                    pendingLivePhraseCapture = null
+                    capturedPhraseText = ""
+                    capturedMeaningText = ""
+                },
+                title = { Text("Maak een eigen offline taalkaart") },
+                text = {
+                    Column(
+                        Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Gespreksregel ter referentie (geen gecontroleerde vertaling):")
+                        Text(phraseCapture.original, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Schrijf zélf de Kurmanji-, Sorani- of Pasjtoezin en " +
+                                "de Nederlandse of Engelse betekenis. Tuddy vertaalt niets " +
+                                "automatisch. Pas na je bevestiging wordt deze kaart " +
+                                "blijvend in het privézinnenboek van deze app opgeslagen. " +
+                                "Andere gespreksregels en audio worden niet opgeslagen.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (!stillSameCaption) Text(
+                            "De regel is veranderd, verwijderd of de microfoon staat aan. " +
+                                "Sluit en open de actuele regel opnieuw.",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            listOf("kmr" to "Kurmanji", "ckb" to "Sorani",
+                                "ps" to "Pasjtoe").forEach { (code, label) ->
+                                TextButton(onClick = { capturedPhraseLanguage = code }) {
+                                    Text((if (capturedPhraseLanguage == code) "● " else "○ ") + label)
+                                }
+                            }
+                        }
+                        OutlinedTextField(
+                            value = capturedPhraseText,
+                            onValueChange = { if (it.length <= 120) capturedPhraseText = it },
+                            label = { Text("Mijn eigen zin (max. 120 tekens)") },
+                            minLines = 2, maxLines = 4,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("nl" to "Nederlands", "en" to "Engels").forEach { (code, label) ->
+                                TextButton(onClick = { capturedMeaningLanguage = code }) {
+                                    Text((if (capturedMeaningLanguage == code) "● " else "○ ") + label)
+                                }
+                            }
+                        }
+                        OutlinedTextField(
+                            value = capturedMeaningText,
+                            onValueChange = { if (it.length <= 180) capturedMeaningText = it },
+                            label = { Text("Mijn zelfgeschreven betekenis (max. 180 tekens)") },
+                            minLines = 2, maxLines = 4,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (duplicate) Text(
+                            "Deze zin bestaat al voor de gekozen taal. " +
+                                "Open Mijn eigen offline zinnen om die kaart bewust te wijzigen.",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        if (capturedPhraseNotice.isNotBlank()) Text(
+                            capturedPhraseNotice, color = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            "Bewaart alleen deze twee door jou geschreven velden op je apparaat. " +
+                                "Geen cloud, ASR-model, transcript of automatische vertaalclaim.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = stillSameCaption && fieldsValid && !duplicate,
+                        onClick = {
+                            val latest = lines.firstOrNull { it.id == phraseCapture.captionId }
+                            if (!listening && generation == phraseCapture.generation &&
+                                latest != null && latest.original == phraseCapture.original &&
+                                latest.translationRevision == phraseCapture.revision &&
+                                PrivatePhraseTextPolicy.valid(personalSentence, 120) &&
+                                PrivatePhraseTextPolicy.valid(personalMeaning, 180) &&
+                                personalPhrases.saveNew(capturedPhraseLanguage,
+                                    personalSentence, capturedMeaningLanguage, personalMeaning)) {
+                                capturedPhraseNotice =
+                                    "Eigen taalkaart bewust opgeslagen. Open Mijn eigen offline zinnen om die te bekijken."
+                                pendingLivePhraseCapture = null
+                                capturedPhraseText = ""
+                                capturedMeaningText = ""
+                            } else {
+                                capturedPhraseNotice =
+                                    "Niet opgeslagen: controleer invoer, beschikbare ruimte of bestaande kaarten."
+                            }
+                        }
+                    ) { Text("Bewaar deze eigen privékaart") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        pendingLivePhraseCapture = null
+                        capturedPhraseText = ""
+                        capturedMeaningText = ""
                     }) { Text("Annuleren") }
                 }
             )
@@ -5538,6 +5678,10 @@ private fun TuddyScreen(
                         meaningDraft = ""
                         meaningNotice = ""
                         meaningIndexOpen = false
+                        pendingLivePhraseCapture = null
+                        capturedPhraseText = ""
+                        capturedMeaningText = ""
+                        capturedPhraseNotice = ""
                         correctionNotice = ""
                         pendingSingleCaptionDelete = null
                         captionDeleteNotice = ""
@@ -6629,6 +6773,10 @@ private fun TuddyScreen(
                     Text(correctionNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
                 }
+                if (capturedPhraseNotice.isNotBlank()) {
+                    Text(capturedPhraseNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                }
                 if (!follow) {
                     Text(
                         "Teruggelezen: automatisch volgen is gepauzeerd. Tik op Volg live om de laatste regel te zien.",
@@ -6740,6 +6888,20 @@ private fun TuddyScreen(
                                         Text(if (line.personalMeaning == null) "✎ Eigen uitleg"
                                             else "✎ Wijzig eigen uitleg")
                                     }
+                                    TextButton(
+                                        enabled = !listening && line.original.isNotBlank(),
+                                        onClick = {
+                                            pendingLivePhraseCapture = PendingLivePhraseCapture(
+                                                line.id, line.original, line.translationRevision, generation
+                                            )
+                                            capturedPhraseLanguage = "kmr"
+                                            capturedMeaningLanguage =
+                                                if (line.sourceCode == "en") "en" else "nl"
+                                            capturedPhraseText = ""
+                                            capturedMeaningText = ""
+                                            capturedPhraseNotice = ""
+                                        }
+                                    ) { Text("＋ Maak eigen Kurdische/Pasjtoe-kaart") }
                                     if (line.status == "Fout" || line.status == "Model ontbreekt") {
                                         TextButton(
                                             enabled = !listening,

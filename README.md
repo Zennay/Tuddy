@@ -1,3 +1,16 @@
+## Nieuw: maak van een gespreksregel een eigen Kurmanji-, Sorani- of Pasjtoe-kaart
+
+Bij iedere tijdelijke gespreksregel kun je na het stoppen van de microfoon
+**＋ Maak eigen Kurdische/Pasjtoe-kaart** kiezen. Je ziet de bronregel als
+referentie, kiest zelf een van de drie talen en typt **zelf** de zin én
+de Nederlandse of Engelse betekenis. Pas een afzonderlijke bevestiging
+bewaart uitsluitend deze twee eigen velden in je lokale privézinnenboek.
+Bestaande kaarten worden niet overschreven. Er is geen automatische vertaling,
+cloud of claim dat deze zinnen door een moedertaalspreker zijn gecontroleerd.
+[Stappen en privacyvoorwaarden](docs/PRIVATE_LIVE_CAPTION_PHRASE_CAPTURE.md).
+
+---
+
 ## Nieuw: deel een exact gekozen eigen zinnen-CSV pas na twee controles
 
 In de thema-CSV-export kun je na je taal- en themaselectie ook
