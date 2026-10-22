@@ -2,6 +2,7 @@
 
 Open **Taalondersteuning → Controleer lokale stemmen** om reeds
 geïnstalleerde, niet-netwerkafhankelijke Android-stemvarianten te bekijken.
+De volledige lijst is doorzoekbaar op stemnaam, taal/regio en engine-ID.
 Kies met **Gebruik deze stem** een lokale voorkeursstem per taal; de voorkeur
 wordt alleen op dit toestel opgeslagen en geldt voor alle lokale Tuddy-
 voorleesfuncties. Met **Automatische stemkeuze herstellen** wis je deze
