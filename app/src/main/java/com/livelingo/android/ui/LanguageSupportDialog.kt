@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.LanguageSearch
 import com.livelingo.android.LocalSpeechVoiceEntry
 import com.livelingo.android.LocalSpeechVoiceInventory
+import com.livelingo.android.LocalSpeechVoicePreview
 import com.livelingo.android.LocalSpeechVoicePreferences
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.UnavailableTextLanguageCatalog
@@ -51,13 +52,19 @@ internal fun LanguageSupportDialog(
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
     val localVoiceInventory = remember(context) { LocalSpeechVoiceInventory(context) }
+    val localVoicePreview = remember(context) { LocalSpeechVoicePreview(context) }
     var installedLocalVoices by remember { mutableStateOf<List<LocalSpeechVoiceEntry>?>(null) }
     var checkingLocalVoices by remember { mutableStateOf(false) }
     var voicePreferenceRevision by remember { mutableStateOf(0) }
     var localVoiceNotice by remember { mutableStateOf("Nog niet gecontroleerd op dit toestel.") }
     var localVoiceQuery by remember { mutableStateOf("") }
-    DisposableEffect(localVoiceInventory) {
-        onDispose { localVoiceInventory.close() }
+    var previewingVoice by remember { mutableStateOf<String?>(null) }
+    var localVoicePreviewNotice by remember { mutableStateOf("") }
+    DisposableEffect(localVoiceInventory, localVoicePreview) {
+        onDispose {
+            localVoiceInventory.close()
+            localVoicePreview.close()
+        }
     }
     var linkNotice by remember { mutableStateOf("") }
     var researchCopyNotice by remember { mutableStateOf("") }
@@ -263,6 +270,13 @@ internal fun LanguageSupportDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (localVoicePreviewNotice.isNotBlank()) {
+                        Text(
+                            localVoicePreviewNotice,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     installedLocalVoices?.let { voices ->
                         if (voices.isEmpty()) {
                             Text(
@@ -280,7 +294,14 @@ internal fun LanguageSupportDialog(
                             }
                             OutlinedTextField(
                                 value = localVoiceQuery,
-                                onValueChange = { localVoiceQuery = it.take(80) },
+                                onValueChange = {
+                                    localVoiceQuery = it.take(80)
+                                    if (previewingVoice != null) {
+                                        localVoicePreview.close()
+                                        previewingVoice = null
+                                        localVoicePreviewNotice = "Stemproef gestopt. Er is niets opgeslagen."
+                                    }
+                                },
                                 label = { Text("Zoek stem, taal of engine-ID") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
@@ -317,22 +338,54 @@ internal fun LanguageSupportDialog(
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                                        TextButton(
-                                            onClick = {
-                                                val saved = LocalSpeechVoicePreferences.selectVoice(
-                                                    context, voice.languageTag, voice.voiceName
-                                                )
-                                                if (saved) {
-                                                    voicePreferenceRevision++
-                                                    localVoiceNotice =
-                                                        "Voorkeursstem voor ${voice.languageTag} lokaal opgeslagen. Geen online fallback."
-                                                } else {
-                                                    localVoiceNotice =
-                                                        "Deze stemvoorkeur kon niet worden opgeslagen."
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            TextButton(
+                                                onClick = {
+                                                    val saved = LocalSpeechVoicePreferences.selectVoice(
+                                                        context, voice.languageTag, voice.voiceName
+                                                    )
+                                                    if (saved) {
+                                                        voicePreferenceRevision++
+                                                        localVoiceNotice =
+                                                            "Voorkeursstem voor ${voice.languageTag} lokaal opgeslagen. Geen online fallback."
+                                                    } else {
+                                                        localVoiceNotice =
+                                                            "Deze stemvoorkeur kon niet worden opgeslagen."
+                                                    }
                                                 }
+                                            ) {
+                                                Text(if (isPreferred) "Voorkeur voor deze taal" else "Gebruik deze stem")
                                             }
-                                        ) {
-                                            Text(if (isPreferred) "Voorkeur voor deze taal" else "Gebruik deze stem")
+                                            TextButton(
+                                                onClick = {
+                                                    if (previewingVoice == voice.voiceName) {
+                                                        localVoicePreview.close()
+                                                        previewingVoice = null
+                                                        localVoicePreviewNotice =
+                                                            "Stemproef gestopt. Er is niets opgeslagen."
+                                                    } else {
+                                                        previewingVoice = voice.voiceName
+                                                        localVoicePreviewNotice =
+                                                            "Korte lokale stemproef wordt afgespeeld; er wordt geen gebruikersinhoud opgeslagen."
+                                                        localVoicePreview.preview(voice) { result ->
+                                                            if (previewingVoice == voice.voiceName) {
+                                                                previewingVoice = null
+                                                                localVoicePreviewNotice = result.fold(
+                                                                    onSuccess = {
+                                                                        "Stemproef afgerond. Er is geen gebruikersinhoud opgeslagen."
+                                                                    },
+                                                                    onFailure = { failure ->
+                                                                        failure.message
+                                                                            ?: "Lokale stemproef mislukt. Er is niets gedownload."
+                                                                    }
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ) {
+                                                Text(if (previewingVoice == voice.voiceName) "Stop stemproef" else "Luister")
+                                            }
                                         }
                                     }
                                 }
