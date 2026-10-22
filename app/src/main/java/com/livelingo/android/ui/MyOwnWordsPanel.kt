@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OwnWord
 import com.livelingo.android.PrivateOwnWordDeck
+import com.livelingo.android.PrivateOwnWordCsv
 import com.livelingo.android.PrivatePrintableOwnWordbook
 import com.livelingo.android.TargetCatalog
 import java.io.ByteArrayOutputStream
@@ -71,6 +72,7 @@ internal fun MyOwnWordsPanel(
     var notice by remember { mutableStateOf("") }
     var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
     var pendingTsvExport by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingCsvExport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingTsvScope by remember { mutableStateOf<List<OwnWord>?>(null) }
     var selectedTsvPreview by remember { mutableStateOf<List<OwnWord>?>(null) }
     var printableConsent by remember { mutableStateOf(false) }
@@ -130,6 +132,29 @@ internal fun MyOwnWordsPanel(
                 }.getOrDefault(false)
                 notice = if (saved) "Eigen woordenlijst opgeslagen als UTF-8 TSV."
                     else "TSV niet opgeslagen. Je privéwoorden blijven behouden."
+            }
+        }
+    }
+    val csvExportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        val snapshot = pendingCsvExport
+        pendingCsvExport = null
+        if (uri != null && snapshot != null) {
+            val latest = deck.entries()?.let { PrivateOwnWordCsv.encode(it, deck) }
+            if (latest?.contentEquals(snapshot) != true) {
+                notice = "Je eigen woorden zijn veranderd of bevatten een " +
+                    "spreadsheet-formuleprefix. Maak de CSV-export opnieuw."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                        stream.write(snapshot)
+                        stream.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                notice = if (saved) "Je eigen woorden zijn als UTF-8 CSV opgeslagen."
+                    else "CSV niet opgeslagen. Je eigen woorden blijven behouden."
             }
         }
     }
@@ -196,6 +221,7 @@ internal fun MyOwnWordsPanel(
         val baseline = deck.entries()
         if (pendingRestore != null || pasteWordsOpen || pasteBackupOpen ||
             pendingBackup != null || pendingTsvExport != null ||
+            pendingCsvExport != null ||
             selectedTsvPreview != null || pendingPrintable != null ||
             printableConsent || editing != null || pendingDelete != null) {
             notice = "Er staat al een eigen-woordenbewerking of export open. Sluit die eerst " +
@@ -247,6 +273,40 @@ internal fun MyOwnWordsPanel(
                 pendingRestore = imported
                 pendingRestoreBase = deck.entries()?.toList()
                 notice = "Woordlijst veilig ingelezen. Kies bewust samenvoegen of vervangen."
+            }
+        }
+    }
+    val csvPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        pendingRestore = null
+        if (uri != null) {
+            val imported = runCatching {
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: throw IllegalArgumentException("onleesbaar CSV-bestand")
+                val output = ByteArrayOutputStream()
+                input.use { stream ->
+                    val buffer = ByteArray(4096)
+                    while (true) {
+                        val size = stream.read(buffer)
+                        if (size < 0) break
+                        if (size == 0 || output.size() + size > PrivateOwnWordDeck.MAX_BACKUP_BYTES)
+                            throw IllegalArgumentException("CSV groter dan 50 KB")
+                        output.write(buffer, 0, size)
+                    }
+                }
+                PrivateOwnWordCsv.previewImport(output.toByteArray(), deck)
+            }.getOrNull()
+            if (imported == null) {
+                notice = "CSV geweigerd: verwacht UTF-8 met kolommen " +
+                    "language,word,meaning en maximaal 120 geldige regels. " +
+                    "Je eigen woorden zijn niet gewijzigd."
+            } else {
+                restoreOrigin = "csv"
+                pendingRestore = imported
+                pendingRestoreBase = deck.entries()?.toList()
+                notice = "CSV ingelezen. Controleer alle woorden en kies zelf " +
+                    "samenvoegen of de volledige lijst vervangen."
             }
         }
     }
@@ -578,7 +638,8 @@ internal fun MyOwnWordsPanel(
                 pendingRestoreBase = null
             },
             title = { Text(if (restoreOrigin == "paste")
-                "Controleer mijn geplakte woorden" else if (restoreOrigin == "tsv")
+                "Controleer mijn geplakte woorden" else if (restoreOrigin == "tsv" ||
+                restoreOrigin == "csv")
                 "Zelfgeschreven woordenlijst importeren?" else "Eigen woorden herstellen?") },
             text = {
                 Column(
@@ -937,6 +998,14 @@ internal fun MyOwnWordsPanel(
                 ) { Text("Importeer eigen woordenlijst (TSV)…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        pendingRestore = null
+                        restoreOrigin = "csv"
+                        csvPicker.launch(arrayOf("text/csv", "text/plain", "application/octet-stream"))
+                    }
+                ) { Text("Importeer eigen woordenlijst (CSV)…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = items?.isNotEmpty() == true,
                     onClick = {
                         val snapshot = deck.exportTsvSnapshot()
@@ -949,6 +1018,21 @@ internal fun MyOwnWordsPanel(
                         }
                     }
                 ) { Text("Exporteer mijn eigen woorden (TSV)…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = items?.isNotEmpty() == true,
+                    onClick = {
+                        val snapshot = deck.entries()?.let { PrivateOwnWordCsv.encode(it, deck) }
+                        if (snapshot == null) {
+                            notice = "CSV-export geweigerd: onleesbare woorden, onveilige " +
+                                "spreadsheet-formuleprefix of te grote lijst. " +
+                                "Gebruik anders de bestaande TSV- of JSON-export."
+                        } else {
+                            pendingCsvExport = snapshot
+                            csvExportPicker.launch("tuddy-mijn-eigen-woorden.csv")
+                        }
+                    }
+                ) { Text("Exporteer mijn eigen woorden (CSV)…") }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = items != null && filtered.isNotEmpty(),
@@ -968,6 +1052,12 @@ internal fun MyOwnWordsPanel(
                 ) { Text("▤ Maak afdrukbaar eigen woordenboek…") }
                 Text("Maak één zelfstandig offline HTML-woordenboek voor " +
                     "bekijken of afdrukken. Alleen jouw ongecontroleerde eigen notities.",
+                    style = MaterialTheme.typography.bodySmall)
+                Text("CSV gebruikt echte kommascheiding en dubbele aanhalingstekens " +
+                    "voor komma’s en aanhalingstekens in je eigen tekst. Geen " +
+                    "gesprekken, automatische vertaling of verborgen spreadsheetformules; " +
+                    "mogelijke formuleprefixen blokkeren de CSV-export. " +
+                    "Import toont eerst alle regels en overschrijft nooit vanzelf.",
                     style = MaterialTheme.typography.bodySmall)
                 Text("TSV bevat alleen je zelfgeschreven betekenissen. " +
                     "Je kunt de lijst buiten Tuddy wijzigen en later bewust " +
