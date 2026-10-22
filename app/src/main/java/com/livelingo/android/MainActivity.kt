@@ -3017,7 +3017,16 @@ private fun TuddyScreen(
                     }
                     is SharedDocumentImportResult.PersonalPhraseBackup -> {
                         stop()
+                        quickTypedOpen = false
+                        twoWayTypedOpen = false
+                        sharedTextToTwoWay = null
+                        draftFromExternalShare = false
+                        manualText = ""
+                        pendingCorrectionTransferText = null
                         pendingSharedPersonalPhraseCsv = null
+                        translationMemoryOpen = false
+                        starterPhraseboardOpen = false
+                        offlinePersonalTurnsOpen = false
                         pendingSharedPersonalPhraseBackupJson = loaded.json
                         personalPhrasesOpen = true
                         error = ""
@@ -6373,6 +6382,8 @@ private fun TuddyScreen(
                 },
                 onDismiss = {
                     personalPhrasesOpen = false
+                    pendingSharedPersonalPhraseCsv = null
+                    pendingSharedPersonalPhraseBackupJson = null
                     incomingPersonalCsv?.let { onPersonalCsvConsumed(it.requestId) }
                 }
             )
