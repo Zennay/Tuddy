@@ -18,10 +18,14 @@ en behoudt de bestaande tijdcodes.
 4. De voortgang is zichtbaar en **Annuleer** stopt het volgen. Een vertaalfout,
    annulering of overgang naar de achtergrond past geen gedeeltelijke vertaling
    toe. De bronfile op schijf blijft onaangeraakt.
-5. Lees de voorbeeldregels terug en kies **Vervang tijdelijke tekst**. Pas dan
-   vervangt de vertaling de tekst in het tijdelijke concept. De tijdcodes blijven
-   behouden; de bestaande undo/redo-bediening kan de wijziging herstellen.
-6. Bewaar desgewenst daarna via de bestaande SRT/VTT-preview een **nieuwe kopie**.
+5. Kies in de preview **Alleen vertaling** of **Origineel + vertaling**.
+   De tweetalige modus zet het origineel boven de vertaling binnen dezelfde
+   tijdgecodeerde cue. Als één gecombineerde cue de bestaande tekstlimieten
+   overschrijdt, blijft toepassen geblokkeerd en kun je Alleen vertaling kiezen.
+6. Lees de voorbeeldregels terug en kies **Vervang tijdelijke tekst**. Pas dan
+   wordt de gekozen uitvoermodus toegepast op het tijdelijke concept. De tijdcodes
+   blijven behouden; de bestaande undo/redo-bediening kan de wijziging herstellen.
+7. Bewaar desgewenst daarna via de bestaande SRT/VTT-preview een **nieuwe kopie**.
    Tuddy overschrijft het gekozen origineel niet.
 
 ## Grenzen en privacy
