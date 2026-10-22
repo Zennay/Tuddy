@@ -25,7 +25,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
@@ -36,6 +43,39 @@ import com.livelingo.android.SavedWord
 import java.text.Normalizer
 import java.util.Locale
 import kotlin.random.Random
+
+/** Highlight only ranges reported by the installed local TTS voice. */
+@Composable
+private fun PracticeSpeechText(
+    text: String,
+    activeSpeechText: String?,
+    activeSpeechRange: Pair<Int, Int>?
+): AnnotatedString {
+    val normalized = text.replace('\n', ' ').replace('\r', ' ').trim()
+    val followsSpeech = activeSpeechText != null && normalized == activeSpeechText
+    val displayedText = if (followsSpeech) activeSpeechText.orEmpty() else text
+    val range = activeSpeechRange.takeIf { followsSpeech }
+    val background = MaterialTheme.colorScheme.primary
+    val foreground = MaterialTheme.colorScheme.onPrimary
+    return remember(displayedText, range, background, foreground) {
+        buildAnnotatedString {
+            append(displayedText)
+            if (range != null && range.first >= 0 &&
+                range.second > range.first && range.second <= displayedText.length
+            ) {
+                addStyle(
+                    SpanStyle(
+                        background = background,
+                        color = foreground,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    range.first,
+                    range.second
+                )
+            }
+        }
+    }
+}
 
 /**
  * Fully on-device practice of already saved information. User-provided
@@ -280,6 +320,8 @@ private fun PracticeCardsSession(
     }
     var revealed by remember(cards, mode) { mutableStateOf(false) }
     var typedAnswer by remember(cards, mode) { mutableStateOf("") }
+    var activeSpeechText by remember(cards, mode) { mutableStateOf<String?>(null) }
+    var activeSpeechRange by remember(cards, mode) { mutableStateOf<Pair<Int, Int>?>(null) }
     var mastered by remember(cards, mode) { mutableIntStateOf(0) }
     var retries by remember(cards, mode) { mutableIntStateOf(0) }
     var skipped by remember(cards, mode) { mutableIntStateOf(0) }
@@ -288,6 +330,8 @@ private fun PracticeCardsSession(
     fun nextCard(remembered: Boolean, repeat: Boolean = false) {
         if (pending.isEmpty()) return
         speaker.stop()
+        activeSpeechText = null
+        activeSpeechRange = null
         onVoiceNotice("")
         val first = pending.removeAt(0)
         if (repeat && (repeatsByCard[first] ?: 0) < 2) {
@@ -316,9 +360,54 @@ private fun PracticeCardsSession(
         return
     }
     val card = pending.first()
-    // Never continue pronouncing an earlier answer when the learning mode changes.
-    DisposableEffect(cards, mode) {
-        onDispose { speaker.stop() }
+    // Stop and clear the temporary highlight when the card changes or the app leaves.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(cards, mode, speaker, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                speaker.stop()
+                activeSpeechText = null
+                activeSpeechRange = null
+                onVoiceNotice("Voorlezen gestopt bij verlaten van het scherm.")
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            speaker.stop()
+        }
+    }
+    fun pronounceCard(pace: LocalSpeechPace) {
+        val safe = card.spokenText.replace('\n', ' ').replace('\r', ' ').trim()
+        if (safe.isBlank() || safe.length > 400 || safe.any { it.isISOControl() } ||
+            card.spokenLanguage.isBlank()
+        ) {
+            speaker.stop()
+            activeSpeechText = null
+            activeSpeechRange = null
+            onVoiceNotice("Deze kaart kan niet veilig met een lokale stem worden voorgelezen.")
+            return
+        }
+        activeSpeechText = safe
+        activeSpeechRange = null
+        speaker.speakSequence(
+            lines = listOf(safe),
+            languageTag = card.spokenLanguage,
+            pace = pace,
+            onProgress = { completed, total ->
+                onVoiceNotice("Lokaal voorlezen: $completed/$total regels.")
+            },
+            feedback = onVoiceNotice,
+            onFinished = { completed ->
+                activeSpeechText = null
+                activeSpeechRange = null
+                if (completed) onVoiceNotice("Voorlezen voltooid.")
+            },
+            onLineStarted = { activeSpeechRange = null },
+            onWordRange = { _, start, endExclusive ->
+                activeSpeechRange = start to endExclusive
+            }
+        )
     }
     Text(card.language + " · " + card.note,
         style = MaterialTheme.typography.labelSmall)
@@ -326,7 +415,8 @@ private fun PracticeCardsSession(
     val gap = if (mode == PracticeMode.GAP) card.selfAuthoredPhrase?.let {
         PrivatePhraseGap.from(it, repeatsByCard[card] ?: 0)
     } else null
-    Text(gap?.hiddenPhrase ?: card.prompt,
+    Text(
+        PracticeSpeechText(gap?.hiddenPhrase ?: card.prompt, activeSpeechText, activeSpeechRange),
         style = MaterialTheme.typography.titleLarge.copy(
             textDirection = if (gap != null && card.rtlAnswer) TextDirection.Rtl
                 else TextDirection.Ltr
@@ -353,7 +443,8 @@ private fun PracticeCardsSession(
     } else if (revealed) {
         HorizontalDivider()
         Text("Opgeslagen antwoord", style = MaterialTheme.typography.labelMedium)
-        Text(gap?.missingToken ?: card.answer,
+        Text(
+            PracticeSpeechText(gap?.missingToken ?: card.answer, activeSpeechText, activeSpeechRange),
             style = MaterialTheme.typography.titleMedium.copy(
                 textDirection = if (card.rtlAnswer) TextDirection.Rtl else TextDirection.Ltr
             ),
@@ -363,30 +454,43 @@ private fun PracticeCardsSession(
         // learner explicitly opens the answer.
         if (card.spokenText.isNotBlank() && card.spokenText.length <= 400) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = {
-                    speaker.speak(card.spokenText, card.spokenLanguage, LocalSpeechPace.NORMAL) {
-                        onVoiceNotice(it)
-                    }
+                TextButton(enabled = activeSpeechText == null, onClick = {
+                    pronounceCard(LocalSpeechPace.NORMAL)
                 }) { Text("🔊 Normaal") }
-                TextButton(onClick = {
-                    speaker.speak(card.spokenText, card.spokenLanguage, LocalSpeechPace.SLOW) {
-                        onVoiceNotice(it)
-                    }
+                TextButton(enabled = activeSpeechText == null, onClick = {
+                    pronounceCard(LocalSpeechPace.SLOW)
                 }) { Text("🔊 Rustig") }
                 TextButton(onClick = {
                     speaker.stop()
+                    activeSpeechText = null
+                    activeSpeechRange = null
                     onVoiceNotice("Voorlezen gestopt.")
                 }) { Text("Stop stem") }
+            }
+            if (activeSpeechText != null) {
+                Text(
+                    if (activeSpeechRange != null)
+                        "Indicatieve tekstmarkering van de geïnstalleerde stem."
+                    else "Markering verschijnt als de stem tekstbereiken terugmeldt.",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
         if (gap != null) {
             Text("Jouw poging: " + (typedAnswer.ifBlank { "(niet ingevuld)" }),
                 style = MaterialTheme.typography.bodyMedium)
-            Text("Hele eigen zin: " + (card.selfAuthoredPhrase?.phrase ?: ""),
+            Text("Hele eigen zin:", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                PracticeSpeechText(
+                    card.selfAuthoredPhrase?.phrase.orEmpty(),
+                    activeSpeechText,
+                    activeSpeechRange
+                ),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     textDirection = if (card.rtlAnswer) TextDirection.Rtl
                         else TextDirection.Ltr
-                ))
+                )
+            )
             Text("Zelfgeschreven betekenis: " +
                 (card.selfAuthoredPhrase?.ownMeaning ?: ""),
                 style = MaterialTheme.typography.bodySmall)

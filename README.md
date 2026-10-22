@@ -2413,6 +2413,11 @@ anders de eerstvolgende geplande datum. Toestemming blijft per onderdeel
 afzonderlijk; Tuddy start geen microfoon, modeldownload, account of
 automatische herinnering. [Zo gebruik je het overzicht](docs/UNIFIED_DAILY_STUDY_HUB.md).
 
+In de gecombineerde offline oefenkaarten volgt de markering de opgeslagen
+zin of het woord dat je lokaal laat voorlezen, wanneer de geïnstalleerde
+Android-stem tekstbereiken terugmeldt. Zonder zo'n bereik blijft de tekst
+zichtbaar, maar claimt Tuddy geen exacte woordtiming; audio wordt niet opgeslagen.
+
 
 ## Nieuw: eigen Kurmanji-, Sorani- en Pasjtoe-zinnen herhalen
 
