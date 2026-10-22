@@ -216,7 +216,7 @@ internal fun LanguageSupportDialog(
                         style = MaterialTheme.typography.titleSmall
                     )
                     Text(
-                        "Controleer welke stemmen op dit toestel al geïnstalleerd zijn en niet als netwerkafhankelijk zijn gemarkeerd. Kies desgewenst een voorkeursstem; die keuze wordt alleen lokaal per taal bewaard. De inventaris spreekt niets uit en downloadt geen stemmen.",
+                        "Controleer welke stemmen op dit toestel al geïnstalleerd zijn en niet als netwerkafhankelijk zijn gemarkeerd. Met Luister hoor je een korte, vaste zin in de stemtaal wanneer beschikbaar; voor overige talen worden alleen cijfers uitgesproken. Kies desgewenst een voorkeursstem; die keuze wordt alleen lokaal per taal bewaard. Inventariseren spreekt niets uit en downloadt geen stemmen.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Row(
@@ -226,6 +226,9 @@ internal fun LanguageSupportDialog(
                         TextButton(
                             enabled = !checkingLocalVoices,
                             onClick = {
+                                localVoicePreview.close()
+                                previewingVoice = null
+                                localVoicePreviewNotice = ""
                                 checkingLocalVoices = true
                                 installedLocalVoices = null
                                 localVoiceNotice = "Geïnstalleerde lokale stemmen controleren…"
@@ -338,6 +341,13 @@ internal fun LanguageSupportDialog(
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                        if (previewingVoice == voice.voiceName) {
+                                            Text(
+                                                "Voorbeeld: " + LocalSpeechVoicePreview.sampleFor(voice.languageTag),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             TextButton(
                                                 onClick = {
