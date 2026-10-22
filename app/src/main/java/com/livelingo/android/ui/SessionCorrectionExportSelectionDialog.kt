@@ -34,12 +34,14 @@ internal fun SessionCorrectionExportSelectionDialog(
     entries: List<SessionTranslationCorrection>,
     onExport: (List<SessionTranslationCorrection>) -> Unit,
     onExportCsv: (List<SessionTranslationCorrection>) -> Unit,
+    onExportHtml: (List<SessionTranslationCorrection>, Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     // A frozen snapshot prevents a silent change to the export list while open.
     val snapshot = remember { entries.toList() }
     var selected by remember { mutableStateOf(snapshot.indices.toSet()) }
     var pairMenuOpen by remember { mutableStateOf(false) }
+    var showAnswers by remember { mutableStateOf(false) }
     val languagePairs = snapshot.map { it.sourceCode to it.targetCode }.distinct()
     val chosen = snapshot.filterIndexed { index, _ -> index in selected }
     AlertDialog(
@@ -128,6 +130,22 @@ internal fun SessionCorrectionExportSelectionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { onExportCsv(chosen.toList()) }
                 ) { Text("Bewaar selectie als bewerkbare CSV…") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Checkbox(
+                        checked = showAnswers,
+                        onCheckedChange = { showAnswers = it }
+                    )
+                    Text(
+                        "Toon mijn eigen vertalingen in het afdrukbare blad",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Button(
+                    enabled = chosen.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onExportHtml(chosen.toList(), showAnswers) }
+                ) { Text(if (showAnswers) "Bewaar privaat antwoordblad als HTML…"
+                    else "Bewaar invulblad zonder vertalingen als HTML…") }
             }
         },
         confirmButton = {
