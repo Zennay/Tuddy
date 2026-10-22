@@ -72,3 +72,9 @@ De zoektekst blijft uitsluitend in het geheugen van het geopende venster.
 Het wisselen van het filter wijzigt geen vertaling of bewaarde correctie;
 ook bij een filter kan het gehele tijdelijke overzicht uitsluitend via
 aparte wis-allesbevestiging worden gewist.
+
+Ook dit zoeken gebruikt de bestaande niet-destructieve Unicode-toetsenbord-
+normalisatie voor onder meer veelgebruikte Arabische/Persische yeh- en
+kafvarianten, zodat eigen Sorani/Pasjtoe-tekst beter terug te vinden is.
+De oorspronkelijk ingetypte letters en de opgeslagen correcties worden
+hierdoor niet gewijzigd of automatisch gelijkgesteld bij hergebruik.

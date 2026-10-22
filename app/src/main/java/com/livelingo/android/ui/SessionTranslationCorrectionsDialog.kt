@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.SessionTranslationCorrection
+import com.livelingo.android.PrivateOfflineSearch
 
 /** In-memory management only; deleting does not rewrite existing captions. */
 @Composable
@@ -32,10 +33,14 @@ internal fun SessionTranslationCorrectionsDialog(
 ) {
     var confirmClear by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    val foldedQuery = PrivateOfflineSearch.fold(query.trim())
     val visible = entries.asReversed().filter { entry ->
-        query.isBlank() || entry.original.contains(query, ignoreCase = true) ||
-            entry.translation.contains(query, ignoreCase = true) ||
-            (entry.sourceCode + " → " + entry.targetCode).contains(query, ignoreCase = true)
+        foldedQuery.isBlank() ||
+            PrivateOfflineSearch.contains(entry.original, foldedQuery) ||
+            PrivateOfflineSearch.contains(entry.translation, foldedQuery) ||
+            PrivateOfflineSearch.contains(
+                entry.sourceCode + " → " + entry.targetCode, foldedQuery
+            )
     }
     AlertDialog(
         onDismissRequest = onDismiss,
