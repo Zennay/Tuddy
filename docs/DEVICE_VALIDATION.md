@@ -6,7 +6,53 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Pinned APK acceptance candidate (22 October 2026, built after PR #361). **This is a historical, reproducible handoff, not the latest app build:** PR #363 subsequently merged on main at `1034ddb0fb1d24882e4e3527ccb360249cfae459`, adding original-caption correction from the fullscreen reader. Do not attribute PR #363 behavior to this APK; obtain a new exact-source artifact before accepting the latest app version on a device:
+Current hosted debug-APK handoff (22 October 2026, after merged product PR #364).
+This is the newest known Android code build as of this handoff, **not** a
+physical installation, signed release, demonstrated airplane-mode operation or
+language-model acceptance. The artifact is bound to GitHub's exact proposed-merge
+checkout, which may have a different commit ID from the squash-merged `main`.
+
+| Field | Immutable evidence |
+|---|---|
+| App-code merge (PR #364) | [`f448dd584cd75f805a2ec480ebb88adf13614d49`](https://github.com/Zennay/Tuddy/commit/f448dd584cd75f805a2ec480ebb88adf13614d49) (`merged=true`) |
+| Hosted Android run | [#39756620318](https://github.com/Zennay/Tuddy/actions/runs/39756620318) — source-head and build completed successfully |
+| Exact build checkout/source identity | `81046cb702d07fccbbbcf71b78651d2007351b4b` (GitHub build's `EXPECTED_SHA` and `source-commit.txt`) |
+| Artifact | [Tuddy-debug-apk #12416246932](https://github.com/Zennay/Tuddy/actions/runs/39756620318/artifacts/12416246932) (expires 5 November 2026 09:39:16 UTC) |
+| APK filename | `app-debug.apk` |
+| **APK SHA-256** | `3e15949f299e885022bf086294c852ceff83ed8f2ffa93fbb9b5df3e9c64e815` |
+| **Artifact ZIP SHA-256 (different file)** | `77ee8642cef211ca26f2e0c4cb48cf6eab415832afd2b08dc29cb0407041b0a5` |
+| Package/version | `com.livelingo.android` / `0.4.0` |
+| Physical installation and real airplane-mode session | **NOT PROVIDED** |
+
+The hosted workflow verified `app-debug.apk: OK` against its generated
+checksum sidecar and printed the APK SHA above before publishing the artifact.
+This candidate includes PR #363 original-caption correction and PR #364's
+content-free RAM-only speech/translation counters, bounded translation latencies
+and manual airplane-mode settings shortcut. It does **not** prove correct speech
+recognition, external radios off, accurate offline translation, or production
+support for Kurmanji, Sorani or Pashto.
+
+Download the artifact ZIP yourself, and from a Tuddy checkout verify exact
+provenance before attempting any authorized handset installation:
+
+```sh
+bash scripts/verify-tuddy-apk-artifact.sh \\
+  artifact.zip \\
+  77ee8642cef211ca26f2e0c4cb48cf6eab415832afd2b08dc29cb0407041b0a5 \\
+  3e15949f299e885022bf086294c852ceff83ed8f2ffa93fbb9b5df3e9c64e815 \\
+  81046cb702d07fccbbbcf71b78651d2007351b4b \\
+  39756620318
+```
+
+The verifier checks artifact integrity and provenance only. The user-controlled
+in-app observation form still requires a human to verify airplane mode,
+independently disabled remaining connections, NL↔EN speech/translation outcomes,
+Stop/lifecycle behavior and privacy after installation. Do not mark accepted
+without the signed-off human device evidence.
+
+---
+
+Historical pinned APK acceptance candidate (22 October 2026, built after PR #361). **This is a historical, reproducible handoff, not the latest app build:** PR #363 subsequently merged on main at `1034ddb0fb1d24882e4e3527ccb360249cfae459`, adding original-caption correction from the fullscreen reader. Do not attribute PR #363 behavior to this APK; obtain a new exact-source artifact before accepting the latest app version on a device:
 
 | Field | Immutable evidence |
 |---|---|
