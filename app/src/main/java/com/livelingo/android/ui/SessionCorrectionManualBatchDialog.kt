@@ -127,7 +127,7 @@ internal fun SessionCorrectionManualBatchDialog(
                         expanded = targetPickerOpen,
                         onDismissRequest = { targetPickerOpen = false }
                     ) {
-                        TargetCatalog.targets.forEach { language ->
+                        SessionCorrectionLanguageCatalog.targets.forEach { language ->
                             DropdownMenuItem(
                                 text = { Text(language.title + " (" + language.code + ")") },
                                 onClick = {
