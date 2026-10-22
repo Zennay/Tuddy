@@ -136,6 +136,19 @@ internal object UnavailableTextLanguageCatalog {
             "de footprint is te groot voor brede Android-dekking zonder quantisatie. Niet geïntegreerd of op Android getest."
     )
 
+    private val opusMtIndoEuropeanResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Tekstvertaling",
+        title = "Helsinki-NLP/opus-mt-ine-ine · 59-talig",
+        url = "https://huggingface.co/Helsinki-NLP/opus-mt-ine-ine",
+        declaredLicense = "Apache-2.0 volgens modelkaart; corpusrechten nog te controleren",
+        footprint = "536 MB volledige repository; 266 MB PyTorch-gewichten plus tokenizer volgens bestandslijst",
+        limitation = "De modelkaart noemt kur_Arab, kur_Latn, pus, nld en eng als bron-/doeltokens en vereist " +
+            "een doelprefix zoals >>nld<<. Dit is een veelbelovende kleinere MT-onderzoekskandidaat, maar " +
+            "kur_Arab/kur_Latn zijn geen dialectspecifiek bewijs voor Sorani/Kurmanji en pus-codecompatibiliteit " +
+            "moet worden gecontroleerd. Geen passende pair-specifieke kwaliteitsmetingen, dataset-/corpusrechten, " +
+            "Android-runtime, quantisatie, latency of geheugen zijn onafhankelijk geverifieerd. Niet geïntegreerd."
+    )
+
     private val madladResearchCandidate = OfflineLanguageModelCandidate(
         category = "Tekstvertaling",
         title = "Google MADLAD-400-3B-MT",
@@ -171,7 +184,7 @@ internal object UnavailableTextLanguageCatalog {
             ),
             translationCandidates = listOf(
                 nllbResearchCandidate, madladResearchCandidate,
-                badiniTranslationResearchCandidate
+                opusMtIndoEuropeanResearchCandidate, badiniTranslationResearchCandidate
             )
         ),
         UnavailableTextLanguage(
@@ -198,7 +211,10 @@ internal object UnavailableTextLanguageCatalog {
                 soraniApacheResearchCandidate,
                 soraniOnnxResearchCandidate
             ),
-            translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
+            translationCandidates = listOf(
+                nllbResearchCandidate, madladResearchCandidate,
+                opusMtIndoEuropeanResearchCandidate
+            )
         ),
         UnavailableTextLanguage(
             "ps", "پښتو · Pasjtoe / Pashto",
@@ -224,6 +240,7 @@ internal object UnavailableTextLanguageCatalog {
             translationCandidates = listOf(
                 nllbResearchCandidate,
                 madladResearchCandidate,
+                opusMtIndoEuropeanResearchCandidate,
                 OfflineLanguageModelCandidate(
                     category = "Tekstvertaling",
                     title = "ZamAI Pashto ↔ English translator",
