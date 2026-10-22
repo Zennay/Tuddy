@@ -37,6 +37,7 @@ internal fun SessionCorrectionExportSelectionDialog(
     entries: List<SessionTranslationCorrection>,
     onExport: (List<SessionTranslationCorrection>) -> Unit,
     onExportCsv: (List<SessionTranslationCorrection>) -> Unit,
+    onShareJson: (List<SessionTranslationCorrection>) -> Unit,
     onExportHtml: (List<SessionTranslationCorrection>, Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -67,8 +68,9 @@ internal fun SessionCorrectionExportSelectionDialog(
             ) {
                 Text(
                     "Kies uitsluitend de zinnen die in jouw eigen JSON- of CSV-bestand " +
-                        "komen. Het opslaan gebeurt pas na keuze van een Android-" +
-                        "bestandslocatie. Die provider kan zelf naar de cloud synchroniseren.",
+                        "komen, of die je bewust via Android deelt. Bewaren gebruikt " +
+                        "een zelf gekozen bestandslocatie; delen opent pas na een " +
+                        "extra volledige preview. Externe apps kunnen kopieën uploaden.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
@@ -166,6 +168,11 @@ internal fun SessionCorrectionExportSelectionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { onExportCsv(chosen.toList()) }
                 ) { Text("Bewaar selectie als bewerkbare CSV…") }
+                Button(
+                    enabled = chosen.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onShareJson(chosen.toList()) }
+                ) { Text("Bekijk geselecteerde JSON en deel bewust…") }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Checkbox(
                         checked = showAnswers,
