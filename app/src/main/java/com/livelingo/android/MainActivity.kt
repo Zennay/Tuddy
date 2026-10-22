@@ -947,12 +947,17 @@ private fun TuddyScreen(
     // User-triggered, privacy-safe diagnostics; never include caption/audio content.
     fun offlineReadinessReportSnapshot(): ByteArray? = runCatching {
         val appVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
+        val microphonePermissionGranted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
         val airplaneMode = runCatching {
             Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
         }.getOrNull()?.toString() ?: "unknown"
         val report = buildString {
             appendLine("Tuddy offline readiness report")
+            appendLine("App package: ${context.packageName}")
             appendLine("App version: $appVersion")
+            appendLine("Microphone permission granted: $microphonePermissionGranted")
             appendLine("Build source SHA: ${BuildConfig.TUDDY_SOURCE_SHA}")
             appendLine("GitHub workflow run ID: ${BuildConfig.TUDDY_BUILD_RUN_ID}")
             appendLine("Android API: ${Build.VERSION.SDK_INT}")
