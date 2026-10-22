@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +50,7 @@ internal fun PrivatePhraseArchiveAction(
     val topics = remember(context) { PrivatePhraseTopics(context) }
     var feedback by remember { mutableStateOf("") }
     var previewExport by remember { mutableStateOf<ArchiveExport?>(null) }
+    var sharePreview by remember { mutableStateOf<ArchiveExport?>(null) }
     var pendingWrite by remember { mutableStateOf<ByteArray?>(null) }
     var previewRestore by remember { mutableStateOf<ArchiveRestore?>(null) }
     var mergeMode by remember { mutableStateOf(true) }
@@ -112,7 +114,8 @@ internal fun PrivatePhraseArchiveAction(
     LaunchedEffect(incomingArchiveJsonText) {
         val shared = incomingArchiveJsonText ?: return@LaunchedEffect
         val bytes = shared.toByteArray(Charsets.UTF_8)
-        if (previewExport != null || pendingWrite != null || previewRestore != null) {
+        if (previewExport != null || sharePreview != null ||
+            pendingWrite != null || previewRestore != null) {
             feedback = "Er staat al een privéback-up open. Sluit die eerst en deel opnieuw; " +
                 "de huidige selectie is behouden."
         } else {
@@ -197,14 +200,75 @@ internal fun PrivatePhraseArchiveAction(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    pendingWrite = exporting.bytes
-                    previewExport = null
-                    saveFile.launch("Tuddy-zinnen-en-themas.json")
-                }) { Text("Ik begrijp dit, kies opslag…") }
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    TextButton(onClick = {
+                        pendingWrite = exporting.bytes
+                        previewExport = null
+                        saveFile.launch("Tuddy-zinnen-en-themas.json")
+                    }) { Text("Ik begrijp dit, kies opslag…") }
+                    TextButton(onClick = {
+                        sharePreview = exporting
+                        previewExport = null
+                    }) { Text("Bekijk volledige JSON en deel bewust…") }
+                }
             },
             dismissButton = {
                 TextButton(onClick = { previewExport = null }) { Text("Annuleren") }
+            }
+        )
+    }
+
+    val sharing = sharePreview
+    if (sharing != null) {
+        AlertDialog(
+            onDismissRequest = { sharePreview = null },
+            title = { Text("Mijn volledige privé-archief echt met een andere app delen?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Text("Dit is de exacte UTF-8 JSON die je gaat delen, inclusief " +
+                        "alle gekozen eigen zinnen, betekenissen en thema's. Lees de " +
+                        "inhoud nogmaals voordat Android Delen wordt geopend.")
+                    Text(
+                        sharing.bytes.toString(Charsets.UTF_8),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text("De externe app kan deze privétekst opslaan, uploaden of " +
+                        "doorsturen. Tuddy kan die kopie niet verwijderen. Geen audio, " +
+                        "favorieten of herhaalplanning worden toegevoegd.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val fresh = deck.exportArchiveSnapshot(context)
+                    if (fresh == null || !fresh.contentEquals(sharing.bytes)) {
+                        feedback = "Je zinnen of thema's zijn veranderd; controleer de back-up opnieuw."
+                    } else {
+                        val sent = runCatching {
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, sharing.bytes.toString(Charsets.UTF_8))
+                            }
+                            val chooser = Intent.createChooser(
+                                send, "Deel uitsluitend deze Tuddy-zinnen-en-thema's-back-up"
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(chooser)
+                            true
+                        }.getOrDefault(false)
+                        feedback = if (sent)
+                            "Android Delen geopend voor exact deze gecontroleerde privé-back-up."
+                        else "Geen externe deelapp beschikbaar; niets gedeeld."
+                    }
+                    sharePreview = null
+                }) { Text("Ik begrijp dit, open Android Delen…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { sharePreview = null }) { Text("Annuleren") }
             }
         )
     }
