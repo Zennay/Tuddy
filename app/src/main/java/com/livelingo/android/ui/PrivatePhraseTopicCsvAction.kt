@@ -56,6 +56,16 @@ private data class TopicCsvUndo(
     val importedNotes: List<PersonalPhrase>
 )
 
+/** Human-readable, ephemeral receipt of changes the user explicitly approved. */
+private data class TopicCsvChange(
+    val incoming: PersonalPhrase,
+    val previous: PersonalPhrase?,
+    val beforeTheme: String?,
+    val afterTheme: String?,
+    val meaningUpdated: Boolean,
+    val themeUpdated: Boolean
+)
+
 /**
  * User-selected complete, editable CSV phrasebook with local topics.
  * Export, import and confirmation are entirely manual; no clipboard, network
@@ -99,6 +109,8 @@ internal fun PrivatePhraseTopicCsvAction(
     var reassignedImportRows by remember { mutableStateOf<Set<String>>(emptySet()) }
     var lastCsvUndo by remember { mutableStateOf<TopicCsvUndo?>(null) }
     var confirmCsvUndo by remember { mutableStateOf(false) }
+    var lastCsvChanges by remember { mutableStateOf<List<TopicCsvChange>>(emptyList()) }
+    var showCsvChanges by remember { mutableStateOf(false) }
 
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
@@ -197,6 +209,12 @@ internal fun PrivatePhraseTopicCsvAction(
                 "geen automatische vertaling, upload of achtergrondopslag.",
             style = MaterialTheme.typography.bodySmall
         )
+        if (lastCsvChanges.isNotEmpty()) {
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { showCsvChanges = true }
+            ) { Text("Bekijk wat de laatste CSV-import echt heeft gewijzigd…") }
+        }
         if (lastCsvUndo != null) {
             OutlinedButton(
                 modifier = Modifier.fillMaxWidth(),
@@ -204,6 +222,66 @@ internal fun PrivatePhraseTopicCsvAction(
             ) { Text("↶ Maak de laatste CSV-import ongedaan…") }
         }
         if (notice.isNotBlank()) Text(notice, style = MaterialTheme.typography.bodySmall)
+    }
+
+    if (showCsvChanges && lastCsvChanges.isNotEmpty()) {
+        val changes = lastCsvChanges
+        AlertDialog(
+            onDismissRequest = { showCsvChanges = false },
+            title = { Text("Wijzigingen van mijn laatste CSV-import") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 470.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Text("Dit is een alleen-lezen overzicht van daadwerkelijk " +
+                        "gekozen toevoegingen, betekeniscorrecties en themawijzigingen. " +
+                        "Geen automatische vertaling, opslag of extern rapport.",
+                        style = MaterialTheme.typography.bodySmall)
+                    changes.forEachIndexed { i, change ->
+                        HorizontalDivider()
+                        Text((i + 1).toString() + ". [" +
+                            change.incoming.language + "] " + change.incoming.phrase,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (change.incoming.language == "ckb" ||
+                                    change.incoming.language == "ps") TextDirection.Rtl
+                                else TextDirection.Ltr
+                            ))
+                        if (change.previous == null) {
+                            Text("Nieuw toegevoegd: [" + change.incoming.meaningLanguage +
+                                "] " + change.incoming.ownMeaning,
+                                style = MaterialTheme.typography.bodySmall)
+                            Text("Thema: " + (change.afterTheme ?: "zonder thema"),
+                                style = MaterialTheme.typography.labelSmall)
+                        } else {
+                            if (change.meaningUpdated) {
+                                Text("Eerdere betekenis: [" +
+                                    change.previous.meaningLanguage + "] " +
+                                    change.previous.ownMeaning,
+                                    style = MaterialTheme.typography.bodySmall)
+                                Text("Nieuwe betekenis: [" +
+                                    change.incoming.meaningLanguage + "] " +
+                                    change.incoming.ownMeaning,
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            if (change.themeUpdated) {
+                                Text("Thema: " + (change.beforeTheme ?: "zonder thema") +
+                                    " → " + (change.afterTheme ?: "zonder thema"),
+                                    style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                    Text("Dit is de historie van de laatste bevestigde " +
+                        "niet-destructieve CSV-import, niet de huidige status. " +
+                        "Dit overzicht vervalt na het verlaten van dit scherm.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCsvChanges = false }) { Text("Sluiten") }
+            }
+        )
     }
 
     val undo = lastCsvUndo
@@ -256,7 +334,11 @@ internal fun PrivatePhraseTopicCsvAction(
                     val restored = deck.undoLastCsvImportIfUnchanged(
                         undo.before, undo.after
                     )
-                    if (restored) onChanged()
+                    if (restored) {
+                        lastCsvChanges = emptyList()
+                        showCsvChanges = false
+                        onChanged()
+                    }
                     notice = if (restored)
                         "Laatste CSV-import teruggedraaid: eerdere zinnen, " +
                             "thema's, favorieten en leerplanning hersteld."
@@ -835,6 +917,19 @@ internal fun PrivatePhraseTopicCsvAction(
             },
             confirmButton = {
                 TextButton(enabled = chosenNotes.isNotEmpty(), onClick = {
+                    val plannedChanges = chosenNotes.mapNotNull { note ->
+                        val old = storedVersion(note)
+                        val id = PrivatePhraseShortcuts.fingerprint(note)
+                        val meaningChanged = id in correctedIds
+                        val themeChanged = id in retopicIds
+                        if (old != null && !meaningChanged && !themeChanged) null
+                        else TopicCsvChange(
+                            note, old, old?.let { topics.topicFor(it) },
+                            if (old == null || themeChanged) chosenLinks[id]
+                            else old.let { topics.topicFor(it) },
+                            meaningChanged, themeChanged
+                        )
+                    }
                     val before = deck.captureRollback()
                     val saved = if (mergeOnly || scoped) {
                         deck.mergeArchiveIfUnchanged(
@@ -847,6 +942,8 @@ internal fun PrivatePhraseTopicCsvAction(
                         )
                     }
                     if (saved) {
+                        lastCsvChanges = if (mergeOnly || scoped) plannedChanges
+                            else emptyList()
                         val after = deck.captureRollback()
                         val resulting = deck.entries()
                         lastCsvUndo = if (before != null && after != null &&
