@@ -3199,3 +3199,17 @@ toegepast. Na het bekijken van een voorbeeld kies je **Alleen vertaling** of
 concept. De tijdcodes blijven staan, de bronfile blijft intact en je kunt daarna
 bewust een nieuwe SRT/VTT-kopie bewaren.
 [Bediening en grenzen](docs/LOCAL_SUBTITLE_TRANSLATION.md).
+
+---
+
+## Nieuw: hele ondertitelreeks lokaal voorlezen
+
+Open een SRT/VTT-bestand in **Gesprekstools → Open SRT/WebVTT…**. Kies in het
+ondertitelconcept een regel, selecteer eerst een geïnstalleerde lokale stem en
+tik **Lees vanaf deze regel · maximaal 100 cues**. Tuddy leest die regel en de
+volgende regels serieel voor, met voortgang en normaal of rustig tempo. **Stop**,
+het kiezen van een andere regel, het wijzigen van het concept of het verlaten
+van de app beëindigt de reeks. Alleen reeds geïnstalleerde niet-netwerkstemmen
+worden gebruikt; te lange regels blokkeren de reeks in plaats van stilzwijgend
+te worden afgekapt. Er wordt geen audio opgeslagen en het bronbestand blijft
+onaangeraakt. [Bediening en grenzen](docs/LOCAL_SUBTITLE_READ_ALOUD.md).
