@@ -55,7 +55,21 @@ internal fun FaceToFacePersonalPhraseDialog(
     var originalOnFarSide by remember { mutableStateOf(true) }
     var large by remember { mutableStateOf(true) }
     var practice by remember { mutableStateOf(false) }
-    var revealed by remember(index, practice) { mutableStateOf(false) }
+    var revealStep by remember { mutableIntStateOf(0) }
+    var revealed by remember(index, practice, revealStep) { mutableStateOf(false) }
+    // All review choices are intentionally ephemeral, not saved with the personal deck.
+    var mixed by remember(cards) { mutableStateOf(false) }
+    var reviewOrder by remember(cards) { mutableStateOf(cards.indices.toList()) }
+    var difficult by remember(cards) { mutableStateOf<Set<Int>>(emptySet()) }
+    var difficultOnly by remember(cards) { mutableStateOf(false) }
+    val navigation = reviewOrder.filter { !difficultOnly || it in difficult }
+    val position = navigation.indexOf(index)
+    fun visit(next: Int) {
+        if (next in cards.indices) {
+            index = next
+            revealStep++ // A fresh question must never inherit a previously revealed answer.
+        }
+    }
     var audioNotice by remember { mutableStateOf("") }
     val selected = cards.getOrNull(index)
     val context = LocalContext.current
@@ -123,13 +137,13 @@ internal fun FaceToFacePersonalPhraseDialog(
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(enabled = index > 0,
-                            onClick = { index-- }) { Text("← Vorige") }
-                        Text("${if (selected == null) 0 else index + 1}/${cards.size}",
+                        TextButton(enabled = position > 0,
+                            onClick = { visit(navigation[position - 1]) }) { Text("← Vorige") }
+                        Text("${if (selected == null) 0 else position + 1}/${navigation.size}",
                             modifier = Modifier.padding(top = 14.dp),
                             style = MaterialTheme.typography.labelMedium)
-                        TextButton(enabled = index < cards.lastIndex,
-                            onClick = { index++ }) { Text("Volgende →") }
+                        TextButton(enabled = position >= 0 && position < navigation.lastIndex,
+                            onClick = { visit(navigation[position + 1]) }) { Text("Volgende →") }
                     }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween) {
@@ -143,6 +157,48 @@ internal fun FaceToFacePersonalPhraseDialog(
                             Text("Terug")
                         }
                     }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(enabled = cards.size > 1, onClick = {
+                            mixed = !mixed
+                            reviewOrder = if (mixed) cards.indices.shuffled()
+                                else cards.indices.toList()
+                            revealStep++
+                            speaker.stop()
+                        }) { Text(if (mixed) "✓ Mix" else "⇄ Mix") }
+                        TextButton(enabled = selected != null, onClick = {
+                            val remaining = if (index in difficult) difficult - index
+                                else difficult + index
+                            difficult = remaining
+                            if (difficultOnly && index !in remaining) {
+                                if (remaining.isEmpty()) {
+                                    difficultOnly = false
+                                } else {
+                                    visit(reviewOrder.first { it in remaining })
+                                }
+                            }
+                        }) {
+                            Text(if (index in difficult) "✓ Nog lastig" else "↻ Lastig")
+                        }
+                        TextButton(enabled = difficult.isNotEmpty(), onClick = {
+                            difficultOnly = !difficultOnly
+                            if (difficultOnly && index !in difficult) {
+                                visit(reviewOrder.first { it in difficult })
+                            }
+                            revealStep++
+                            speaker.stop()
+                        }) {
+                            Text(if (difficultOnly) "Alle kaarten"
+                                else "Herhaal (${difficult.size})")
+                        }
+                    }
+                    Text(
+                        if (difficultOnly) "Alleen jouw ${difficult.size} lastige kaarten"
+                        else "Tijdelijke oefensessie · ${difficult.size} gemarkeerd · " +
+                            if (mixed) "willekeurige volgorde" else "opgeslagen volgorde",
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center
+                    )
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween) {
                         TextButton(onClick = { practice = !practice }) {
