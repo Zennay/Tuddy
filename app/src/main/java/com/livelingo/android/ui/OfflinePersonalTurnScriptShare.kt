@@ -3,6 +3,7 @@ package com.livelingo.android.ui
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
@@ -34,11 +35,40 @@ internal fun OfflinePersonalTurnScriptShare(
     val context = LocalContext.current
     var preview by remember { mutableStateOf<ByteArray?>(null) }
     var feedback by remember { mutableStateOf("") }
-    fun fresh(): ByteArray? = PrivateAuthoredConversationScript.render(turns)
+    // Explicitly scoped turn selection: never default to sharing the whole session.
+    var selectedIndices by remember(turns) { mutableStateOf<Set<Int>>(emptySet()) }
+    fun fresh(): ByteArray? = PrivateAuthoredConversationScript.render(
+        turns.filterIndexed { index, _ -> index in selectedIndices }
+    )
 
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text("Kies de beurten die je afzonderlijk extern wilt delen:",
+            style = MaterialTheme.typography.labelMedium)
+        Row {
+            TextButton(onClick = { selectedIndices = turns.indices.toSet() }) {
+                Text("Kies alle " + turns.size + " beurten")
+            }
+            TextButton(onClick = { selectedIndices = emptySet() }) {
+                Text("Wis selectie")
+            }
+        }
+        turns.forEachIndexed { index, turn ->
+            val note = turn.note
+            val source = if (turn.fromMeaning) note.ownMeaning else note.phrase
+            TextButton(
+                onClick = {
+                    selectedIndices = if (index in selectedIndices)
+                        selectedIndices - index else selectedIndices + index
+                    feedback = ""
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text((if (index in selectedIndices) "☑ " else "☐ ") +
+                    "Beurt " + (index + 1) + ": " + source.take(70))
+            }
+        }
         OutlinedButton(
-            enabled = turns.isNotEmpty(),
+            enabled = selectedIndices.isNotEmpty(),
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 val bytes = fresh()
@@ -47,9 +77,10 @@ internal fun OfflinePersonalTurnScriptShare(
                 else ""
                 if (bytes != null) preview = bytes.copyOf()
             }
-        ) { Text("Deel dit volledige eigen gesprekscript bewust…") }
+        ) { Text("Deel alleen mijn " + selectedIndices.size + " geselecteerde beurt(en)…") }
         Text(
-            "Delen is optioneel: bekijk eerst alle beurten en kies daarna " +
+            "Delen is optioneel: selecteer de gewenste beurten, bekijk " +
+                "alleen die volledige tekst en kies daarna " +
                 "zelf een Android-app. Niets wordt automatisch verzonden.",
             style = MaterialTheme.typography.bodySmall
         )
@@ -69,7 +100,7 @@ internal fun OfflinePersonalTurnScriptShare(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "Alleen dit complete, expliciet gekozen tekstscript " +
+                        "Alleen dit expliciet geselecteerde tekstfragment " +
                             "van maximaal 12 beurten / 8192 bytes gaat naar " +
                             "een Android-deelvenster; geen audio, geschiedenis " +
                             "of andere persoonlijke zinnen.",
