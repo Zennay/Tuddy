@@ -334,9 +334,9 @@ internal fun PrivateSubtitleFileDialog(
         sequenceReading = false
         sequenceProgress = 0
         sequenceTotal = 0
-                sequenceStartIndex = -1
-                sequenceLineIndex = -1
-                sequenceWordRange = null
+        sequenceStartIndex = -1
+        sequenceLineIndex = -1
+        sequenceWordRange = null
         spokenNotice = ""
     }
     LaunchedEffect(translationOpen, requestSave, voicePickerOpen) {
@@ -346,9 +346,9 @@ internal fun PrivateSubtitleFileDialog(
             sequenceReading = false
             sequenceProgress = 0
             sequenceTotal = 0
-                sequenceStartIndex = -1
-                sequenceLineIndex = -1
-                sequenceWordRange = null
+            sequenceStartIndex = -1
+            sequenceLineIndex = -1
+            sequenceWordRange = null
             if (wasReadingSequence) {
                 spokenNotice = "Voorlezen gestopt omdat een dialoog is geopend."
             }
@@ -359,9 +359,9 @@ internal fun PrivateSubtitleFileDialog(
         sequenceReading = false
         sequenceProgress = 0
         sequenceTotal = 0
-                sequenceStartIndex = -1
-                sequenceLineIndex = -1
-                sequenceWordRange = null
+        sequenceStartIndex = -1
+        sequenceLineIndex = -1
+        sequenceWordRange = null
         val safe = current?.text?.replace('\n', ' ')?.trim().orEmpty()
         if (safe.isBlank() || safe.length > 400) {
             spokenNotice = "Alleen geselecteerde tekst tot 400 tekens kan lokaal worden voorgelezen."
@@ -853,9 +853,9 @@ internal fun PrivateSubtitleFileDialog(
                                         sequenceReading = false
                                         sequenceProgress = 0
                                         sequenceTotal = 0
-                sequenceStartIndex = -1
-                sequenceLineIndex = -1
-                sequenceWordRange = null
+                                        sequenceStartIndex = -1
+                                        sequenceLineIndex = -1
+                                        sequenceWordRange = null
                                         chosenVoiceLanguage = language.code
                                         spokenNotice = ""
                                         voicePickerOpen = false
@@ -877,9 +877,9 @@ internal fun PrivateSubtitleFileDialog(
                             sequenceReading = false
                             sequenceProgress = 0
                             sequenceTotal = 0
-                sequenceStartIndex = -1
-                sequenceLineIndex = -1
-                sequenceWordRange = null
+                            sequenceStartIndex = -1
+                            sequenceLineIndex = -1
+                            sequenceWordRange = null
                             spokenNotice = "Uitspraak gestopt."
                         }) { Text("■ Stop") }
                     }
