@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -49,6 +52,7 @@ internal fun SessionCorrectionTransferDialog(
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     var preview by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
     var selectedRows by remember { mutableStateOf(emptySet<Int>()) }
+    var pairPickerOpen by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     // One explicit rollback inside this dialog only; never saved to app storage.
@@ -210,6 +214,35 @@ internal fun SessionCorrectionTransferDialog(
                             onClick = { selectedRows = emptySet() },
                             enabled = !busy
                         ) { Text("Kies niets") }
+                    }
+                    val languagePairs = imported.map {
+                        it.sourceCode to it.targetCode
+                    }.distinct()
+                    if (languagePairs.size > 1) {
+                        Box {
+                            TextButton(
+                                enabled = !busy,
+                                onClick = { pairPickerOpen = true }
+                            ) { Text("Kies alleen één taalpaar… ▾") }
+                            DropdownMenu(
+                                expanded = pairPickerOpen,
+                                onDismissRequest = { pairPickerOpen = false }
+                            ) {
+                                languagePairs.forEach { pair ->
+                                    DropdownMenuItem(
+                                        text = { Text(pair.first + " → " + pair.second) },
+                                        onClick = {
+                                            selectedRows = imported.indices.filter { index ->
+                                                val row = imported[index]
+                                                row.sourceCode == pair.first &&
+                                                    row.targetCode == pair.second
+                                            }.toSet()
+                                            pairPickerOpen = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                     imported.forEachIndexed { index, row ->
                         Row(
