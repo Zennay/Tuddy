@@ -86,8 +86,28 @@ import com.livelingo.android.ui.LanguageSupportDialog
 import com.livelingo.android.ui.TwoWayTypedConversationDialog
 import com.livelingo.android.ui.TypedConversationLine
 import com.livelingo.android.ui.CaptionLanguageCorrectionDialog
+import java.io.FileInputStream
+import java.security.MessageDigest
 import java.text.DateFormat
 import java.util.Date
+
+/**
+ * Hash the installed base APK for a user-requested device-readiness report.
+ * Call from Dispatchers.IO; never block the Compose main thread on APK I/O.
+ */
+private fun installedBaseApkSha256(context: Context): String? = runCatching {
+    val sourcePath = context.packageManager.getApplicationInfo(context.packageName, 0).sourceDir
+    val digest = MessageDigest.getInstance("SHA-256")
+    FileInputStream(sourcePath).use { input ->
+        val buffer = ByteArray(32 * 1024)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
+    }
+    digest.digest().joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+}.getOrNull()
 
 /** Explicitly authored SRT/VTT copy while Android document chooser takes focus. */
 private data class PendingEditedSubtitleSave(
@@ -649,6 +669,14 @@ private fun TuddyScreen(
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
+    var installedApkSha256 by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(offlineReadinessOpen) {
+        if (offlineReadinessOpen) {
+            installedApkSha256 = withContext(Dispatchers.IO) {
+                installedBaseApkSha256(context) ?: "unavailable"
+            }
+        }
+    }
     var offlineReportPickerOpen by remember { mutableStateOf(false) }
     // Return to the explicit startcheck only after the user opened Android speech settings.
     var pendingSpeechSettingsReturnTag by remember { mutableStateOf<String?>(null) }
@@ -946,13 +974,20 @@ private fun TuddyScreen(
 
     // User-triggered, privacy-safe diagnostics; never include caption/audio content.
     fun offlineReadinessReportSnapshot(): ByteArray? = runCatching {
+        val installedApkHash = installedApkSha256 ?: return@runCatching null
         val appVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
+        val microphonePermissionGranted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
         val airplaneMode = runCatching {
             Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
         }.getOrNull()?.toString() ?: "unknown"
         val report = buildString {
             appendLine("Tuddy offline readiness report")
+            appendLine("App package: ${context.packageName}")
             appendLine("App version: $appVersion")
+            appendLine("Installed base APK SHA-256: $installedApkHash")
+            appendLine("Microphone permission granted: $microphonePermissionGranted")
             appendLine("Build source SHA: ${BuildConfig.TUDDY_SOURCE_SHA}")
             appendLine("GitHub workflow run ID: ${BuildConfig.TUDDY_BUILD_RUN_ID}")
             appendLine("Android API: ${Build.VERSION.SDK_INT}")
