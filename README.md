@@ -8,7 +8,8 @@ te zien. Pas na een tweede expliciete bevestiging opent Android Delen.
 
 De ontvanger kan de JSON direct via Android Delen naar Tuddy sturen:
 Tuddy herkent alleen de begrensde, strikte Tuddy-correctie-indeling en
-opent een selectief importvoorbeeld. Handmatig plakken blijft mogelijk
+opent een selectief importvoorbeeld; ook een opgeslagen JSON-bestand kan
+vanuit Bestanden worden gedeeld. Handmatig plakken blijft mogelijk
 via **Mijn eigen correcties meenemen → Plak eigen JSON of CSV…**.
 De ontvanger selecteert zelf zinnen en kiest daarna bewust samenvoegen
 of vervangen. Het klembord wordt niet automatisch gelezen en gedeelde
