@@ -25,3 +25,7 @@ extra Android-toestemming, spraakmodel of automatische vertaalsuggestie.
 
 Deze functie bevestigt geen ASR-/MT-ondersteuning voor Kurmanji, Sorani
 of Pasjtoe en vervangt geen fysieke Android 12+ vliegtuigmodusacceptatie.
+
+Je kunt bovendien **Voeg één exact taalpaar toe…** gebruiken om alle
+correcties voor een bron- en doeltaalrichting ineens aan de selectie toe
+te voegen. Dat laat eerder aangevinkte andere taalparen ongemoeid.
