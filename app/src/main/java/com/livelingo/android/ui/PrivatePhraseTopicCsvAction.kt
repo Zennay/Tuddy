@@ -83,6 +83,9 @@ internal fun PrivatePhraseTopicCsvAction(
     var importTopic by remember { mutableStateOf<String?>(null) }
     // Row exclusions belong to the transient preview, never to storage.
     var excludedImportRows by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // Existing meanings are never modified unless individually opted in here.
+    // Kept in RAM only for this exact CSV preview.
+    var correctedImportRows by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
@@ -143,6 +146,7 @@ internal fun PrivatePhraseTopicCsvAction(
                 importLanguage = null
                 importTopic = null
                 excludedImportRows = emptySet()
+                correctedImportRows = emptySet()
                 notice = ""
             }
         }
@@ -242,6 +246,7 @@ internal fun PrivatePhraseTopicCsvAction(
                         importLanguage = null
                         importTopic = null
                         excludedImportRows = emptySet()
+                        correctedImportRows = emptySet()
                         pasteOpen = false
                         pasteText = ""
                         pasteError = ""
@@ -512,13 +517,22 @@ internal fun PrivatePhraseTopicCsvAction(
         val chosenLinks = review.archive.assignments.filterKeys { it in identities }
         val names = review.archive.topics.filter { it in chosenLinks.values }
         val chosenArchive = PrivatePhraseArchive(chosenNotes, names, chosenLinks)
-        val existingKeys = review.originalNotes.map {
-            it.language + "|" + it.phrase.lowercase(java.util.Locale.ROOT)
-        }.toSet()
-        fun alreadyStored(note: PersonalPhrase): Boolean =
-            note.language + "|" + note.phrase.lowercase(java.util.Locale.ROOT) in existingKeys
+        fun sourceKey(note: PersonalPhrase) =
+            note.language + "|" + note.phrase.lowercase(java.util.Locale.ROOT)
+        val existingByKey = review.originalNotes.associateBy(::sourceKey)
+        fun storedVersion(note: PersonalPhrase): PersonalPhrase? =
+            existingByKey[sourceKey(note)]
+        fun alreadyStored(note: PersonalPhrase): Boolean = storedVersion(note) != null
         val newCount = chosenNotes.count { !alreadyStored(it) }
         val existingCount = chosenNotes.size - newCount
+        val correctedIds = chosenNotes.mapNotNull { incoming ->
+            val old = storedVersion(incoming)
+            val id = PrivatePhraseShortcuts.fingerprint(incoming)
+            if (id in correctedImportRows && old != null &&
+                old.language == incoming.language && old.phrase == incoming.phrase &&
+                old != incoming) id else null
+        }.toSet()
+        val unchangedCount = existingCount - correctedIds.size
         AlertDialog(
             onDismissRequest = { importReview = null },
             title = { Text("Eigen CSV-zinnen én thema's controleren") },
@@ -564,6 +578,7 @@ internal fun PrivatePhraseTopicCsvAction(
                         importLanguage = null
                         importTopic = null
                         excludedImportRows = emptySet()
+                        correctedImportRows = emptySet()
                         mergeOnly = true
                     }) { Text("↺ Herstel volledige CSV-selectie") }
                     TextButton(
@@ -591,16 +606,17 @@ internal fun PrivatePhraseTopicCsvAction(
                     ) { Text("☐ Sla alle zichtbare zinnen over") }
                     Text("Geselecteerd: " + chosenNotes.size +
                         " van " + review.archive.notes.size + " eigen zinnen. " +
-                        newCount + " nieuw, " + existingCount + " bestaan lokaal al. " +
-                        "Bij veilig samenvoegen worden bestaande betekenissen " +
-                        "en themakoppelingen nooit door de CSV overschreven.",
+                        newCount + " nieuw, " + correctedIds.size +
+                        " bestaande betekenissen bewust geselecteerd voor correctie, " +
+                        unchangedCount + " bestaande zinnen blijven gelijk. " +
+                        "Thema's en favorieten blijven altijd lokaal leidend.",
                         style = MaterialTheme.typography.labelMedium)
                     TextButton(onClick = { mergeOnly = true }) {
-                        Text(if (mergeOnly) "☑ Voeg veilig alleen nieuwe toe"
-                            else "☐ Voeg veilig alleen nieuwe toe")
+                        Text(if (mergeOnly) "☑ Veilig samenvoegen / gekozen correcties"
+                            else "☐ Veilig samenvoegen / gekozen correcties")
                     }
                     TextButton(
-                        enabled = !scoped,
+                        enabled = !scoped && correctedImportRows.isEmpty(),
                         onClick = { mergeOnly = false }
                     ) {
                         Text(if (!mergeOnly) "☑ Vervang hele privé-lijst (destructief)"
@@ -608,9 +624,11 @@ internal fun PrivatePhraseTopicCsvAction(
                     }
                     Text(
                         if (mergeOnly)
-                            "Behoud je eigen bestaande betekenissen, thema's, favorieten " +
-                                "en herhaaldatums. Alleen nieuwe zinnen en hun thema's " +
-                                "worden toegevoegd binnen de limiet van 80 zinnen en 12 thema's."
+                            "Nieuwe zinnen worden toegevoegd. Bestaande betekenissen " +
+                                "veranderen uitsluitend na de aparte keuze bij die rij. " +
+                                "Een gecorrigeerd antwoord begint opnieuw met leren; " +
+                                "favoriet en huidig thema blijven behouden. Alle andere " +
+                                "herhaaldatums blijven onaangeroerd."
                         else
                             "Let op: dit verwijdert al je bestaande eigen zinnen, " +
                                 "thema's, favorieten en herhaalplanning. Alleen de " +
@@ -639,12 +657,43 @@ internal fun PrivatePhraseTopicCsvAction(
                         ))
                         Text("Eigen betekenis: " + note.ownMeaning,
                             style = MaterialTheme.typography.bodySmall)
-                        Text(
-                            if (alreadyStored(note))
-                                "Bestaat lokaal: bij samenvoegen behoud je jouw " +
-                                    "huidige betekenis en thema (CSV-rij wordt overgeslagen)."
-                            else "Nieuwe zin: bij samenvoegen wordt deze eigen " +
-                                "zin inclusief gekozen thema toegevoegd.",
+                        val old = storedVersion(note)
+                        if (old != null) {
+                            val eligible = old.language == note.language &&
+                                old.phrase == note.phrase && old != note
+                            Text("Lokaal opgeslagen: [" + old.meaningLanguage + "] " +
+                                old.ownMeaning, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                if (eligible) "CSV stelt voor: [" + note.meaningLanguage +
+                                    "] " + note.ownMeaning
+                                else if (old == note)
+                                    "Deze betekenis is gelijk aan de lokale versie."
+                                else "Bronzin verschilt in hoofdletters; deze " +
+                                    "identiteit is niet automatisch te corrigeren.",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            if (eligible) {
+                                TextButton(
+                                    enabled = included,
+                                    onClick = {
+                                        correctedImportRows = if (identity in correctedImportRows)
+                                            correctedImportRows - identity
+                                        else correctedImportRows + identity
+                                        mergeOnly = true
+                                    }
+                                ) {
+                                    Text(if (identity in correctedImportRows)
+                                        "☑ Vervang uitsluitend deze bestaande betekenis"
+                                    else "☐ Corrigeer deze bestaande betekenis (apart akkoord)")
+                                }
+                            }
+                            Text("Het lokale thema en de favoriet van deze zin blijven " +
+                                "onaangeroerd. Bij betekeniswijziging vervalt uitsluitend " +
+                                "de herhaalvoortgang van deze zin.",
+                                style = MaterialTheme.typography.labelSmall)
+                        } else Text(
+                            "Nieuwe zin: deze eigen zin wordt inclusief het gekozen " +
+                                "thema toegevoegd bij veilig samenvoegen.",
                             style = MaterialTheme.typography.labelSmall
                         )
                         Text("Thema: " + (review.archive.assignments[identity]
@@ -659,7 +708,8 @@ internal fun PrivatePhraseTopicCsvAction(
                 TextButton(enabled = chosenNotes.isNotEmpty(), onClick = {
                     val saved = if (mergeOnly || scoped) {
                         deck.mergeArchiveIfUnchanged(
-                            context, chosenArchive, review.originalNotes, review.originalTopics
+                            context, chosenArchive, review.originalNotes, review.originalTopics,
+                            correctedIds
                         )
                     } else {
                         deck.replaceArchiveIfUnchanged(
@@ -668,15 +718,16 @@ internal fun PrivatePhraseTopicCsvAction(
                     }
                     if (saved) onChanged()
                     notice = if (saved && (mergeOnly || scoped))
-                        "Geselecteerde nieuwe eigen zinnen en thema's toegevoegd; " +
-                            "bestaande informatie behouden."
+                        "Geselecteerde zinnen verwerkt: " + newCount + " nieuw, " +
+                            correctedIds.size + " bestaande betekenissen bewust gecorrigeerd. " +
+                            "Overige gegevens blijven behouden."
                     else if (saved)
                         "Eigen zinnen en thema's bewust vervangen; oude planning gewist."
                     else "Import geweigerd: gegevens zijn gewijzigd of de " +
                         "taal/thema-limiet is bereikt. Niets gewijzigd."
                     importReview = null
                 }) {
-                    Text(if (mergeOnly) "Voeg uitsluitend nieuwe zinnen toe"
+                    Text(if (mergeOnly) "Voeg nieuw toe en corrigeer gekozen betekenissen"
                         else "Vervang alle eigen zinnen en thema's")
                 }
             },
