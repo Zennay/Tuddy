@@ -63,6 +63,7 @@ internal fun OfflinePersonalPhraseTurnsDialog(
     var saveNotice by remember { mutableStateOf("") }
     var pendingSave by remember { mutableStateOf<Pair<Int, PersonalPhrase>?>(null) }
     var pendingBatch by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
+    var pendingEdit by remember { mutableStateOf<Pair<Int, LocalPersonalTurn>?>(null) }
     var alternate by remember { mutableStateOf(true) }
     var turns by remember { mutableStateOf<List<LocalPersonalTurn>>(emptyList()) }
     var shown by remember { mutableStateOf<PersonalPhrase?>(null) }
@@ -301,6 +302,21 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
+                        TextButton(onClick = {
+                            pendingEdit = index to turn
+                            saveNotice = ""
+                        }) { Text("✎ Corrigeer mijn tekst") }
+                        TextButton(onClick = {
+                            turns = turns.mapIndexed { i, item ->
+                                if (i == index) item.copy(fromMeaning = !item.fromMeaning)
+                                else item
+                            }
+                        }) { Text("⇄ Wissel deze beurt") }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         TextButton(enabled = index > 0, onClick = {
                             val reordered = turns.toMutableList()
                             val moved = reordered.removeAt(index)
@@ -492,4 +508,28 @@ internal fun OfflinePersonalPhraseTurnsDialog(
             }
         )
     }
+    val editRequest = pendingEdit
+    if (editRequest != null) {
+        val (position, originalTurn) = editRequest
+        OfflinePersonalTurnRevisionDialog(
+            original = originalTurn.note,
+            onConfirm = { revised ->
+                if (turns.getOrNull(position) != originalTurn) {
+                    false
+                } else {
+                    turns = turns.mapIndexed { i, old ->
+                        if (i == position) LocalPersonalTurn(
+                            revised, originalTurn.fromMeaning, temporary = true
+                        ) else old
+                    }
+                    saveNotice = "Alleen deze beurt in het tijdelijke gesprek " +
+                        "aangepast; je opgeslagen zinnen zijn niet gewijzigd."
+                    pendingEdit = null
+                    true
+                }
+            },
+            onDismiss = { pendingEdit = null }
+        )
+    }
+
 }
