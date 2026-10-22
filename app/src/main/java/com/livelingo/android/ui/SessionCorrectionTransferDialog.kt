@@ -236,10 +236,16 @@ internal fun SessionCorrectionTransferDialog(
                     val chosen = imported.filterIndexed { index, _ ->
                         index in selectedRows
                     }
-                    SessionCorrectionMergeOptions(
-                        current = entries,
-                        imported = imported,
-                        enabled = !busy,
+                    if (chosen.isEmpty()) {
+                        Text(
+                            "Kies minstens één zin. Zonder selectie wordt niets overschreven.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    } else {
+                        SessionCorrectionMergeOptions(
+                            current = entries,
+                            imported = chosen,
+                            enabled = !busy,
                         onCommit = { merged, summary ->
                             val before = entries.toList()
                             if (onReplace(merged)) {
@@ -252,12 +258,13 @@ internal fun SessionCorrectionTransferDialog(
                                 notice = "Samenvoegen geweigerd. Er is niets gewijzigd."
                             }
                         }
-                    )
+                        )
+                    }
                     Button(
                         onClick = {
-                            if (onReplace(imported)) {
+                            if (onReplace(chosen)) {
                                 undoBefore = entries.toList()
-                                undoAfter = imported.toList()
+                                undoAfter = chosen.toList()
                                 preview = null
                                 notice = "Geselecteerde correcties zijn alleen in RAM geladen. " +
                                     "Bestaande gespreksregels zijn niet gewijzigd."
@@ -265,11 +272,15 @@ internal fun SessionCorrectionTransferDialog(
                                 notice = "Import geweigerd. Er zijn geen wijzigingen toegepast."
                             }
                         },
-                        enabled = !busy,
+                        enabled = !busy && chosen.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Ja, vervang mijn tijdelijke correcties") }
+                    ) { Text("Ja, vervang door mijn selectie") }
                     TextButton(
-                        onClick = { preview = null; notice = "Import geannuleerd." }
+                        onClick = {
+                            preview = null
+                            selectedRows = emptySet()
+                            notice = "Import geannuleerd."
+                        }
                     ) { Text("Annuleren: behoud huidige correcties") }
                 }
             }
