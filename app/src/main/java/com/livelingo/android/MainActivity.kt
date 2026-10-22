@@ -60,6 +60,7 @@ import com.livelingo.android.ui.DailyStudyHub
 import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.ArchivePrivatePhraseCaptureDialog
+import com.livelingo.android.ui.ArchivePrivatePhraseBatchCaptureDialog
 import com.livelingo.android.ui.OfflinePhraseQuickPicker
 import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.SessionMeaningIndexDialog
@@ -273,6 +274,12 @@ private data class PendingArchivePhraseCapture(
     val generation: Int,
     val archive: List<TranscriptExportRow>,
     val row: TranscriptExportRow
+)
+
+private data class PendingArchivePhraseBatchCapture(
+    val generation: Int,
+    val archive: List<TranscriptExportRow>,
+    val rows: List<TranscriptExportRow>
 )
 
 private data class Line(
@@ -628,6 +635,10 @@ private fun TuddyScreen(
     var pendingArchivePhraseCapture by remember {
         mutableStateOf<PendingArchivePhraseCapture?>(null)
     }
+    var pendingArchivePhraseBatchCapture by remember {
+        mutableStateOf<PendingArchivePhraseBatchCapture?>(null)
+    }
+    var archivePhraseBatchSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var archivePhraseCaptureNotice by remember { mutableStateOf("") }
     var archiveExcerptNotice by remember { mutableStateOf("") }
     var copyStatus by remember { mutableStateOf("") }
@@ -2268,11 +2279,15 @@ private fun TuddyScreen(
                 if (loaded == null) {
                     previewArchiveRows = null
                     pendingArchivePhraseCapture = null
+                    pendingArchivePhraseBatchCapture = null
+                    archivePhraseBatchSelection = emptySet()
                     archivePhraseCaptureNotice = ""
                     error = readNotice + " Het huidige gesprek is niet gewijzigd."
                 } else {
                     previewArchiveRows = loaded
                     pendingArchivePhraseCapture = null
+                    pendingArchivePhraseBatchCapture = null
+                    archivePhraseBatchSelection = emptySet()
                     archivePhraseCaptureNotice = ""
                     archiveSearchQuery = ""
                     exportStatus = ""
@@ -2520,6 +2535,8 @@ private fun TuddyScreen(
                 manualText = ""
                 previewArchiveRows = null
                 pendingArchivePhraseCapture = null
+                pendingArchivePhraseBatchCapture = null
+                archivePhraseBatchSelection = emptySet()
                 archivePhraseCaptureNotice = ""
                 subtitleFileCues = null
                 viewedSubtitlePreview = null
@@ -2571,6 +2588,8 @@ private fun TuddyScreen(
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             pendingArchivePhraseCapture = null
+            pendingArchivePhraseBatchCapture = null
+            archivePhraseBatchSelection = emptySet()
             archivePhraseCaptureNotice = ""
             subtitleFileCues = null
             viewedSubtitlePreview = null
@@ -4111,11 +4130,14 @@ private fun TuddyScreen(
             )
         }
         if (archive != null && pendingArchiveExcerpt == null &&
-            pendingArchivePhraseCapture == null && !archiveStudyOpen && !archiveReaderOpen) {
+            pendingArchivePhraseCapture == null &&
+            pendingArchivePhraseBatchCapture == null && !archiveStudyOpen && !archiveReaderOpen) {
             AlertDialog(
                 onDismissRequest = {
                     pendingArchiveExcerpt = null
                     pendingArchivePhraseCapture = null
+                    pendingArchivePhraseBatchCapture = null
+                    archivePhraseBatchSelection = emptySet()
                     archivePhraseCaptureNotice = ""
                     previewArchiveRows = null
                     archiveSubtitleConsentOpen = false
@@ -4185,6 +4207,47 @@ private fun TuddyScreen(
                             "${matchedArchive.size} van ${archive.size} regels zichtbaar · alleen op dit toestel",
                             style = MaterialTheme.typography.labelSmall
                         )
+                        Text(
+                            "Selecteer maximaal 10 regels om zelf meerdere privékaarten te schrijven. " +
+                                "Je selectie blijft behouden wanneer je de zoekterm wijzigt.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${archivePhraseBatchSelection.size} van maximaal 10 geselecteerd",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            TextButton(
+                                enabled = archivePhraseBatchSelection.isNotEmpty(),
+                                onClick = {
+                                    archivePhraseBatchSelection = emptySet()
+                                    archivePhraseCaptureNotice = ""
+                                }
+                            ) { Text("Wis selectie") }
+                        }
+                        OutlinedButton(
+                            enabled = !listening && archivePhraseBatchSelection.isNotEmpty() &&
+                                archivePhraseBatchSelection.size <= 10 &&
+                                archivePhraseBatchSelection.all { it in archive.indices },
+                            onClick = {
+                                val selectedRows = archive.mapIndexedNotNull { index, row ->
+                                    row.takeIf { index in archivePhraseBatchSelection }
+                                }
+                                if (selectedRows.isNotEmpty() && selectedRows.size <= 10) {
+                                    pendingArchivePhraseBatchCapture = PendingArchivePhraseBatchCapture(
+                                        generation, archive, selectedRows
+                                    )
+                                    archivePhraseCaptureNotice = ""
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("＋ Schrijf ${archivePhraseBatchSelection.size} eigen privékaarten…")
+                        }
                         if (archiveExcerptNotice.isNotBlank()) {
                             Text(archiveExcerptNotice,
                                 style = MaterialTheme.typography.bodySmall,
@@ -4201,7 +4264,33 @@ private fun TuddyScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(matchedArchive) { row ->
+                                val archiveRowIndex = archive.indexOfFirst { it === row }
                                 Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = archiveRowIndex >= 0 &&
+                                                archiveRowIndex in archivePhraseBatchSelection,
+                                            enabled = !listening && archiveRowIndex >= 0 &&
+                                                row.original.isNotBlank() &&
+                                                (archiveRowIndex in archivePhraseBatchSelection ||
+                                                    archivePhraseBatchSelection.size < 10),
+                                            onCheckedChange = { checked ->
+                                                if (archiveRowIndex >= 0) {
+                                                    if (checked && archivePhraseBatchSelection.size >= 10) {
+                                                        archivePhraseCaptureNotice =
+                                                            "Maximaal 10 archiefregels per batch; bewaar eerst je eigen kaarten."
+                                                    } else {
+                                                        archivePhraseBatchSelection =
+                                                            if (checked) archivePhraseBatchSelection + archiveRowIndex
+                                                            else archivePhraseBatchSelection - archiveRowIndex
+                                                        archivePhraseCaptureNotice = ""
+                                                    }
+                                                }
+                                            }
+                                        )
+                                        Text("Selecteer voor eigen kaart",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
                                     Text(
                                         DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
                                             .format(Date(row.recordedAtMillis)) +
@@ -4255,11 +4344,47 @@ private fun TuddyScreen(
                     TextButton(onClick = {
                         pendingArchiveExcerpt = null
                         pendingArchivePhraseCapture = null
+                        pendingArchivePhraseBatchCapture = null
+                        archivePhraseBatchSelection = emptySet()
                         archivePhraseCaptureNotice = ""
                         archiveExcerptNotice = ""
                         previewArchiveRows = null
                         archiveSearchQuery = ""
                     }) { Text("Sluiten") }
+                }
+            )
+        }
+
+        val archivePhraseBatchRequest = pendingArchivePhraseBatchCapture
+        if (archivePhraseBatchRequest != null) {
+            val request = archivePhraseBatchRequest
+            val stillCurrent = !listening && generation == request.generation &&
+                previewArchiveRows === request.archive &&
+                request.rows.size in 1..10 && request.rows.all { it in request.archive }
+            ArchivePrivatePhraseBatchCaptureDialog(
+                rows = request.rows,
+                stillCurrent = stillCurrent,
+                existingPhrases = personalPhrases.entries(),
+                onSave = { batch ->
+                    val current = pendingArchivePhraseBatchCapture
+                    if (current != null && !listening &&
+                        generation == current.generation &&
+                        previewArchiveRows === current.archive &&
+                        current.rows == request.rows &&
+                        current.rows.size in 1..10 &&
+                        current.rows.all { it in current.archive } &&
+                        batch.size == current.rows.size &&
+                        personalPhrases.saveNewBatch(batch)) {
+                        archivePhraseCaptureNotice =
+                            "${batch.size} eigen privékaarten bewust opgeslagen. Open Mijn eigen offline zinnen om ze te bekijken."
+                        pendingArchivePhraseBatchCapture = null
+                        archivePhraseBatchSelection = emptySet()
+                        true
+                    } else false
+                },
+                onDismiss = {
+                    pendingArchivePhraseBatchCapture = null
+                    archivePhraseBatchSelection = emptySet()
                 }
             )
         }
@@ -4283,6 +4408,8 @@ private fun TuddyScreen(
                         archivePhraseCaptureNotice =
                             "Eigen privékaart bewust opgeslagen. Open Mijn eigen offline zinnen om die te bekijken."
                         pendingArchivePhraseCapture = null
+                        pendingArchivePhraseBatchCapture = null
+                        archivePhraseBatchSelection = emptySet()
                         true
                     } else false
                 },
@@ -5735,6 +5862,8 @@ private fun TuddyScreen(
                         exportStatus = ""
                         previewArchiveRows = null
                         pendingArchivePhraseCapture = null
+                        pendingArchivePhraseBatchCapture = null
+                        archivePhraseBatchSelection = emptySet()
                         archivePhraseCaptureNotice = ""
                         archiveSearchQuery = ""
                         pendingArchiveGeneration = null
