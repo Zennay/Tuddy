@@ -354,20 +354,60 @@ internal fun PrivateSubtitleFileDialog(
             }
         }
     }
+    fun beginSequence(
+        safeLines: List<String>,
+        startIndex: Int,
+        languageTag: String,
+        pace: LocalSpeechPace
+    ) {
+        sequenceStartIndex = startIndex
+        sequenceLineIndex = 0
+        sequenceWordRange = null
+        sequenceReading = true
+        sequenceProgress = 0
+        sequenceTotal = safeLines.size
+        spokenNotice = "Lokale spraak voorbereiden…"
+        speaker.speakSequence(
+            lines = safeLines,
+            languageTag = languageTag,
+            pace = pace,
+            onProgress = { completed, total ->
+                sequenceProgress = completed
+                sequenceTotal = total
+                spokenNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { spokenNotice = it },
+            onFinished = { completed ->
+                sequenceReading = false
+                if (completed) sequenceProgress = sequenceTotal else sequenceProgress = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
+            },
+            onLineStarted = { index ->
+                sequenceLineIndex = index
+                sequenceWordRange = null
+            },
+            onWordRange = { index, start, endExclusive ->
+                sequenceLineIndex = index
+                sequenceWordRange = start to endExclusive
+            }
+        )
+    }
+
     fun pronounceCue(slow: Boolean) {
         val lang = chosenVoiceLanguage ?: return
-        sequenceReading = false
-        sequenceProgress = 0
-        sequenceTotal = 0
-        sequenceStartIndex = -1
-        sequenceLineIndex = -1
-        sequenceWordRange = null
-        val safe = current?.text?.replace('\n', ' ')?.trim().orEmpty()
-        if (safe.isBlank() || safe.length > 400) {
-            spokenNotice = "Alleen geselecteerde tekst tot 400 tekens kan lokaal worden voorgelezen."
-        } else speaker.speak(safe, lang,
-            if (slow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL) {
-            spokenNotice = it
+        val sourceIndex = found.getOrNull(shownIndex)?.first ?: return
+        val safe = current?.text?.replace('\n', ' ')?.replace('\r', ' ')?.trim().orEmpty()
+        if (safe.isBlank() || safe.length > 400 || safe.any { it.isISOControl() }) {
+            spokenNotice = "Alleen geselecteerde tekst tot 400 tekens zonder controletekens kan lokaal worden voorgelezen."
+        } else {
+            beginSequence(
+                safeLines = listOf(safe),
+                startIndex = sourceIndex,
+                languageTag = lang,
+                pace = if (slow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL
+            )
         }
     }
 
@@ -393,38 +433,11 @@ internal fun PrivateSubtitleFileDialog(
                 "Verkort of splits die regel voordat je de reeks voorleest."
             return
         }
-        sequenceStartIndex = startIndex
-        sequenceLineIndex = 0
-        sequenceWordRange = null
-        sequenceReading = true
-        sequenceProgress = 0
-        sequenceTotal = safeLines.size
-        spokenNotice = "Lokale spraak voorbereiden…"
-        speaker.speakSequence(
-            lines = safeLines,
+        beginSequence(
+            safeLines = safeLines,
+            startIndex = startIndex,
             languageTag = lang,
-            pace = if (sequenceSlow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL,
-            onProgress = { completed, total ->
-                sequenceProgress = completed
-                sequenceTotal = total
-                spokenNotice = "Lokaal voorlezen: $completed/$total regels."
-            },
-            feedback = { spokenNotice = it },
-            onFinished = { completed ->
-                sequenceReading = false
-                if (completed) sequenceProgress = sequenceTotal else sequenceProgress = 0
-                sequenceStartIndex = -1
-                sequenceLineIndex = -1
-                sequenceWordRange = null
-            },
-            onLineStarted = { index ->
-                sequenceLineIndex = index
-                sequenceWordRange = null
-            },
-            onWordRange = { index, start, endExclusive ->
-                sequenceLineIndex = index
-                sequenceWordRange = start to endExclusive
-            }
+            pace = if (sequenceSlow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL
         )
     }
 
