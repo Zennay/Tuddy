@@ -5734,6 +5734,8 @@ private fun TuddyScreen(
                         pinnedExportOpen = false
                         exportStatus = ""
                         previewArchiveRows = null
+                        pendingArchivePhraseCapture = null
+                        archivePhraseCaptureNotice = ""
                         archiveSearchQuery = ""
                         pendingArchiveGeneration = null
                         pendingArchiveExcerpt = null
