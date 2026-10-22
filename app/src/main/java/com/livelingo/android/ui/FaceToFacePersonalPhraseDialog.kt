@@ -55,6 +55,8 @@ internal fun FaceToFacePersonalPhraseDialog(
     var originalOnFarSide by remember { mutableStateOf(true) }
     var large by remember { mutableStateOf(true) }
     var practice by remember { mutableStateOf(false) }
+    // A deliberately tapped, temporary cover for both readers; never persisted.
+    var privacyCurtain by remember { mutableStateOf(false) }
     var revealed by remember(index, practice) { mutableStateOf(false) }
     var audioNotice by remember { mutableStateOf("") }
     val selected = cards.getOrNull(index)
@@ -97,9 +99,11 @@ internal fun FaceToFacePersonalPhraseDialog(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        val text = if (originalOnFarSide) selected?.phrase
+                        val text = if (privacyCurtain) "Privéstand · tekst afgeschermd"
+                            else if (originalOnFarSide) selected?.phrase
                             else if (meaningHidden) "Eigen betekenis verborgen" else selected?.ownMeaning
-                        val language = if (originalOnFarSide) selected?.language
+                        val language = if (privacyCurtain) null
+                            else if (originalOnFarSide) selected?.language
                             else selected?.meaningLanguage
                         Text(if (originalOnFarSide) "TEGENOVER · EIGEN ZIN"
                             else "TEGENOVER · EIGEN BETEKENIS",
@@ -143,6 +147,18 @@ internal fun FaceToFacePersonalPhraseDialog(
                             Text("Terug")
                         }
                     }
+                    TextButton(
+                        onClick = {
+                            speaker.stop()
+                            privacyCurtain = !privacyCurtain
+                            revealed = false
+                            audioNotice = ""
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (privacyCurtain) "👁 Laat beide zijden weer zien"
+                            else "◼ Verberg direct beide zijden")
+                    }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween) {
                         TextButton(onClick = { practice = !practice }) {
@@ -153,7 +169,7 @@ internal fun FaceToFacePersonalPhraseDialog(
                             Text(if (meaningHidden) "Toon betekenis" else "Betekenis zichtbaar")
                         }
                     }
-                    if (selected != null) {
+                    if (selected != null && !privacyCurtain) {
                         OfflinePhraseSpeechActions(
                             original = selected.phrase,
                             originalLanguage = selected.language,
@@ -190,10 +206,13 @@ internal fun FaceToFacePersonalPhraseDialog(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        val text = if (originalOnFarSide)
-                            if (meaningHidden) "Eigen betekenis verborgen" else selected?.ownMeaning
-                        else selected?.phrase
-                        val language = if (originalOnFarSide) selected?.meaningLanguage
+                        val text = if (privacyCurtain) "Privéstand · tekst afgeschermd"
+                            else if (originalOnFarSide)
+                                if (meaningHidden) "Eigen betekenis verborgen"
+                                else selected?.ownMeaning
+                            else selected?.phrase
+                        val language = if (privacyCurtain) null
+                            else if (originalOnFarSide) selected?.meaningLanguage
                             else selected?.language
                         Text(if (originalOnFarSide) "HIER · EIGEN BETEKENIS"
                             else "HIER · EIGEN ZIN",
