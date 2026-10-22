@@ -2,14 +2,21 @@ package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.CorrectionConflictChoice
+import com.livelingo.android.CorrectionMergeKey
 import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.SessionTranslationCorrectionMerge
 
@@ -24,6 +31,9 @@ internal fun SessionCorrectionMergeOptions(
     enabled: Boolean,
     onCommit: (List<SessionTranslationCorrection>, String) -> Unit
 ) {
+    var chosenConflicts by remember(current, imported) {
+        mutableStateOf(emptySet<CorrectionMergeKey>())
+    }
     val keep = SessionTranslationCorrectionMerge.prepare(
         current, imported, CorrectionConflictChoice.KEEP_CURRENT
     )
@@ -63,6 +73,47 @@ internal fun SessionCorrectionMergeOptions(
                             "Geïmporteerd: " + conflict.incoming.translation,
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Checkbox(
+                            checked = conflict.key in chosenConflicts,
+                            enabled = enabled,
+                            onCheckedChange = { useImported ->
+                                chosenConflicts = if (useImported) {
+                                    chosenConflicts + conflict.key
+                                } else chosenConflicts - conflict.key
+                            }
+                        )
+                        Text(
+                            "Gebruik voor deze zin de geïmporteerde vertaling",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+            if (keep.conflicts.isNotEmpty()) {
+                val individually = SessionTranslationCorrectionMerge.prepareSelected(
+                    current, imported, chosenConflicts
+                )
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled && individually != null,
+                    onClick = {
+                        if (individually != null) {
+                            onCommit(
+                                individually.rows,
+                                individually.added.toString() + " toegevoegd; " +
+                                    individually.replaced + " individueel gekozen " +
+                                    "vertalingen overgenomen; " +
+                                    individually.kept + " bestaande behouden."
+                            )
+                        }
+                    }
+                ) {
+                    Text("Voeg samen met mijn keuzes (" +
+                        chosenConflicts.size + " van " + keep.conflicts.size + ")")
                 }
             }
             OutlinedButton(
