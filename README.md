@@ -3183,3 +3183,17 @@ van Arabische/Perzische yeh en kaf, negeert het optionele klinkertekens,
 tatweel en ZWNJ en normaliseert Unicode-presentatievormen. De bewaarde
 tekst wordt niet herschreven en er wordt geen zoekindex opgeslagen.
 [Werking en grenzen](docs/LIVE_CAPTION_SCRIPT_SEARCH.md).
+
+---
+
+## Nieuw: vertaal een geopend ondertitelbestand lokaal
+
+Open een SRT/VTT-bestand in **Gesprekstools → Open SRT/WebVTT…** en kies
+**Vertaal ondertitelconcept lokaal…**. Kies zelf bron- en doeltaal en controleer
+eerst of de exacte ML Kit-tekstmodellen al lokaal beschikbaar zijn. Tuddy
+downloadt niets automatisch en start geen microfoon. De regels worden
+serieel vertaald; bij een fout of annulering wordt geen gedeeltelijk resultaat
+toegepast. Na het bekijken van een voorbeeld bevestig je expliciet het vervangen
+van de tijdelijke tekst. De tijdcodes blijven staan, de bronfile blijft intact
+en je kunt daarna bewust een nieuwe SRT/VTT-kopie bewaren.
+[Bediening en grenzen](docs/LOCAL_SUBTITLE_TRANSLATION.md).
