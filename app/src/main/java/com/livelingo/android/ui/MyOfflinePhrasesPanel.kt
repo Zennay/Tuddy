@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.OwnWord
 import com.livelingo.android.IncomingPersonalCsvDocument
 import java.io.ByteArrayOutputStream
 import androidx.compose.ui.text.style.TextDirection
@@ -89,6 +90,8 @@ internal fun MyOfflinePhrasesPanel(
     var pendingGroupRemoval by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var pendingSingleRemoval by remember { mutableStateOf<PersonalPhrase?>(null) }
     var practiceOpen by remember { mutableStateOf(false) }
+    var quizOpen by remember { mutableStateOf(false) }
+    var quizScope by remember { mutableStateOf<List<OwnWord>?>(null) }
     var scheduledOpen by remember { mutableStateOf(false) }
     var startScheduleConsent by remember { mutableStateOf(false) }
     var eraseScheduleConsent by remember { mutableStateOf(false) }
@@ -364,6 +367,9 @@ internal fun MyOfflinePhrasesPanel(
                 else -> phraseTopics.topicFor(note) == selectedTopic
             }
         }
+    }
+    val quizPairNotes = topicPracticeNotes.filter {
+        it.language == language && it.meaningLanguage == meaningLanguage
     }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
 
@@ -775,6 +781,17 @@ internal fun MyOfflinePhrasesPanel(
         )
         return
     }
+    if (quizOpen) {
+        OwnWordQuizDialog(
+            notes = quizScope.orEmpty(),
+            phraseMode = true,
+            onDismiss = {
+                quizOpen = false
+                quizScope = null
+            }
+        )
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -881,6 +898,26 @@ internal fun MyOfflinePhrasesPanel(
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(if (selectedTopic == null) "Oefen mijn eigen zinnen"
                     else "Oefen dit thema · ${topicPracticeNotes.size} zinnen") }
+                OutlinedButton(
+                    enabled = quizPairNotes.size >= 2,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        // A question and ALL decoys share the same exact source
+                        // language and user-authored meaning language. No mixed
+                        // NL/EN answer bank and no changes to the phrase deck.
+                        quizScope = quizPairNotes.map {
+                            OwnWord(it.language, it.phrase, it.ownMeaning)
+                        }
+                        quizOpen = true
+                    }
+                ) {
+                    Text("🎯 Meerkeuze · ${labels[language] ?: language.uppercase()} " +
+                        "→ ${meaningLanguage.uppercase()} · ${quizPairNotes.size} eigen zinnen")
+                }
+                Text("Deze quiz gebruikt alleen je huidige bron-/betekenistaalpaar " +
+                    "en je gekozen thema, niet automatisch de overige zinnen. " +
+                    "Minstens twee verschillende zelfgeschreven betekenissen nodig.",
+                    style = MaterialTheme.typography.bodySmall)
                 if (!deck.reviewsEnabled()) {
                     OutlinedButton(
                         enabled = phrases?.isNotEmpty() == true,
@@ -1108,6 +1145,22 @@ internal fun MyOfflinePhrasesPanel(
                     }
                     Text("${shown.size} van ${phrases.size} zelf ingevoerde zinnen",
                         style = MaterialTheme.typography.bodySmall)
+                    val searchQuizNotes = shown.filter {
+                        it.language == language && it.meaningLanguage == meaningLanguage
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = searchQuizNotes.size >= 2,
+                        onClick = {
+                            quizScope = searchQuizNotes.map {
+                                OwnWord(it.language, it.phrase, it.ownMeaning)
+                            }
+                            quizOpen = true
+                        }
+                    ) {
+                        Text("Quiz uitsluitend met deze ${searchQuizNotes.size} gevonden " +
+                            "zinnen · ${language.uppercase()} → ${meaningLanguage.uppercase()}")
+                    }
                     shown.forEach { item ->
                         HorizontalDivider()
                         Text("${labels[item.language]} · ${if (item.meaningLanguage == "nl") "NL" else "EN"}",
