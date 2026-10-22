@@ -56,6 +56,8 @@ internal fun OfflineReadinessDialog(
     onCancelSpeech: () -> Unit,
     onOpenSpeechSettings: () -> Unit,
     onOpenAirplaneSettings: () -> Unit,
+    requireOfflineRadioBeforeListening: Boolean,
+    onSetRequireOfflineRadio: (Boolean) -> Unit,
     onBrowseSpeechPacks: () -> Unit,
     onCopyDiagnostics: () -> Boolean,
     sessionDiagnostics: OfflineSessionDiagnostics,
@@ -215,6 +217,23 @@ internal fun OfflineReadinessDialog(
                         "Dit opent alleen instellingen en schakelt niets zelf uit.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                Text(
+                    "Optioneel, alleen voor deze app-sessie: bij strikte " +
+                        "vliegtuigmodus weigert Tuddy het starten of automatisch " +
+                        "herstarten van de microfoon als Android vliegtuigmodus niet " +
+                        "bevestigt, wifi nog aan staat of een netwerktransport " +
+                        "wordt gemeld. Ook dit garandeert geen volledige isolatie.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedButton(
+                    onClick = { onSetRequireOfflineRadio(!requireOfflineRadioBeforeListening) },
+                    enabled = !isListening,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (requireOfflineRadioBeforeListening)
+                        "Strikte vliegtuigmodus: aan · uitschakelen"
+                    else "Strikte vliegtuigmodus voor luisteren inschakelen")
+                }
                 Text(radioStatus.display(), style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(
                     onClick = { radioStatus = OfflineRadioSnapshot.capture(context) },

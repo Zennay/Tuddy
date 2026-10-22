@@ -710,6 +710,9 @@ private fun TuddyScreen(
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
+    // Ephemeral user opt-in: no microphone startup when Android still reports
+    // a usable connection. Never persist or mistake this for real device proof.
+    var requireOfflineRadioBeforeListening by remember { mutableStateOf(false) }
     var installedApkSha256 by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(offlineReadinessOpen) {
         if (offlineReadinessOpen) {
@@ -1096,6 +1099,7 @@ private fun TuddyScreen(
             appendLine("GitHub workflow run ID: ${BuildConfig.TUDDY_BUILD_RUN_ID}")
             appendLine("Android API: ${Build.VERSION.SDK_INT}")
             appendLine("Airplane mode: $airplaneMode")
+            appendLine("Strict offline radio-only microphone start (session): $requireOfflineRadioBeforeListening")
             OfflineRadioSnapshot.capture(context).reportLines().forEach {
                 appendLine(it)
             }
@@ -1669,6 +1673,20 @@ private fun TuddyScreen(
             return
         }
         if (listening && !forceRestart) return
+        if (requireOfflineRadioBeforeListening) {
+            val radio = OfflineRadioSnapshot.capture(context)
+            if (radio.airplaneModeOn != true || radio.wifiEnabled != false ||
+                radio.networkReadFailed || radio.visibleTransports.isNotEmpty()) {
+                // Also tear down the previous recognizer during automatic restart:
+                // a stale live service must not survive a newly observed link.
+                stop()
+                error = "Luisteren niet gestart: strikte vliegtuigmodus gekozen. " +
+                    "Android meldt nog een radio of verbinding, of kan de status " +
+                    "niet lezen. Controleer wifi en netwerk in Instellingen."
+                offlineReadinessOpen = true
+                return
+            }
+        }
         if (!forceRestart) {
             pendingLivePhraseBatchCapture = null
             livePhraseBatchSelection = emptySet()
@@ -3062,6 +3080,10 @@ private fun TuddyScreen(
                 onDownloadSpeech = { downloadSpeechPackNow() },
                 onCancelSpeech = { cancelSpeechPackFollow() },
                 onOpenSpeechSettings = { openSpeechSettings() },
+                requireOfflineRadioBeforeListening = requireOfflineRadioBeforeListening,
+                onSetRequireOfflineRadio = { enabled ->
+                    if (!listening) requireOfflineRadioBeforeListening = enabled
+                },
                 onOpenAirplaneSettings = {
                     if (!listening) {
                         runCatching {
