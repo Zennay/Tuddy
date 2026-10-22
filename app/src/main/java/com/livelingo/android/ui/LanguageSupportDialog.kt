@@ -296,42 +296,42 @@ internal fun LanguageSupportDialog(
                                 )
                             } else {
                                 filteredVoices.forEach { voice ->
-                                val isPreferred = remember(
-                                    voicePreferenceRevision, voice.languageTag, voice.voiceName
-                                ) {
-                                    LocalSpeechVoicePreferences.selectedVoiceName(
-                                        context, voice.languageTag
-                                    ) == voice.voiceName
-                                }
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(
-                                        "${voice.displayName} (${voice.languageTag})",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Text(
-                                        voice.voiceName,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    TextButton(
-                                        onClick = {
-                                            val saved = LocalSpeechVoicePreferences.selectVoice(
-                                                context, voice.languageTag, voice.voiceName
-                                            )
-                                            if (saved) {
-                                                voicePreferenceRevision++
-                                                localVoiceNotice =
-                                                    "Voorkeursstem voor ${voice.languageTag} lokaal opgeslagen. Geen online fallback."
-                                            } else {
-                                                localVoiceNotice =
-                                                    "Deze stemvoorkeur kon niet worden opgeslagen."
-                                            }
-                                        }
+                                    val isPreferred = remember(
+                                        voicePreferenceRevision, voice.languageTag, voice.voiceName
                                     ) {
-                                        Text(if (isPreferred) "Voorkeur voor deze taal" else "Gebruik deze stem")
+                                        LocalSpeechVoicePreferences.selectedVoiceName(
+                                            context, voice.languageTag
+                                        ) == voice.voiceName
+                                    }
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(
+                                            "${voice.displayName} (${voice.languageTag})",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            voice.voiceName,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        TextButton(
+                                            onClick = {
+                                                val saved = LocalSpeechVoicePreferences.selectVoice(
+                                                    context, voice.languageTag, voice.voiceName
+                                                )
+                                                if (saved) {
+                                                    voicePreferenceRevision++
+                                                    localVoiceNotice =
+                                                        "Voorkeursstem voor ${voice.languageTag} lokaal opgeslagen. Geen online fallback."
+                                                } else {
+                                                    localVoiceNotice =
+                                                        "Deze stemvoorkeur kon niet worden opgeslagen."
+                                                }
+                                            }
+                                        ) {
+                                            Text(if (isPreferred) "Voorkeur voor deze taal" else "Gebruik deze stem")
+                                        }
                                     }
                                 }
-                            }
                             }
                             TextButton(
                                 onClick = {
