@@ -589,6 +589,74 @@ internal class PrivatePhraseDeck(context: Context) {
     }
 
     /**
+     * Import an explicitly chosen UTF-8 CSV list of self-authored sentence pairs.
+     * Exactly four columns, exact header, RFC-style comma and quote escaping.
+     * One record per line: multi-line quoted cells are intentionally unsupported
+     * because the personal phrase text policy rejects controls and line breaks.
+     * Parsing never writes; the calling UI shows every row and asks separately
+     * whether to merge or replace existing private phrases.
+     */
+    fun previewCsvImport(bytes: ByteArray): List<PersonalPhrase>? {
+        if (bytes.isEmpty() || bytes.size > MAX_JSON) return null
+        val decoded = bytes.toString(Charsets.UTF_8)
+        if (!decoded.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        val lines = decoded.removePrefix("\uFEFF").split('\n')
+            .dropLastWhile { it.isEmpty() }
+            .map { it.removeSuffix("\r") }
+        if (lines.size !in 2..(MAX_ROWS + 1) ||
+            lines.first() != "language,phrase,meaningLanguage,ownMeaning") return null
+
+        fun fields(line: String): List<String>? {
+            val result = mutableListOf<String>()
+            var offset = 0
+            while (true) {
+                val cell = StringBuilder()
+                if (offset < line.length && line[offset] == '"') {
+                    offset++
+                    var closed = false
+                    while (offset < line.length) {
+                        val ch = line[offset++]
+                        if (ch == '"') {
+                            if (offset < line.length && line[offset] == '"') {
+                                cell.append('"')
+                                offset++
+                            } else {
+                                closed = true
+                                break
+                            }
+                        } else {
+                            cell.append(ch)
+                        }
+                    }
+                    if (!closed || offset < line.length && line[offset] != ',') return null
+                } else {
+                    while (offset < line.length && line[offset] != ',') {
+                        val ch = line[offset++]
+                        if (ch == '"') return null
+                        cell.append(ch)
+                    }
+                }
+                result.add(cell.toString())
+                if (offset == line.length) break
+                offset++ // Consume exactly one comma.
+            }
+            return result
+        }
+
+        val seen = HashSet<String>()
+        val result = ArrayList<PersonalPhrase>()
+        for (line in lines.drop(1)) {
+            val values = fields(line) ?: return null
+            if (values.size != 4) return null
+            val record = PersonalPhrase(values[0], values[1], values[2], values[3])
+            val identity = record.language + "|" + record.phrase.lowercase(Locale.ROOT)
+            if (!valid(record) || !seen.add(identity)) return null
+            result.add(record)
+        }
+        return result.takeIf { it.isNotEmpty() }
+    }
+
+    /**
      * Mandatory header, user-written text only, no language inference.
      * UTF-8 TSV rows: language, phrase, meaningLanguage, ownMeaning.
      * Parsing only; UI controls the separate merge/replace confirmation.
