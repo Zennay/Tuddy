@@ -26,11 +26,12 @@ en behoudt de bestaande tijdcodes.
 6. De voortgang telt de geselecteerde regels. **Annuleer** stopt het volgen.
    Een vertaalfout, annulering of overgang naar de achtergrond past geen
    gedeeltelijke vertaling toe. De bronfile op schijf blijft onaangeraakt.
-7. Lees de eerste voorbeeldregels uit het gekozen bereik terug en kies in de
-   preview **Alleen vertaling** of **Origineel + vertaling**. De tweetalige modus
-   zet het origineel boven de vertaling binnen dezelfde tijdgecodeerde cue.
-   Cues buiten het bereik behouden tekst en tijdcodes. Als één gecombineerde cue
-   de bestaande tekstlimieten overschrijdt, blijft toepassen geblokkeerd.
+7. Blader met **Vorige voorbeeldregels** en **Volgende voorbeeldregels** door
+   de volledige vertaling (vijf cues per pagina) en kies **Alleen vertaling** of
+   **Origineel + vertaling**. De tweetalige modus zet het origineel boven de
+   vertaling binnen dezelfde tijdgecodeerde cue. Cues buiten het bereik behouden
+   tekst en tijdcodes. Als één gecombineerde cue de bestaande tekstlimieten
+   overschrijdt, blijft toepassen geblokkeerd.
 8. Kies **Vervang tijdelijke tekst** om uitsluitend de geselecteerde cues in het
    tijdelijke concept te wijzigen. De bestaande undo/redo-bediening kan dit
    herstellen. Met **Ander bereik kiezen** kun je de preview weggooien en een
