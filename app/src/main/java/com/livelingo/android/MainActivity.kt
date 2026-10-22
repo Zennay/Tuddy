@@ -672,6 +672,8 @@ private fun TuddyScreen(
     var modelStorageBusy by remember { mutableStateOf(false) }
     var modelStorageNotice by remember { mutableStateOf("") }
     var pendingModelDeletion by remember { mutableStateOf<String?>(null) }
+    var selectedModelCleanupCodes by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var pendingBulkModelDeletion by remember { mutableStateOf<List<String>?>(null) }
     var textReceipt by remember {
         mutableStateOf(OfflineTextReceipt(spoken[0].translateCode, spoken[1].translateCode,
             OfflineTextStage.UNCHECKED, "Controleer welke tekstmodellen lokaal aanwezig zijn."))
@@ -1093,6 +1095,9 @@ private fun TuddyScreen(
         modelStorage.list { codes, message ->
             modelStorageBusy = false
             installedTextModels = codes
+            selectedModelCleanupCodes = selectedModelCleanupCodes
+                .intersect(codes.orEmpty().toSet()) -
+                setOf(source.translateCode, target.translateCode)
             modelStorageNotice = message.ifBlank {
                 if (codes.isNullOrEmpty()) "Geen extra ML Kit-tekstmodellen gevonden."
                 else "${codes.size} lokaal gedownloade tekstmodellen gevonden."
@@ -1117,6 +1122,7 @@ private fun TuddyScreen(
             modelStorageNotice = message
             installedTextModels = null  // never keep presenting an old inventory
             if (success) {
+                selectedModelCleanupCodes = selectedModelCleanupCodes - code
                 localTranslatorPool.invalidate()
                 // The inventory and currently selected pair are independent;
                 // always re-read actual model status after storage changes.
@@ -1125,6 +1131,92 @@ private fun TuddyScreen(
                     OfflineTextStage.UNCHECKED, "Opslag gewijzigd: controleer het teksttaalpaar opnieuw.")
             }
         }
+    }
+
+    /**
+     * Remove a user-confirmed batch serially. Each deletion re-reads ML Kit's
+     * real inventory and re-checks the currently selected pair. A failure
+     * stops the batch; completed deletions are reported and never implied
+     * to have rolled back.
+     */
+    fun removeSelectedUnusedTextModels(requestedCodes: List<String>) {
+        if (modelStorageBusy || listening || preparingOfflineModel) return
+        val requested = requestedCodes.distinct().sorted()
+        val activePair = setOf(source.translateCode, target.translateCode)
+        val installed = installedTextModels.orEmpty().toSet()
+        if (requested.isEmpty()) {
+            pendingBulkModelDeletion = null
+            return
+        }
+        if (requested.any {
+                it !in installed || it in activePair ||
+                    it !in TargetCatalog.codes || it == TranslateLanguage.ENGLISH
+            }) {
+            pendingBulkModelDeletion = null
+            selectedModelCleanupCodes = selectedModelCleanupCodes - activePair
+            modelStorageNotice =
+                "De selectie of het actieve taalpaar is gewijzigd; niets verwijderd. Ververs de modellen en selecteer opnieuw."
+            return
+        }
+
+        pendingBulkModelDeletion = null
+        pendingModelDeletion = null
+        sourceOpen = false
+        targetOpen = false
+        modelStorageBusy = true
+        selectedModelCleanupCodes = selectedModelCleanupCodes - requested.toSet()
+        modelStorageNotice = "Verwijderen: 0/${requested.size} tekstmodellen…"
+        var removedCount = 0
+
+        fun finishBulkRemoval(failure: String? = null) {
+            selectedModelCleanupCodes = emptySet()
+            modelStorageNotice = "Opslag controleren na verwijderen…"
+            modelStorage.list { codes, inventoryMessage ->
+                installedTextModels = codes
+                modelStorageBusy = false
+                modelStorageNotice = buildString {
+                    append("Verwijderd: $removedCount/${requested.size} geselecteerde tekstmodellen.")
+                    if (!failure.isNullOrBlank()) append(" Gestopt: $failure")
+                    if (inventoryMessage.isNotBlank()) append(" $inventoryMessage")
+                    else if (codes != null) append(" Resterende modellen: ${codes.size}.")
+                }
+            }
+        }
+
+        fun removeAt(index: Int) {
+            if (index >= requested.size) {
+                finishBulkRemoval()
+                return
+            }
+            if (requested[index] in setOf(source.translateCode, target.translateCode)) {
+                finishBulkRemoval(
+                    "Het actieve taalpaar is gewijzigd; volgende modellen zijn niet verwijderd."
+                )
+                return
+            }
+            val code = requested[index]
+            modelStorageNotice = "Verwijderen: ${removedCount + 1}/${requested.size} · $code…"
+            modelStorage.removeUnused(
+                code,
+                selectedPair = { setOf(source.translateCode, target.translateCode) }
+            ) { success, message ->
+                if (!success) {
+                    finishBulkRemoval(message)
+                } else {
+                    removedCount++
+                    localTranslatorPool.invalidate()
+                    textInventory.invalidate()
+                    textReceipt = OfflineTextReceipt(
+                        source.translateCode, target.translateCode,
+                        OfflineTextStage.UNCHECKED,
+                        "Opslag gewijzigd: controleer het teksttaalpaar opnieuw."
+                    )
+                    removeAt(index + 1)
+                }
+            }
+        }
+
+        removeAt(0)
     }
 
     fun prepareOfflinePair() {
@@ -1470,6 +1562,8 @@ private fun TuddyScreen(
         stop()
         modelStorage.invalidate()
         installedTextModels = null
+        selectedModelCleanupCodes = emptySet()
+        pendingBulkModelDeletion = null
         source = nextSource
         sourceQuery = ""
         sourceOpen = false
@@ -1690,6 +1784,8 @@ private fun TuddyScreen(
         modelStorage.invalidate()
         installedTextModels = null
         pendingModelDeletion = null
+        pendingBulkModelDeletion = null
+        selectedModelCleanupCodes = emptySet()
         pendingCaptionShare = null
         pendingSpeakerExport = null
         pendingTranscriptExport = null
@@ -2526,6 +2622,8 @@ private fun TuddyScreen(
                 modelStorage.invalidate()
                 modelStorageBusy = false
                 pendingModelDeletion = null
+                pendingBulkModelDeletion = null
+                selectedModelCleanupCodes = emptySet()
                 installedTextModels = null
             }
             if (event == Lifecycle.Event.ON_STOP) {
@@ -5790,6 +5888,54 @@ private fun TuddyScreen(
                 }
             )
         }
+        pendingBulkModelDeletion?.let { bulkCodes ->
+            val currentPair = setOf(source.translateCode, target.translateCode)
+            val bulkSelectionStillValid = bulkCodes.all {
+                it in installedTextModels.orEmpty() && it !in currentPair
+            }
+            AlertDialog(
+                onDismissRequest = { pendingBulkModelDeletion = null },
+                title = { Text("Geselecteerde tekstmodellen verwijderen?") },
+                text = {
+                    Column(
+                        modifier = Modifier.heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "Controleer de volledige lijst. Alleen deze ML Kit-tekstmodellen worden verwijderd; Android-spraakpakketten, gesprekken en opgeslagen woorden blijven staan."
+                        )
+                        bulkCodes.forEach { code ->
+                            val label = TargetCatalog.targets.firstOrNull {
+                                it.code == code
+                            }?.title ?: code
+                            Text("• $label ($code)")
+                        }
+                        if (!bulkSelectionStillValid) {
+                            Text(
+                                "De inventaris of het actieve taalpaar is gewijzigd. Annuleer, ververs de modellen en selecteer opnieuw.",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Text(
+                            "Verwijderen kan niet ongedaan worden gemaakt. Als een latere verwijdering mislukt, blijven eerdere verwijderingen uitgevoerd en meldt Tuddy hoeveel er zijn verwijderd."
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = bulkSelectionStillValid && !modelStorageBusy &&
+                            !listening && !preparingOfflineModel,
+                        onClick = { removeSelectedUnusedTextModels(bulkCodes) }
+                    ) { Text("Verwijder ${bulkCodes.size} modellen") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingBulkModelDeletion = null }) {
+                        Text("Annuleren")
+                    }
+                }
+            )
+        }
         if (pendingStudyErase) {
             val wordTotal = savedVocabulary.entries().size
             val ownWordTotal = ownWordDeck.entries()?.size
@@ -6023,6 +6169,8 @@ private fun TuddyScreen(
                                 stop()
                                 modelStorage.invalidate()
                                 installedTextModels = null
+                                pendingBulkModelDeletion = null
+                                selectedModelCleanupCodes = emptySet()
                                 pendingCaptionShare = null
                                 pendingSpeakerExport = null
                                 pendingTranscriptExport = null
@@ -6538,6 +6686,8 @@ private fun TuddyScreen(
                                     stop()
                                     modelStorage.invalidate()
                                     installedTextModels = null
+                                    pendingBulkModelDeletion = null
+                                    selectedModelCleanupCodes = emptySet()
                                     target = LanguageChoice(choice.title, choice.code, choice.code)
                                     languageSettings.edit()
                                         .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, choice.code)
@@ -6747,12 +6897,61 @@ private fun TuddyScreen(
                         }
                         if (modelStorageNotice.isNotBlank())
                             Text(modelStorageNotice, style = MaterialTheme.typography.bodySmall)
+                        val activeTextPair = setOf(source.translateCode, target.translateCode)
+                        val unusedTextModelCodes = installedTextModels.orEmpty()
+                            .filter { it !in activeTextPair }
+                        val selectedUnusedModelCount = selectedModelCleanupCodes.count {
+                            it in installedTextModels.orEmpty() && it !in activeTextPair
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            TextButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = !modelStorageBusy && !listening &&
+                                    !preparingOfflineModel && unusedTextModelCodes.isNotEmpty(),
+                                onClick = { selectedModelCleanupCodes = unusedTextModelCodes.toSet() }
+                            ) { Text("Selecteer ongebruikte", maxLines = 2) }
+                            TextButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = !modelStorageBusy && selectedModelCleanupCodes.isNotEmpty(),
+                                onClick = { selectedModelCleanupCodes = emptySet() }
+                            ) { Text("Wis selectie") }
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !modelStorageBusy && !listening && !preparingOfflineModel &&
+                                selectedUnusedModelCount > 0,
+                            onClick = {
+                                val selected = selectedModelCleanupCodes.filter {
+                                    it in installedTextModels.orEmpty() && it !in activeTextPair
+                                }.sorted()
+                                if (selected.isNotEmpty()) pendingBulkModelDeletion = selected
+                            }
+                        ) { Text("Verwijder selectie ($selectedUnusedModelCount)") }
+                        Text(
+                            "Kies meerdere ongebruikte tekstmodellen om ze na één overzicht achter elkaar te verwijderen. Het actieve bron-/doeltaalpaar blijft beschermd.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         installedTextModels?.forEach { code ->
                             val label = TargetCatalog.targets.firstOrNull { it.code == code }?.title ?: code
-                            val isProtected = code in setOf(source.translateCode, target.translateCode)
+                            val isProtected = code in activeTextPair
                             Row(modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Checkbox(
+                                    checked = !isProtected && code in selectedModelCleanupCodes,
+                                    onCheckedChange = { checked ->
+                                        selectedModelCleanupCodes = if (checked) {
+                                            selectedModelCleanupCodes + code
+                                        } else {
+                                            selectedModelCleanupCodes - code
+                                        }
+                                    },
+                                    enabled = !isProtected && !listening &&
+                                        !preparingOfflineModel && !modelStorageBusy
+                                )
                                 Text("$label ($code)" + if (isProtected) " · actief" else "",
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.bodySmall)

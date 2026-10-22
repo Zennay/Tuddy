@@ -2727,11 +2727,15 @@ of externe bestandsopslag.
 Via **Taal- en modelinstellingen → Beheer offline tekstmodelopslag**
 zie je de echt geïnstalleerde ML Kit-tekstmodellen. Ongebruikte modellen
 kun je **per taal, na afzonderlijke bevestiging** verwijderen. Het actuele
-bron-/doeltaalpaar blijft beschermd. De actie is uitgeschakeld bij luisteren,
-modelvoorbereiding of een al lopende opslagactie; er is geen automatische
-opruiming en geen netwerkspraak. Je huidige gesprek en privéwoorden blijven
-staan, maar later gebruik kan opnieuw een modeldownload via wifi vragen.
-Dit beheert geen Android-spraakpakketten en belooft geen gemeten opslagwinst.
+bron-/doeltaalpaar blijft beschermd. Je kunt ook meerdere ongebruikte
+modellen aanvinken en na één volledige bevestigingslijst achter elkaar
+verwijderen. Tuddy controleert ieder model opnieuw, stopt bij de eerste fout
+en meldt expliciet hoeveel verwijderingen al gelukt zijn; een gedeeltelijke
+actie wordt niet als teruggedraaid voorgesteld. De actie is uitgeschakeld bij
+luisteren, modelvoorbereiding of een andere opslagactie. Er is geen automatische
+opruiming of netwerkspraak. Je huidige gesprek en privéwoorden blijven staan,
+maar later gebruik kan opnieuw een modeldownload via wifi vragen. Dit beheert
+geen Android-spraakpakketten en belooft geen gemeten opslagwinst.
 [Uitleg en beperkingen](docs/OFFLINE_TEXT_MODEL_STORAGE.md).
 Nog geen fysiek toestelbewijs of getekende release.
 
