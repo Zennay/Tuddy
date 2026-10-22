@@ -166,7 +166,9 @@ internal fun OfflinePhrasePresenter(
         }
     }
     val selected = cards.getOrNull(selectedIndex)
-    LaunchedEffect(selected?.phrase, selected?.ownMeaning, selected?.language) {
+    LaunchedEffect(
+        selected?.phrase, selected?.ownMeaning, selected?.language, selected?.meaningLanguage
+    ) {
         // Navigating to another private card must never keep reading the last.
         speaker.stop()
         activeSpeechSide = null
