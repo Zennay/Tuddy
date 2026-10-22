@@ -2739,17 +2739,22 @@ geen Android-spraakpakketten en belooft geen gemeten opslagwinst.
 [Uitleg en beperkingen](docs/OFFLINE_TEXT_MODEL_STORAGE.md).
 Nog geen fysiek toestelbewijs of getekende release.
 
-## Nieuw: zinnen handmatig corrigeren
+## Nieuw: zinnen en vertalingen handmatig corrigeren
 
 Bij een definitieve gespreksregel kun je met **✎ Corrigeer tekst**
 de oorspronkelijke zin in het tijdelijke gesprek herstellen en de
 tekst lokaal opnieuw laten vertalen. Voor regels met **Fout** of
 **Model ontbreekt** is er ook **↻ Probeer opnieuw**, zonder de tekst
-opnieuw in te typen. Oude, vertraagde resultaten kunnen de nieuwere
-correctie niet overschrijven; een handmatige correctie krijgt een
-zichtbaar label. De microfoon moet uit staan. Dit is geen echte
-spraakmodelverbetering of menselijke tolkvalidatie.
-[Bediening, privacy en grenzen](docs/CAPTION_CORRECTIONS.md).
+opnieuw in te typen. Daarnaast kun je met **✎ Corrigeer vertaling**
+een afgeronde lokale vertaling rechtstreeks aanpassen zonder de
+vertaalmotor opnieuw te starten of de oorspronkelijke zin te wijzigen.
+Een vertaalcorrectie blijft tijdelijk, krijgt een zichtbaar label
+en wordt niet als door Android of een model gecontroleerd gepresenteerd.
+Nog niet gebruikte deel- en exportpayloads worden ongeldig gemaakt.
+De microfoon moet uit staan. Dit is geen echte spraakmodelverbetering
+of menselijke tolkvalidatie.
+[Bediening van tekstcorrecties](docs/CAPTION_CORRECTIONS.md) ·
+[Bediening, privacy en grenzen van vertaalcorrecties](docs/MANUAL_LIVE_TRANSLATION_CORRECTION.md).
 
 ## Nieuw: zin typen zonder microfoon
 
