@@ -55,6 +55,7 @@ internal fun PrivateSubtitleTranslationDialog(
     var progress by remember { mutableIntStateOf(0) }
     var translatedCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var translatedIndices by remember(cues) { mutableStateOf<List<Int>>(emptyList()) }
+    var previewPage by remember(cues) { mutableIntStateOf(0) }
     var firstCueNumber by remember(cues) { mutableStateOf("1") }
     var lastCueNumber by remember(cues) { mutableStateOf(cues.size.toString()) }
     var bilingualOutput by remember(cues) { mutableStateOf(false) }
@@ -174,6 +175,7 @@ internal fun PrivateSubtitleTranslationDialog(
         translating = true
         checking = false
         progress = 0
+        previewPage = 0
         message = "Lokale modelstatus wordt opnieuw gecontroleerd…"
         controller.translate(
             cues = selectedCues,
@@ -236,6 +238,13 @@ internal fun PrivateSubtitleTranslationDialog(
     }
 
     val preview = translatedCues
+    val previewPageSize = 5
+    val previewPageCount = preview?.let {
+        (it.size + previewPageSize - 1) / previewPageSize
+    } ?: 0
+    val safePreviewPage = previewPage.coerceIn(0, (previewPageCount - 1).coerceAtLeast(0))
+    val previewStartIndex = safePreviewPage * previewPageSize
+    val previewItems = preview?.drop(previewStartIndex)?.take(previewPageSize).orEmpty()
     val outputCues = if (preview == null || preview.size != translatedIndices.size) {
         null
     } else {
@@ -399,16 +408,33 @@ internal fun PrivateSubtitleTranslationDialog(
                 if (preview != null) {
                     Text(
                         "Controleer de vertaling voordat je de tijdelijke tekst vervangt. " +
-                            "Hieronder staan de eerste ${minOf(5, preview.size)} vertaalde regels " +
+                            "Voorbeeld ${previewStartIndex + 1}–" +
+                            "${previewStartIndex + previewItems.size} van ${preview.size} vertaalde regels " +
                             "uit bereik ${translatedIndices.firstOrNull()?.plus(1) ?: "?"}–" +
                             "${translatedIndices.lastOrNull()?.plus(1) ?: "?"}. " +
                             "Andere regels blijven ongewijzigd.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(
+                            modifier = Modifier.weight(1f),
+                            enabled = safePreviewPage > 0,
+                            onClick = { previewPage = safePreviewPage - 1 }
+                        ) { Text("Vorige voorbeeldregels") }
+                        TextButton(
+                            modifier = Modifier.weight(1f),
+                            enabled = safePreviewPage + 1 < previewPageCount,
+                            onClick = { previewPage = safePreviewPage + 1 }
+                        ) { Text("Volgende voorbeeldregels") }
+                    }
                     TextButton(
                         onClick = {
                             translatedCues = null
                             translatedIndices = emptyList()
+                            previewPage = 0
                             progress = 0
                             bilingualOutput = false
                             message = ""
@@ -441,8 +467,9 @@ internal fun PrivateSubtitleTranslationDialog(
                             color = MaterialTheme.colorScheme.error
                         )
                     }
-                    preview.take(5).forEachIndexed { index, cue ->
-                        val originalIndex = translatedIndices[index]
+                    previewItems.forEachIndexed { pageOffset, cue ->
+                        val previewIndex = previewStartIndex + pageOffset
+                        val originalIndex = translatedIndices[previewIndex]
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text("Regel ${originalIndex + 1} · origineel",
                                 style = MaterialTheme.typography.labelSmall)
