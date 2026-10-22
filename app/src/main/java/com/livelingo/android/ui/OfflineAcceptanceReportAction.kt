@@ -258,15 +258,20 @@ internal fun OfflineAcceptanceReportAction(
         val expectedBaseline = pendingBaseline
         pendingReport = null
         pendingBaseline = null
+        // Never erase twenty real observations because a document chooser was
+        // cancelled, a provider failed, or device identity changed mid-save.
+        var saved = false
         if (uri == null || selected == null || expectedBaseline == null) {
-            message = "Rapportopslag geannuleerd; er is geen bestand geschreven."
+            message = "Opslaan geannuleerd. Je ingevoerde waarnemingen blijven in " +
+                "deze app-sessie bewaard; kies opnieuw Bewaar rapport."
         } else {
             val current = deviceSnapshot()
             if (current == null || !current.contentEquals(expectedBaseline)) {
-                message = "Apparaat- of modelstatus veranderde tijdens de bestandskeuze. " +
-                    "Open het rapport opnieuw om een verouderd verslag te voorkomen."
+                message = "Apparaat- of modelstatus is veranderd tijdens het kiezen. " +
+                    "Niets opgeslagen of gewist. Het oorspronkelijke momentopnameverslag " +
+                    "kan niet veilig worden geëxporteerd; begin zo nodig een nieuwe sessie."
             } else {
-                val written = runCatching {
+                saved = runCatching {
                     val output = context.contentResolver.openOutputStream(uri, "w")
                         ?: return@runCatching false
                     output.use {
@@ -275,12 +280,13 @@ internal fun OfflineAcceptanceReportAction(
                     }
                     true
                 }.getOrDefault(false)
-                message = if (written)
+                message = if (saved)
                     "Handmatig waarnemingsrapport opgeslagen. Controleer de gekozen provider op externe synchronisatie."
-                else "Opslaan mislukt; het rapport is niet bewaard."
+                else "Bestandsprovider kon niet opslaan. Je concept blijft in het " +
+                    "appgeheugen zodat je een andere opslaglocatie kunt kiezen."
             }
         }
-        resetDraft()
+        if (saved) resetDraft() else opened = true
     }
 
     Column(
@@ -329,6 +335,10 @@ internal fun OfflineAcceptanceReportAction(
                             "Een vinkje of dit rapport verandert geen releasegate en wordt niet automatisch geverifieerd.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (message.isNotBlank()) {
+                        Text(message, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error)
+                    }
                     Text(
                         "Geïnstalleerde APK SHA-256: ${installedApkDigest(baseline) ?: "onbeschikbaar"}",
                         style = MaterialTheme.typography.bodySmall
@@ -511,8 +521,10 @@ internal fun OfflineAcceptanceReportAction(
                         val bytes = reportBytes()
                         if (capturedBaseline == null || fresh == null ||
                             !fresh.contentEquals(capturedBaseline) || bytes == null) {
-                            message = "Apparaatstatus is veranderd of onvolledig. Open het rapport opnieuw."
-                            resetDraft()
+                            message = "Apparaatstatus is veranderd of onvolledig. " +
+                                "Het huidige concept blijft bewaard, maar kan niet met " +
+                                "een verouderde apparaatmomentopname worden geëxporteerd."
+                            attemptMessage = message
                         } else {
                             pendingReport = bytes
                             pendingBaseline = capturedBaseline
