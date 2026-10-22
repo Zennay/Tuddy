@@ -2940,6 +2940,14 @@ voor dertien expliciet kiesbare regionale spraakkandidaten: elf oorspronkelijke 
 [de handleiding voor tweeweg-gesprekken](docs/TWO_WAY_OFFLINE_CONVERSATION.md).
 Dit bewijst geen telefoonacceptatie of Koerdische/Pasjtoe vrije vertaling.
 
+In het tijdelijke **tweeweg-typgesprek** kun je ook het origineel of een
+daadwerkelijk lokaal afgeronde vertaling laten voorlezen. De actieve zijde
+blijft gemarkeerd; tekstbereiken worden alleen gemarkeerd als de geïnstalleerde
+Android-stem ze terugmeldt. Bij ontbrekende bereiken toont Tuddy alleen de
+actieve regel, zonder exacte woordtiming te claimen. De zes zichtbare regels
+blijven in RAM; stoppen, een nieuwe beurt, taalwissel, schermwissel of
+achtergrond stopt de spraak en wist de tijdelijke markering.
+
 ## Nieuw: één regel uit een privé-archief kopiëren of delen
 
 In het eigen **read-only JSON-archief** kunnen gebruikers na selectie
