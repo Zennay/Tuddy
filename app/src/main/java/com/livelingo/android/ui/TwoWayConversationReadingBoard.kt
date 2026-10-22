@@ -342,7 +342,7 @@ internal fun TwoWayConversationReadingBoard(
                 }
                 TextButton(
                     onClick = {
-                        speaker.stop()
+                        clearSpeech()
                         audioNotice = "Lokale stem gestopt."
                     },
                     modifier = Modifier.fillMaxWidth()
