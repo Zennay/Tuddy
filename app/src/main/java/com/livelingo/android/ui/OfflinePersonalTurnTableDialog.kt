@@ -13,12 +13,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
@@ -28,11 +34,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
 
 /**
  * Two-person, offline presentation of the exact temporary conversation turns.
  * Unlike a phrase-deck slideshow, each turn keeps its chosen speaking direction.
- * Nothing is saved, translated, pronounced, shared or requested over the network.
+ * User-triggered local voice is optional, and practice can conceal the reply.
+ * No automatic recording, translation, sharing or persistence.
  */
 @Composable
 internal fun OfflinePersonalTurnTableDialog(
@@ -45,7 +54,38 @@ internal fun OfflinePersonalTurnTableDialog(
     }
     var swapSides by remember { mutableStateOf(false) }
     var large by remember { mutableStateOf(true) }
+    var practice by remember { mutableStateOf(false) }
+    var revealed by remember(index, practice) { mutableStateOf(false) }
+    var slowSpeech by remember { mutableStateOf(false) }
+    var audioNotice by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    DisposableEffect(lifecycle, speaker) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                speaker.stop()
+            }
+        }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.lifecycle.removeObserver(observer)
+            speaker.close()
+        }
+    }
     val turn = turns.getOrNull(index)
+    LaunchedEffect(index, swapSides, practice, turn) {
+        speaker.stop()
+        audioNotice = ""
+    }
+    val responseHidden = practice && !revealed
+    fun readAuthored(text: String, language: String) {
+        speaker.speak(
+            text, language,
+            if (slowSpeech) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL
+        ) { audioNotice = it }
+    }
+
     val prompt = turn?.let { (note, fromMeaning) ->
         if (fromMeaning) note.ownMeaning else note.phrase
     }.orEmpty()
@@ -63,7 +103,7 @@ internal fun OfflinePersonalTurnTableDialog(
             TextDirection.Rtl else TextDirection.Ltr
 
     @Composable
-    fun TurnSide(text: String, language: String, label: String, inverted: Boolean) {
+    fun TurnSide(text: String, language: String, label: String, inverted: Boolean, hidden: Boolean) {
         Column(
             modifier = Modifier.fillMaxSize()
                 .graphicsLayer { rotationZ = if (inverted) 180f else 0f }
@@ -74,7 +114,8 @@ internal fun OfflinePersonalTurnTableDialog(
         ) {
             Text(label, style = MaterialTheme.typography.labelLarge)
             Text(
-                text.ifBlank { "Geen geselecteerde zin." },
+                if (hidden) "Antwoord verborgen · onthul in het midden"
+                else text.ifBlank { "Geen geselecteerde zin." },
                 style = MaterialTheme.typography.bodyLarge.copy(
                     textDirection = direction(language)
                 ),
@@ -88,7 +129,7 @@ internal fun OfflinePersonalTurnTableDialog(
     }
 
     Dialog(
-        onDismissRequest = onBack,
+        onDismissRequest = { speaker.stop(); onBack() },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = false
@@ -100,8 +141,8 @@ internal fun OfflinePersonalTurnTableDialog(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    if (!swapSides) TurnSide(answer, answerLanguage, "TEGENOVER · MIJN EIGEN PAAR", true)
-                    else TurnSide(prompt, promptLanguage, "TEGENOVER · MIJN BRONZIN", true)
+                    if (!swapSides) TurnSide(answer, answerLanguage, "TEGENOVER · MIJN EIGEN PAAR", true, responseHidden)
+                    else TurnSide(prompt, promptLanguage, "TEGENOVER · MIJN BRONZIN", true, false)
                 }
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
@@ -130,8 +171,54 @@ internal fun OfflinePersonalTurnTableDialog(
                         TextButton(onClick = { large = !large }) {
                             Text(if (large) "Aa kleiner" else "Aa groter")
                         }
-                        TextButton(onClick = onBack) { Text("Terug") }
+                        TextButton(onClick = {
+                            speaker.stop()
+                            onBack()
+                        }) { Text("Terug") }
                     }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(onClick = { practice = !practice }) {
+                            Text(if (practice) "✓ Oefenmodus" else "○ Oefenmodus")
+                        }
+                        TextButton(
+                            enabled = practice && responseHidden && turn != null,
+                            onClick = { revealed = true }
+                        ) { Text(if (responseHidden) "Toon antwoord" else "Antwoord zichtbaar") }
+                        TextButton(onClick = { slowSpeech = !slowSpeech }) {
+                            Text(if (slowSpeech) "Langzaam" else "Normaal")
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(enabled = turn != null &&
+                            (!responseHidden || turn.second), onClick = {
+                            turn?.first?.let { readAuthored(it.phrase, it.language) }
+                        }) { Text("🔊 Eigen zin") }
+                        TextButton(enabled = turn != null &&
+                            (!responseHidden || !turn.second), onClick = {
+                            turn?.first?.let { readAuthored(it.ownMeaning, it.meaningLanguage) }
+                        }) { Text("🔊 Betekenis") }
+                        TextButton(onClick = {
+                            speaker.stop()
+                            audioNotice = "Lokale voorlezing gestopt."
+                        }) { Text("■ Stop") }
+                    }
+                    if (audioNotice.isNotBlank()) {
+                        Text(audioNotice, style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center)
+                    }
+                    Text(
+                        "Voorlezen alleen na jouw tik met een door Android als " +
+                            "geïnstalleerd én lokaal gemelde stem. " +
+                            "Ontbreekt die stem, dan geen netwerkfallback.",
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center
+                    )
                     Text(
                         "Uitsluitend jouw zelfgeschreven, niet gecontroleerde zinnen. " +
                             "Tijdelijk in geheugen · geen spraakherkenning of automatische vertaling.",
@@ -143,8 +230,8 @@ internal fun OfflinePersonalTurnTableDialog(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
-                    if (!swapSides) TurnSide(prompt, promptLanguage, "HIER · MIJN BRONZIN", false)
-                    else TurnSide(answer, answerLanguage, "HIER · MIJN EIGEN PAAR", false)
+                    if (!swapSides) TurnSide(prompt, promptLanguage, "HIER · MIJN BRONZIN", false, false)
+                    else TurnSide(answer, answerLanguage, "HIER · MIJN EIGEN PAAR", false, responseHidden)
                 }
             }
         }
