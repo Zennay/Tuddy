@@ -330,3 +330,15 @@ de laatste import bewust en succesvol ongedaan is gemaakt, verdwijnt
 ook het wijzigingsoverzicht. Het is een historisch overzicht van de
 laatste import en geen live status; voor actuele inhoud open je opnieuw
 je persoonlijke zinnenboek.
+
+
+## Direct vanuit Android Bestanden openen
+
+Een door de gebruiker geopend of bewust als één bestand gedeeld
+`text/csv`- of `application/csv`-document kan nu rechtstreeks
+deze **vijfkoloms privézinnen-CSV preview** in Tuddy openen. Er gebeurt
+geen automatische import: de volledige strikte validatie en
+afzonderlijke toestemming voor nieuwe zinnen, betekeniscorrecties
+en themawijzigingen gelden net als bij **Importeer uit CSV…**.
+Zie [Android Openen met Tuddy voor eigen CSV](ANDROID_PERSONAL_CSV_OPEN_WITH.md)
+voor de ondersteunde MIME-types, privacygrenzen en gebruiksstappen.
