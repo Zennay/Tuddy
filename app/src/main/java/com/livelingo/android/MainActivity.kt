@@ -3068,6 +3068,7 @@ private fun TuddyScreen(
             translationMemoryRevision
             com.livelingo.android.ui.SessionTranslationCorrectionsDialog(
                 entries = translationMemory.entries(),
+                speaker = captionSpeaker,
                 onRemove = { entry ->
                     if (translationMemory.forget(entry)) translationMemoryRevision++
                 },

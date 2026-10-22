@@ -15,6 +15,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.SessionTranslationCorrections
+import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.PrivateOfflineSearch
 
 /**
@@ -32,11 +34,13 @@ import com.livelingo.android.PrivateOfflineSearch
 @Composable
 internal fun SessionTranslationCorrectionsDialog(
     entries: List<SessionTranslationCorrection>,
+    speaker: LocalCaptionSpeaker,
     onRemove: (SessionTranslationCorrection) -> Unit,
     onRevise: (SessionTranslationCorrection, String, String) -> Boolean,
     onClear: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    DisposableEffect(speaker) { onDispose { speaker.stop() } }
     var confirmClear by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<SessionTranslationCorrection?>(null) }
@@ -149,6 +153,7 @@ internal fun SessionTranslationCorrectionsDialog(
                         Text(entry.original, style = MaterialTheme.typography.bodyMedium)
                         Text(entry.translation, style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary)
+                        SessionCorrectionPlaybackActions(entry, speaker)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = {
                                 editing = entry
@@ -158,6 +163,7 @@ internal fun SessionTranslationCorrectionsDialog(
                                 confirmClear = false
                             }) { Text("Bewerk") }
                             TextButton(onClick = {
+                                speaker.stop()
                                 onRemove(entry)
                                 if (editing == entry) editing = null
                             }) { Text("Vergeet deze zin") }
@@ -169,6 +175,7 @@ internal fun SessionTranslationCorrectionsDialog(
                         Text("Wis alle tijdelijke correcties definitief?",
                             color = MaterialTheme.colorScheme.error)
                         OutlinedButton(onClick = {
+                            speaker.stop()
                             onClear()
                             editing = null
                             confirmClear = false
