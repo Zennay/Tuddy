@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -114,6 +115,7 @@ internal fun ArchivePrivatePhraseCaptureDialog(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Mijn eigen zin (max. 120 tekens)") },
+                    keyboardOptions = KeyboardOptions(autoCorrect = false),
                     minLines = 2,
                     maxLines = 4
                 )
