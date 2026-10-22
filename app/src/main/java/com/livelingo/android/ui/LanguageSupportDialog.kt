@@ -135,7 +135,25 @@ internal fun LanguageSupportDialog(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Text(item.reason, style = MaterialTheme.typography.bodySmall)
-                            val candidates = item.speechCandidates + item.translationCandidates
+                            val allCandidates = item.speechCandidates + item.translationCandidates
+                            val languageMatchesQuery = LanguageSearch.matches(
+                                query, listOf(item.code, item.title, item.aliases, item.reason)
+                            )
+                            val matchingCandidates = allCandidates.filter { candidate ->
+                                LanguageSearch.matches(query, listOf(
+                                    candidate.category,
+                                    candidate.title,
+                                    candidate.url,
+                                    candidate.declaredLicense,
+                                    candidate.footprint,
+                                    candidate.limitation
+                                ))
+                            }
+                            val candidates = if (normalizedQuery.isEmpty() || languageMatchesQuery) {
+                                allCandidates
+                            } else {
+                                matchingCandidates
+                            }
                             if (candidates.isNotEmpty()) {
                                 Text("Modelonderzoek · niet in Tuddy geïntegreerd",
                                     style = MaterialTheme.typography.labelMedium)
