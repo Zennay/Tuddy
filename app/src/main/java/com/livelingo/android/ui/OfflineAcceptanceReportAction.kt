@@ -20,11 +20,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Explicitly records a human-observed offline acceptance session.
@@ -41,11 +45,13 @@ internal fun OfflineAcceptanceReportAction(
     onPickerFinished: () -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var baseline by remember { mutableStateOf<ByteArray?>(null) }
     var recordedAt by remember { mutableStateOf(0L) }
     var opened by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var expectedApkSha256 by remember { mutableStateOf("") }
+    var sidecarNotice by remember { mutableStateOf("") }
     var disconnectedConfirmed by remember { mutableStateOf(false) }
     var permissionAndStopConfirmed by remember { mutableStateOf(false) }
     var noCloudFallbackConfirmed by remember { mutableStateOf(false) }
@@ -171,6 +177,7 @@ internal fun OfflineAcceptanceReportAction(
         recordedAt = 0L
         opened = false
         expectedApkSha256 = ""
+        sidecarNotice = ""
         disconnectedConfirmed = false
         permissionAndStopConfirmed = false
         noCloudFallbackConfirmed = false
@@ -183,6 +190,46 @@ internal fun OfflineAcceptanceReportAction(
         attemptMessage = ""
         pendingReport = null
         pendingBaseline = null
+    }
+
+    // Explicit user action: read only 257 bytes from the selected document.
+    // No cached URI, file name, speech text or remote request is retained.
+    val chooseChecksumSidecar = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        onPickerFinished()
+        if (uri == null) {
+            sidecarNotice = "Geen controlebestand geselecteerd."
+        } else {
+            coroutineScope.launch {
+                val parsed = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            val limit = OfflineApkChecksumSidecar.MAX_BYTES
+                            val bytes = ByteArray(limit + 1)
+                            var used = 0
+                            while (used < bytes.size) {
+                                val count = stream.read(bytes, used, bytes.size - used)
+                                if (count <= 0) break
+                                used += count
+                            }
+                            if (used in 1..limit) OfflineApkChecksumSidecar.parse(
+                                String(bytes, 0, used, Charsets.UTF_8)
+                            ) else null
+                        }
+                    }.getOrNull()
+                }
+                if (opened && baseline != null && parsed != null) {
+                    expectedApkSha256 = parsed
+                    sidecarNotice = "Checksum uit het gekozen controlebestand ingevuld. " +
+                        "Controleer onafhankelijk dat dit bestand bij de bedoelde GitHub-build hoort."
+                } else {
+                    sidecarNotice = "Geen bruikbare sha256sum-regel gevonden. " +
+                        "Kies bewust app-debug.apk.sha256 uit het juiste build-artifact. " +
+                        "Het veld is niet gewijzigd."
+                }
+            }
+        }
     }
 
     val saveReport = rememberLauncherForActivityResult(
@@ -268,6 +315,24 @@ internal fun OfflineAcceptanceReportAction(
                         "Geïnstalleerde APK SHA-256: ${installedApkDigest(baseline) ?: "onbeschikbaar"}",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    OutlinedButton(
+                        enabled = enabled,
+                        onClick = {
+                            onPickerStarted()
+                            chooseChecksumSidecar.launch(arrayOf("*/*"))
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Lees app-debug.apk.sha256 uit zelf gekozen bestand…") }
+                    Text(
+                        "Tuddy leest maximaal 256 bytes uit één bewust gekozen " +
+                            "checksum-bestand, zonder het APK-bestand of gesprek te uploaden. " +
+                            "Een externe bestandsprovider kan wel synchroniseren. " +
+                            "Een match bewijst alleen bestandsidentiteit, geen afzender of apparaatacceptatie.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (sidecarNotice.isNotBlank()) {
+                        Text(sidecarNotice, style = MaterialTheme.typography.bodySmall)
+                    }
                     OutlinedTextField(
                         value = expectedApkSha256,
                         onValueChange = {
