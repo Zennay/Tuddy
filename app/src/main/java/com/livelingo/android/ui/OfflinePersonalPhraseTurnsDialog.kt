@@ -48,7 +48,9 @@ internal fun OfflinePersonalPhraseTurnsDialog(
 ) {
     val context = LocalContext.current
     val deck = remember(context) { PrivatePhraseDeck(context) }
-    var notes by remember(deck) { mutableStateOf(deck.entries()) }
+    var storedNotes by remember(deck) { mutableStateOf(deck.entries()) }
+    // Render against a stable snapshot; updates are visible after save.
+    val notes = storedNotes
     var language by remember(initialLanguage) {
         mutableStateOf(initialLanguage.takeIf { it in setOf("kmr", "ckb", "ps") } ?: "kmr")
     }
@@ -409,7 +411,7 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                             proposed.meaningLanguage, proposed.ownMeaning
                         )
                         if (saved) {
-                            notes = deck.entries()
+                            storedNotes = deck.entries()
                             turns = turns.mapIndexed { index, item ->
                                 if (index == position) item.copy(temporary = false) else item
                             }
@@ -469,7 +471,7 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                     if (latest != proposedBatch || latest.size !in 1..10) {
                         saveNotice = "Het gesprek is veranderd; bekijk je selectie opnieuw."
                     } else if (deck.saveNewBatch(proposedBatch)) {
-                        notes = deck.entries()
+                        storedNotes = deck.entries()
                         turns = turns.map { turn ->
                             if (turn.temporary) turn.copy(temporary = false) else turn
                         }
