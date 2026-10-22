@@ -51,3 +51,17 @@ niet bewaard voor een volgende appstart. De schakelaar kan tijdens
 luisteren niet worden gewijzigd. Zelfs met de schakelaar aan blijft
 een menselijke toestelcontrole vereist: Android kan radios of andere
 verkeerbronnen verbergen die niet via deze APIs zichtbaar zijn.
+
+## Verbinding veranderd tijdens het luisteren
+
+Wanneer de strikte sessiekeuze aan staat, controleert Tuddy tijdens
+actief luisteren ongeveer elke 1,5 seconde dezelfde Android-signalen.
+Als wifi terugkomt, een transport verschijnt of een indicator niet meer
+leesbaar is, stopt Tuddy de herkenner en toont de offline startcheck.
+Zonder de expliciete strikte sessiekeuze draait deze bewaking niet.
+De app maakt hiervoor geen internetverzoek, scant geen netwerkidentiteit
+en start geen achtergronddienst.
+
+Het blijft een **best effort** Android-momentopname, geen firewall.
+Tussen twee controles kan de systeemtoestand veranderen. Het afsluiten
+van de app stopt ook de bewaking; de strikte keuze wordt niet opgeslagen.

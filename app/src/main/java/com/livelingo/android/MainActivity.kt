@@ -53,6 +53,7 @@ import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.livelingo.android.model.SafeCommunityPhrasebook
@@ -6344,6 +6345,25 @@ private fun TuddyScreen(
                 onOwnWordChanged = { ownWordRevision++ },
                 onDismiss = { dailyStudyHubOpen = false }
             )
+        }
+        // A strict user choice also applies AFTER the microphone has started.
+        // Poll only while a strict session is actively listening; no network
+        // request, background worker or persistent monitor is created.
+        LaunchedEffect(listening, requireOfflineRadioBeforeListening) {
+            while (listening && requireOfflineRadioBeforeListening) {
+                delay(1_500L)
+                if (!listening || !requireOfflineRadioBeforeListening) break
+                val radio = OfflineRadioSnapshot.capture(context)
+                if (radio.airplaneModeOn != true || radio.wifiEnabled != false ||
+                    radio.networkReadFailed || radio.visibleTransports.isNotEmpty()) {
+                    stop()
+                    error = "Strikt offline luisteren gestopt: Android meldt " +
+                        "een gewijzigde of onbekende netwerkverbinding. " +
+                        "Controleer vliegtuigmodus en wifi opnieuw."
+                    offlineReadinessOpen = true
+                    break
+                }
+            }
         }
         Surface(Modifier.fillMaxSize()) {
             Column(
