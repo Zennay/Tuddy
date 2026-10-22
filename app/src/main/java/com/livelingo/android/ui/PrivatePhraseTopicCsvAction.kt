@@ -74,6 +74,8 @@ internal fun PrivatePhraseTopicCsvAction(
     var pasteText by remember { mutableStateOf("") }
     var pasteError by remember { mutableStateOf("") }
     var mergeOnly by remember { mutableStateOf(true) }
+    var importLanguage by remember { mutableStateOf<String?>(null) }
+    var importTopic by remember { mutableStateOf<String?>(null) }
 
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
@@ -129,6 +131,8 @@ internal fun PrivatePhraseTopicCsvAction(
                     incoming, baseline.toList(), topics.exportSnapshot()
                 )
                 mergeOnly = true
+                importLanguage = null
+                importTopic = null
                 notice = ""
             }
         }
@@ -224,6 +228,8 @@ internal fun PrivatePhraseTopicCsvAction(
                             candidate, baseline.toList(), topics.exportSnapshot()
                         )
                         mergeOnly = true
+                        importLanguage = null
+                        importTopic = null
                         pasteOpen = false
                         pasteText = ""
                         pasteError = ""
@@ -357,6 +363,20 @@ internal fun PrivatePhraseTopicCsvAction(
 
     val review = importReview
     if (review != null) {
+        val scoped = importLanguage != null || importTopic != null
+        val chosenNotes = review.archive.notes.filter { note ->
+            (importLanguage == null || note.language == importLanguage) &&
+                (importTopic == null ||
+                    if (importTopic == "__without__")
+                        PrivatePhraseShortcuts.fingerprint(note) !in review.archive.assignments
+                    else review.archive.assignments[
+                        PrivatePhraseShortcuts.fingerprint(note)
+                    ] == importTopic)
+        }
+        val identities = chosenNotes.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
+        val chosenLinks = review.archive.assignments.filterKeys { it in identities }
+        val names = review.archive.topics.filter { it in chosenLinks.values }
+        val chosenArchive = PrivatePhraseArchive(chosenNotes, names, chosenLinks)
         AlertDialog(
             onDismissRequest = { importReview = null },
             title = { Text("Eigen CSV-zinnen én thema's controleren") },
@@ -366,11 +386,49 @@ internal fun PrivatePhraseTopicCsvAction(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
+                    Text("Kies welke zinnen je écht wilt overnemen. " +
+                        "Standaard worden alle geldige regels getoond. " +
+                        "Een gedeeltelijke selectie kan uitsluitend veilig samenvoegen.")
+                    TextButton(onClick = {
+                        importLanguage = null
+                        mergeOnly = true
+                    }) { Text(if (importLanguage == null) "✓ Alle drie talen" else "Alle drie talen") }
+                    listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe").forEach {
+                        (code, label) ->
+                        TextButton(onClick = {
+                            importLanguage = code
+                            mergeOnly = true
+                        }) { Text(if (importLanguage == code) "✓ " + label else label) }
+                    }
+                    TextButton(onClick = {
+                        importTopic = null
+                        mergeOnly = true
+                    }) { Text(if (importTopic == null) "✓ Alle thema's" else "Alle thema's") }
+                    TextButton(onClick = {
+                        importTopic = "__without__"
+                        mergeOnly = true
+                    }) {
+                        Text(if (importTopic == "__without__") "✓ Zonder thema"
+                            else "Zonder thema")
+                    }
+                    review.archive.topics.forEach { name ->
+                        TextButton(onClick = {
+                            importTopic = name
+                            mergeOnly = true
+                        }) { Text(if (importTopic == name) "✓ " + name else name) }
+                    }
+                    Text("Geselecteerd: " + chosenNotes.size +
+                        " van " + review.archive.notes.size + " eigen zinnen. " +
+                        "Alle onderstaande zinnen vormen exact de importpreview.",
+                        style = MaterialTheme.typography.labelMedium)
                     TextButton(onClick = { mergeOnly = true }) {
                         Text(if (mergeOnly) "☑ Voeg veilig alleen nieuwe toe"
                             else "☐ Voeg veilig alleen nieuwe toe")
                     }
-                    TextButton(onClick = { mergeOnly = false }) {
+                    TextButton(
+                        enabled = !scoped,
+                        onClick = { mergeOnly = false }
+                    ) {
                         Text(if (!mergeOnly) "☑ Vervang hele privé-lijst (destructief)"
                             else "☐ Vervang hele privé-lijst (destructief)")
                     }
@@ -387,7 +445,7 @@ internal fun PrivatePhraseTopicCsvAction(
                             else MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    review.archive.notes.forEachIndexed { i, note ->
+                    chosenNotes.forEachIndexed { i, note ->
                         HorizontalDivider()
                         Text((i + 1).toString() + ". " + note.language.uppercase() +
                             " → " + note.meaningLanguage.uppercase())
@@ -397,7 +455,7 @@ internal fun PrivatePhraseTopicCsvAction(
                         ))
                         Text("Eigen betekenis: " + note.ownMeaning,
                             style = MaterialTheme.typography.bodySmall)
-                        Text("Thema: " + (review.archive.assignments[
+                        Text("Thema: " + (chosenLinks[
                             PrivatePhraseShortcuts.fingerprint(note)
                         ] ?: "zonder thema"), style = MaterialTheme.typography.labelMedium)
                     }
@@ -407,14 +465,14 @@ internal fun PrivatePhraseTopicCsvAction(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val saved = if (mergeOnly) {
+                TextButton(enabled = chosenNotes.isNotEmpty(), onClick = {
+                    val saved = if (mergeOnly || scoped) {
                         deck.mergeArchiveIfUnchanged(
-                            context, review.archive, review.originalNotes, review.originalTopics
+                            context, chosenArchive, review.originalNotes, review.originalTopics
                         )
                     } else {
                         deck.replaceArchiveIfUnchanged(
-                            context, review.archive, review.originalNotes, review.originalTopics
+                            context, chosenArchive, review.originalNotes, review.originalTopics
                         )
                     }
                     if (saved) onChanged()
