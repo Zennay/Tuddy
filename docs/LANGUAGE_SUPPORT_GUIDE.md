@@ -1,6 +1,6 @@
 # Taalondersteuning in Tuddy
 
-Open in de app **Taal- en modelinstellingen → Bekijk alle taalondersteuning**. Het overzicht is doorzoekbaar op taalcode, Engelse of eigen naam, Nederlandse naam en veelgebruikte aliassen; accenten zijn niet vereist.
+Open in de app **Taal- en modelinstellingen → Bekijk alle taalondersteuning**. Het overzicht is doorzoekbaar op taalcode, Engelse of eigen naam, Nederlandse naam, aliassen, modelkaartnaam, modelcategorie, gedeclareerde licentie en modelomvang; accenten zijn niet vereist. Zoeken naar een model toont de talen waarvoor die onderzoekskandidaat relevant is, maar maakt het model niet beschikbaar of gedownload.
 
 ## Drie aparte categorieën
 
@@ -19,6 +19,8 @@ De app voert geen automatische cloudspraakfallback uit. Het overzicht downloadt 
 - Volledige Kurmanji/Sorani/Pasjtoe-ondersteuning vereist een geschikt gelicentieerd on-device model, native-speakerbeoordeling en fysieke vliegtuigmodusacceptatie.
 
 De gids is informatief en doorzoekbaar; zij vervangt geen toestelcontrole, modellicentiecontrole of native-speakerbeoordeling.
+
+Bij een zoekopdracht op modelnaam, licentie of technische beperking toont Tuddy alleen de bijpassende modelkaarten. **Kopieer gefilterde onderzoeksresultaten** kopieert uitsluitend de openbare kandidaatmetadata, modelkaartlinks, gedeclareerde licenties, omvang en bekende beperkingen (maximaal 16.000 tekens). De zoektekst, eigen zinnen, transcripties en audio worden niet gekopieerd. Dit downloadt of activeert geen model.
 
 ## Modelonderzoek: concrete kandidaten, nog geen ondersteuning
 
@@ -82,3 +84,10 @@ Dit is een expliciete licentie-/dialectwaarschuwing, geen juridische conclusie o
 **Niet als ondersteund beschouwen:** `kur_Arab`/`kur_Latn` zijn generieke taal-/schriftcodes en geen bewijs van native-speaker-goedgekeurde Sorani- of Kurmanji-kwaliteit; `pus` moet naar Tuddy's Pasjtoe-code worden gemapt. De modelkaart biedt geen bruikbare paar-specifieke kwaliteitsmeting voor deze dialecten, en corpus-/trainingsdatarechten zijn niet onafhankelijk geauditeerd. De Android-runtime, tokenizer, doelprefix, kwantisatie, geheugen, snelheid, batterij en daadwerkelijke offline werking zijn niet gevalideerd. Geen modelbestanden worden gedownload of ingebouwd door deze kaart.
 
 **Concrete vervolgstap voor issue #2:** controleer eerst de upstream model-/corpusrechten en taalcode-/prefixmapping; bepaal daarna of de ~266 MB gewichten met de bijbehorende tokenizer naar een bruikbare, permissief gelicentieerde Android-pack kunnen worden geconverteerd. Pas daarna native-speakerreview en echte offline-toestelacceptatie. Tot die bewijzen bestaan blijven Kurmanji, Sorani en Pasjtoe preview-only.
+
+
+## Runtime lead — preconverted INT8 ONNX OPUS-MT
+
+[SashaSobchuk/opus-mt-onnx-int8](https://huggingface.co/SashaSobchuk/opus-mt-onnx-int8) publishes quantized ONNX model folders for local/on-device translation and lists an `opus-mt-ine-ine` folder. Its card says each language direction was checked only on sample words and points to a `pairs_map.json` for directions that produced output. This may reduce Android runtime/conversion work compared with converting the original 536 MB repository from scratch.
+
+**Still not ready to ship:** the conversion repository declares CC-BY-4.0 and says the source models are CC-BY-4.0, while the official [Helsinki-NLP/opus-mt-ine-ine](https://huggingface.co/Helsinki-NLP/opus-mt-ine-ine) card declares Apache-2.0. That metadata/provenance mismatch is unresolved. The exact `kur_Arab`, `kur_Latn`, `pus`, `nld` and `eng` direction entries in `pairs_map.json`, model hashes and actual sentence quality have not been confirmed. Do not bundle, download or activate this converted pack until source/license provenance and exact direction coverage are clear, then native-speaker and real Android offline behavior are reviewed.
