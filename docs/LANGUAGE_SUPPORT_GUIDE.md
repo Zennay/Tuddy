@@ -20,7 +20,7 @@ De app voert geen automatische cloudspraakfallback uit. Het overzicht downloadt 
 
 De gids is informatief en doorzoekbaar; zij vervangt geen toestelcontrole, modellicentiecontrole of native-speakerbeoordeling.
 
-Bij een zoekopdracht op modelnaam, licentie of technische beperking toont Tuddy alleen de bijpassende modelkaarten. **Kopieer gefilterde onderzoeksresultaten** kopieert uitsluitend de openbare kandidaatmetadata, modelkaartlinks, gedeclareerde licenties, omvang en bekende beperkingen (maximaal 16.000 tekens). De zoektekst, eigen zinnen, transcripties en audio worden niet gekopieerd. Dit downloadt of activeert geen model.
+Bij een zoekopdracht op modelnaam, licentie of technische beperking toont Tuddy alleen de bijpassende modelkaarten. Het onderzoeksdeel heeft daarnaast een taakfilter: **Alle modellen**, **Spraak → tekst (ASR)** of **Tekstvertaling (MT)**. Dit maakt het makkelijker om een mogelijke spraakherkenningsstap te onderscheiden van een vertaalmodel; het maakt een kandidaat niet beschikbaar of gevalideerd. **Kopieer gefilterde onderzoeksresultaten** kopieert uitsluitend de zichtbare kandidaatmetadata binnen de huidige zoekopdracht en het gekozen taakfilter, inclusief modelkaartlinks, gedeclareerde licenties, omvang, taalrichtingsnotities en bekende beperkingen (maximaal 16.000 tekens). De zoektekst, eigen zinnen, transcripties en audio worden niet gekopieerd. Dit downloadt of activeert geen model.
 
 ## Modelonderzoek: concrete kandidaten, nog geen ondersteuning
 
