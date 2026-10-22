@@ -27,9 +27,7 @@ internal object PrivateOwnWordCsvUriRoute {
                         if (prefix.take(length).any { it == '\n'.code.toByte() }) break
                     }
                     val text = prefix.copyOf(length).toString(Charsets.UTF_8)
-                        .removePrefix("\uFEFF")
-                    text.startsWith("language,word,meaning\r\n") ||
-                        text.startsWith("language,word,meaning\n")
+                    PrivateOwnWordCsvHeader.matches(text)
                 } ?: false
             } catch (_: Exception) { false }
         }

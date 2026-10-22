@@ -79,10 +79,7 @@ internal object SharedPlainTextIntent {
                 // the private word preview, never the translation field.
                 // The panel will perform full strict UTF-8, 50KB, column and
                 // word validation; even malformed rows never auto-import.
-                val csv = candidate.removePrefix("\uFEFF")
-                if (csv.startsWith("language,word,meaning\r\n") ||
-                    csv.startsWith("language,word,meaning\n") ||
-                    csv.startsWith("language,word,meaning\r")) {
+                if (PrivateOwnWordCsvHeader.matches(candidate)) {
                     return if (bytes.size <= PrivateOwnWordDeck.MAX_BACKUP_BYTES) {
                         IncomingSharedText(null, null, ownWordCsvText = candidate)
                     } else {
