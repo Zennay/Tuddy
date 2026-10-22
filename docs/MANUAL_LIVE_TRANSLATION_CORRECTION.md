@@ -1,6 +1,8 @@
 # Handmatig een live vertaling corrigeren
 
-Open bij een afgeronde gespreksregel **⋯ Corrigeer, maak privékaart en meer** en kies **Corrigeer vertaling**.
+Open bij een afgeronde gespreksregel **⋯ Corrigeer, maak privékaart en meer** en kies **Corrigeer vertaling**. Je kunt nu ook rechtstreeks in **⛶ Leesmodus** op **✎ Corrigeer deze vertaling…** tikken bij een afgeronde, lokaal vertaalde livegespreksregel. De grote leesmodus sluit dan en opent precies dezelfde bestaande veilige correctiedialoog.
+
+De knop is afwezig terwijl de microfoon luistert, bij voorlopige/onvoltooide vertalingen en in het bewust geopende **alleen-lezen privéarchief**. Een archiefregel kan hierdoor nooit een livegespreksregel corrigeren.
 
 - Pas alleen de vertaalde tekst aan; de oorspronkelijke herkende zin blijft intact.
 - **Bewaar correctie** past de tekst uitsluitend aan in de huidige tijdelijke gespreksregel. Tuddy start hiervoor geen nieuwe automatische vertaling.
