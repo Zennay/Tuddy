@@ -15,6 +15,22 @@ internal class SessionTranslationCorrections {
     companion object {
         const val MAX_ENTRIES = 40
         const val MAX_TEXT_UNITS = 400
+
+        /** Import must be all-or-nothing: reject duplicates, invalid codes and bad UTF-16. */
+        fun validEntries(entries: List<SessionTranslationCorrection>): Boolean {
+            if (entries.size > MAX_ENTRIES) return false
+            val candidate = SessionTranslationCorrections()
+            for (entry in entries) {
+                if (listOf(entry.original, entry.translation).any { value ->
+                        value.toByteArray(Charsets.UTF_8).toString(Charsets.UTF_8) != value
+                    }) return false
+                if (!candidate.remember(
+                        entry.original, entry.translation, entry.sourceCode, entry.targetCode
+                    )) return false
+            }
+            // Duplicate exact keys must not silently overwrite another imported correction.
+            return candidate.entries() == entries
+        }
     }
 
     private val items = mutableListOf<SessionTranslationCorrection>()
@@ -66,6 +82,14 @@ internal class SessionTranslationCorrections {
                     item.targetCode == previous.targetCode
             }) return false
         items[index] = previous.copy(original = original, translation = translation)
+        return true
+    }
+
+    /** Explicitly replace only RAM suggestions after user review, never persisted. */
+    fun replaceAll(entries: List<SessionTranslationCorrection>): Boolean {
+        if (!validEntries(entries)) return false
+        items.clear()
+        items.addAll(entries)
         return true
     }
 
