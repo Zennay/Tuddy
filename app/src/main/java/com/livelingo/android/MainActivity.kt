@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.PersistableBundle
 import android.provider.Settings
 import android.view.WindowManager
@@ -715,6 +716,9 @@ private fun TuddyScreen(
         }
     }
     var offlineReportPickerOpen by remember { mutableStateOf(false) }
+    // Only event counts and monotonic durations live in RAM, never speech/text.
+    var sessionDiagnostics by remember { mutableStateOf(OfflineSessionDiagnostics()) }
+    val speechTranslationStarted = remember { mutableMapOf<Long, Long>() }
     // Return to the explicit startcheck only after the user opened Android speech settings.
     var pendingSpeechSettingsReturnTag by remember { mutableStateOf<String?>(null) }
     var languageSupportOpen by remember { mutableStateOf(false) }
@@ -891,7 +895,32 @@ private fun TuddyScreen(
     fun updateLine(id: Long, translation: String, status: String, token: Int, revision: Int) {
         if (!translationStillRelevant(id, token, revision)) return
         val index = lines.indexOfFirst { it.id == id }
-        if (index >= 0) lines[index] = lines[index].copy(translated = translation, status = status)
+        if (index >= 0) {
+            lines[index] = lines[index].copy(translated = translation, status = status)
+            // Only completed *speech-origin* translations count, never typed
+            // turns, editing, pending interim text or superseded callbacks.
+            if (status in setOf("Lokaal", "Lokaal vertaald", "Model ontbreekt", "Fout")) {
+                val beganAt = speechTranslationStarted.remove(id)
+                if (beganAt != null) {
+                    sessionDiagnostics = when (status) {
+                        "Lokaal vertaald" -> sessionDiagnostics.copy(
+                            localTranslations = sessionDiagnostics.localTranslations + 1,
+                            translationLatenciesMs = (
+                                sessionDiagnostics.translationLatenciesMs +
+                                    (SystemClock.elapsedRealtime() - beganAt).coerceAtLeast(0L)
+                            ).takeLast(10)
+                        )
+                        "Model ontbreekt" -> sessionDiagnostics.copy(
+                            missingTextModels = sessionDiagnostics.missingTextModels + 1
+                        )
+                        "Fout" -> sessionDiagnostics.copy(
+                            translationFailures = sessionDiagnostics.translationFailures + 1
+                        )
+                        else -> sessionDiagnostics // Same-language echo is not MT.
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -1065,6 +1094,8 @@ private fun TuddyScreen(
             appendLine("Text model state: ${textReceipt.stage}")
             appendLine("Text model detail: ${textReceipt.detail}")
             appendLine("Listening at export: $listening")
+            appendLine("Session counters: RAM only; not physical validation")
+            sessionDiagnostics.asReportLines().forEach { appendLine(it) }
             appendLine("Transcript/audio included: no")
         }
         report.toByteArray(Charsets.UTF_8).takeIf { it.size in 1..8192 }
@@ -1672,9 +1703,15 @@ private fun TuddyScreen(
                     val retry = ContinuousSpeechRestartPolicy.delayForError(
                         code, SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
                     if (retry != null) {
+                        sessionDiagnostics = sessionDiagnostics.copy(
+                            retryableSpeechErrors = sessionDiagnostics.retryableSpeechErrors + 1
+                        )
                         scheduleRestart(voiceToken, retry) { start(forceRestart = true) }
                     } else {
                         stop() // never retry permissions, unsupported languages or unknown errors
+                        sessionDiagnostics = sessionDiagnostics.copy(
+                            terminalSpeechErrors = sessionDiagnostics.terminalSpeechErrors + 1
+                        )
                         error = "Offline spraakherkenning niet beschikbaar of onderbroken (code $code). Controleer het gedownloade spraakpakket."
                     }
                 }
@@ -1685,6 +1722,10 @@ private fun TuddyScreen(
                     clearInterim()
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
+                        sessionDiagnostics = sessionDiagnostics.copy(
+                            finalUtterances = sessionDiagnostics.finalUtterances + 1
+                        )
+                        speechTranslationStarted[id] = SystemClock.elapsedRealtime()
                         lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
                         // Only real completed speech recognition triggers a short cue:
                         // not interim results, typed text, retries or translations.
@@ -1695,6 +1736,7 @@ private fun TuddyScreen(
                         // translationStillRelevant(lines.any { it.id == id }).
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             val removed = lines.removeAt(0)
+                            speechTranslationStarted.remove(removed.id)
                             captionPins = captionPins - removed.id
                             pinnedStudyEdits.remove(removed.id)
                             manuallyAssignedSpeakers.remove(removed.id)
@@ -1727,6 +1769,11 @@ private fun TuddyScreen(
                         val latest = SpeechHypothesisPolicy.select(
                             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
                         if (latest != partial) {
+                            if (latest.isNotBlank()) {
+                                sessionDiagnostics = sessionDiagnostics.copy(
+                                    interimUpdates = sessionDiagnostics.interimUpdates + 1
+                                )
+                            }
                             partial = latest
                             prepareInterim(latest, observedSource, selectedTarget, voiceToken, token)
                         }
@@ -1749,6 +1796,11 @@ private fun TuddyScreen(
             }
             speech.startListening(intent)
             listening = true
+            if (!forceRestart) {
+                sessionDiagnostics = sessionDiagnostics.copy(
+                    listeningStarts = sessionDiagnostics.listeningStarts + 1
+                )
+            }
             // Continuous speech recognizer restarts must NOT extend a
             // user-chosen capture deadline. Only the original tap arms it.
             if (!forceRestart && !microphoneLimit.arm {
@@ -2979,11 +3031,29 @@ private fun TuddyScreen(
                 onDownloadSpeech = { downloadSpeechPackNow() },
                 onCancelSpeech = { cancelSpeechPackFollow() },
                 onOpenSpeechSettings = { openSpeechSettings() },
+                onOpenAirplaneSettings = {
+                    if (!listening) {
+                        runCatching {
+                            context.startActivity(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS))
+                        }.onFailure {
+                            error = "Android-vliegtuigmodusinstellingen konden niet worden geopend. " +
+                                "Open ze handmatig en controleer wifi en bluetooth afzonderlijk."
+                        }
+                    }
+                },
                 onBrowseSpeechPacks = {
                     offlineReadinessOpen = false
                     speechCatalogOpen = true
                 },
                 onCopyDiagnostics = { copyOfflineReadinessReport() },
+                sessionDiagnostics = sessionDiagnostics,
+                onResetSessionCounters = {
+                    // Reset is manual and blocked during active recording by the dialog.
+                    if (!listening) {
+                        sessionDiagnostics = OfflineSessionDiagnostics()
+                        speechTranslationStarted.clear()
+                    }
+                },
                 onReportSnapshot = { offlineReadinessReportSnapshot() },
                 onReportPickerStarted = { offlineReportPickerOpen = true },
                 onReportPickerFinished = { offlineReportPickerOpen = false },
@@ -6295,6 +6365,7 @@ private fun TuddyScreen(
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
+        speechTranslationStarted.clear()
                         manuallyAssignedSpeakers.clear()
                         captionPins = emptySet()
                         pinnedChosenIds = null
