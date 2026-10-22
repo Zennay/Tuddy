@@ -26,15 +26,18 @@ Latest app-code candidate (22 October 2026, after PR #324):
 
 The PR #324 Android workflow built proposed-merge checkout `a322a1f…`; its full Git tree SHA `c2c9860…` is identical to merged default-branch PR #324 commit `2cd2183…`. The workflow verified the APK SHA-256 before upload. The artifact ZIP digest is a separate digest and must never be substituted for the APK digest. This proves build provenance only, not physical installation or offline-device acceptance.
 
-After downloading the artifact ZIP, verify the ZIP itself before extracting it:
+From a Tuddy source checkout, after downloading the artifact ZIP as `artifact.zip`, run the reusable integrity verifier:
 
 ```sh
-echo '9fd7e5c6f1d5a6de3932eb18d9f43b8dba5101ed97afa5f0cb1b888eb27c9eed  artifact.zip' | sha256sum --check -
-unzip artifact.zip
-echo '6af97fe6275cfbcb9579b691fad03e7c78645d1164034a17252cf9cba292a915  app-debug.apk' | sha256sum --check -
+bash scripts/verify-tuddy-apk-artifact.sh \
+  artifact.zip \
+  9fd7e5c6f1d5a6de3932eb18d9f43b8dba5101ed97afa5f0cb1b888eb27c9eed \
+  6af97fe6275cfbcb9579b691fad03e7c78645d1164034a17252cf9cba292a915 \
+  a322a1fd07f110aefed48fde969d5d7bbbafaf90 \
+  39724071919
 ```
 
-Keep the two checks separate: the first checks the downloaded ZIP, the second the extracted APK. Only after the APK check passes should an authorized tester install it and record the physical-device evidence below.
+The helper checks the ZIP digest before extraction, rejects archive path-traversal entries, verifies the APK and its checksum sidecar, and cross-checks the embedded build manifest, source commit and workflow run ID. It deliberately reports integrity only; it does not claim physical installation or offline acceptance. Only after verification should an authorized tester install the APK and record the device evidence below.
 
 Previous app-code candidate (22 October 2026, after PR #318 and before PR #320):
 
