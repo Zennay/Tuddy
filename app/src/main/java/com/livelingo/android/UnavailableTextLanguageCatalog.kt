@@ -208,8 +208,9 @@ internal object UnavailableTextLanguageCatalog {
                     declaredLicense = "Apache-2.0 volgens modelkaart",
                     footprint = "modelbestand circa 967 MB",
                     limitation = "Modelkaart noemt Common Voice Kurmanji, maar geen datasetversie of evaluatiescore. " +
-                        "Trainingsdatarechten, dialectnauwkeurigheid, latency en geheugenbeslag zijn niet onafhankelijk geverifieerd. " +
-                        "Niet geïntegreerd of op Android getest."
+                        "Mozilla Data Collective publiceert Common Voice Kurmanji 26.0 onder CC0-1.0, maar zonder release-ID " +
+                        "is niet bewezen dat deze gewichten precies die versie gebruiken. Trainingsdatarechten, dialectnauwkeurigheid, " +
+                        "latency en geheugenbeslag zijn niet onafhankelijk geverifieerd. Niet geïntegreerd of op Android getest."
                 ),
                 kurmanjiCompactResearchCandidate,
                 kurmanjiWav2VecResearchCandidate
