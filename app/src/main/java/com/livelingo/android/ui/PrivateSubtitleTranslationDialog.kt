@@ -492,9 +492,16 @@ internal fun PrivateSubtitleTranslationDialog(
                 TextButton(
                     enabled = receipt?.stage == OfflineTextStage.READY &&
                         sourceCode.isNotBlank() && targetCode.isNotBlank() &&
-                        sourceCode != targetCode && !checking && !translating,
+                        sourceCode != targetCode && selectedIndices.isNotEmpty() &&
+                        !detectingSource && !checking && !translating,
                     onClick = { startTranslation() }
-                ) { Text(if (translating) "Vertalen…" else "Vertaal ${selectedIndices.size} regels") }
+                ) {
+                    Text(when {
+                        translating -> "Vertalen…"
+                        selectedIndices.isEmpty() -> "Kies geldig bereik"
+                        else -> "Vertaal ${selectedIndices.size} regels"
+                    })
+                }
             }
         },
         dismissButton = {
