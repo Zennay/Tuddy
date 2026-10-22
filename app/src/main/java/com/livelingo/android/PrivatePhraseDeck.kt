@@ -351,6 +351,40 @@ internal class PrivatePhraseDeck(context: Context) {
         }
     }
 
+    /**
+     * Export only a consciously selected subset as user-editable CSV; never
+     * silently include the rest of a private phrase collection.
+     * Round-trip through our strict CSV parser before offering document bytes.
+     * No topics, review dates, favorites, transcripts or model output are included.
+     */
+    @Synchronized
+    fun exportCsvSelectionSnapshot(selection: List<PersonalPhrase>): ByteArray? {
+        if (selection.isEmpty() || selection.size > MAX_ROWS ||
+            selection.toSet().size != selection.size) return null
+        val saved = entries() ?: return null
+        if (!saved.containsAll(selection)) return null
+        val selected = selection.toSet()
+        val rows = saved.filter { it in selected }
+        if (rows.size != selection.size) return null
+
+        fun csvCell(value: String): String =
+            if (value.contains(',') || value.contains('"')) {
+                "\"" + value.replace("\"", "\"\"") + "\""
+            } else value
+        val text = buildString {
+            append("language,phrase,meaningLanguage,ownMeaning\n")
+            rows.forEach { note ->
+                append(csvCell(note.language)).append(',')
+                append(csvCell(note.phrase)).append(',')
+                append(csvCell(note.meaningLanguage)).append(',')
+                append(csvCell(note.ownMeaning)).append('\n')
+            }
+        }
+        return text.toByteArray(Charsets.UTF_8).takeIf { bytes ->
+            bytes.size <= MAX_JSON && previewCsvImport(bytes) == rows
+        }
+    }
+
     private fun validArchiveTopic(value: String): Boolean =
         value.length in 1..30 && value == value.trim() &&
             !value.startsWith("__") && value.none { character ->
