@@ -1,6 +1,7 @@
 package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -48,13 +51,34 @@ internal fun SessionCorrectionPracticeDialog(
     var retryOnly by remember { mutableStateOf(false) }
     var reverse by remember { mutableStateOf(false) }
     var speechMessage by remember { mutableStateOf("") }
-    val batch = if (retryOnly) retryCards else snapshot.drop(offset).take(12)
+    var pairMenuOpen by remember { mutableStateOf(false) }
+    var selectedPair by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val pairs = snapshot.map { it.sourceCode to it.targetCode }.distinct()
+    val filtered = if (selectedPair == null) snapshot else snapshot.filter {
+        (it.sourceCode to it.targetCode) == selectedPair
+    }
+    val batch = if (retryOnly) retryCards else filtered.drop(offset).take(12)
     val current = batch.getOrNull(currentIndex)
     val prompt = current?.let { if (reverse) it.translation else it.original }
     val answer = current?.let { if (reverse) it.original else it.translation }
     val promptLang = current?.let { if (reverse) it.targetCode else it.sourceCode }
     val answerLang = current?.let { if (reverse) it.sourceCode else it.targetCode }
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
+
+    fun selectPair(pair: Pair<String, String>?) {
+        speaker.stop()
+        selectedPair = pair
+        pairMenuOpen = false
+        offset = 0
+        currentIndex = 0
+        revealed = false
+        recalled = 0
+        toRepeat = 0
+        hardCards = emptyList()
+        retryCards = emptyList()
+        retryOnly = false
+        speechMessage = ""
+    }
 
     fun advance(known: Boolean) {
         speaker.stop()
@@ -83,7 +107,32 @@ internal fun SessionCorrectionPracticeDialog(
                         "Je antwoorden worden nergens bewaard.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                if (snapshot.isEmpty()) {
+                if (snapshot.isNotEmpty()) {
+                    Box {
+                        TextButton(onClick = { pairMenuOpen = true }) {
+                            val selected = selectedPair
+                            Text("Oefen taalpaar: " +
+                                (if (selected == null) "Alle" else
+                                    selected.first + " → " + selected.second) + " ▾")
+                        }
+                        DropdownMenu(
+                            expanded = pairMenuOpen,
+                            onDismissRequest = { pairMenuOpen = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Alle taalparen") },
+                                onClick = { selectPair(null) }
+                            )
+                            pairs.forEach { pair ->
+                                DropdownMenuItem(
+                                    text = { Text(pair.first + " → " + pair.second) },
+                                    onClick = { selectPair(pair) }
+                                )
+                            }
+                        }
+                    }
+                }
+                if (filtered.isEmpty()) {
                     Text("Er zijn nog geen eigen correcties om te oefenen.")
                 } else if (current == null) {
                     Text(
@@ -108,8 +157,8 @@ internal fun SessionCorrectionPracticeDialog(
                         ) { Text("Herhaal mijn moeilijke zinnen (" +
                             hardCards.size + ")") }
                     }
-                    val normalSize = snapshot.drop(offset).take(12).size
-                    val hasNextBatch = offset + normalSize < snapshot.size
+                    val normalSize = filtered.drop(offset).take(12).size
+                    val hasNextBatch = offset + normalSize < filtered.size
                     Button(
                         onClick = {
                             speaker.stop()
@@ -150,7 +199,7 @@ internal fun SessionCorrectionPracticeDialog(
                     Text(
                         "Kaart " + (if (retryOnly) currentIndex + 1 else
                             offset + currentIndex + 1) + " van " +
-                            (if (retryOnly) batch.size else snapshot.size) + " · " +
+                            (if (retryOnly) batch.size else filtered.size) + " · " +
                             promptLang + " → " + answerLang +
                             (if (retryOnly) " · moeilijke zinnen" else ""),
                         style = MaterialTheme.typography.labelMedium
