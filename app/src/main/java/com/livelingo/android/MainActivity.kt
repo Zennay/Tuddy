@@ -7892,6 +7892,35 @@ private fun TuddyScreen(
                                             correctionNotice = ""
                                         }
                                     ) { Text("✎ Corrigeer vertaling") }
+                                    translationMemoryRevision
+                                    val ownSuggestion = translationMemory.suggest(
+                                        line.original, line.sourceCode, line.targetCode
+                                    )?.takeIf { it != line.translated &&
+                                        line.status in setOf("Lokaal", "Lokaal vertaald") }
+                                    if (ownSuggestion != null) {
+                                        Text("Eerdere eigen correctie beschikbaar · niet door model gecontroleerd",
+                                            style = MaterialTheme.typography.bodySmall)
+                                        TextButton(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            enabled = !listening,
+                                            onClick = {
+                                                // Open the existing revision-checked dialog;
+                                                // the user must still inspect and confirm.
+                                                val current = lines.firstOrNull { it.id == line.id }
+                                                if (current != null && !listening &&
+                                                    current.translationRevision == line.translationRevision &&
+                                                    current.original == line.original &&
+                                                    current.sourceCode == line.sourceCode &&
+                                                    current.targetCode == line.targetCode) {
+                                                    editingTranslationId = line.id
+                                                    translationCorrectionBaseline = current.translated
+                                                    translationCorrectionRevision = current.translationRevision
+                                                    translationCorrectionGeneration = generation
+                                                    translationCorrectionDraft = ownSuggestion
+                                                }
+                                            }
+                                        ) { Text("↳ Bekijk mijn vorige correctie") }
+                                    }
                                     TextButton(
                                         modifier = Modifier.fillMaxWidth(),
                                         enabled = !listening && line.original.isNotBlank(),
