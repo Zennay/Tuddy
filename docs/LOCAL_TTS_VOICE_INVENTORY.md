@@ -5,13 +5,14 @@ Open **Taalondersteuning → Controleer lokale stemmen** om de stemmen te bekijk
 ## Stem bekijken en kiezen
 
 - Tuddy toont alle gevonden geïnstalleerde lokale stemvarianten met locale-tag en engine-ID. Gebruik het zoekveld om te filteren op stemnaam, taal/regio of engine-ID; het aantal treffers en het totaal blijven zichtbaar. Netwerkafhankelijke en nog niet geïnstalleerde stemmen worden uitgesloten.
-- Tik bij een stem op **Gebruik deze stem** om die als lokale voorkeur voor de betreffende taal in te stellen. De voorkeur geldt voor alle Tuddy-voorleesfuncties die die taal gebruiken.
+- Tik op **Luister** om een korte vaste voorbeeldzin af te spelen via precies die geïnstalleerde lokale stem. **Stop stemproef** beëindigt het afspelen; de zoekopdracht wijzigen of het venster sluiten stopt de proef ook.
+- Tik op **Gebruik deze stem** om die als lokale voorkeur voor de betreffende taal in te stellen. De voorkeur geldt voor alle Tuddy-voorleesfuncties die die taal gebruiken.
 - **Automatische stemkeuze herstellen** wist de expliciet gekozen stemvoorkeuren en laat Tuddy weer automatisch een passende lokale stem kiezen.
 - De voorkeursstem wordt alleen in de private app-instellingen op dit toestel opgeslagen. Er wordt geen tekst, audio, transcript of gebruiksgeschiedenis bewaard.
 - **Android-toegankelijkheidsinstellingen** opent, als Android dit ondersteunt, het systeemscherm. Open daar **Tekst-naar-spraakuitvoer** (de benaming verschilt per Android-versie), beheer stemmen zelf en voer daarna de controle opnieuw uit.
 
 ## Wat de lijst betekent
 
-De inventaris leest alleen metadata van de Android TTS-dienst. Tijdens de controle wordt niets uitgesproken, geen stem gedownload en geen voorkeur gewijzigd. Een vermelde stem bewijst alleen dat Android een reeds geïnstalleerde lokale TTS-stem meldt. Het bewijst niet dat offline spraakherkenning (ASR), machinevertaling (MT), dialectkwaliteit of een volledige vliegtuigmoduservaring werkt.
+De inventaris leest alleen metadata van de Android TTS-dienst en spreekt tijdens de inventariscontrole niets uit. Alleen na een expliciete tik op **Luister** wordt de vaste voorbeeldzin “Tuddy voice preview.” afgespeeld, en alleen als exact die stem nog als lokaal geïnstalleerd en niet-netwerkafhankelijk beschikbaar is. De preview gebruikt geen eigen tekst, downloadt geen stem, wijzigt geen voorkeur en slaat geen audio of tekst op. Een stemproef laat de klank horen, maar bewijst geen uitspraakskwaliteit of taalondersteuning. Het bewijst niet dat offline spraakherkenning (ASR), machinevertaling (MT), dialectkwaliteit of een volledige vliegtuigmoduservaring werkt.
 
 Taalondersteuning kan per apparaat, TTS-engine en stem verschillen. Tuddy gebruikt geen online spraakfallback; als de gekozen stem niet lokaal beschikbaar is, wordt de voorleesactie geweigerd en wordt niet stilzwijgend naar een netwerkstem overgeschakeld.
