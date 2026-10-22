@@ -136,3 +136,10 @@ volledige importbestand. Voor een merge/vervanging gebruikt Tuddy alleen
 het uiteindelijke selectie-overzicht en blijven de bestaande
 expliciete conflictkeuzes, maximale 40 zinnen en tijdelijke Undo geldig.
 Geen automatische of gedeeltelijke import.
+
+
+Dezelfde zoek- en selectiemogelijkheden bestaan ook in **Kies zinnen
+voor export…**: filter op tekst of taalpaar, vink een eigen zin aan,
+kies alleen de zichtbare regels of haal ze uit de selectie. Ook daar
+blijven verborgen aangevinkte correcties geselecteerd en zie je het
+totaal vóór je bewust een JSON-, CSV- of afdrukbaar HTML-document maakt.
