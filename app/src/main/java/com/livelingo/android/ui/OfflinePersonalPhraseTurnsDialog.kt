@@ -218,12 +218,28 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                             TextDirection.Rtl else TextDirection.Ltr))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = { tableTurn = index }) {
-                            Text("↕ Toon deze beurt aan beide kanten")
+                            Text("↕ Toon aan beide kanten")
+                        }
+                        TextButton(enabled = index > 0, onClick = {
+                            val reordered = turns.toMutableList()
+                            val moved = reordered.removeAt(index)
+                            reordered.add(index - 1, moved)
+                            turns = reordered
+                        }) {
+                            Text("↑")
+                        }
+                        TextButton(enabled = index < turns.lastIndex, onClick = {
+                            val reordered = turns.toMutableList()
+                            val moved = reordered.removeAt(index)
+                            reordered.add(index + 1, moved)
+                            turns = reordered
+                        }) {
+                            Text("↓")
                         }
                         TextButton(onClick = {
                             turns = turns.filterIndexed { i, _ -> i != index }
                         }) {
-                            Text("Verwijder beurt")
+                            Text("Verwijder")
                         }
                     }
                     TextButton(onClick = { shown = note }) {
