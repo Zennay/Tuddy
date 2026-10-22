@@ -18,7 +18,10 @@ appears in the device snapshot.
 
 The form records five explicit confirmations, aggregate successful-observation
 counts for NL→EN and EN→NL speech and translation (each 0–10), and the highest
-observed latency in milliseconds. It has no free-text notes field and never asks
+observed latency in milliseconds. A complete record is impossible unless the
+installed base APK SHA-256 is a valid 64-hex digest and Android reports airplane
+mode enabled in the captured device snapshot; those controls are disabled when
+the corresponding device evidence is missing. It has no free-text notes field and never asks
 for sample phrases, transcript content or audio. A partial or failed session can
 also be saved; the report labels it incomplete rather than inventing a pass.
 
