@@ -281,3 +281,32 @@ tussen preview en bevestiging veranderd, dan wordt de volledige
 bewerking geweigerd. Een gedeeltelijke import kan niet de hele
 privélijst vervangen. Alle wijzigingen zijn handmatig, lokaal en
 zonder automatische cloudvertaling.
+
+
+## Laatste geïmporteerde CSV tijdelijk ongedaan maken
+
+Direct na een geslaagde CSV-import via Documenten of handmatig plakken
+kan **↶ Maak de laatste CSV-import ongedaan…** verschijnen. In een
+aparte volledige preview zie je alle zinnen en betekenissen die terug
+zouden komen, inclusief hun oorspronkelijke aantal. Pas na expliciet
+**Herstel eerdere privégegevens** wordt de vorige toestand teruggezet.
+
+De app bewaart hiervoor uitsluitend **tijdens deze geopende
+gebruikerssessie in RAM** een momentopname van precies de zes
+privézin-velden: zinnen, themanamen, themakoppelingen, favorieten,
+herhaalstatus en de opt-in op geplande herhaling. Geen transcript,
+audio, externe accountgegevens of onbekende appinstellingen worden
+gekopieerd. Dit is geen permanente back-up.
+
+De vorige zes velden worden in één opslagtransactie hersteld, maar
+**alleen als de huidige zes velden nog exact overeenkomen met de
+toestand direct na die import**. Is er intussen ook maar één zin,
+thema, favoriet of herhaalresultaat veranderd, dan weigert de app
+zonder gegevens te overschrijven. De knop wordt na één terugdraai-
+poging verwijderd; bij een volgende bewuste CSV-import wordt alleen
+de nieuwste import bewaard. Bij het sluiten van het scherm of de app
+vervalt de mogelijkheid.
+
+Voor langdurige overdracht blijft de bestaande opt-in
+JSON/CSV-archiefroute beschikbaar. De terugdraaifunctie doet geen
+netwerkverzoek en maakt geen automatische vertaling.
