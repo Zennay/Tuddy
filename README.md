@@ -1,3 +1,14 @@
+## Nieuw: herhaal alleen je lastige tijdelijke gespreksbeurten
+
+In de schermvullende offline tafelmodus kun je zelf een beurt als
+**lastig** markeren en via **Herhaal** alleen die beurten doorlopen.
+Tik opnieuw om een bekende beurt uit de selectie te halen. De
+markeringen bestaan uitsluitend in het huidige appgeheugen; er is
+geen automatische score, opslag of online spraak-/vertaalfunctie.
+[Uitleg](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: oefenen met een echte twee-persoons tafelmodus
 
 In de eigen offline zinnengesprekken kun je **Oefenmodus** kiezen:
