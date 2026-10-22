@@ -1,6 +1,7 @@
 package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -51,6 +54,7 @@ internal fun SessionTranslationCorrectionsDialog(
     var chosenCorrections by remember { mutableStateOf(emptySet<SessionTranslationCorrection>()) }
     var batchSnapshot by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
     var confirmBatch by remember { mutableStateOf(false) }
+    var bulkPairMenuOpen by remember { mutableStateOf(false) }
     var batchNotice by remember { mutableStateOf("") }
     var batchUndoBefore by remember {
         mutableStateOf<List<SessionTranslationCorrection>?>(null)
@@ -148,6 +152,36 @@ internal fun SessionTranslationCorrectionsDialog(
                             chosenCorrections = emptySet()
                             confirmBatch = false
                         }) { Text("Kies niets") }
+                    }
+                    val exactPairs = entries.map {
+                        it.sourceCode to it.targetCode
+                    }.distinct()
+                    if (exactPairs.size > 1) {
+                        Box {
+                            TextButton(
+                                enabled = batchSnapshot == entries,
+                                onClick = { bulkPairMenuOpen = true }
+                            ) { Text("Voeg één exact taalpaar toe… ▾") }
+                            DropdownMenu(
+                                expanded = bulkPairMenuOpen,
+                                onDismissRequest = { bulkPairMenuOpen = false }
+                            ) {
+                                exactPairs.forEach { pair ->
+                                    DropdownMenuItem(
+                                        text = { Text(pair.first + " → " + pair.second) },
+                                        onClick = {
+                                            chosenCorrections = chosenCorrections +
+                                                entries.filter { item ->
+                                                    item.sourceCode == pair.first &&
+                                                        item.targetCode == pair.second
+                                                }
+                                            confirmBatch = false
+                                            bulkPairMenuOpen = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                     if (batchSnapshot != entries) {
                         Text(
