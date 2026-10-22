@@ -1,10 +1,13 @@
 ## Nieuw: controleer geïnstalleerde lokale voorleesstemmen
 
-Open **Taalondersteuning → Controleer lokale stemmen** om de reeds
-geïnstalleerde Android-stemmen te bekijken die als niet-netwerkafhankelijk
-worden gemeld. Via **Android-toegankelijkheidsinstellingen** kun je zelf naar het
-systeemscherm gaan; open daar Tekst-naar-spraakuitvoer en controleer daarna opnieuw. Tuddy spreekt niets uit,
-downloadt geen stem en bewaart de lijst niet tijdens deze inventarisatie.
+Open **Taalondersteuning → Controleer lokale stemmen** om reeds
+geïnstalleerde, niet-netwerkafhankelijke Android-stemvarianten te bekijken.
+Kies met **Gebruik deze stem** een lokale voorkeursstem per taal; de voorkeur
+wordt alleen op dit toestel opgeslagen en geldt voor alle lokale Tuddy-
+voorleesfuncties. Met **Automatische stemkeuze herstellen** wis je deze
+voorkeuren. Via **Android-toegankelijkheidsinstellingen** kun je zelf naar
+Tekst-naar-spraakuitvoer gaan. De inventaris spreekt niets uit en downloadt
+geen stem.
 
 Dit gaat uitsluitend over lokale tekst-naar-spraak (voorlezen). Het bewijst
 geen offline spraakherkenning, machinevertaling, dialectkwaliteit of
