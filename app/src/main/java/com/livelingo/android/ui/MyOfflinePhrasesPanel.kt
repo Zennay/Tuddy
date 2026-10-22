@@ -67,6 +67,8 @@ internal fun MyOfflinePhrasesPanel(
     onIncomingCsvConsumed: (Long) -> Unit = {},
     incomingSharedCsvText: String? = null,
     onIncomingSharedCsvConsumed: (String) -> Unit = {},
+    incomingBackupJsonText: String? = null,
+    onIncomingBackupJsonConsumed: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     var language by remember { mutableStateOf(initialLanguage.takeIf {
@@ -252,6 +254,30 @@ internal fun MyOfflinePhrasesPanel(
             }
         }
     }
+    LaunchedEffect(incomingBackupJsonText) {
+        val shared = incomingBackupJsonText ?: return@LaunchedEffect
+        val bytes = shared.toByteArray(Charsets.UTF_8)
+        if (pendingImport != null || pasteOpen || pendingExport != null ||
+            pendingTsvExport != null || pendingCsvExport != null || pendingPrintable != null) {
+            info = "Er staat al een eigen-zinnenimport of export open. Sluit die eerst en deel opnieuw; " +
+                "de huidige selectie is behouden."
+        } else {
+            val candidate = deck.previewImport(bytes)
+            val baseline = deck.entries()
+            if (candidate == null || baseline == null) {
+                info = "Gedeelde Tuddy-zinnenback-up geweigerd: ongeldige versie, zinnen of bestandsgrootte. " +
+                    "Er is niets gewijzigd."
+            } else {
+                importSource = "json"
+                pendingImport = candidate
+                pendingImportBase = baseline.toList()
+                info = "Gedeelde Tuddy-zinnenback-up ontvangen. Controleer de volledige lijst; " +
+                    "er is nog niets geïmporteerd."
+            }
+        }
+        onIncomingBackupJsonConsumed(shared)
+    }
+
     val openTsv = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
