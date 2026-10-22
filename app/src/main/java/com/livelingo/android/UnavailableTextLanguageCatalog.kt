@@ -320,7 +320,20 @@ internal object UnavailableTextLanguageCatalog {
     fun search(query: String): List<UnavailableTextLanguage> {
         if (LanguageSearch.normalize(query).isEmpty()) return emptyList()
         return entries.filter { item ->
-            LanguageSearch.matches(query, listOf(item.code, item.title, item.aliases))
+            val candidateFields = (item.speechCandidates + item.translationCandidates).flatMap { candidate ->
+                listOf(
+                    candidate.category,
+                    candidate.title,
+                    candidate.url,
+                    candidate.declaredLicense,
+                    candidate.footprint,
+                    candidate.limitation
+                )
+            }
+            LanguageSearch.matches(
+                query,
+                listOf(item.code, item.title, item.aliases, item.reason) + candidateFields
+            )
         }
     }
 }
