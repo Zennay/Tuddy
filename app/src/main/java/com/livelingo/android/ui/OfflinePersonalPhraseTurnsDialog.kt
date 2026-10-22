@@ -53,12 +53,21 @@ internal fun OfflinePersonalPhraseTurnsDialog(
     var turns by remember { mutableStateOf<List<LocalPersonalTurn>>(emptyList()) }
     var shown by remember { mutableStateOf<PersonalPhrase?>(null) }
     var choosingSaved by remember { mutableStateOf(false) }
+    var tableTurn by remember { mutableStateOf<Int?>(null) }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val normalized = draft.trim().lowercase(Locale.ROOT)
     val choices = if (normalized.isEmpty()) emptyList() else notes.orEmpty().filter { note ->
         note.language == language && note.meaningLanguage == meaningLanguage &&
             (if (fromMeaning) note.ownMeaning else note.phrase).trim()
                 .lowercase(Locale.ROOT) == normalized
+    }
+    tableTurn?.let { selected ->
+        OfflinePersonalTurnTableDialog(
+            turns = turns.map { it.note to it.fromMeaning },
+            initialIndex = selected,
+            onBack = { tableTurn = null }
+        )
+        return
     }
     shown?.let { note ->
         OfflinePhrasePresenter(notes = listOf(note), initial = note,
@@ -168,9 +177,27 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                     TextButton(onClick = { alternate = !alternate }) {
                         Text(if (alternate) "✓ Wissel na beurt" else "☐ Wissel na beurt")
                     }
+                    TextButton(onClick = {
+                        turns = turns.dropLast(1)
+                        if (alternate) fromMeaning = !fromMeaning
+                    }, enabled = turns.isNotEmpty()) {
+                        Text("↶ Laatste beurt terug")
+                    }
                     TextButton(onClick = { turns = emptyList() }, enabled = turns.isNotEmpty()) {
                         Text("Wis alle beurten")
                     }
+                }
+                if (turns.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = { tableTurn = turns.lastIndex },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("↕ Speel dit eigen gesprek tegenover elkaar af")
+                    }
+                    Text("Bekijk de beurten één voor één, met aan beide " +
+                        "kanten de juiste originele zin en jouw eigen betekenis. " +
+                        "Geen opname, vertaalmodel of automatische opslag.",
+                        style = MaterialTheme.typography.bodySmall)
                 }
                 if (turns.isEmpty()) {
                     Text("Nog geen gekozen beurt. Alleen expliciet gekozen " +
@@ -186,6 +213,16 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                     Text(result, style = MaterialTheme.typography.bodyLarge.copy(
                         textDirection = if (turn.fromMeaning && note.language in setOf("ckb", "ps"))
                             TextDirection.Rtl else TextDirection.Ltr))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { tableTurn = index }) {
+                            Text("↕ Toon deze beurt aan beide kanten")
+                        }
+                        TextButton(onClick = {
+                            turns = turns.filterIndexed { i, _ -> i != index }
+                        }) {
+                            Text("Verwijder beurt")
+                        }
+                    }
                     TextButton(onClick = { shown = note }) {
                         Text("Toon deze eigen zin groot")
                     }
