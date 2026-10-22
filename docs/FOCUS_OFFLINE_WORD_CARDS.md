@@ -11,3 +11,19 @@ Open in Tuddy de **Leesmodus** of het **groot lezen van een eigen privéarchief*
 - Tekst, geselecteerde woorden, zoekterm en popup-vensters blijven binnen de huidige schermsessie. Er is geen cloudwoordenboek, netwerkfallback of permanente zoekindex.
 
 Dit is een lees- en studieverbetering, **geen** ondersteuning voor volledige offline Kurmanji-, Sorani- of Pasjtoe-ASR/MT en geen vervanging voor fysieke Android-acceptatie.
+
+## Zoeken met Sorani-/Pasjtoe-toetsenbordvarianten
+
+De zoekbalk in de grote leesmodus gebruikt nu dezelfde tijdelijke **zoek-only**
+Arabisch/Perzische spellingtolerantie als Tuddy's privéarchief en eigen kaarten:
+Arabische/Persische yeh- en kaf-vormen, Unicode-presentatievormen, en optionele
+klinkertekens/tatweel/ZWNJ worden genormaliseerd voor de match. Dit geldt voor
+originele tekst, reeds lokaal vertaalde tekst en een eventuele handmatige uitleg.
+Het handmatige sprekerfilter en de privéarchiefgrens blijven actief.
+
+- De app verandert **geen enkele** originele letter in bron, vertaling,
+  notitie, export, archief of bewaarde privékaart.
+- Een trefferrij die alleen via een toetsenbordvariant werd gevonden verschijnt
+  wel in de resultaten, maar alleen **letterlijke** overeenkomsten krijgen
+  een kleurmarkering. Zo wordt geen verkeerde positie als exact woord gepresenteerd.
+- Dit is geen dialectherkenning, automatische vertaling of nieuw offline ASR-model.
