@@ -1,3 +1,15 @@
+## Nieuw: deel een exact gekozen eigen zinnen-CSV pas na twee controles
+
+In de thema-CSV-export kun je na je taal- en themaselectie ook
+**bewust Android Delen** openen zonder eerst een bestand te bewaren.
+Tuddy toont alle kaarten en daarna nog de volledige CSV-tekst
+met een expliciete waarschuwing over externe apps. Alleen na jouw
+tweede toestemming en een nieuwe check van de geselecteerde data
+wordt Android Delen geopend. Geen stilzwijgende upload.
+[Privacy en werkwijze](docs/PRIVATE_TOPIC_CSV_ROUNDTRIP.md).
+
+---
+
 ## Nieuw: importeer slechts één taal of thema uit een eigen CSV
 
 Bij het openen of handmatig plakken van een vijfkoloms-CSV kun je
