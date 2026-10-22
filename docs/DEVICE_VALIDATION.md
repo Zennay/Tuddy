@@ -6,39 +6,48 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest app-code candidate (22 October 2026, after PR #335):
+Latest app-code candidate (22 October 2026, after PR #342):
 
 | Field | Immutable evidence |
 |---|---|
-| Current default-branch SHA | `491501e756f3543c447d1221db6a5fac78488aa1` |
-| Default-branch app-code SHA at build | `491501e756f3543c447d1221db6a5fac78488aa1` |
-| Hosted Android run | [#39732041700](https://github.com/Zennay/Tuddy/actions/runs/39732041700) — COMPLETED SUCCESS; exact-head `build` and `source-head` both passed |
-| Build checkout commit (PR merge candidate) | `1b5d005ea7353b08a6acade3662ea7c79ccf896d` |
-| Git tree SHA for checkout and merged PR #335 main | `5125b8d1045f1ca365cb80db296d0aaf9850c625` (identical) |
-| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39732041700/artifacts/12406265219) (ID `12406265219`, expires 5 November 2026 06:10:52 UTC) |
+| App-code SHA for this exact artifact (later docs-only commits may advance main) | `9d6b6dc66a835a283dec8074e4c99dab75358503` |
+| Git tree SHA | `e972b3fccf295a19d03e734db2561e16a7daafe9` |
+| Hosted Android run | [#39737509144](https://github.com/Zennay/Tuddy/actions/runs/39737509144) — COMPLETED SUCCESS; post-merge `build` succeeded |
+| Build checkout commit | `9d6b6dc66a835a283dec8074e4c99dab75358503` (matches exact source SHA in the build manifest) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39737509144/artifacts/12408355295) (ID `12408355295`, expires 5 November 2026 07:03:27 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `81b2af400e4145ef9d19ab08ada26bd6fd60c100a85022f1a6d916313d97951a` |
-| APK size | See `build-manifest.txt` inside the artifact; the workflow log does not expose the exact byte count |
-| Artifact ZIP SHA-256 (not APK) | `eb9c50707e2c66944cd8db01cdc5ec1af27f8d25165a3c91a1c490ec5d43a7d0` |
-| Package | `com.livelingo.android` (legacy ID retained until deliberate migration) |
+| **APK SHA-256** | `581ca4fa09a367a01190888cf4296d9255de82ef17e582d52f2f9786eddf7e5d` |
+| APK size | See `build-manifest.txt` inside the artifact |
+| Artifact ZIP SHA-256 (not APK) | `3e93683b57b4169f0a8c0f917a80c8fead13cd18b075239e92436ed461906bc2` |
+| Package | `com.livelingo.android` |
 | Version | `0.4.0` |
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-The PR #335 Android workflow built proposed-merge checkout `1b5d005…`; its full Git tree SHA `5125b8d…` is identical to merged default-branch commit `491501e…`. This build adds atomic authoring of up to ten user-written private phrase cards from selected JSON-archive rows. Every card begins blank; only the user's own text and language choices are stored after one explicit batch confirmation. The artifact ZIP digest is separate from the APK digest. This proves build provenance only, not physical installation or offline-device acceptance.
+This artifact is tied to the app-code commit shown above; a later documentation-only
+commit can advance the full default-branch SHA without changing this APK candidate.
+It includes PR #341's privacy-safe manual offline acceptance report and PR #342's
+bounded offline subtitle read-aloud. The checksum sidecar was verified
+by the hosted build (`app-debug.apk: OK`). This is build provenance only: it
+does not prove physical installation, actual offline speech quality, zero
+network traffic or device acceptance.
 
-From a Tuddy source checkout, after downloading the artifact ZIP as `artifact.zip`, run the reusable integrity verifier:
+From a Tuddy source checkout, after downloading the artifact ZIP as
+`artifact.zip`, run the reusable integrity verifier:
 
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  eb9c50707e2c66944cd8db01cdc5ec1af27f8d25165a3c91a1c490ec5d43a7d0 \
-  81b2af400e4145ef9d19ab08ada26bd6fd60c100a85022f1a6d916313d97951a \
-  1b5d005ea7353b08a6acade3662ea7c79ccf896d \
-  39732041700
+  3e93683b57b4169f0a8c0f917a80c8fead13cd18b075239e92436ed461906bc2 \
+  581ca4fa09a367a01190888cf4296d9255de82ef17e582d52f2f9786eddf7e5d \
+  9d6b6dc66a835a283dec8074e4c99dab75358503 \
+  39737509144
 ```
 
-The helper checks the ZIP digest before extraction, rejects archive path-traversal entries, verifies the APK and its checksum sidecar, and cross-checks the embedded build manifest, source commit and workflow run ID. It deliberately reports integrity only; it does not claim physical installation or offline acceptance. Only after verification should an authorized tester install the APK and record the device evidence below.
+The helper checks the ZIP digest before extraction, rejects archive path-traversal
+entries, verifies the APK and its checksum sidecar, and cross-checks the embedded
+build manifest, source commit and workflow run ID. It deliberately reports
+integrity only; it does not claim physical installation or offline acceptance.
 
 Previous app-code candidate (22 October 2026, after PR #333 and before PR #335):
 
@@ -54,7 +63,7 @@ Previous app-code candidate (22 October 2026, after PR #333 and before PR #335):
 | Artifact ZIP SHA-256 | `2275f56609a701409d94abb3a32f95caf20cae608f2697871b913b29204e369a` |
 | Physical installation / airplane-mode proof | **NOT PROVIDED** |
 
-The PR #333 candidate remains historical; PR #335 is the current app-code candidate. The old and new artifact ZIP digests are not APK digests, and neither artifact proves physical acceptance.
+The PR #333 and #335 candidates are historical; PR #342 is the current app-code candidate. The old and new artifact ZIP digests are not APK digests, and neither artifact proves physical acceptance.
 
 Previous app-code candidate (22 October 2026, after PR #318 and before PR #320):
 
@@ -246,7 +255,42 @@ speech or full transcripts** with reports.
     and the translated provisional subtitle. The source-only and hosted
     synthetic gates cannot replace this actual handset trial.
 
-## 3. Evidence / release record (fill only after running the test)
+## 3. Capture the in-app offline observation report
+
+After installing the exact APK listed in section 1 on an authorized physical
+Android 12+ handset, run the real offline session described in section 2.
+Keep airplane mode enabled and independently ensure Wi-Fi/mobile data remain
+disabled before opening the report form; the form binds its snapshot to the
+current device state.
+
+1. Open **Offline startcheck** and choose **Leg fysieke offline-waarnemingen
+   vast…**.
+2. Copy the **APK SHA-256** from section 1 into the expected APK checksum field.
+   Use the digest of `app-debug.apk`, never the enclosing artifact ZIP digest.
+   The form compares this value with the installed base APK digest. A mismatch
+   means the wrong APK or checksum is being used; do not mark it accepted.
+3. Record only observations made on this device: APK identity, disconnected
+   state, microphone/Stop lifecycle, absence of cloud fallback, and transcript
+   clearing after relaunch.
+4. Make ten attempts in each direction for offline speech and local translation
+   (NL→EN and EN→NL). Enter how many succeeded (0–10) and the highest observed
+   end-to-end latency in milliseconds. Do not enter sample phrases, transcripts,
+   audio, names, or free-form notes.
+5. Review the full report and choose an Android Storage Access Framework
+   destination. Check whether that provider synchronizes files externally.
+   The form clears its temporary values after dismissal or returning from the
+   file picker. If device/model state changed during the picker, it refuses the
+   stale report; reopen the form after restoring the intended offline state.
+6. Attach the resulting report only after reviewing it for device identifiers
+   and sharing consent. Keep this issue open until a human reviews the evidence.
+
+The report is explicitly **self-reported** and **not independently verified by
+Tuddy**. A complete form is not proof of zero network traffic, an independent
+speech-quality assessment, a signed release, or production authorization. It
+does not close issue #1 automatically. Do not attach raw speech/audio or full
+private transcripts.
+
+## 4. Evidence / release record (fill only after running the test)
 
 - Candidate source / APK digest: **NOT YET OBSERVED ON DEVICE**
 - Historical v0.4 source archive: original ZIP SHA-256 `e7721d41d4f7baf31850e3836d5655cfd3b20c2197752cc4a3ff1078fc57992c`; all 23 extracted entries have matching Git blob hashes in `archive/v0.4/LiveLingo-Android/` on branch `docs/archive-v04-source-completeness-20261022` (manifest: [`archive/v0.4/IMPORT_MANIFEST.md`](../archive/v0.4/IMPORT_MANIFEST.md)). This archive-integrity record is not evidence of a physical install; historical sources are preserved separately from the active app module.
