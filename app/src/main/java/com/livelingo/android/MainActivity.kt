@@ -3077,6 +3077,11 @@ private fun TuddyScreen(
                         if (changed) translationMemoryRevision++
                     }
                 },
+                onReplace = { imported ->
+                    translationMemory.replaceAll(imported).also { changed ->
+                        if (changed) translationMemoryRevision++
+                    }
+                },
                 onClear = {
                     translationMemory.clear()
                     translationMemoryRevision++

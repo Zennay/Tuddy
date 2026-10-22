@@ -29,7 +29,8 @@ import com.livelingo.android.PrivateOfflineSearch
 
 /**
  * User-reviewed edits to in-memory corrections only. Previously displayed
- * captions and the language pair remain unchanged; nothing is exported.
+ * captions and the language pair remain unchanged. Any document transfer is
+ * initiated and reviewed by the human, never automatically persisted.
  */
 @Composable
 internal fun SessionTranslationCorrectionsDialog(
@@ -37,11 +38,13 @@ internal fun SessionTranslationCorrectionsDialog(
     speaker: LocalCaptionSpeaker,
     onRemove: (SessionTranslationCorrection) -> Unit,
     onRevise: (SessionTranslationCorrection, String, String) -> Boolean,
+    onReplace: (List<SessionTranslationCorrection>) -> Boolean,
     onClear: () -> Unit,
     onDismiss: () -> Unit
 ) {
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
     var practiceOpen by remember { mutableStateOf(false) }
+    var transferOpen by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<SessionTranslationCorrection?>(null) }
@@ -95,6 +98,13 @@ internal fun SessionTranslationCorrectionsDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Oefen mijn correcties · tijdelijk") }
                 }
+                OutlinedButton(
+                    onClick = {
+                        speaker.stop()
+                        transferOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Eigen correcties bewust importeren / exporteren…") }
                 if (entries.isEmpty()) Text("Nog geen correcties onthouden.")
                 else if (visible.isEmpty()) Text("Geen passend voorstel gevonden.")
 
@@ -212,5 +222,21 @@ internal fun SessionTranslationCorrectionsDialog(
     )
     if (practiceOpen) {
         SessionCorrectionPracticeDialog(entries, speaker) { practiceOpen = false }
+    }
+    if (transferOpen) {
+        SessionCorrectionTransferDialog(
+            entries = entries,
+            onReplace = { imported ->
+                speaker.stop()
+                onReplace(imported).also { changed ->
+                    if (changed) {
+                        editing = null
+                        editError = ""
+                        confirmClear = false
+                    }
+                }
+            },
+            onDismiss = { transferOpen = false }
+        )
     }
 }
