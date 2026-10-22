@@ -3,7 +3,8 @@
 In een geopend **Eigen ondertitelconcept · lokaal** kun je bij een geselecteerde
 regel **Lees vanaf deze regel · maximaal 100 cues** kiezen. Kies eerst handmatig
 een taal in de bestaande lokale-stemkiezer. Tuddy leest de geselecteerde cue en
-de volgende regels in volgorde voor, met een zichtbare voortgangsteller.
+de volgende regels in volgorde voor, met een zichtbare voortgangsteller. Je kunt vóór het starten kiezen tussen
+normaal en rustig tempo; de keuze geldt voor de hele reeks.
 
 ## Veilig gedrag
 
