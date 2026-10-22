@@ -61,3 +61,15 @@ exportactie en er wordt niets nieuw opgeslagen. Deel geen gevoelige
 persoonsgegevens op een zichtbaar scherm.
 Een fysiek Android-vliegtuigmodusbewijs en een getekende release ontbreken
 nog steeds.
+
+## Beide schermhelften direct afschermen
+
+Tijdens een persoonlijke kaart op tafel kun je **◼ Verberg direct beide
+zijden** kiezen. Beide eigen teksten worden tijdelijk afgedekt, de
+eventueel klinkende lokaal geïnstalleerde Android-stem wordt gestopt en
+de voorleesknoppen verdwijnen zolang de bedekking actief is.
+Met **👁 Laat beide zijden weer zien** herstel je de oorspronkelijke
+kaart zonder de opgeslagen zinnen te veranderen. In Oefenmodus blijft
+een eerder onthulde betekenis opnieuw verborgen; uitsluitend je eigen
+tik kan die later laten zien. De privacybedekking is geen wachtwoord-
+of systeemslot, en reset bij het sluiten van het venster.
