@@ -310,3 +310,23 @@ vervalt de mogelijkheid.
 Voor langdurige overdracht blijft de bestaande opt-in
 JSON/CSV-archiefroute beschikbaar. De terugdraaifunctie doet geen
 netwerkverzoek en maakt geen automatische vertaling.
+
+
+## Tijdelijk overzicht van werkelijk doorgevoerde CSV-wijzigingen
+
+Na een geslaagde **niet-destructieve** import van een vijfkoloms
+CSV kun je **Bekijk wat de laatste CSV-import echt heeft gewijzigd…**
+openen. Dit is een leesbaar overzicht van de daadwerkelijk toegevoegde
+bronregels, de **oude én nieuwe betekenis** van goedgekeurde
+betekeniscorrecties en de **oude → nieuwe themagroep** van afzonderlijk
+gekozen themawijzigingen. Reeds bestaande zinnen die je niet hebt
+gewijzigd worden niet als verandering getoond.
+
+De inhoud is uitsluitend in het geheugen van dit studiescherm
+beschikbaar, niet opgeslagen als log, analytisch evenement of
+bestand. Er wordt niets automatisch doorgestuurd of gekopieerd.
+Een volgende geslaagde import vervangt het eerdere overzicht. Nadat
+de laatste import bewust en succesvol ongedaan is gemaakt, verdwijnt
+ook het wijzigingsoverzicht. Het is een historisch overzicht van de
+laatste import en geen live status; voor actuele inhoud open je opnieuw
+je persoonlijke zinnenboek.
