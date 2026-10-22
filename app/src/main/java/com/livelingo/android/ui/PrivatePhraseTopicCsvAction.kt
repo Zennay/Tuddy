@@ -31,7 +31,12 @@ import com.livelingo.android.PrivatePhraseTopicCsv
 import com.livelingo.android.PrivatePhraseTopics
 import java.io.ByteArrayOutputStream
 
-private data class TopicCsvExport(val bytes: ByteArray, val archive: PrivatePhraseArchive)
+private data class TopicCsvExport(
+    val bytes: ByteArray,
+    val archive: PrivatePhraseArchive,
+    val language: String?,
+    val topic: String?
+)
 private data class TopicCsvImport(
     val archive: PrivatePhraseArchive,
     val originalNotes: List<PersonalPhrase>,
@@ -52,23 +57,34 @@ internal fun PrivatePhraseTopicCsvAction(
     val topics = remember(context) { PrivatePhraseTopics(context) }
     var notice by remember { mutableStateOf("") }
     var exportReview by remember { mutableStateOf<TopicCsvExport?>(null) }
-    var pendingWrite by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingWrite by remember { mutableStateOf<TopicCsvExport?>(null) }
+    var choosingScope by remember { mutableStateOf(false) }
+    var selectedLanguage by remember { mutableStateOf<String?>(null) }
+    var selectedTopic by remember { mutableStateOf<String?>(null) }
+    fun selection(language: String?, topic: String?): List<PersonalPhrase>? =
+        deck.entries()?.filter { note ->
+            (language == null || note.language == language) &&
+                (topic == null ||
+                    if (topic == "__without__") topics.topicFor(note) == null
+                    else topics.topicFor(note) == topic)
+        }
     var importReview by remember { mutableStateOf<TopicCsvImport?>(null) }
     var mergeOnly by remember { mutableStateOf(true) }
 
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
     ) { uri ->
-        val bytes = pendingWrite
+        val pending = pendingWrite
         pendingWrite = null
-        if (uri != null && bytes != null) {
-            val fresh = PrivatePhraseTopicCsv.snapshot(context, deck)?.first
-            if (fresh == null || !fresh.contentEquals(bytes)) {
+        if (uri != null && pending != null) {
+            val selected = selection(pending.language, pending.topic)
+            val fresh = selected?.let { PrivatePhraseTopicCsv.snapshot(context, deck, it)?.first }
+            if (fresh == null || !fresh.contentEquals(pending.bytes)) {
                 notice = "Eigen zinnen of thema's zijn veranderd: controleer CSV opnieuw."
             } else {
                 val saved = runCatching {
                     context.contentResolver.openOutputStream(uri, "w")?.use {
-                        it.write(bytes)
+                        it.write(pending.bytes)
                         it.flush()
                         true
                     } ?: false
@@ -119,15 +135,12 @@ internal fun PrivatePhraseTopicCsvAction(
             enabled = deck.entries()?.isNotEmpty() == true,
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-                val candidate = PrivatePhraseTopicCsv.snapshot(context, deck)
-                if (candidate == null) {
-                    notice = "Geen geldige zinnen- en thema-CSV mogelijk."
-                } else {
-                    exportReview = TopicCsvExport(candidate.first, candidate.second)
-                    notice = ""
-                }
+                selectedLanguage = null
+                selectedTopic = null
+                choosingScope = true
+                notice = ""
             }
-        ) { Text("Exporteer zinnen mét thema's als CSV…") }
+        ) { Text("Exporteer gekozen zinnen mét thema's als CSV…") }
         OutlinedButton(
             modifier = Modifier.fillMaxWidth(),
             onClick = { openFile.launch(arrayOf("text/csv", "text/plain", "application/octet-stream")) }
@@ -141,11 +154,72 @@ internal fun PrivatePhraseTopicCsvAction(
         if (notice.isNotBlank()) Text(notice, style = MaterialTheme.typography.bodySmall)
     }
 
+    if (choosingScope) {
+        val selected = selection(selectedLanguage, selectedTopic).orEmpty()
+        AlertDialog(
+            onDismissRequest = { choosingScope = false },
+            title = { Text("Kies bewust welke eigen zinnen in CSV komen") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text("Welke taal mag in de CSV? (geen andere zinnen worden gedeeld)")
+                    TextButton(onClick = { selectedLanguage = null }) {
+                        Text(if (selectedLanguage == null) "✓ Alle drie talen" else "Alle drie talen")
+                    }
+                    listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe").forEach {
+                        (code, title) ->
+                        TextButton(onClick = { selectedLanguage = code }) {
+                            Text(if (selectedLanguage == code) "✓ " + title else title)
+                        }
+                    }
+                    Text("Welke persoonlijke themagroep?")
+                    TextButton(onClick = { selectedTopic = null }) {
+                        Text(if (selectedTopic == null) "✓ Alle thema's" else "Alle thema's")
+                    }
+                    TextButton(onClick = { selectedTopic = "__without__" }) {
+                        Text(if (selectedTopic == "__without__") "✓ Zonder thema" else "Zonder thema")
+                    }
+                    topics.topics().forEach { title ->
+                        TextButton(onClick = { selectedTopic = title }) {
+                            Text(if (selectedTopic == title) "✓ " + title else title)
+                        }
+                    }
+                    Text("Geselecteerd: " + selected.size +
+                        " van maximaal 80 zelfgeschreven zinnen. " +
+                        "Hierna volgt eerst een volledige inhoudscontrole.")
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = selected.isNotEmpty(),
+                    onClick = {
+                        val candidate = PrivatePhraseTopicCsv.snapshot(context, deck, selected)
+                        if (candidate == null) {
+                            notice = "Selectie ongeldig of intussen gewijzigd; kies opnieuw."
+                        } else {
+                            exportReview = TopicCsvExport(
+                                candidate.first, candidate.second, selectedLanguage, selectedTopic
+                            )
+                            choosingScope = false
+                            notice = ""
+                        }
+                    }
+                ) { Text("Bekijk geselecteerde zinnen volledig…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { choosingScope = false }) { Text("Annuleren") }
+            }
+        )
+    }
+
     val export = exportReview
     if (export != null) {
         AlertDialog(
             onDismissRequest = { exportReview = null },
-            title = { Text("CSV met alle eigen zinnen en thema's bewaren?") },
+            title = { Text("Alleen mijn geselecteerde zinnen als CSV bewaren?") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp)
@@ -153,7 +227,7 @@ internal fun PrivatePhraseTopicCsvAction(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        "Bekijk alle persoonlijke zinnen en zelfgekozen thema's hieronder. " +
+                        "Bekijk uitsluitend deze gekozen zinnen en hun thema's hieronder. " +
                             "Pas na bevestiging kies jij een Android-bestandslocatie. " +
                             "Deze export bevat geen audio, favorieten, transcript of herhaaldatums."
                     )
@@ -183,9 +257,9 @@ internal fun PrivatePhraseTopicCsvAction(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    pendingWrite = export.bytes
+                    pendingWrite = export
                     exportReview = null
-                    saveFile.launch("Tuddy-eigen-zinnen-met-themas.csv")
+                    saveFile.launch("Tuddy-geselecteerde-zinnen-met-themas.csv")
                 }) { Text("Ik begrijp dit, kies opslag…") }
             },
             dismissButton = {
