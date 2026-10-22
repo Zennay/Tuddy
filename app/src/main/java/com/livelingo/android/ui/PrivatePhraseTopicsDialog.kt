@@ -41,6 +41,16 @@ private data class PendingTopicMerge(
     val affected: List<PersonalPhrase>
 )
 
+/** One reversible, in-memory merge; never an automatic persistent backup. */
+private data class UndoTopicMerge(
+    val source: String,
+    val target: String,
+    val before: ByteArray,
+    val after: ByteArray,
+    val notes: List<PersonalPhrase>,
+    val affected: List<PersonalPhrase>
+)
+
 /** Theme management for human-authored notes, never model-derived categories. */
 @Composable
 internal fun PrivatePhraseTopicsDialog(
@@ -55,6 +65,8 @@ internal fun PrivatePhraseTopicsDialog(
     var pendingDelete by remember { mutableStateOf<String?>(null) }
     var pendingMerge by remember { mutableStateOf<PendingTopicMerge?>(null) }
     var mergeDestination by remember { mutableStateOf<String?>(null) }
+    var lastMerge by remember { mutableStateOf<UndoTopicMerge?>(null) }
+    var undoMergeOpen by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
     var pendingRestore by remember { mutableStateOf<PendingTopicRestore?>(null) }
@@ -189,6 +201,63 @@ internal fun PrivatePhraseTopicsDialog(
         return
     }
 
+    val undo = lastMerge
+    if (undoMergeOpen && undo != null) {
+        val candidate = storage.previewImport(undo.before)
+        AlertDialog(
+            onDismissRequest = { undoMergeOpen = false },
+            title = { Text("Laatste samenvoeging ongedaan maken?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Text("Herstel het thema ‘" + undo.source + "’ en de vroegere " +
+                        "indeling van de " + undo.affected.size + " genoemde zinnen " +
+                        "uit het doelthema ‘" + undo.target + "’. Dit verandert " +
+                        "geen zinnen, eigen betekenissen, favorieten of herhaaldatums.",
+                        style = MaterialTheme.typography.bodySmall)
+                    undo.affected.forEachIndexed { i, note ->
+                        Text((i + 1).toString() + ". [" + note.language + "] " +
+                            note.phrase, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    if (candidate == null) Text(
+                        "De oorspronkelijke indeling is niet meer geldig. " +
+                            "Ongedaan maken is geblokkeerd.",
+                        color = MaterialTheme.colorScheme.error
+                    ) else Text(
+                        "Alleen mogelijk zolang sinds het samenvoegen geen zinnen " +
+                            "of themakoppelingen zijn gewijzigd. Dit herstel bestaat " +
+                            "uitsluitend in het geheugen totdat je dit scherm sluit.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = candidate != null, onClick = {
+                    val current = storage.exportSnapshot()
+                    val restored = candidate != null && current != null &&
+                        current.contentEquals(undo.after) &&
+                        storage.replaceImportedIfUnchanged(
+                            candidate, undo.after, undo.notes
+                        )
+                    if (restored) onChanged()
+                    notice = if (restored)
+                        "Vorige themasamenvoeging teruggedraaid; leerdata behouden."
+                    else "Herstel geweigerd: lokale zinnen of thema's veranderden. " +
+                        "Er is niets teruggedraaid."
+                    lastMerge = null
+                    undoMergeOpen = false
+                }) { Text("Herstel de vroegere thema-indeling") }
+            },
+            dismissButton = {
+                TextButton(onClick = { undoMergeOpen = false }) { Text("Annuleren") }
+            }
+        )
+        return
+    }
+
     val merging = pendingMerge
     if (merging != null) {
         val destinations = topics.filter { it != merging.source }
@@ -241,7 +310,16 @@ internal fun PrivatePhraseTopicsDialog(
                                 merging.source, target,
                                 merging.originalTopics, merging.originalNotes
                             )
-                            if (merged) onChanged()
+                            if (merged) {
+                                val after = storage.exportSnapshot()
+                                lastMerge = after?.let { snapshot ->
+                                    UndoTopicMerge(
+                                        merging.source, target, merging.originalTopics,
+                                        snapshot, merging.originalNotes, merging.affected
+                                    )
+                                }
+                                onChanged()
+                            }
                             notice = if (merged)
                                 "Thema's samengevoegd; eigen zinnen en leerdata behouden."
                             else "Samenvoegen geweigerd: zinnen of thema's zijn gewijzigd. " +
@@ -371,6 +449,11 @@ internal fun PrivatePhraseTopicsDialog(
                     }
                 }
                 if (topics.isEmpty()) Text("Je hebt nog geen thema’s.")
+                if (lastMerge != null) {
+                    TextButton(onClick = { undoMergeOpen = true }) {
+                        Text("↶ Maak de laatste themasamenvoeging ongedaan…")
+                    }
+                }
                 TextButton(enabled = topics.isNotEmpty(), onClick = {
                     val snapshot = storage.exportSnapshot()
                     if (snapshot == null) {
