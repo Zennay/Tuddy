@@ -38,3 +38,11 @@ gelden ook via deze route.
   beoordeeld of door Tuddy geverifieerd. Deze functie verandert niets aan
   issue #2 voor volledig vrije offline Kurmanji/Sorani/Pasjtoe ASR+MT of aan
   issue #1 voor fysieke Android-vliegtuigmodusacceptatie.
+
+
+## Meerdere regels
+
+Voor een gestopte sessie kun je ook maximaal tien gespreksregels selecteren en
+per regel zelf een privékaart schrijven. De batch wordt atomair opgeslagen
+nadat alle velden compleet zijn:
+[Meerdere eigen privékaarten uit gesprek of archief](PRIVATE_PHRASE_BATCH_AUTHORING.md).
