@@ -119,17 +119,7 @@ internal class LocalSpeechVoicePreview(context: Context) {
                                 }
                             }
                         }
-                        if (!candidate.setOnUtteranceProgressListener(listener)) {
-                            finish(
-                                candidate,
-                                requestGeneration,
-                                callback,
-                                Result.failure(
-                                    IllegalStateException("Android ondersteunt geen statusmelding voor deze stemproef.")
-                                )
-                            )
-                            return@post
-                        }
+                        candidate.setOnUtteranceProgressListener(listener)
 
                         val speakStatus = candidate.speak(
                             PREVIEW_TEXT,
