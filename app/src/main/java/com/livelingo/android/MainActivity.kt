@@ -3017,7 +3017,7 @@ private fun TuddyScreen(
                 incomingViewedSubtitle?.requestId == request.requestId) {
                 when (loaded) {
                     is SharedDocumentImportResult.Rejected ->
-                        error = loaded.reason + " Het huidige gesprek blijft ongewijzigd."
+                        error = loaded.reason + " Bestaande inhoud blijft ongewijzigd."
                     is SharedDocumentImportResult.Subtitle -> {
                         stop() // Do not combine a file preview with live microphone capture.
                         viewedSubtitlePreview = loaded.cues.toList()
