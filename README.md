@@ -33,8 +33,9 @@ bewaart uitsluitend deze twee eigen velden in je lokale privézinnenboek.
 Bestaande kaarten worden niet overschreven. Er is geen automatische vertaling,
 cloud of claim dat deze zinnen door een moedertaalspreker zijn gecontroleerd.
 Je kunt ook maximaal tien gestopte gespreksregels selecteren en in één wizard
-zelf meerdere kaarten schrijven; niets wordt opgeslagen totdat de volledige
-batch expliciet is bevestigd.
+zelf meerdere kaarten schrijven. Controleer eerst het overzicht van alle eigen
+zinnen en betekenissen; niets wordt opgeslagen totdat de volledige batch
+expliciet is bevestigd.
 [Stappen en privacyvoorwaarden](docs/PRIVATE_LIVE_CAPTION_PHRASE_CAPTURE.md) ·
 [Batchkaarten uit gesprek of archief](docs/PRIVATE_PHRASE_BATCH_AUTHORING.md).
 
