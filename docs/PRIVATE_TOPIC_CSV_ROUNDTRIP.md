@@ -189,3 +189,27 @@ met alle geldige regels geselecteerd. Vóór opslag blijft de bestaande
 strenge controle tegen inmiddels gewijzigde lokale zinnen en thema's
 actief; bij conflict wordt niets gedeeltelijk opgeslagen. Er is geen
 automatische synchronisatie, vertaling, of verwerking van conversatieaudio.
+
+
+## Per zin bepalen wat er naar een extern CSV-bestand gaat
+
+Bij **Exporteer gekozen zinnen mét thema's als CSV…** kies je eerst taal en
+themagroep. Nu kun je ook **per zichtbare zin** op **☑ Meenemen** of
+**☐ Overgeslagen** tikken. Ook niet-meegenomen zinnen blijven in het
+selectiescherm zichtbaar, inclusief de zelfgeschreven betekenis en het
+thema. Zo controleer je gemakkelijk wat er **niet** wordt gedeeld.
+
+**Sla alle zichtbare zinnen over** selecteert in één keer niets in de
+gekozen filtergroep; **Herstel alle zichtbare zinnen** maakt de huidige
+selectie weer compleet. De exportknop is uitgeschakeld wanneer er niets
+meer geselecteerd is. De daaropvolgende volledige preview toont exact
+de zinnen die naar het document gaan of bewust via Android Delen worden
+aangeboden.
+
+Tuddy onthoudt uitsluitend tijdens de lopende selectie welke
+bronidentiteiten je hebt aangevinkt. Bij documentopslag én vlak vóór
+Android Delen wordt de tekst vanuit de huidige lokale zinnen opnieuw
+berekend en tegen de complete bevestigde CSV vergeleken; gewijzigde of
+verwijderde geselecteerde zinnen veroorzaken een weigering. Een nieuwe
+export begint met alle zichtbare zinnen geselecteerd. Geen verborgen
+ongevraagde zinnen, transcriptdata of automatisch gedeelde bestanden.
