@@ -99,6 +99,7 @@ private sealed class SharedDocumentImportResult {
     data class Subtitle(val cues: List<PrivateSubtitleCue>) : SharedDocumentImportResult()
     data class CorrectionJson(val json: String) : SharedDocumentImportResult()
     data class PersonalPhraseBackup(val json: String) : SharedDocumentImportResult()
+    data class PersonalPhraseArchive(val json: String) : SharedDocumentImportResult()
     data class Rejected(val reason: String) : SharedDocumentImportResult()
 }
 
@@ -548,6 +549,7 @@ private fun TuddyScreen(
     // External phrasebook text/backup remains in RAM until its explicit import preview consumes it.
     var pendingSharedPersonalPhraseCsv by remember { mutableStateOf<String?>(null) }
     var pendingSharedPersonalPhraseBackupJson by remember { mutableStateOf<String?>(null) }
+    var pendingSharedPersonalPhraseArchiveJson by remember { mutableStateOf<String?>(null) }
     // A user explicitly opened one private CSV: expose its preview-only
     // phrasebook screen. Do not read, translate, or save the external bytes here.
     LaunchedEffect(incomingPersonalCsv?.requestId) {
@@ -2612,6 +2614,18 @@ private fun TuddyScreen(
                             )
                         }
                     } else if (selected.text.trimStart().startsWith("{") &&
+                        selected.text.contains("\"tuddy-private-phrase-archive-v1\"")) {
+                        val decoded = if (selected.sizeBytes <= 70_000 && bytes.size <= 70_000)
+                            personalPhrases.previewArchiveImport(bytes) else null
+                        if (decoded != null) {
+                            SharedDocumentImportResult.PersonalPhraseArchive(selected.text)
+                        } else {
+                            SharedDocumentImportResult.Rejected(
+                                "Gedeeld Tuddy-zinnen- en thema-archief geweigerd: ongeldige versie, " +
+                                    "zinnen/thema's of groter dan 70 KB. Niets gewijzigd."
+                            )
+                        }
+                    } else if (selected.text.trimStart().startsWith("{") &&
                         selected.text.contains("\"tuddy-private-phrases-v1\"")) {
                         val decoded = if (selected.sizeBytes <= 50_000 && bytes.size <= 50_000)
                             personalPhrases.previewImport(bytes) else null
@@ -3015,6 +3029,23 @@ private fun TuddyScreen(
                         translationMemoryOpen = true
                         error = ""
                     }
+                    is SharedDocumentImportResult.PersonalPhraseArchive -> {
+                        stop()
+                        quickTypedOpen = false
+                        twoWayTypedOpen = false
+                        sharedTextToTwoWay = null
+                        draftFromExternalShare = false
+                        manualText = ""
+                        pendingCorrectionTransferText = null
+                        pendingSharedPersonalPhraseCsv = null
+                        pendingSharedPersonalPhraseBackupJson = null
+                        translationMemoryOpen = false
+                        starterPhraseboardOpen = false
+                        offlinePersonalTurnsOpen = false
+                        pendingSharedPersonalPhraseArchiveJson = loaded.json
+                        personalPhrasesOpen = true
+                        error = ""
+                    }
                     is SharedDocumentImportResult.PersonalPhraseBackup -> {
                         stop()
                         quickTypedOpen = false
@@ -3024,6 +3055,7 @@ private fun TuddyScreen(
                         manualText = ""
                         pendingCorrectionTransferText = null
                         pendingSharedPersonalPhraseCsv = null
+                        pendingSharedPersonalPhraseArchiveJson = null
                         translationMemoryOpen = false
                         starterPhraseboardOpen = false
                         offlinePersonalTurnsOpen = false
@@ -3057,6 +3089,20 @@ private fun TuddyScreen(
                 pendingSharedPersonalPhraseCsv = shared.personalPhraseCsvText
                 personalPhrasesOpen = true
                 error = ""
+            } else if (shared.personalPhraseArchiveJson != null) {
+                stop()
+                quickTypedOpen = false
+                twoWayTypedOpen = false
+                sharedTextToTwoWay = null
+                draftFromExternalShare = false
+                manualText = ""
+                pendingCorrectionTransferText = null
+                pendingSharedPersonalPhraseCsv = null
+                pendingSharedPersonalPhraseBackupJson = null
+                translationMemoryOpen = false
+                pendingSharedPersonalPhraseArchiveJson = shared.personalPhraseArchiveJson
+                personalPhrasesOpen = true
+                error = ""
             } else if (shared.personalPhraseBackupJson != null) {
                 stop()
                 quickTypedOpen = false
@@ -3066,6 +3112,7 @@ private fun TuddyScreen(
                 manualText = ""
                 pendingCorrectionTransferText = null
                 pendingSharedPersonalPhraseCsv = null
+                pendingSharedPersonalPhraseArchiveJson = null
                 translationMemoryOpen = false
                 pendingSharedPersonalPhraseBackupJson = shared.personalPhraseBackupJson
                 personalPhrasesOpen = true
@@ -6380,10 +6427,16 @@ private fun TuddyScreen(
                     if (pendingSharedPersonalPhraseBackupJson == received)
                         pendingSharedPersonalPhraseBackupJson = null
                 },
+                incomingArchiveJsonText = pendingSharedPersonalPhraseArchiveJson,
+                onIncomingArchiveJsonConsumed = { received ->
+                    if (pendingSharedPersonalPhraseArchiveJson == received)
+                        pendingSharedPersonalPhraseArchiveJson = null
+                },
                 onDismiss = {
                     personalPhrasesOpen = false
                     pendingSharedPersonalPhraseCsv = null
                     pendingSharedPersonalPhraseBackupJson = null
+                    pendingSharedPersonalPhraseArchiveJson = null
                     incomingPersonalCsv?.let { onPersonalCsvConsumed(it.requestId) }
                 }
             )
