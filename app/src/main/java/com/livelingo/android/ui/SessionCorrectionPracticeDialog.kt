@@ -168,7 +168,7 @@ internal fun SessionCorrectionPracticeDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
                         val matching = snapshot.filter { row ->
-                            val query = selectionQuery.trim()
+                            val query = PrivateOfflineSearch.fold(selectionQuery.trim())
                             query.isEmpty() || PrivateOfflineSearch.contains(row.original, query) ||
                                 PrivateOfflineSearch.contains(row.translation, query) ||
                                 PrivateOfflineSearch.contains(
