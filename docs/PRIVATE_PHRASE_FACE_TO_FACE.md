@@ -18,11 +18,32 @@ meldt dat de teksten **niet door Tuddy gecontroleerd** zijn. Dit is geen
 voltooide automatische vertaling, geen offline Kurmanji/Sorani/Pasjtoe
 spraakherkenning en geen bewijs van native-speakercontrole.
 
-Tijdens de tafelmodus worden de woorden alleen gelezen uit de bestaande
-privékaarten: geen nieuwe app-opslag, model-, microfoon- of netwerkactie,
-TTS, kopie, delen of export. Bij openen stopt de bestaande lokale
-voorleesfunctie. Terug hervat niet automatisch audio. De kaarten blijven
-uitsluitend via de bestaande bewuste opslagknoppen in de privéopslag
-aanwezig. Deel geen gevoelige persoonsgegevens op een zichtbaar scherm.
+## Oefenen met de eigen zin of betekenis
+
+Schakel **Oefenmodus** in om de **zelfgeschreven betekenis** voor beide
+personen te verbergen totdat je bewust **Toon betekenis** kiest. Bij elke
+volgende/vorige kaart wordt de betekenis weer verborgen, ook als de kanten
+omgedraaid zijn. De oefenmodus schrijft geen leerresultaten weg of
+verandert geen kaart in de privéwoordenlijst.
+
+Met **🔊 Mijn zin**, **🔊 Mijn betekenis**, **Rustig mijn betekenis**
+en **■ Stop** kun je uitsluitend na een expliciete tik een korte tekst
+laten voorlezen. Bij een verborgen betekenis zijn de betreffende
+voorleesknoppen uitgeschakeld totdat deze bewust onthuld wordt.
+De bestaande `LocalCaptionSpeaker` accepteert uitsluitend een al
+geïnstalleerde Android-stem die het systeem als niet-netwerkafhankelijk
+aanmerkt; ontbreekt die, dan wordt niet online uitgesproken of
+automatisch een model gedownload. Uitspraak is niet onafhankelijk
+geverifieerd, zeker niet voor Kurmanji/Sorani/Pasjtoe.
+
+De TTS-engine stopt en wordt vrijgegeven wanneer de gebruiker wisselt
+van kaart of kant, de oefenmodus wijzigt, teruggaat, de app op de
+achtergrond komt of het dialoogvenster sluit. Bij Terug wordt audio niet
+automatisch hervat.
+
+De teksten komen alleen uit de bestaande privékaarten. Er is geen
+automatische microfoon-, transcript-, upload-, kopieer-, deel- of
+exportactie en er wordt niets nieuw opgeslagen. Deel geen gevoelige
+persoonsgegevens op een zichtbaar scherm.
 Een fysiek Android-vliegtuigmodusbewijs en een getekende release ontbreken
 nog steeds.
