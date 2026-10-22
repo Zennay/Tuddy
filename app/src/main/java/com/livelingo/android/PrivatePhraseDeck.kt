@@ -444,7 +444,8 @@ internal class PrivatePhraseDeck(context: Context) {
     fun previewArchiveImport(bytes: ByteArray): PrivatePhraseArchive? {
         if (bytes.isEmpty() || bytes.size > 70_000) return null
         val decoded = bytes.toString(Charsets.UTF_8)
-        if (!decoded.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        if (!decoded.toByteArray(Charsets.UTF_8).contentEquals(bytes) ||
+            !StrictJsonKeyGuard.accepts(decoded)) return null
         return try {
             val root = JSONObject(decoded)
             if (root.length() != 4 ||
@@ -745,7 +746,8 @@ internal class PrivatePhraseDeck(context: Context) {
     fun previewImport(bytes: ByteArray): List<PersonalPhrase>? {
         if (bytes.isEmpty() || bytes.size > MAX_JSON) return null
         val source = bytes.toString(Charsets.UTF_8)
-        if (!source.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        if (!source.toByteArray(Charsets.UTF_8).contentEquals(bytes) ||
+            !StrictJsonKeyGuard.accepts(source)) return null
         return try {
             val root = JSONObject(source)
             if (root.length() != 2 ||

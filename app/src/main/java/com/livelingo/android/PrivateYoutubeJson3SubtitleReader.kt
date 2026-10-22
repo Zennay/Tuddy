@@ -36,7 +36,9 @@ internal object PrivateYoutubeJson3SubtitleReader {
                 ch == '\u0000' || (ch.isISOControl() &&
                     ch != '\n' && ch != '\r' && ch != '\t')
             }) return null
-        val root = runCatching { JSONObject(raw.removePrefix("\uFEFF")) }
+        val json = raw.removePrefix("\uFEFF")
+        if (!StrictJsonKeyGuard.accepts(json)) return null
+        val root = runCatching { JSONObject(json) }
             .getOrNull() ?: return null
         // Distinguish this from a Tuddy private transcript JSON document.
         val events = root.optJSONArray("events") ?: return null

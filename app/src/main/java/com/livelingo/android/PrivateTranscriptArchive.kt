@@ -34,7 +34,8 @@ internal object PrivateTranscriptArchive {
         val utf8 = bytes.toString(Charsets.UTF_8)
         // Kotlin's default UTF-8 decoder replaces invalid sequences. Refuse
         // those bytes rather than displaying altered user-supplied evidence.
-        if (!utf8.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        if (!utf8.toByteArray(Charsets.UTF_8).contentEquals(bytes) ||
+            !StrictJsonKeyGuard.accepts(utf8)) return null
         return try {
             val root = JSONObject(utf8)
             if (!exactFields(root, ROOT_FIELDS) ||

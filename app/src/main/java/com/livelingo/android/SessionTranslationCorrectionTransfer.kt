@@ -53,6 +53,7 @@ internal object SessionTranslationCorrectionTransfer {
         } catch (_: CharacterCodingException) {
             return null
         }
+        if (!StrictJsonKeyGuard.accepts(source)) return null
         val root = runCatching { JSONObject(source) }.getOrNull() ?: return null
         if (!exactKeys(root, rootKeys) ||
             root.opt("format") != FORMAT ||
