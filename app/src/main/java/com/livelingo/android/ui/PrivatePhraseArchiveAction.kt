@@ -40,7 +40,9 @@ private data class ArchiveRestore(
 @Composable
 internal fun PrivatePhraseArchiveAction(
     deck: PrivatePhraseDeck,
-    onChanged: () -> Unit
+    onChanged: () -> Unit,
+    incomingArchiveJsonText: String? = null,
+    onIncomingArchiveJsonConsumed: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val topics = remember(context) { PrivatePhraseTopics(context) }
@@ -104,6 +106,31 @@ internal fun PrivatePhraseArchiveAction(
                 feedback = ""
             }
         }
+    }
+
+    LaunchedEffect(incomingArchiveJsonText) {
+        val shared = incomingArchiveJsonText ?: return@LaunchedEffect
+        val bytes = shared.toByteArray(Charsets.UTF_8)
+        if (previewExport != null || pendingWrite != null || previewRestore != null) {
+            feedback = "Er staat al een privéback-up open. Sluit die eerst en deel opnieuw; " +
+                "de huidige selectie is behouden."
+        } else {
+            val candidate = if (bytes.size <= 70_000)
+                deck.previewArchiveImport(bytes) else null
+            val baseline = deck.entries()
+            if (candidate == null || baseline == null) {
+                feedback = "Gedeeld Tuddy-zinnen- en thema-archief geweigerd: ongeldige versie, " +
+                    "zinnen/thema's of groter dan 70 KB. Niets gewijzigd."
+            } else {
+                mergeMode = true
+                previewRestore = ArchiveRestore(
+                    candidate, baseline.toList(), topics.exportSnapshot()
+                )
+                feedback = "Gedeeld privé-archief ontvangen. Controleer alle zinnen en thema's; " +
+                    "er is nog niets hersteld."
+            }
+        }
+        onIncomingArchiveJsonConsumed(shared)
     }
 
     Column(
