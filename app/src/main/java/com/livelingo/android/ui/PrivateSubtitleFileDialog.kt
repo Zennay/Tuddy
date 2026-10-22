@@ -142,6 +142,8 @@ internal fun PrivateSubtitleFileDialog(
     var requestAssSave by remember { mutableStateOf(false) }
     var personalPhraseSource by remember(cues) { mutableStateOf<String?>(null) }
     var batchPhraseOpen by remember(cues) { mutableStateOf(false) }
+    var translationOpen by remember(cues) { mutableStateOf(false) }
+    var translationBase by remember(cues) { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
     var removeOpen by remember { mutableStateOf(false) }
@@ -371,6 +373,14 @@ internal fun PrivateSubtitleFileDialog(
                     "CSV/TSV neemt bestaande begin- en eindtijden over. " +
                     "Geen geverifieerde vertaling of automatische audio-synchronisatie.",
                     style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    enabled = draft.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        translationBase = draft.toList()
+                        translationOpen = true
+                    }
+                ) { Text("🌐 Vertaal ondertitelconcept lokaal…") }
                 OutlinedTextField(value = query, onValueChange = {
                     query = it.take(100)
                     shownIndex = -1
@@ -3200,5 +3210,31 @@ internal fun PrivateSubtitleFileDialog(
                 TextButton(onClick = { requestSave = null }) { Text("Annuleren") }
             }
         )
+    }
+    if (translationOpen) {
+        val base = translationBase
+        if (base != null) {
+            PrivateSubtitleTranslationDialog(
+                cues = base,
+                onApply = { translated ->
+                    if (draft == base) {
+                        applyChange(translated)
+                        notice = "Lokale vertaling toegepast op de tijdelijke kopie. Gebruik Herstel/ongedaan maken of bewaar bewust een nieuwe SRT/VTT-kopie."
+                        query = ""
+                        shownIndex = -1
+                    } else {
+                        notice = "Het concept veranderde tijdens vertalen; de vertaling is niet toegepast."
+                    }
+                    translationOpen = false
+                    translationBase = null
+                },
+                onDismiss = {
+                    translationOpen = false
+                    translationBase = null
+                }
+            )
+        } else {
+            translationOpen = false
+        }
     }
 }
