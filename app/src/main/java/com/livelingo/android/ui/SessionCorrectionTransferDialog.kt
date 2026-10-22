@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +58,9 @@ private data class SessionCorrectionSharePreview(
 internal fun SessionCorrectionTransferDialog(
     entries: List<SessionTranslationCorrection>,
     onReplace: (List<SessionTranslationCorrection>) -> Boolean,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    initialPastedText: String? = null,
+    onInitialPastedTextConsumed: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -77,6 +80,36 @@ internal fun SessionCorrectionTransferDialog(
     // One explicit rollback inside this dialog only; never saved to app storage.
     var undoBefore by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
     var undoAfter by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
+
+    LaunchedEffect(initialPastedText) {
+        val shared = initialPastedText ?: return@LaunchedEffect
+        if (preview != null || pasteOpen || sharePreview != null ||
+            exportSelectionOpen || busy) {
+            notice = "Er staat al een correctie-overdracht open. Sluit die eerst en deel opnieuw; " +
+                "de huidige selectie is behouden."
+        } else {
+            val bytes = shared.toByteArray(Charsets.UTF_8)
+            val decoded = if (bytes.size <= SessionTranslationCorrectionTransfer.MAX_BYTES)
+                SessionTranslationCorrectionTransfer.decode(bytes) else null
+            if (decoded == null) {
+                if (bytes.size <= SessionTranslationCorrectionTransfer.MAX_BYTES) {
+                    pastedCorrections = shared
+                    pasteOpen = true
+                }
+                notice = "Gedeelde correcties konden niet als geldige Tuddy-JSON worden gelezen. " +
+                    "Controleer de tekst; er is niets geïmporteerd."
+            } else {
+                preview = decoded
+                selectedRows = decoded.indices.toSet()
+                importSearch = ""
+                pastedCorrections = ""
+                pasteOpen = false
+                notice = "Gedeelde Tuddy-correcties ontvangen. Controleer de lijst en kies daarna " +
+                    "bewust samenvoegen of vervangen; er is nog niets geïmporteerd."
+            }
+        }
+        onInitialPastedTextConsumed(shared)
+    }
 
     val save = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
