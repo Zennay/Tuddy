@@ -233,7 +233,7 @@ internal fun PrivatePhraseTopicsDialog(
             },
             confirmButton = {
                 TextButton(
-                    enabled = mergeDestination in destinations,
+                    enabled = destinations.any { it == mergeDestination },
                     onClick = {
                         val target = mergeDestination
                         if (target != null) {
