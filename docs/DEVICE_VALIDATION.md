@@ -6,7 +6,7 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest app-code candidate (22 October 2026, after PR #361; built from its exact proposed-merge checkout and now merged to main):
+Pinned APK acceptance candidate (22 October 2026, built after PR #361). **This is a historical, reproducible handoff, not the latest app build:** PR #363 subsequently merged on main at `1034ddb0fb1d24882e4e3527ccb360249cfae459`, adding original-caption correction from the fullscreen reader. Do not attribute PR #363 behavior to this APK; obtain a new exact-source artifact before accepting the latest app version on a device:
 
 | Field | Immutable evidence |
 |---|---|
