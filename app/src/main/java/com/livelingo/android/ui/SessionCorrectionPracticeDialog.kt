@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -200,7 +201,7 @@ internal fun SessionCorrectionPracticeDialog(
                                 )
                                 Text(
                                     entry.sourceCode + " → " + entry.targetCode +
-                                        "\\n" + entry.original + " → " + entry.translation,
+                                        "\n" + entry.original + " → " + entry.translation,
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.bodySmall
                                 )
@@ -220,7 +221,10 @@ internal fun SessionCorrectionPracticeDialog(
                             resetRound()
                         }) { Text("Ronde opnieuw") }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         listOf(5, 10, 12).forEach { size ->
                             TextButton(onClick = {
                                 batchSize = size
