@@ -32,6 +32,17 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    de bovenste helft is omgekeerd en de onderste helft leesbaar vanaf
    jouw kant. Met **Kanten** bepaal je welke tekst aan welke persoon
    wordt getoond. Blader per beurt met Vorige/Volgende.
+### Gesprek onmiddellijk privé afschermen
+
+Kies **◼ Verberg direct beide zijden** in de tafelmodus om beide
+teksthelften tijdelijk onleesbaar te maken. Eventuele lokale voorlezing
+stopt direct en kan niet opnieuw starten tot je bewust **👁 Laat beide
+zijden weer zien** kiest. Ook in Mix/Herhaal/Oefenmodus blijft het
+oorspronkelijke gesprek behouden en moet je een eerder onthuld antwoord
+opnieuw bewust onthullen. De bedekking is geen Android-systeemslot;
+iedereen met toegang tot de telefoon kan zelf op de knop drukken.
+Er wordt niets opgeslagen, verwijderd of online verzonden.
+
 ### Optioneel scherm aanhouden in tafelmodus
 
 Kies **☼ Scherm aanhouden tijdens dit tafelgesprek** om alleen gedurende

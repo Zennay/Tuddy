@@ -1,3 +1,15 @@
+## Nieuw: één tik om beide oefenhelften te verbergen
+
+Met **Verberg direct beide zijden** maak je persoonlijke zinnen of
+tijdelijke gesprekken onmiddellijk onleesbaar op beide schermhelften.
+Lopende lokale voorlezing stopt en blijft geblokkeerd totdat je
+zelf de teksten weer zichtbaar maakt. Mix/Herhaal blijven intact;
+geen opslag of automatische netwerkactie. Dit is geen wachtwoordslot.
+[Kaartmodus](docs/PRIVATE_PHRASE_FACE_TO_FACE.md) ·
+[Gespreksmodus](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: wisselende offline oefenrondes met eigen zinnen
 
 In beide schermvullende tafelmodi kun je **Mix** kiezen om bestaande

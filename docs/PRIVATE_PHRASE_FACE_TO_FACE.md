@@ -80,3 +80,14 @@ een nieuwe oefenvraag begint. De volgorde, markeringen en oefenstatus
 bestaan **alleen zolang het tafelvenster open is**. Geen automatische
 gegevensopslag, leerscore of netwerkverzoek; bestaande persoonlijke
 spaced-repetitiongegevens worden niet aangeraakt.
+
+## Direct afschermen tijdens eigen-kaartoefening
+
+Met **◼ Verberg direct beide zijden** kun je ook midden in Mix of een
+gerichte Herhaalronde alle privézinnen direct uit beeld halen.
+De lokaal geïnstalleerde Android-stem stopt onmiddellijk;
+spraakknoppen zijn niet beschikbaar onder de bedekking.
+**👁 Laat beide zijden weer zien** brengt je terug naar dezelfde
+kaart en oefenselectie, zonder een eerder afgedekte betekenis te tonen.
+Dit is een kortstondige zichtbaarheidsschakelaar, **geen toegangscode
+of systeemvergrendeling**. Sluiten van het scherm wist de schakelstand.
