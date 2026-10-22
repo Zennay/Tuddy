@@ -16,6 +16,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -471,7 +472,14 @@ internal fun SavedWordsPanel(
                 words.forEach { word ->
                     HorizontalDivider()
                     val key = "${word.language}|${word.word}"
-                    Column {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = if (activeSpeechKey == key)
+                            MaterialTheme.colorScheme.secondaryContainer
+                        else MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
                         Text(
                             SavedWordFollowText(
                                 word = word,
@@ -481,6 +489,15 @@ internal fun SavedWordsPanel(
                             ),
                             style = MaterialTheme.typography.titleSmall
                         )
+                        if (activeSpeechKey == key) {
+                            Text(
+                                if (activeSpeechRange != null)
+                                    "Nu voorgelezen · indicatieve tekstmarkering van de stem."
+                                else "Nu voorgelezen · deze stem geeft geen woordbereik terug.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
                         reviewDates[key]?.let { scheduled ->
                             val dueLabel = if (scheduled.dueDay <= localToday)
                                 "Vandaag herhalen"
@@ -525,6 +542,7 @@ internal fun SavedWordsPanel(
                                 audioNotice = "Lokale voorlezing gestopt."
                             }) { Text("■ Stop") }
                         }
+                    }
                     }
                 }
             }
