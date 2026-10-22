@@ -12,10 +12,12 @@ en behoudt de bestaande tijdcodes.
    (tot 1.200 tekens). De uitkomst is een voorstel; controleer de brontaal zelf.
 2. Kies of bevestig de bron- en doeltaal uit de ondersteunde ML Kit-teksttalen.
    Tuddy start geen vertaling zonder deze expliciete taalkeuze.
-3. Kies het bereik met **Eerste regel** en **Laatste regel**. Beide nummers zijn
-   inclusief en beginnen bij 1. Standaard staat het hele document geselecteerd;
-   **Hele bestand kiezen** herstelt dat bereik. Een ongeldig bereik blokkeert
-   vertalen. Cues buiten het gekozen bereik blijven onaangeraakt.
+3. Kies een expliciete selectie met 1-based regelnummers, bijvoorbeeld
+   `1-5,8,11-12`. Een los nummer selecteert één cue; een bereik is inclusief.
+   Standaard staat het hele document geselecteerd en **Hele bestand kiezen**
+   herstelt dat. Ongeldige, dubbele of overlappende nummers blokkeren vertalen.
+   De samenvatting toont de genormaliseerde selectie en het exacte aantal cues.
+   Alle cues buiten de selectie blijven onaangeraakt.
 4. Tik op **Controleer lokale modellen**. Dit leest alleen de actuele lokale
    modelinventaris. Voor een verschillende bron- en doeltaal moeten de benodigde
    modellen al aanwezig zijn; Engels is ingebouwd.
@@ -47,10 +49,12 @@ en behoudt de bestaande tijdcodes.
 - Een ontbrekend of onbekend model blokkeert de vertaling. Sluit de dialoog en
   bereid het gekozen paar bewust voor via **Offline startcheck → Tekstmodel
   offline voorbereiden → wifi**; open het document daarna opnieuw.
-- Maximaal 500 cues. Het gekozen bereik gebruikt 1-based, inclusieve
-  regelnummers; cues buiten het bereik behouden hun tekst en tijdcodes. Iedere
-  vertaalde regel moet binnen de bestaande ondertiteltekstgrenzen blijven. Bij
-  een ongeldige of mislukte geselecteerde regel blijft het hele concept ongewijzigd.
+- Maximaal 500 cues. De selectie gebruikt 1-based regelnummers en ondersteunt
+  losse cues en inclusieve bereiken zoals `1-5,8,11-12`; dubbele of overlappende
+  regelnummers worden geweigerd. Cues buiten de selectie behouden hun tekst en
+  tijdcodes. Iedere vertaalde regel moet binnen de bestaande ondertiteltekstgrenzen
+  blijven. Bij een ongeldige of mislukte geselecteerde regel blijft het hele concept
+  ongewijzigd.
 - De voorgestelde brontaal komt uit een korte on-device steekproef en kan fout
   zijn. Je kunt de taal handmatig wijzigen; modelcontrole en vertalen vereisen
   nog steeds een aparte expliciete actie. Controleer alle vertalingen voordat je ze publiceert.
