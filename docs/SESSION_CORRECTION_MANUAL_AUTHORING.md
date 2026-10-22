@@ -23,3 +23,14 @@ zelfstandige keuze.
 Dit maakt Kurmanji, Sorani of Pasjtoe niet automatisch beschikbaar:
 volwaardige rechtengecontroleerde on-device ASR+MT en fysieke Android
 vliegtuigmodusacceptatie blijven aparte, onbewezen productgates.
+
+
+Voor Kurmanji (`kmr`), Sorani (`ckb`) en Pasjtoe (`ps`) is de keuze
+bedoeld als **handmatig phrasebook**: je mag zelf de exacte zin en je eigen
+vertaling invoeren, maar deze codes worden niet toegevoegd aan de echte
+ML Kit-tekstdoelen of Android-spraakcatalogus. Er is geen lokale stem of
+automatische vertaling voor deze route bevestigd. Gebruik **Taal- en
+modelinstellingen → Bekijk alle taalondersteuning → Schrijf eigen zinnen
+zonder model…** om met een van deze talen te beginnen. De bestaande oefen- en
+exportacties kunnen de eigen tekst gebruiken; dit heft de openstaande
+volledige offline ASR+MT-gate niet op.
