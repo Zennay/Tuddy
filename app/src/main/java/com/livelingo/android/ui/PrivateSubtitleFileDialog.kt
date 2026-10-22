@@ -3210,7 +3210,8 @@ internal fun PrivateSubtitleFileDialog(
                 TextButton(onClick = { requestSave = null }) { Text("Annuleren") }
             }
         )
-        if (translationOpen) {
+    }
+    if (translationOpen) {
         val base = translationBase
         if (base != null) {
             PrivateSubtitleTranslationDialog(
@@ -3236,5 +3237,4 @@ internal fun PrivateSubtitleFileDialog(
             translationOpen = false
         }
     }
-}
 }
