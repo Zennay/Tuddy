@@ -40,12 +40,24 @@ internal class PrivateSubtitleTranslationController {
         source: String,
         target: String,
         onProgress: (completed: Int, total: Int) -> Unit,
-        onComplete: (texts: List<String>?, error: String?) -> Unit
+        onComplete: (texts: List<String>?, error: String?) -> Unit,
+        sourceRowNumbers: List<Int> = cues.indices.map { it + 1 }
     ) {
         cancel()
         val token = generation
         if (cues.isEmpty() || cues.size > MAX_CUES) {
             complete(token, null, "Dit ondertitelconcept bevat geen geldige vertaalbatch.", onComplete)
+            return
+        }
+        if (sourceRowNumbers.size != cues.size ||
+            sourceRowNumbers.any { it !in 1..MAX_CUES } ||
+            sourceRowNumbers.zipWithNext().any { (left, right) -> left >= right }
+        ) {
+            complete(
+                token, null,
+                "De oorspronkelijke regelnummers komen niet overeen met de vertaalbatch.",
+                onComplete
+            )
             return
         }
         if (source !in TargetCatalog.codes || target !in TargetCatalog.codes) {
@@ -101,10 +113,11 @@ internal class PrivateSubtitleTranslationController {
                 }
 
                 val input = cues[index].text.replace('\n', ' ').trim()
+                val sourceRow = sourceRowNumbers[index]
                 if (input.isBlank()) {
                     complete(
                         token, null,
-                        "Regel ${index + 1} is leeg. Het concept is ongewijzigd.",
+                        "Regel $sourceRow is leeg. Het concept is ongewijzigd.",
                         onComplete
                     )
                     return
@@ -118,7 +131,7 @@ internal class PrivateSubtitleTranslationController {
                             if (clean == null) {
                                 complete(
                                     token, null,
-                                    "Vertaalde regel ${index + 1} overschrijdt de veilige tekstgrenzen. " +
+                                    "Vertaalde regel $sourceRow overschrijdt de veilige tekstgrenzen. " +
                                         "Het concept is ongewijzigd.",
                                     onComplete
                                 )
@@ -132,7 +145,7 @@ internal class PrivateSubtitleTranslationController {
                             if (token == generation) {
                                 complete(
                                     token, null,
-                                    "Lokale vertaling van regel ${index + 1} mislukte. " +
+                                    "Lokale vertaling van regel $sourceRow mislukte. " +
                                         "Er zijn geen gedeeltelijke wijzigingen toegepast.",
                                     onComplete
                                 )
@@ -141,7 +154,7 @@ internal class PrivateSubtitleTranslationController {
                 } catch (_: Exception) {
                     complete(
                         token, null,
-                        "Lokale vertaling van regel ${index + 1} kon niet starten. " +
+                        "Lokale vertaling van regel $sourceRow kon niet starten. " +
                             "Het concept is ongewijzigd.",
                         onComplete
                     )
