@@ -62,6 +62,17 @@ persoonsgegevens op een zichtbaar scherm.
 Een fysiek Android-vliegtuigmodusbewijs en een getekende release ontbreken
 nog steeds.
 
+## Volgmarkering bij lokale uitspraak
+
+Tijdens **🔊 Eigen zin** of **🔊 Betekenis** blijft de daadwerkelijk
+uitgesproken helft zichtbaar en wordt een tekstbereik gemarkeerd wanneer de
+reeds geïnstalleerde, niet-netwerkafhankelijke Android-stem dit terugmeldt.
+Als de stem geen bereik teruggeeft, blijft alleen de zin zichtbaar; Tuddy
+claimt geen exacte woordgrenzen of fonetische timing. De markering verdwijnt
+bij stoppen, wisselen van kaart/kant, privacy-afscherming, wijzigen van de
+spreeksnelheid of het verlaten van de app. Er wordt geen audio of extra
+spraaktekst opgeslagen.
+
 ## Wisselende volgorde en tijdelijk gericht herhalen
 
 De tafelmodus heeft nu **⇄ Mix**: de geselecteerde, al bestaande kaarten

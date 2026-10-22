@@ -3349,7 +3349,9 @@ zonder tekstbereiken blijven bij regelvolging; de markering is indicatief, geen 
 Dezelfde tijdelijke volgkaart verschijnt ook bij het voorlezen van origineel
 of vertaling in **Tuddy · Toon gesprekszin**. In het tweezijdige gespreksscherm
 wordt bovendien de zijde **Tegenover** of **Hier** gemarkeerd die op dat moment
-wordt voorgelezen.
+wordt voorgelezen. In de persoonlijke zinnentafel volgt de markering
+bovendien de zelfgeschreven zin of betekenis die lokaal wordt voorgelezen,
+wanneer de stem tekstbereiken meldt.
 **Stop**, het kiezen van een andere regel, het wijzigen van het concept of het
 verlaten van de app beëindigt de reeks. Alleen reeds geïnstalleerde
 niet-netwerkstemmen worden gebruikt; te lange regels blokkeren de reeks in
