@@ -9,7 +9,8 @@ privétranscript.
 2. Gebruik de getoonde bronzin en eventuele afgeronde vertaling uitsluitend
    als context. De twee tekstvelden blijven leeg; Tuddy vult niets automatisch in.
 3. Kies expliciet **Kurmanji**, **Sorani** of **Pasjtoe** als taal van jouw zin.
-   Schrijf zelf de zin (maximaal 120 tekens).
+   Schrijf zelf de zin (maximaal 120 tekens); Sorani/Pasjtoe krijgt een
+   rechts-naar-links invoerrichting en automatische toetsenbordcorrectie staat uit.
 4. Kies **Nederlands** of **Engels** als betekenisstaal en schrijf zelf
    de betekenis (maximaal 180 tekens).
 5. Controleer beide velden en kies bewust **Bewaar mijn eigen privékaart**.
