@@ -118,6 +118,24 @@ internal fun OfflineAcceptanceReportAction(
         return report.toByteArray(Charsets.UTF_8).takeIf { it.size in 1..16384 }
     }
 
+    fun resetDraft() {
+        baseline = null
+        recordedAt = 0L
+        opened = false
+        expectedApkSha256 = ""
+        disconnectedConfirmed = false
+        permissionAndStopConfirmed = false
+        noCloudFallbackConfirmed = false
+        privacyClearingConfirmed = false
+        nlEnSpeech = "0"
+        enNlSpeech = "0"
+        nlEnTranslation = "0"
+        enNlTranslation = "0"
+        maxLatencyMs = ""
+        pendingReport = null
+        pendingBaseline = null
+    }
+
     val saveReport = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/plain")
     ) { uri ->
@@ -148,6 +166,7 @@ internal fun OfflineAcceptanceReportAction(
                 else "Opslaan mislukt; het rapport is niet bewaard."
             }
         }
+        resetDraft()
     }
 
     Column(
@@ -183,7 +202,7 @@ internal fun OfflineAcceptanceReportAction(
     if (opened) {
         val readyReport = reportBytes()
         AlertDialog(
-            onDismissRequest = { opened = false; baseline = null },
+            onDismissRequest = { resetDraft(); message = "" },
             title = { Text("Offline sessie vastleggen") },
             text = {
                 Column(
@@ -287,8 +306,7 @@ internal fun OfflineAcceptanceReportAction(
                         if (capturedBaseline == null || fresh == null ||
                             !fresh.contentEquals(capturedBaseline) || bytes == null) {
                             message = "Apparaatstatus is veranderd of onvolledig. Open het rapport opnieuw."
-                            opened = false
-                            baseline = null
+                            resetDraft()
                         } else {
                             pendingReport = bytes
                             pendingBaseline = capturedBaseline
@@ -300,7 +318,7 @@ internal fun OfflineAcceptanceReportAction(
                 ) { Text("Bewaar rapport…") }
             },
             dismissButton = {
-                TextButton(onClick = { opened = false; baseline = null }) {
+                TextButton(onClick = { resetDraft(); message = "" }) {
                     Text("Annuleren")
                 }
             }
