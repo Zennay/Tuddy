@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.PrivateAuthoredConversationTurn
 import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivatePhraseTextPolicy
 import java.util.Locale
@@ -361,6 +362,34 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                 }
                 OfflinePersonalTurnScriptExport(
                     turns = turns.map { it.note to it.fromMeaning }
+                )
+                OfflinePersonalTurnScriptImport(
+                    current = turns.map {
+                        PrivateAuthoredConversationTurn(it.note, it.fromMeaning)
+                    },
+                    onImport = { expected, selected, replace ->
+                        val actual = turns.map {
+                            PrivateAuthoredConversationTurn(it.note, it.fromMeaning)
+                        }
+                        if (actual != expected ||
+                            (!replace && turns.size + selected.size > 12)) {
+                            false
+                        } else {
+                            val restored = selected.map { item ->
+                                // Imported files are never enrolled in the saved deck.
+                                LocalPersonalTurn(
+                                    item.note, item.fromMeaning, temporary = true
+                                )
+                            }
+                            turns = if (replace) restored else turns + restored
+                            draft = ""
+                            manualOriginal = ""
+                            manualMeaning = ""
+                            choosingSaved = false
+                            saveNotice = ""
+                            true
+                        }
+                    }
                 )
                 Text("Deze zinnen zijn niet onafhankelijk beoordeeld. " +
                     "Gebruik ze niet bij urgente, medische of juridische beslissingen.",

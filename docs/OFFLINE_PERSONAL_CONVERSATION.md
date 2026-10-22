@@ -46,6 +46,33 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    een afzonderlijk bewust bewaarde privézin blijft natuurlijk wel
    in de zinnenlijst staan totdat je hem zelf verwijdert.
 
+## Heropen een eigen gesprekscript op een andere sessie
+
+1. Bewaar bewust je gekozen beurten met **Bewaar uitsluitend deze eigen beurten als tekst…**.
+   Bekijk de volledige preview en wijs zelf een Android-bestandslocatie aan.
+2. Open later **Gesprek met eigen offline zinnen** en kies
+   **Open mijn eerder bewaarde Tuddy-gesprek…**. Kies expliciet het eerdere
+   `Tuddy-mijn-offline-gespreksbeurten.txt`-bestand via Android Documenten.
+3. Tuddy leest maximaal **8192 bytes** lokaal en accepteert uitsluitend de
+   exacte Nederlandse Tuddy-scriptopmaak met **1–12** complete, zelfgeschreven
+   beurten. Vervalste taalparen, beschadigde UTF-8, gevaarlijke opmaak,
+   extra regels of te lange inhoud worden afgewezen. Het bronbestand verandert
+   nooit en bij fouten blijft het bestaande gesprek intact.
+4. Controleer **alle** originele zinnen en betekenissen inclusief de
+   richting van elke beurt in de volledige preview. Kies daarna bewust:
+   **Vervang mijn tijdelijke gesprek** of **Voeg toe aan mijn tijdelijke
+   gesprek** (alleen bij totaal maximaal twaalf beurten).
+5. Een geïmporteerde beurt is altijd **tijdelijk**, ook als de originele
+   schrijver hem eerder in een eigen woordenlijst had staan. Wil je een
+   afzonderlijk paar bewaren, gebruik dan de aparte bestaande
+   toestemmingsactie. De import bewaart nooit automatisch in de woordenlijst
+   of op schijf.
+
+De Android Documenten-app kan externe cloudbestandsproviders aanbieden,
+maar Tuddy uploadt of vertaalt het geselecteerde bestand niet. Dit is
+geen compatibiliteit met willekeurige ondertitels of vertaalbestanden:
+alleen door Tuddy zelf geëxporteerde gesprekscripts zijn ondersteund.
+
 ## Externe kopie is een afzonderlijke bewuste stap
 
 Een gesprek wordt standaard niet opgeslagen of gedeeld. Een afzonderlijk\nzelfgeschreven zinnenpaar kan na expliciete bevestiging lokaal bewaard worden.\nAlleen via

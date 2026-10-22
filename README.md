@@ -1,3 +1,16 @@
+## Nieuw: exporteer én heropen een zelfgeschreven privégesprek
+
+Tuddy kan een bewust als `.txt` bewaard gesprek nu later weer als
+**tijdelijke gespreksbeurten** openen. Kies zelf het bestand via Android
+Documenten, controleer alle zinnen en de gespreksrichting en beslis daarna
+**Vervang** of **Voeg toe** (maximaal twaalf beurten totaal). Ongeldige of
+te grote documenten worden zonder wijziging geweigerd. Geïmporteerde
+zinnen worden nooit automatisch permanent in de woordenlijst opgeslagen.
+De bestaande tekstexport heeft hetzelfde, strikt begrensde Tuddy-formaat.
+[Stapsgewijze handleiding](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: offline eigen tweewegzinnen — zonder spraak- of vertaalmodel
 
 Open **Gesprek met eigen offline zinnen**. Kies exact een opgeslagen eigen zin
