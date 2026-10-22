@@ -3071,6 +3071,11 @@ private fun TuddyScreen(
                 onRemove = { entry ->
                     if (translationMemory.forget(entry)) translationMemoryRevision++
                 },
+                onRevise = { previous, original, translation ->
+                    translationMemory.revise(previous, original, translation).also { changed ->
+                        if (changed) translationMemoryRevision++
+                    }
+                },
                 onClear = {
                     translationMemory.clear()
                     translationMemoryRevision++
