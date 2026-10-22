@@ -28,8 +28,7 @@ internal class PrivateOwnWordDeck(context: Context) {
         const val MAX_ENTRIES = 120
         const val MAX_BACKUP_BYTES = 50_000
         private const val MAX_JSON = 50_000
-        val SUPPORTED_CODES: Set<String> =
-            (TargetCatalog.codes + listOf("kmr", "ckb", "ps")).toSet()
+        val SUPPORTED_CODES: Set<String> = SessionCorrectionLanguageCatalog.codes
         private fun cleanCode(raw: String): String =
             raw.trim().replace('_', '-').substringBefore('-').lowercase(Locale.ROOT)
 
