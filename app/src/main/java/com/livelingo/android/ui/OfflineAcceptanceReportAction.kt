@@ -110,15 +110,46 @@ internal fun OfflineAcceptanceReportAction(
         val installed = installedApkDigest(bytes) ?: return false
         return expected.matches(Regex("[0-9a-f]{64}")) && expected == installed
     }
+    fun reportLines(bytes: ByteArray?): Set<String> =
+        bytes?.toString(Charsets.UTF_8)?.lineSequence()?.map { it.trim() }?.toSet()
+            ?: emptySet()
+
     fun reportsAirplaneModeOn(bytes: ByteArray?): Boolean =
-        bytes?.toString(Charsets.UTF_8)?.lineSequence()
-            ?.any { it.trim() == "Airplane mode: true" } == true
+        "Airplane mode: true" in reportLines(bytes)
+
+    fun reportsWifiRadioDisabled(bytes: ByteArray?): Boolean =
+        "Wifi radio enabled (Android reported): false" in reportLines(bytes)
+
+    fun reportsNoNetworkTransports(bytes: ByteArray?): Boolean {
+        val lines = reportLines(bytes)
+        return "Network transport read failed: false" in lines &&
+            "Network transports Android reports: none reported" in lines
+    }
+
+    fun reportsOfflineRadioState(bytes: ByteArray?): Boolean =
+        reportsAirplaneModeOn(bytes) &&
+            reportsWifiRadioDisabled(bytes) &&
+            reportsNoNetworkTransports(bytes)
+
+    fun offlineRadioBlockerMessage(bytes: ByteArray?): String = when {
+        !reportsAirplaneModeOn(bytes) ->
+            "Android rapporteert geen ingeschakelde vliegtuigmodus. De sessie blijft onvolledig."
+        !reportsWifiRadioDisabled(bytes) ->
+            "Android rapporteert dat de wifi-radio aan staat of de status niet kan lezen. Schakel wifi uit en open het rapport opnieuw."
+        !reportsNoNetworkTransports(bytes) ->
+            "Android rapporteert een actieve netwerkverbinding of kan de netwerkstatus niet lezen. Verbreek verbindingen en open het rapport opnieuw."
+        else -> "De radio-indicatoren zijn niet voldoende voor een complete offline-waarneming."
+    }
     fun reportBytes(): ByteArray? {
         val identity = baseline ?: return null
         val installedDigest = installedApkDigest(identity)
         val expectedDigest = expectedApkSha256.trim().lowercase()
         val digestMatches = expectedDigestMatches(identity)
         val airplaneModeReportedOn = reportsAirplaneModeOn(identity)
+        val wifiRadioReportedOff = reportsWifiRadioDisabled(identity)
+        val networkTransportsReportedClear = reportsNoNetworkTransports(identity)
+        val radioSnapshotReady = airplaneModeReportedOn && wifiRadioReportedOff &&
+            networkTransportsReportedClear
         val nlEn = OfflineObservationLedger.totals(attempts, OfflineObservationDirection.NL_EN)
         val enNl = OfflineObservationLedger.totals(attempts, OfflineObservationDirection.EN_NL)
         val worstLatency = OfflineObservationLedger.worstEndToEndLatencyMs(attempts)
@@ -127,7 +158,7 @@ internal fun OfflineAcceptanceReportAction(
         val recordedAllAttempts = OfflineObservationLedger.complete(attempts)
         val allSuccessfulTranslationsTimed =
             OfflineObservationLedger.timedSuccessesComplete(attempts)
-        val complete = digestMatches && airplaneModeReportedOn &&
+        val complete = digestMatches && radioSnapshotReady &&
             disconnectedConfirmed &&
             permissionAndStopConfirmed && noCloudFallbackConfirmed &&
             privacyClearingConfirmed && recordedAllAttempts &&
@@ -144,6 +175,10 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Expected APK SHA-256 supplied by operator (APK file, not artifact ZIP): ${expectedDigest.ifBlank { "not supplied" }}")
             appendLine("Installed base APK SHA-256: ${installedDigest ?: "unavailable"}")
             appendLine("Installed APK digest matches supplied expected APK digest: $digestMatches")
+            appendLine("Captured airplane mode reported enabled: $airplaneModeReportedOn")
+            appendLine("Captured Wi-Fi radio reported disabled: $wifiRadioReportedOff")
+            appendLine("Captured network status readable with no transports: $networkTransportsReportedClear")
+            appendLine("Captured radio indicators consistent with offline session: $radioSnapshotReady")
             appendLine("Airplane mode enabled and Wi-Fi/mobile connectivity independently disabled: $disconnectedConfirmed")
             appendLine("Microphone permission and explicit Stop/lifecycle behavior observed: $permissionAndStopConfirmed")
             appendLine("No cloud/network speech or translation fallback observed: $noCloudFallbackConfirmed")
@@ -387,11 +422,9 @@ internal fun OfflineAcceptanceReportAction(
                             MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    if (!reportsAirplaneModeOn(baseline)) {
+                    if (!reportsOfflineRadioState(baseline)) {
                         Text(
-                            "Android rapporteert momenteel geen vliegtuigmodus aan. " +
-                                "De sessie kan als mislukt/onvolledig worden vastgelegd; " +
-                                "een complete offline-waarneming is pas mogelijk nadat je de verbinding verbreekt.",
+                            offlineRadioBlockerMessage(baseline),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -399,7 +432,7 @@ internal fun OfflineAcceptanceReportAction(
                     AcceptanceObservationCheck(
                         "Vliegtuigmodus aan; wifi en mobiele data zijn onafhankelijk uitgeschakeld.",
                         disconnectedConfirmed,
-                        enabled = reportsAirplaneModeOn(baseline)
+                        enabled = reportsOfflineRadioState(baseline)
                     ) { disconnectedConfirmed = it }
                     AcceptanceObservationCheck(
                         "Microfoonmachtiging, expliciet Stoppen en stoppen bij verlaten van de app waargenomen.",
