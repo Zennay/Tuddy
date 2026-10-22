@@ -3343,9 +3343,9 @@ Open een SRT/VTT-bestand in **Gesprekstools → Open SRT/WebVTT…**. Kies in he
 ondertitelconcept een regel, selecteer eerst een geïnstalleerde lokale stem en
 tik **Lees vanaf deze regel · maximaal 100 cues**. Tuddy leest die regel en de
 volgende regels serieel voor, met voortgang en normaal of rustig tempo.
-Tijdens het afspelen toont Tuddy de actuele cue en markeert het tekstfragment
-dat een compatibele lokale stem terugmeldt. Stemmen zonder tekstbereiken blijven
-bij regelvolging; de markering is indicatief, geen exacte fonetische timing.
+Bij lokaal voorlezen van één cue of een reeks toont Tuddy de actuele cue
+en markeert het tekstfragment dat een compatibele lokale stem terugmeldt. Stemmen
+zonder tekstbereiken blijven bij regelvolging; de markering is indicatief, geen exacte fonetische timing.
 **Stop**, het kiezen van een andere regel, het wijzigen van het concept of het
 verlaten van de app beëindigt de reeks. Alleen reeds geïnstalleerde
 niet-netwerkstemmen worden gebruikt; te lange regels blokkeren de reeks in
