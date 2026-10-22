@@ -5,12 +5,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -46,6 +48,7 @@ internal fun SessionCorrectionTransferDialog(
     val scope = rememberCoroutineScope()
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     var preview by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
+    var selectedRows by remember { mutableStateOf(emptySet<Int>()) }
     var notice by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     // One explicit rollback inside this dialog only; never saved to app storage.
@@ -82,6 +85,7 @@ internal fun SessionCorrectionTransferDialog(
     ) { uri: Uri? ->
         if (uri != null) {
             preview = null
+            selectedRows = emptySet()
             busy = true
             scope.launch {
                 val decoded = withContext(Dispatchers.IO) {
@@ -114,6 +118,7 @@ internal fun SessionCorrectionTransferDialog(
                         "maximaal 40 exacte eigen correcties. Er is niets gewijzigd."
                 } else {
                     preview = decoded
+                    selectedRows = decoded.indices.toSet()
                     notice = "Controleer alle zinnen. Kies bewust hoe je deze " +
                         "samenvoegt of als vervanging in RAM laadt."
                 }
@@ -191,13 +196,45 @@ internal fun SessionCorrectionTransferDialog(
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    Text(
+                        selectedRows.size.toString() + " van " + imported.size +
+                            " eigen correcties gekozen. Alleen deze worden overgenomen.",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(
+                            onClick = { selectedRows = imported.indices.toSet() },
+                            enabled = !busy
+                        ) { Text("Kies alles") }
+                        TextButton(
+                            onClick = { selectedRows = emptySet() },
+                            enabled = !busy
+                        ) { Text("Kies niets") }
+                    }
                     imported.forEachIndexed { index, row ->
-                        Text(
-                            (index + 1).toString() + ". " + row.sourceCode +
-                                " → " + row.targetCode + ": " + row.original +
-                                " → " + row.translation,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Checkbox(
+                                checked = index in selectedRows,
+                                onCheckedChange = { selected ->
+                                    selectedRows = if (selected) selectedRows + index
+                                        else selectedRows - index
+                                },
+                                enabled = !busy
+                            )
+                            Text(
+                                (index + 1).toString() + ". " + row.sourceCode +
+                                    " → " + row.targetCode + ": " + row.original +
+                                    " → " + row.translation,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    val chosen = imported.filterIndexed { index, _ ->
+                        index in selectedRows
                     }
                     SessionCorrectionMergeOptions(
                         current = entries,
