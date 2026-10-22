@@ -5254,7 +5254,12 @@ private fun TuddyScreen(
             MyOfflinePhrasesPanel(
                 deck = personalPhrases,
                 initialLanguage = previewTarget,
-                onDismiss = { personalPhrasesOpen = false }
+                incomingCsvDocument = incomingPersonalCsv,
+                onIncomingCsvConsumed = onPersonalCsvConsumed,
+                onDismiss = {
+                    personalPhrasesOpen = false
+                    incomingPersonalCsv?.let { onPersonalCsvConsumed(it.requestId) }
+                }
             )
         }
         val deleteRequest = pendingSingleCaptionDelete
