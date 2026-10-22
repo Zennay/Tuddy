@@ -12,6 +12,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,6 +70,9 @@ internal fun PrivatePhraseTopicCsvAction(
                     else topics.topicFor(note) == topic)
         }
     var importReview by remember { mutableStateOf<TopicCsvImport?>(null) }
+    var pasteOpen by remember { mutableStateOf(false) }
+    var pasteText by remember { mutableStateOf("") }
+    var pasteError by remember { mutableStateOf("") }
     var mergeOnly by remember { mutableStateOf(true) }
 
     val saveFile = rememberLauncherForActivityResult(
@@ -145,6 +149,15 @@ internal fun PrivatePhraseTopicCsvAction(
             modifier = Modifier.fillMaxWidth(),
             onClick = { openFile.launch(arrayOf("text/csv", "text/plain", "application/octet-stream")) }
         ) { Text("Importeer zinnen mét thema's uit CSV…") }
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                pasteOpen = true
+                pasteText = ""
+                pasteError = ""
+                notice = ""
+            }
+        ) { Text("Plak mijn eigen zinnen mét thema's als CSV…") }
         Text(
             "Bewerkbare vijfkoloms-CSV met een eigen thema per zin. Dit is anders " +
                 "dan de gewone vierkoloms-CSV. Alles wordt eerst volledig getoond; " +
@@ -152,6 +165,80 @@ internal fun PrivatePhraseTopicCsvAction(
             style = MaterialTheme.typography.bodySmall
         )
         if (notice.isNotBlank()) Text(notice, style = MaterialTheme.typography.bodySmall)
+    }
+
+    if (pasteOpen) {
+        AlertDialog(
+            onDismissRequest = {
+                pasteOpen = false
+                pasteText = ""
+                pasteError = ""
+            },
+            title = { Text("Plak een eigen CSV met thema's · zonder bestand") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Text("Plak bewust maximaal 12.000 tekens inclusief de exacte " +
+                        "vijfkoloms-kopregel: language,phrase,meaningLanguage,ownMeaning,topic. " +
+                        "Geen automatische klembordlezing of netwerkvertaaldienst. " +
+                        "Bij geldige invoer volgt eerst een afzonderlijke volledige preview.",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedTextField(
+                        value = pasteText,
+                        onValueChange = { incoming ->
+                            if (incoming.length <= 12_000) {
+                                pasteText = incoming
+                                pasteError = ""
+                            } else {
+                                pasteError = "Maximaal 12.000 tekens; invoer ongewijzigd."
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Volledige eigen CSV inclusief de vijf kolomnamen") },
+                        minLines = 4,
+                        maxLines = 10
+                    )
+                    if (pasteError.isNotBlank()) {
+                        Text(pasteError, color = MaterialTheme.colorScheme.error)
+                    }
+                    Text("Een lege themakolom is toegestaan. Alle betekenissen zijn " +
+                        "door jou zelf geschreven en worden niet door Tuddy vertaald.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val candidate = PrivatePhraseTopicCsv.preview(
+                        pasteText.toByteArray(Charsets.UTF_8), deck
+                    )
+                    val baseline = deck.entries()
+                    if (candidate == null || baseline == null) {
+                        pasteError = "CSV onjuist of te groot: controleer vijf kolommen, " +
+                            "taalcodes, dubbele quotes, thema's en dubbele bronzinnen. " +
+                            "Niets opgeslagen."
+                    } else {
+                        importReview = TopicCsvImport(
+                            candidate, baseline.toList(), topics.exportSnapshot()
+                        )
+                        mergeOnly = true
+                        pasteOpen = false
+                        pasteText = ""
+                        pasteError = ""
+                        notice = ""
+                    }
+                }) { Text("Controleer alle geplakte zinnen…") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pasteOpen = false
+                    pasteText = ""
+                    pasteError = ""
+                }) { Text("Annuleren") }
+            }
+        )
     }
 
     if (choosingScope) {
