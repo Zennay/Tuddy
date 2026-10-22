@@ -160,3 +160,32 @@ app kan de data wel uploaden, synchroniseren of doorsturen;
 Tuddy kan die externe kopie niet verwijderen. De functie
 is standaard uit totdat de gebruiker bewust beide stappen
 doorloopt en is geen automatische cloudbackup.
+
+
+## Zelf afzonderlijke CSV-regels kiezen bij import
+
+Bij **Importeer zinnen mét thema's uit CSV…** en **Plak mijn eigen zinnen
+mét thema's als CSV…** kun je na de taal- en themafilter ook **per regel**
+bewust kiezen tussen **☑ Meenemen** en **☐ Overgeslagen**. De bronzin,
+je eigen betekenis en het thema blijven zichtbaar, ook wanneer je de regel
+uitsluit. Tik opnieuw om een overgeslagen regel weer mee te nemen.
+
+Met **Neem alle zichtbare zinnen mee** of **Sla alle zichtbare zinnen over**
+kun je in één keer de op dat moment gefilterde regels kiezen. De keuze
+voor andere, verborgen filtergroepen blijft behouden. **Herstel volledige
+CSV-selectie** wist de filters én alle overgeslagen regels.
+
+Het scherm toont uitsluitend voor werkelijk geselecteerde regels de
+aantallen **nieuw** en **bestaat lokaal**. Bij nul gekozen regels is
+bevestigen onmogelijk. Zodra je zelfs één regel uitsluit, is **Vervang hele
+privé-lijst** uitgeschakeld: een deelimport kan uitsluitend veilig
+samenvoegen en verandert nooit een bestaande betekenis, thema of
+herhaalplanning. Pas nadat de gehele CSV weer is gekozen, is de apart
+gewaarschuwde volledige vervangoptie beschikbaar.
+
+De rijselectie wordt uitsluitend tijdens de huidige preview in geheugen
+bewaard. Een nieuwe bestandsimport of nieuwe handmatige plakimport begint
+met alle geldige regels geselecteerd. Vóór opslag blijft de bestaande
+strenge controle tegen inmiddels gewijzigde lokale zinnen en thema's
+actief; bij conflict wordt niets gedeeltelijk opgeslagen. Er is geen
+automatische synchronisatie, vertaling, of verwerking van conversatieaudio.
