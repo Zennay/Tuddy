@@ -300,7 +300,10 @@ internal fun PrivatePhraseTopicCsvAction(
                         "de resterende selectie volgt eerst een volledige privacy-preview.",
                         style = MaterialTheme.typography.bodySmall)
                     TextButton(onClick = {
-                        excludedExportRows = emptySet()
+                        val visibleIds = visible.map {
+                            PrivatePhraseShortcuts.fingerprint(it)
+                        }.toSet()
+                        excludedExportRows = excludedExportRows - visibleIds
                     }) { Text("↺ Herstel alle zichtbare zinnen") }
                     TextButton(
                         enabled = visible.any {
