@@ -55,6 +55,7 @@ internal fun LanguageSupportDialog(
     var checkingLocalVoices by remember { mutableStateOf(false) }
     var voicePreferenceRevision by remember { mutableStateOf(0) }
     var localVoiceNotice by remember { mutableStateOf("Nog niet gecontroleerd op dit toestel.") }
+    var localVoiceQuery by remember { mutableStateOf("") }
     DisposableEffect(localVoiceInventory) {
         onDispose { localVoiceInventory.close() }
     }
@@ -265,7 +266,36 @@ internal fun LanguageSupportDialog(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         } else {
-                            voices.take(30).forEach { voice ->
+                            val filteredVoices = remember(voices, localVoiceQuery) {
+                                voices.filter { voice ->
+                                    LanguageSearch.matches(
+                                        localVoiceQuery,
+                                        listOf(voice.displayName, voice.languageTag, voice.voiceName)
+                                    )
+                                }
+                            }
+                            OutlinedTextField(
+                                value = localVoiceQuery,
+                                onValueChange = { localVoiceQuery = it.take(80) },
+                                label = { Text("Zoek stem, taal of engine-ID") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text(
+                                if (localVoiceQuery.isBlank()) {
+                                    "${voices.size} lokale stemvarianten beschikbaar."
+                                } else {
+                                    "${filteredVoices.size} van ${voices.size} stemvarianten gevonden."
+                                },
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            if (filteredVoices.isEmpty()) {
+                                Text(
+                                    "Geen lokale stemvarianten gevonden voor deze zoekopdracht.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            } else {
+                                filteredVoices.forEach { voice ->
                                 val isPreferred = remember(
                                     voicePreferenceRevision, voice.languageTag, voice.voiceName
                                 ) {
@@ -302,11 +332,6 @@ internal fun LanguageSupportDialog(
                                     }
                                 }
                             }
-                            if (voices.size > 30) {
-                                Text(
-                                    "Nog ${voices.size - 30} stemvarianten niet getoond.",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
                             }
                             TextButton(
                                 onClick = {
