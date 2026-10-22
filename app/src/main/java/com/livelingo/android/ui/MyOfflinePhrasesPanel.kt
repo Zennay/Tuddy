@@ -41,6 +41,12 @@ private data class PendingScopedTsv(
     val bytes: ByteArray
 )
 
+private data class PendingScopedCsv(
+    val language: String?,
+    val topic: String?,
+    val bytes: ByteArray
+)
+
 private data class PendingTopicPhrasebook(
     val language: String?,
     val topic: String?,
@@ -88,6 +94,10 @@ internal fun MyOfflinePhrasesPanel(
     var pasteError by remember { mutableStateOf("") }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingTsvExport by remember { mutableStateOf<PendingScopedTsv?>(null) }
+    var pendingCsvExport by remember { mutableStateOf<PendingScopedCsv?>(null) }
+    var csvConsent by remember { mutableStateOf(false) }
+    var csvAllLanguages by remember { mutableStateOf(false) }
+    var csvOnlySelectedTopic by remember { mutableStateOf(false) }
     var tsvConsent by remember { mutableStateOf(false) }
     var tsvAllLanguages by remember { mutableStateOf(false) }
     var tsvOnlySelectedTopic by remember { mutableStateOf(false) }
@@ -147,6 +157,33 @@ internal fun MyOfflinePhrasesPanel(
                 }.getOrDefault(false)
                 info = if (saved) "Gekozen zelfgeschreven zinnen opgeslagen als UTF-8 TSV."
                     else "TSV niet opgeslagen. Je eigen zinnen blijven behouden."
+            }
+        }
+    }
+    val createCsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        val snapshot = pendingCsvExport
+        pendingCsvExport = null
+        if (uri != null && snapshot != null) {
+            // Recalculate after the external picker: never export newly added
+            // notes or notes moved into this topic behind the user's back.
+            val current = deck.entries()?.filter { note ->
+                (snapshot.language == null || note.language == snapshot.language) &&
+                    matchesTopic(note, snapshot.topic)
+            }?.let { deck.exportCsvSelectionSnapshot(it) }
+            if (current == null || !current.contentEquals(snapshot.bytes)) {
+                info = "Taal, thema of eigen zinnen zijn gewijzigd. Bekijk de export opnieuw."
+            } else {
+                val saved = runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                        stream.write(snapshot.bytes)
+                        stream.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                info = if (saved) "Gekozen zelfgeschreven zinnen opgeslagen als UTF-8 CSV."
+                    else "CSV niet opgeslagen. Je eigen zinnen blijven behouden."
             }
         }
     }
@@ -784,6 +821,15 @@ internal fun MyOfflinePhrasesPanel(
                         tsvConsent = true
                     }
                 ) { Text("Exporteer gekozen zinnen als TSV…") }
+                OutlinedButton(
+                    enabled = phrases?.isNotEmpty() == true,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        csvAllLanguages = false
+                        csvOnlySelectedTopic = selectedTopic != null
+                        csvConsent = true
+                    }
+                ) { Text("Exporteer gekozen zinnen als CSV…") }
                 Text("Kies vooraf welke taal en eventueel welke themagroep naar " +
                     "TSV gaat. Controleer alle zinnen vóór je ze extern opslaat. " +
                     "Het bestand is bewerkbaar en later opnieuw te importeren; " +
@@ -1042,6 +1088,88 @@ internal fun MyOfflinePhrasesPanel(
             },
             dismissButton = {
                 TextButton(onClick = { tsvConsent = false }) { Text("Annuleren") }
+            }
+        )
+    }
+    if (csvConsent) {
+        val topic = if (csvOnlySelectedTopic) selectedTopic else null
+        val chosenLanguage = if (csvAllLanguages) null else language
+        val included = phrases.orEmpty().filter { note ->
+            (chosenLanguage == null || note.language == chosenLanguage) &&
+                matchesTopic(note, topic)
+        }
+        AlertDialog(
+            onDismissRequest = { csvConsent = false },
+            title = { Text("Eigen zinnen als CSV bewaren?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Kies de exacte taal- en themaselectie. Alleen onderstaande " +
+                        "${included.size} eigen zinnen en jouw zelfgeschreven betekenissen " +
+                        "komen in het bestand; niet het volledige gesprek of de " +
+                        "herhaalplanning. De export is geschikt voor de eigen " +
+                        "strikte CSV-import van Tuddy.",
+                        style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { csvAllLanguages = !csvAllLanguages }) {
+                        Text(if (csvAllLanguages) "☑ Alle drie talen" else
+                            "☑ Alleen ${labels[language]}")
+                    }
+                    if (selectedTopic != null) {
+                        TextButton(onClick = {
+                            csvOnlySelectedTopic = !csvOnlySelectedTopic
+                        }) {
+                            Text(if (csvOnlySelectedTopic)
+                                "☑ Alleen huidige themagroep" else
+                                "☐ Alle thema’s")
+                        }
+                    }
+                    included.forEachIndexed { index, note ->
+                        HorizontalDivider()
+                        Text("${index + 1}. ${labels[note.language]} · ${note.phrase}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (note.language == "ckb" ||
+                                    note.language == "ps") TextDirection.Rtl
+                                else TextDirection.Ltr
+                            ))
+                        Text("${note.meaningLanguage.uppercase()}: ${note.ownMeaning}",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = TextDirection.Ltr
+                            ))
+                    }
+                    Text("Je Android-bestandsprovider kan deze privézinnen buiten " +
+                        "Tuddy opslaan of synchroniseren. Externe kopieën worden niet " +
+                        "door ‘Wis gesprek’ verwijderd. Geen automatische of " +
+                        "native-speaker-gecontroleerde vertaling.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = included.isNotEmpty() && phrases != null,
+                    onClick = {
+                        val snapshot = deck.exportCsvSelectionSnapshot(included)
+                        if (snapshot == null) {
+                            info = "De geselecteerde zinnen zijn ongeldig of veranderd."
+                        } else {
+                            pendingCsvExport = PendingScopedCsv(
+                                chosenLanguage, topic, snapshot
+                            )
+                            csvConsent = false
+                            createCsv.launch(
+                                if (topic != null) "Tuddy-eigen-zinnen-thema.csv"
+                                else if (chosenLanguage == null) "Tuddy-eigen-zinnen-alle-talen.csv"
+                                else "Tuddy-eigen-zinnen-${chosenLanguage}.csv"
+                            )
+                        }
+                    }
+                ) { Text("Ik begrijp dit, kies opslag…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { csvConsent = false }) { Text("Annuleren") }
             }
         )
     }
