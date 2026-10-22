@@ -35,6 +35,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -303,6 +306,9 @@ internal fun PrivateSubtitleFileDialog(
     var sequenceReading by remember { mutableStateOf(false) }
     var sequenceProgress by remember { mutableIntStateOf(0) }
     var sequenceTotal by remember { mutableIntStateOf(0) }
+    var sequenceStartIndex by remember { mutableIntStateOf(-1) }
+    var sequenceLineIndex by remember { mutableIntStateOf(-1) }
+    var sequenceWordRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var sequenceSlow by remember { mutableStateOf(false) }
     DisposableEffect(speaker, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -312,6 +318,9 @@ internal fun PrivateSubtitleFileDialog(
                 sequenceReading = false
                 sequenceProgress = 0
                 sequenceTotal = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
                 if (wasReadingSequence) {
                     spokenNotice = "Voorlezen gestopt toen Tuddy naar de achtergrond ging."
                 }
@@ -325,6 +334,9 @@ internal fun PrivateSubtitleFileDialog(
         sequenceReading = false
         sequenceProgress = 0
         sequenceTotal = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
         spokenNotice = ""
     }
     LaunchedEffect(translationOpen, requestSave, voicePickerOpen) {
@@ -334,6 +346,9 @@ internal fun PrivateSubtitleFileDialog(
             sequenceReading = false
             sequenceProgress = 0
             sequenceTotal = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
             if (wasReadingSequence) {
                 spokenNotice = "Voorlezen gestopt omdat een dialoog is geopend."
             }
@@ -344,6 +359,9 @@ internal fun PrivateSubtitleFileDialog(
         sequenceReading = false
         sequenceProgress = 0
         sequenceTotal = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
         val safe = current?.text?.replace('\n', ' ')?.trim().orEmpty()
         if (safe.isBlank() || safe.length > 400) {
             spokenNotice = "Alleen geselecteerde tekst tot 400 tekens kan lokaal worden voorgelezen."
@@ -375,6 +393,9 @@ internal fun PrivateSubtitleFileDialog(
                 "Verkort of splits die regel voordat je de reeks voorleest."
             return
         }
+        sequenceStartIndex = startIndex
+        sequenceLineIndex = 0
+        sequenceWordRange = null
         sequenceReading = true
         sequenceProgress = 0
         sequenceTotal = safeLines.size
@@ -392,6 +413,17 @@ internal fun PrivateSubtitleFileDialog(
             onFinished = { completed ->
                 sequenceReading = false
                 if (completed) sequenceProgress = sequenceTotal else sequenceProgress = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
+            },
+            onLineStarted = { index ->
+                sequenceLineIndex = index
+                sequenceWordRange = null
+            },
+            onWordRange = { index, start, endExclusive ->
+                sequenceLineIndex = index
+                sequenceWordRange = start to endExclusive
             }
         )
     }
@@ -721,6 +753,67 @@ internal fun PrivateSubtitleFileDialog(
                         }
                     }
                 } else {
+                    if (sequenceReading && sequenceStartIndex >= 0 && sequenceLineIndex >= 0) {
+                        val activeIndex = sequenceStartIndex + sequenceLineIndex
+                        val activeCue = draft.getOrNull(activeIndex)
+                        if (activeCue != null) {
+                            val range = sequenceWordRange
+                            val highlightBackground = MaterialTheme.colorScheme.primary
+                            val highlightForeground = MaterialTheme.colorScheme.onPrimary
+                            val activeText = remember(
+                                activeCue.text, range, highlightBackground, highlightForeground
+                            ) {
+                                buildAnnotatedString {
+                                    append(activeCue.text)
+                                    if (range != null && range.first >= 0 &&
+                                        range.second > range.first &&
+                                        range.second <= activeCue.text.length
+                                    ) {
+                                        addStyle(
+                                            SpanStyle(
+                                                background = highlightBackground,
+                                                color = highlightForeground,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            range.first,
+                                            range.second
+                                        )
+                                    }
+                                }
+                            }
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        "Nu voorgelezen · regel ${activeIndex + 1} · " +
+                                            "${activeCue.startLabel} → ${activeCue.endLabel}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    Text(
+                                        activeText,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            textDirection = TextDirection.ContentOrRtl
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    Text(
+                                        if (range != null)
+                                            "Indicatieve tekstmarkering van de geïnstalleerde stem."
+                                        else "Regelvolging actief; deze stem geeft nog geen woordbereik door.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
                     Text("${current.startLabel} → ${current.endLabel}",
                         style = MaterialTheme.typography.labelLarge)
                     Box(modifier = Modifier.fillMaxWidth().weight(1f)
@@ -760,6 +853,9 @@ internal fun PrivateSubtitleFileDialog(
                                         sequenceReading = false
                                         sequenceProgress = 0
                                         sequenceTotal = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
                                         chosenVoiceLanguage = language.code
                                         spokenNotice = ""
                                         voicePickerOpen = false
@@ -781,6 +877,9 @@ internal fun PrivateSubtitleFileDialog(
                             sequenceReading = false
                             sequenceProgress = 0
                             sequenceTotal = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
                             spokenNotice = "Uitspraak gestopt."
                         }) { Text("■ Stop") }
                     }
