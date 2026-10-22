@@ -293,20 +293,38 @@ internal fun PrivateSubtitleFileDialog(
     var chosenVoiceLanguage by remember { mutableStateOf<String?>(null) }
     var voicePickerOpen by remember { mutableStateOf(false) }
     var spokenNotice by remember { mutableStateOf("") }
+    var sequenceReading by remember { mutableStateOf(false) }
+    var sequenceProgress by remember { mutableIntStateOf(0) }
+    var sequenceTotal by remember { mutableIntStateOf(0) }
+    var sequenceSlow by remember { mutableStateOf(false) }
     DisposableEffect(speaker, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE)
+            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE) {
+                val wasReadingSequence = sequenceReading
                 speaker.stop()
+                sequenceReading = false
+                sequenceProgress = 0
+                sequenceTotal = 0
+                if (wasReadingSequence) {
+                    spokenNotice = "Voorlezen gestopt toen Tuddy naar de achtergrond ging."
+                }
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer); speaker.close() }
     }
-    LaunchedEffect(current?.text, current?.startMillis, current?.endMillis) {
+    LaunchedEffect(draft, shownIndex, current?.text, current?.startMillis, current?.endMillis) {
         speaker.stop()
+        sequenceReading = false
+        sequenceProgress = 0
+        sequenceTotal = 0
         spokenNotice = ""
     }
     fun pronounceCue(slow: Boolean) {
         val lang = chosenVoiceLanguage ?: return
+        sequenceReading = false
+        sequenceProgress = 0
+        sequenceTotal = 0
         val safe = current?.text?.replace('\n', ' ')?.trim().orEmpty()
         if (safe.isBlank() || safe.length > 400) {
             spokenNotice = "Alleen geselecteerde tekst tot 400 tekens kan lokaal worden voorgelezen."
@@ -314,6 +332,49 @@ internal fun PrivateSubtitleFileDialog(
             if (slow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL) {
             spokenNotice = it
         }
+    }
+
+    fun pronounceSequenceFromCurrent() {
+        val lang = chosenVoiceLanguage
+        if (lang == null) {
+            spokenNotice = "Kies eerst een taal voor lokaal voorlezen."
+            voicePickerOpen = true
+            return
+        }
+        val startIndex = found.getOrNull(shownIndex)?.first ?: return
+        val batch = draft.drop(startIndex).take(100)
+        val safeLines = batch.map { it.text.replace('\n', ' ').replace('\r', ' ').trim() }
+        val invalidOffset = safeLines.indexOfFirst { line ->
+            line.isBlank() || line.length > 400 || line.any { it.isISOControl() }
+        }
+        if (safeLines.isEmpty()) {
+            spokenNotice = "Er zijn geen regels vanaf de geselecteerde cue."
+            return
+        }
+        if (invalidOffset >= 0) {
+            spokenNotice = "Regel ${startIndex + invalidOffset + 1} is leeg of langer dan 400 tekens. " +
+                "Verkort of splits die regel voordat je de reeks voorleest."
+            return
+        }
+        sequenceReading = true
+        sequenceProgress = 0
+        sequenceTotal = safeLines.size
+        spokenNotice = "Lokale spraak voorbereiden…"
+        speaker.speakSequence(
+            lines = safeLines,
+            languageTag = lang,
+            pace = if (sequenceSlow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL,
+            onProgress = { completed, total ->
+                sequenceProgress = completed
+                sequenceTotal = total
+                spokenNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { spokenNotice = it },
+            onFinished = { completed ->
+                sequenceReading = false
+                if (completed) sequenceProgress = sequenceTotal else sequenceProgress = 0
+            }
+        )
     }
 
     fun applyChange(next: List<PrivateSubtitleCue>) {
@@ -639,6 +700,9 @@ internal fun PrivateSubtitleFileDialog(
                                     text = { Text(language.title) },
                                     onClick = {
                                         speaker.stop()
+                                        sequenceReading = false
+                                        sequenceProgress = 0
+                                        sequenceTotal = 0
                                         chosenVoiceLanguage = language.code
                                         spokenNotice = ""
                                         voicePickerOpen = false
@@ -657,8 +721,28 @@ internal fun PrivateSubtitleFileDialog(
                             onClick = { pronounceCue(true) }) { Text("Rustig") }
                         TextButton(onClick = {
                             speaker.stop()
+                            sequenceReading = false
+                            sequenceProgress = 0
+                            sequenceTotal = 0
                             spokenNotice = "Uitspraak gestopt."
                         }) { Text("■ Stop") }
+                    }
+                    TextButton(
+                        enabled = !sequenceReading,
+                        onClick = { sequenceSlow = !sequenceSlow }
+                    ) {
+                        Text(if (sequenceSlow) "🐢 Rustig tempo aan" else "Normaal tempo · tik voor rustig")
+                    }
+                    OutlinedButton(
+                        enabled = chosenVoiceLanguage != null && !sequenceReading,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { pronounceSequenceFromCurrent() }
+                    ) { Text("▶ Lees vanaf deze regel · maximaal 100 cues") }
+                    if (sequenceReading) {
+                        Text(
+                            "Lokaal voorlezen: $sequenceProgress/$sequenceTotal. Stoppen of naar de achtergrond gaan beëindigt de reeks.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     if (spokenNotice.isNotBlank()) {
                         Text(spokenNotice, style = MaterialTheme.typography.bodySmall)
