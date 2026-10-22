@@ -750,12 +750,19 @@ private fun TuddyScreen(
         source.speechCode, source.translateCode, target.translateCode,
         spoken.map { it.speechCode to it.translateCode }
     )
+    // Apply the same search-only script folding as the private phrasebook.
+    // Stored captions and translations are never normalized or rewritten.
     val normalizedHistoryQuery = PrivateOfflineSearch.fold(historySearchQuery.trim())
+    fun historySearchMatches(line: Line): Boolean =
+        normalizedHistoryQuery.isNotBlank() && (
+            PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
+                PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery) ||
+                line.personalMeaning?.let {
+                    PrivateOfflineSearch.contains(it, normalizedHistoryQuery)
+                } == true
+        )
     val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
-        else lines.indices.filter { index ->
-            PrivateOfflineSearch.contains(lines[index].original, normalizedHistoryQuery) ||
-                PrivateOfflineSearch.contains(lines[index].translated, normalizedHistoryQuery)
-        }
+        else lines.indices.filter { historySearchMatches(lines[it]) }
 
     fun captureCombinedStudyBook(): ByteArray? =
         PrivateCombinedStudyBook.snapshot(
@@ -6754,7 +6761,10 @@ private fun TuddyScreen(
                         value = historySearchQuery,
                         onValueChange = { historySearchQuery = it.take(80) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Zoek originele tekst of vertaling") },
+                        label = { Text("Zoek tekst, vertaling of eigen uitleg") },
+                        supportingText = {
+                            Text("Zoekt ook met veelvoorkomende Arabisch/Perzische toetsenbordvarianten; opgeslagen tekst blijft exact behouden.")
+                        },
                         singleLine = true
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -6802,18 +6812,13 @@ private fun TuddyScreen(
                         }
                     }
                     items(lines, key = { it.id }) { line ->
+                        val isHistorySearchMatch = historySearchMatches(line)
                         Card(
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth(),
                             border = BorderStroke(
-                                if (normalizedHistoryQuery.isNotBlank() && (
-                                        PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
-                                            PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery)
-                                    )) 2.dp else 1.dp,
-                                if (normalizedHistoryQuery.isNotBlank() && (
-                                        PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
-                                            PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery)
-                                    )) MaterialTheme.colorScheme.primary
+                                if (isHistorySearchMatch) 2.dp else 1.dp,
+                                if (isHistorySearchMatch) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.outlineVariant
                             )
                         ) {
@@ -6829,9 +6834,9 @@ private fun TuddyScreen(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(0.dp)
                                 ) {
                                     val speaker = manuallyAssignedSpeakers[line.id]
                                     Text(
@@ -6839,13 +6844,16 @@ private fun TuddyScreen(
                                         else "Spreker $speaker (handmatig)",
                                         style = MaterialTheme.typography.labelSmall
                                     )
-                                    TextButton(onClick = {
-                                        when (speaker) {
-                                            null -> manuallyAssignedSpeakers[line.id] = "A"
-                                            "A" -> manuallyAssignedSpeakers[line.id] = "B"
-                                            else -> manuallyAssignedSpeakers.remove(line.id)
+                                    TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            when (speaker) {
+                                                null -> manuallyAssignedSpeakers[line.id] = "A"
+                                                "A" -> manuallyAssignedSpeakers[line.id] = "B"
+                                                else -> manuallyAssignedSpeakers.remove(line.id)
+                                            }
                                         }
-                                    }) { Text("Wijzig spreker") }
+                                    ) { Text("Wijzig spreker (A / B / onbekend)") }
                                 }
                                 if (line.userCorrected) {
                                     Text("✎ Zelf gecorrigeerd · niet door Android gecontroleerd",
@@ -6868,8 +6876,28 @@ private fun TuddyScreen(
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    TextButton(
+                                // Lazy-list scoped only: recycled, off-screen captions do not
+                                // retain an open editing menu or a persisted preference.
+                                var captionToolsExpanded by remember(line.id) {
+                                    mutableStateOf(false)
+                                }
+                                TextButton(
+                                    onClick = { captionToolsExpanded = !captionToolsExpanded },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (captionToolsExpanded) "⌃ Sluit bewerk- en bewaaropties"
+                                        else "⋯ Corrigeer, maak privékaart en meer")
+                                }
+                                if (captionToolsExpanded) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text("Alle acties gelden uitsluitend voor deze gespreksregel.",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
                                         enabled = !listening,
                                         onClick = {
                                             editingCaptionId = line.id
@@ -6878,6 +6906,7 @@ private fun TuddyScreen(
                                         }
                                     ) { Text("✎ Corrigeer tekst") }
                                     TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
                                         enabled = !listening && line.original.isNotBlank(),
                                         onClick = {
                                             editingMeaning = Triple(line.id, line.original, line.translationRevision)
@@ -6889,6 +6918,7 @@ private fun TuddyScreen(
                                             else "✎ Wijzig eigen uitleg")
                                     }
                                     TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
                                         enabled = !listening && line.original.isNotBlank(),
                                         onClick = {
                                             pendingLivePhraseCapture = PendingLivePhraseCapture(
@@ -6904,6 +6934,7 @@ private fun TuddyScreen(
                                     ) { Text("＋ Maak eigen Kurdische/Pasjtoe-kaart") }
                                     if (line.status == "Fout" || line.status == "Model ontbreekt") {
                                         TextButton(
+                                            modifier = Modifier.fillMaxWidth(),
                                             enabled = !listening,
                                             onClick = {
                                                 val index = lines.indexOfFirst { it.id == line.id }
@@ -6926,8 +6957,8 @@ private fun TuddyScreen(
                                             }
                                         ) { Text("↻ Probeer opnieuw") }
                                     }
-                                }
                                 TextButton(
+                                    modifier = Modifier.fillMaxWidth(),
                                     enabled = !listening && line.original.isNotBlank(),
                                     onClick = {
                                         pendingCaptionLanguageChange = Triple(
@@ -6939,16 +6970,18 @@ private fun TuddyScreen(
                                         line.status == "Lokaal vertaald") &&
                                     line.original.isNotBlank()
                                 ) {
-                                    OutlinedButton(onClick = {
+                                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                                         if (listening) stop()
                                         captionSpeaker.stop()
                                         presentedCaptionId = line.id
                                     }) { Text("▣ Toon deze zin groot") }
                                 }
-                                TextButton(onClick = {
+                                TextButton(modifier = Modifier.fillMaxWidth(), onClick = {
                                     pendingSingleCaptionDelete = Triple(
                                         line.id, line.original, line.translationRevision)
                                 }) { Text("🗑 Wis deze regel") }
+                                }
+                                }
                                 OfflineWordText(
                                     line.original, line.sourceCode,
                                     MaterialTheme.typography.bodyLarge.copy(
