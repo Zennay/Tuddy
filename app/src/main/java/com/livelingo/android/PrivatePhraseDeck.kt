@@ -28,6 +28,9 @@ internal data class PrivatePhraseArchive(
 
 internal data class DuePersonalPhrase(val phrase: PersonalPhrase, val stage: Int, val dueDay: Long)
 
+/** Exact app-private preference state of the personal phrasebook, held only in RAM. */
+internal data class PrivatePhraseRollback(val entries: Map<String, Any>)
+
 internal class PrivatePhraseDeck(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(
         "tuddy_private_phrases_v1", Context.MODE_PRIVATE
@@ -645,6 +648,82 @@ internal class PrivatePhraseDeck(context: Context) {
                 // remain stable, but due dates for corrected answers must reset.
                 val remainingReviews = reviewRows().filterKeys { it !in correctedIds }
                 editor.putStringSet(REVIEW_ROWS, encodeReviews(remainingReviews))
+            }
+            editor.commit()
+        } catch (_: RuntimeException) { false }
+    }
+
+    /**
+     * Capture exactly the six private-phrase storage fields. No generic app
+     * settings, microphone permissions, transcripts or cloud state are read.
+     * Used solely for a user-confirmed, single-step undo in the same screen.
+     */
+    @Synchronized
+    fun captureRollback(): PrivatePhraseRollback? {
+        if (decode() == null) return null
+        return try {
+            val stored = prefs.all
+            val names = listOf(
+                KEY, PrivatePhraseTopics.TOPICS_KEY,
+                PrivatePhraseTopics.ASSIGNMENTS_KEY,
+                PrivatePhraseShortcuts.KEY, REVIEW_OPT_IN, REVIEW_ROWS
+            )
+            val snapshot = mutableMapOf<String, Any>()
+            for (name in names) {
+                if (!stored.containsKey(name)) continue
+                val raw = stored[name] ?: return null
+                snapshot[name] = when (name) {
+                    KEY -> raw as? String ?: return null
+                    REVIEW_OPT_IN -> raw as? Boolean ?: return null
+                    else -> {
+                        val values = raw as? Set<*> ?: return null
+                        if (values.any { it !is String }) return null
+                        values.filterIsInstance<String>().toSet()
+                    }
+                }
+            }
+            PrivatePhraseRollback(snapshot.toMap())
+        } catch (_: RuntimeException) { null }
+    }
+
+    /**
+     * Reverts one CSV transaction only when every owned field still equals the
+     * exact post-import snapshot. Never overwrites a newer note, theme, pin or
+     * learning event. All old values are restored in one transaction.
+     */
+    @Synchronized
+    fun undoLastCsvImportIfUnchanged(
+        before: PrivatePhraseRollback,
+        after: PrivatePhraseRollback
+    ): Boolean {
+        if (before == after || captureRollback() != after) return false
+        val fields = listOf(
+            KEY, PrivatePhraseTopics.TOPICS_KEY,
+            PrivatePhraseTopics.ASSIGNMENTS_KEY,
+            PrivatePhraseShortcuts.KEY, REVIEW_OPT_IN, REVIEW_ROWS
+        )
+        if (before.entries.keys.any { it !in fields }) return false
+        return try {
+            val editor = prefs.edit()
+            for (name in fields) {
+                val original = before.entries[name]
+                if (original == null) {
+                    editor.remove(name)
+                } else when (name) {
+                    KEY -> {
+                        if (original !is String) return false
+                        editor.putString(name, original)
+                    }
+                    REVIEW_OPT_IN -> {
+                        if (original !is Boolean) return false
+                        editor.putBoolean(name, original)
+                    }
+                    else -> {
+                        val strings = original as? Set<*> ?: return false
+                        if (strings.any { it !is String }) return false
+                        editor.putStringSet(name, strings.filterIsInstance<String>().toSet())
+                    }
+                }
             }
             editor.commit()
         } catch (_: RuntimeException) { false }
