@@ -750,11 +750,11 @@ private fun TuddyScreen(
         source.speechCode, source.translateCode, target.translateCode,
         spoken.map { it.speechCode to it.translateCode }
     )
-    val normalizedHistoryQuery = historySearchQuery.trim()
+    val normalizedHistoryQuery = PrivateOfflineSearch.fold(historySearchQuery.trim())
     val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
         else lines.indices.filter { index ->
-            lines[index].original.contains(normalizedHistoryQuery, ignoreCase = true) ||
-                lines[index].translated.contains(normalizedHistoryQuery, ignoreCase = true)
+            PrivateOfflineSearch.contains(lines[index].original, normalizedHistoryQuery) ||
+                PrivateOfflineSearch.contains(lines[index].translated, normalizedHistoryQuery)
         }
 
     fun captureCombinedStudyBook(): ByteArray? =
@@ -4324,7 +4324,7 @@ private fun TuddyScreen(
             val chosenPins = pinnedLines.filter {
                 pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty()
             }
-            val term = pinnedSearchTerm.trim()
+            val term = PrivateOfflineSearch.fold(pinnedSearchTerm.trim())
             val pinnedPairs = pinnedLines.map { it.sourceCode to it.targetCode }.distinct()
             val filteredPins = pinnedLines.filter { line ->
                 val pairMatches = pinnedManagePair == null ||
@@ -4337,10 +4337,10 @@ private fun TuddyScreen(
                         line.status == "Lokaal vertaald" && line.translated.isNotBlank()
                 }
                 pairMatches && scopeMatches && (term.isBlank() ||
-                    line.original.contains(term, ignoreCase = true) ||
-                    line.translated.contains(term, ignoreCase = true) ||
-                    line.sourceCode.contains(term, ignoreCase = true) ||
-                    line.targetCode.contains(term, ignoreCase = true))
+                    PrivateOfflineSearch.contains(line.original, term) ||
+                    PrivateOfflineSearch.contains(line.translated, term) ||
+                    PrivateOfflineSearch.contains(line.sourceCode, term) ||
+                    PrivateOfflineSearch.contains(line.targetCode, term))
             }.let { if (pinnedNewestFirst) it.reversed() else it }
             val visiblePinIds = filteredPins.map { it.id }.toSet()
             val studyReadyPins = chosenPins.count {
@@ -6807,12 +6807,12 @@ private fun TuddyScreen(
                             modifier = Modifier.fillMaxWidth(),
                             border = BorderStroke(
                                 if (normalizedHistoryQuery.isNotBlank() && (
-                                        line.original.contains(normalizedHistoryQuery, ignoreCase = true) ||
-                                            line.translated.contains(normalizedHistoryQuery, ignoreCase = true)
+                                        PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
+                                            PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery)
                                     )) 2.dp else 1.dp,
                                 if (normalizedHistoryQuery.isNotBlank() && (
-                                        line.original.contains(normalizedHistoryQuery, ignoreCase = true) ||
-                                            line.translated.contains(normalizedHistoryQuery, ignoreCase = true)
+                                        PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
+                                            PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery)
                                     )) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.outlineVariant
                             )
