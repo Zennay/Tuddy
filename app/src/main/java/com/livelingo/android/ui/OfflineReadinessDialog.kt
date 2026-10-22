@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OfflineTextReceipt
+import com.livelingo.android.OfflineSessionDiagnostics
 import com.livelingo.android.OfflineTextStage
 import com.livelingo.android.SpeechPackReceipt
 import com.livelingo.android.SpeechPackStage
@@ -48,6 +49,8 @@ internal fun OfflineReadinessDialog(
     onOpenSpeechSettings: () -> Unit,
     onBrowseSpeechPacks: () -> Unit,
     onCopyDiagnostics: () -> Boolean,
+    sessionDiagnostics: OfflineSessionDiagnostics,
+    onResetSessionCounters: () -> Unit,
     onReportSnapshot: () -> ByteArray?,
     onReportPickerStarted: () -> Unit,
     onReportPickerFinished: () -> Unit,
@@ -180,6 +183,24 @@ internal fun OfflineReadinessDialog(
                 ) { Text("Kopieer diagnoserapport") }
                 if (diagnosticsMessage.value.isNotBlank())
                     Text(diagnosticsMessage.value, style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider()
+                Text("3 · Mijn lokale luistersessie",
+                    style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Tuddy telt alleen gewijzigde tussenteksten, definitieve herkenningen, " +
+                        "spraakfouten en lokaal afgeronde vertalingen. Alle tellers blijven " +
+                        "tijdelijk in het geheugen. Een getal is geen bewijs dat vliegtuigmodus " +
+                        "actief was of dat de vertaling correct is.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                sessionDiagnostics.asReportLines().forEach { line ->
+                    Text(line, style = MaterialTheme.typography.bodySmall)
+                }
+                OutlinedButton(
+                    onClick = onResetSessionCounters,
+                    enabled = !isListening,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Wis sessietellers") }
                 OfflineReadinessFileExportAction(
                     enabled = !isListening,
                     snapshot = onReportSnapshot,
@@ -192,7 +213,8 @@ internal fun OfflineReadinessDialog(
                     onPickerStarted = onReportPickerStarted,
                     onPickerFinished = onReportPickerFinished
                 )
-                Text("Het rapport bevat alleen apparaat-, taal- en modelstatus; geen transcript of audio.",
+                Text("Het rapport bevat apparaat-, taal- en modelstatus plus " +
+                    "RAM-sessietellers, maar geen transcript of audio.",
                     style = MaterialTheme.typography.bodySmall)
                 if (!isListening) {
                     TextButton(onClick = onOpenTyped, modifier = Modifier.fillMaxWidth()) {
