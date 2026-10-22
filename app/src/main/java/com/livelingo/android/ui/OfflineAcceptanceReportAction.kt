@@ -50,16 +50,48 @@ internal fun OfflineAcceptanceReportAction(
     var permissionAndStopConfirmed by remember { mutableStateOf(false) }
     var noCloudFallbackConfirmed by remember { mutableStateOf(false) }
     var privacyClearingConfirmed by remember { mutableStateOf(false) }
-    var nlEnSpeech by remember { mutableStateOf("0") }
-    var enNlSpeech by remember { mutableStateOf("0") }
-    var nlEnTranslation by remember { mutableStateOf("0") }
-    var enNlTranslation by remember { mutableStateOf("0") }
-    var maxLatencyMs by remember { mutableStateOf("") }
+    // A bounded, transient observation ledger. Never store user utterances.
+    var attempts by remember { mutableStateOf<List<OfflineObservedAttempt>>(emptyList()) }
+    var chosenDirection by remember { mutableStateOf(OfflineObservationDirection.NL_EN) }
+    var observedSpeech by remember { mutableStateOf(false) }
+    var observedTranslation by remember { mutableStateOf(false) }
+    var attemptLatency by remember { mutableStateOf("") }
+    var attemptMessage by remember { mutableStateOf("") }
     var pendingReport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingBaseline by remember { mutableStateOf<ByteArray?>(null) }
 
-    fun count(value: String): Int? = value.toIntOrNull()?.takeIf { it in 0..10 }
-    fun latency(value: String): Long? = value.toLongOrNull()?.takeIf { it in 1..600000 }
+    fun recordAttempt() {
+        val time = attemptLatency.toLongOrNull()
+        if (attemptLatency.isNotBlank() && (time == null || time !in 1L..600000L)) {
+            attemptMessage = "Voer een geldige duur in (1–600000 ms) of laat dit veld leeg."
+            return
+        }
+        if (!observedSpeech && observedTranslation) {
+            attemptMessage = "Zonder geslaagde spraakherkenning kan geen lokale spraakvertaling slagen."
+            return
+        }
+        if (!observedTranslation && time != null) {
+            attemptMessage = "Een vertaaltijd hoort alleen bij een geslaagde lokale vertaling."
+            return
+        }
+        val proposed = OfflineObservedAttempt(
+            chosenDirection, observedSpeech, observedTranslation, time
+        )
+        if (!OfflineObservationLedger.canRecord(attempts, proposed)) {
+            attemptMessage = "Maximaal tien pogingen per richting, zonder extra tekstgegevens."
+            return
+        }
+        attempts = attempts + proposed
+        attemptMessage = "Poging opgeslagen in tijdelijk appgeheugen."
+        observedSpeech = false
+        observedTranslation = false
+        attemptLatency = ""
+        if (chosenDirection == OfflineObservationDirection.NL_EN &&
+            OfflineObservationLedger.totals(
+                attempts, OfflineObservationDirection.NL_EN
+            ).attempts == OfflineObservationLedger.REQUIRED_ATTEMPTS_PER_DIRECTION
+        ) chosenDirection = OfflineObservationDirection.EN_NL
+    }
     fun installedApkDigest(bytes: ByteArray?): String? {
         val line = bytes?.toString(Charsets.UTF_8)?.lineSequence()
             ?.firstOrNull { it.startsWith("Installed base APK SHA-256:") } ?: return null
@@ -80,14 +112,19 @@ internal fun OfflineAcceptanceReportAction(
         val expectedDigest = expectedApkSha256.trim().lowercase()
         val digestMatches = expectedDigestMatches(identity)
         val airplaneModeReportedOn = reportsAirplaneModeOn(identity)
-        val speechCounts = listOf(nlEnSpeech, enNlSpeech).map(::count)
-        val translationCounts = listOf(nlEnTranslation, enNlTranslation).map(::count)
-        val worstLatency = latency(maxLatencyMs)
+        val nlEn = OfflineObservationLedger.totals(attempts, OfflineObservationDirection.NL_EN)
+        val enNl = OfflineObservationLedger.totals(attempts, OfflineObservationDirection.EN_NL)
+        val worstLatency = OfflineObservationLedger.worstEndToEndLatencyMs(attempts)
+        // A failed utterance is still a valid documented attempt. Outcomes
+        // must NEVER be converted into an acceptance or success assertion.
+        val recordedAllAttempts = OfflineObservationLedger.complete(attempts)
+        val allSuccessfulTranslationsTimed =
+            OfflineObservationLedger.timedSuccessesComplete(attempts)
         val complete = digestMatches && airplaneModeReportedOn &&
             disconnectedConfirmed &&
             permissionAndStopConfirmed && noCloudFallbackConfirmed &&
-            privacyClearingConfirmed && speechCounts.all { it == 10 } &&
-            translationCounts.all { it == 10 } && worstLatency != null
+            privacyClearingConfirmed && recordedAllAttempts &&
+            allSuccessfulTranslationsTimed
         val baseText = identity.toString(Charsets.UTF_8)
         val report = buildString {
             appendLine("Tuddy manual offline acceptance record")
@@ -95,7 +132,8 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Self-reported by device operator: yes")
             appendLine("Independently verified by Tuddy: no")
             appendLine("Session recorded at epoch milliseconds UTC: $recordedAt")
-            appendLine("Observation completeness: ${if (complete) "all required observations marked complete" else "incomplete or one or more observations failed"}")
+            appendLine("Observation completeness: ${if (complete) "required observations recorded (NOT acceptance)" else "incomplete; inspect unrecorded or unchecked observations"}")
+            appendLine("Outcome acceptance by an independent reviewer: NOT GRANTED")
             appendLine("Expected APK SHA-256 supplied by operator (APK file, not artifact ZIP): ${expectedDigest.ifBlank { "not supplied" }}")
             appendLine("Installed base APK SHA-256: ${installedDigest ?: "unavailable"}")
             appendLine("Installed APK digest matches supplied expected APK digest: $digestMatches")
@@ -103,11 +141,21 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Microphone permission and explicit Stop/lifecycle behavior observed: $permissionAndStopConfirmed")
             appendLine("No cloud/network speech or translation fallback observed: $noCloudFallbackConfirmed")
             appendLine("Conversation cleared and no old transcript returned after relaunch: $privacyClearingConfirmed")
-            appendLine("NL to EN successful offline speech utterances out of 10 attempts (0-10): ${nlEnSpeech.ifBlank { "not recorded" }}")
-            appendLine("EN to NL successful offline speech utterances out of 10 attempts (0-10): ${enNlSpeech.ifBlank { "not recorded" }}")
-            appendLine("NL to EN successful local translations out of 10 attempts (0-10): ${nlEnTranslation.ifBlank { "not recorded" }}")
-            appendLine("EN to NL successful local translations out of 10 attempts (0-10): ${enNlTranslation.ifBlank { "not recorded" }}")
-            appendLine("Maximum observed end-to-end latency in milliseconds: ${maxLatencyMs.ifBlank { "not recorded" }}")
+            appendLine("NL to EN observed attempts: ${nlEn.attempts}/10")
+            appendLine("NL to EN successful on-device recognition: ${nlEn.recognized}")
+            appendLine("NL to EN failed recognition: ${nlEn.failedSpeech}")
+            appendLine("NL to EN successful local translation: ${nlEn.translated}")
+            appendLine("NL to EN failed local translation after recognized speech: ${nlEn.failedTranslationAfterSpeech}")
+            appendLine("NL to EN timed successful translations: ${nlEn.timedTranslations}")
+            appendLine("EN to NL observed attempts: ${enNl.attempts}/10")
+            appendLine("EN to NL successful on-device recognition: ${enNl.recognized}")
+            appendLine("EN to NL failed recognition: ${enNl.failedSpeech}")
+            appendLine("EN to NL successful local translation: ${enNl.translated}")
+            appendLine("EN to NL failed local translation after recognized speech: ${enNl.failedTranslationAfterSpeech}")
+            appendLine("EN to NL timed successful translations: ${enNl.timedTranslations}")
+            appendLine("Maximum operator-observed end-to-end latency in milliseconds: ${worstLatency ?: "not observed"}")
+            appendLine("All twenty human-observed attempts recorded: $recordedAllAttempts")
+            appendLine("Every successful translation has a manually measured latency: $allSuccessfulTranslationsTimed")
             appendLine()
             appendLine("Device and installed-build snapshot (captured before this session report):")
             append(baseText.trimEnd())
@@ -127,11 +175,12 @@ internal fun OfflineAcceptanceReportAction(
         permissionAndStopConfirmed = false
         noCloudFallbackConfirmed = false
         privacyClearingConfirmed = false
-        nlEnSpeech = "0"
-        enNlSpeech = "0"
-        nlEnTranslation = "0"
-        enNlTranslation = "0"
-        maxLatencyMs = ""
+        attempts = emptyList()
+        chosenDirection = OfflineObservationDirection.NL_EN
+        observedSpeech = false
+        observedTranslation = false
+        attemptLatency = ""
+        attemptMessage = ""
         pendingReport = null
         pendingBaseline = null
     }
@@ -271,17 +320,91 @@ internal fun OfflineAcceptanceReportAction(
                         "Gesprek gewist; na herstart kwam geen oude transcripttekst terug.",
                         privacyClearingConfirmed
                     ) { privacyClearingConfirmed = it }
-                    Text("Voer 10 pogingen per richting uit; registreer hoeveel er slaagden.", fontWeight = FontWeight.SemiBold)
-                    CountField("NL → EN · spraak geslaagd van 10", nlEnSpeech) { nlEnSpeech = it }
-                    CountField("EN → NL · spraak geslaagd van 10", enNlSpeech) { enNlSpeech = it }
-                    CountField("NL → EN · vertaling geslaagd van 10", nlEnTranslation) { nlEnTranslation = it }
-                    CountField("EN → NL · vertaling geslaagd van 10", enNlTranslation) { enNlTranslation = it }
-                    OutlinedTextField(
-                        value = maxLatencyMs,
-                        onValueChange = { maxLatencyMs = it.filter(Char::isDigit).take(6) },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Hoogste waargenomen latentie (ms)") },
-                        singleLine = true
+                    Text(
+                        "Leg precies tien ECHT waargenomen pogingen per richting vast. " +
+                            "Mislukte herkenningen en vertalingen tellen ook als poging; " +
+                            "noteer geen namen, inhoud of audio.",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    OfflineObservationDirection.entries.forEach { direction ->
+                        val totals = OfflineObservationLedger.totals(attempts, direction)
+                        OutlinedButton(
+                            onClick = {
+                                chosenDirection = direction
+                                observedSpeech = false
+                                observedTranslation = false
+                                attemptLatency = ""
+                                attemptMessage = ""
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("${direction.label}: ${totals.attempts}/10 pogingen · " +
+                                "${totals.recognized} spraak · ${totals.translated} vertaald" +
+                                if (chosenDirection == direction) " ✓ geselecteerd" else "")
+                        }
+                    }
+                    val selectedTotals = OfflineObservationLedger.totals(attempts, chosenDirection)
+                    if (selectedTotals.attempts < OfflineObservationLedger.REQUIRED_ATTEMPTS_PER_DIRECTION) {
+                        Text("${chosenDirection.label} · poging ${selectedTotals.attempts + 1} van 10")
+                        AcceptanceObservationCheck(
+                            "Deze poging gaf een correct herkende lokale spraakzin.",
+                            observedSpeech
+                        ) {
+                            observedSpeech = it
+                            if (!it) {
+                                observedTranslation = false
+                                attemptLatency = ""
+                            }
+                        }
+                        AcceptanceObservationCheck(
+                            "Deze poging gaf ook een correcte lokale vertaling.",
+                            observedTranslation,
+                            enabled = observedSpeech
+                        ) {
+                            observedTranslation = it
+                            if (!it) attemptLatency = ""
+                        }
+                        if (observedSpeech && observedTranslation) {
+                            OutlinedTextField(
+                                value = attemptLatency,
+                                onValueChange = { attemptLatency = it.filter(Char::isDigit).take(6) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Zelf gemeten totale vertraging in ms") },
+                                singleLine = true
+                            )
+                            Text(
+                                "Meet zelf vanaf spreken tot vertaling op het scherm. " +
+                                    "Leeg laten is toegestaan maar blijft zichtbaar als ontbrekend.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        OutlinedButton(onClick = { recordAttempt() }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Leg deze ${chosenDirection.label}-poging vast")
+                        }
+                    }
+                    if (attempts.isNotEmpty()) {
+                        TextButton(onClick = {
+                            val index = attempts.indexOfLast { it.direction == chosenDirection }
+                            if (index >= 0) {
+                                attempts = attempts.filterIndexed { i, _ -> i != index }
+                                attemptMessage = "Laatste ${chosenDirection.label}-poging ongedaan gemaakt."
+                            } else {
+                                attemptMessage = "Voor ${chosenDirection.label} is nog niets vastgelegd."
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Herstel laatste poging in gekozen richting")
+                        }
+                    }
+                    if (attemptMessage.isNotBlank()) {
+                        Text(attemptMessage, style = MaterialTheme.typography.bodySmall)
+                    }
+                    val attemptsReady = OfflineObservationLedger.complete(attempts)
+                    Text(
+                        if (attemptsReady) "Alle twintig pogingen geregistreerd, inclusief fouten. " +
+                            "Dit is geen keuringsgoedkeuring."
+                        else "Nog ${20 - attempts.size} afzonderlijke pogingen te registreren. " +
+                            "Een onvolledig rapport blijft bewust exporteerbaar.",
+                        style = MaterialTheme.typography.bodySmall
                     )
                     Text(
                         "Het bestand bevat de exacte APK-/apparaatstatus plus bovenstaande aggregaten. " +
@@ -343,17 +466,3 @@ private fun AcceptanceObservationCheck(
     }
 }
 
-@Composable
-private fun CountField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = { onValueChange(it.filter(Char::isDigit).take(2)) },
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(label) },
-        singleLine = true
-    )
-}
