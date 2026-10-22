@@ -2124,7 +2124,9 @@ Zoek in een zelf geopend SRT/VTT-bestand en kies vervolgens
 **Bewaar alleen gevonden regels…**. Ook Arabisch/Perzische
 toetsenbordvarianten worden voor het zoeken herkend, zonder originele
 tekst of tijdcodes te herschrijven. Kies tussen de originele
-tijdcodes en een vanaf 00:00 aaneengesloten selectie. Vooraf zie
+tijdcodes en een vanaf 00:00 aaneengesloten selectie. Dezelfde
+zoek-only spellingtolerantie geldt bij het bladeren door een eigen SRT/VTT
+met gekozen audio en bij het controleren van twee ondertitelsporen. Vooraf zie
 je het aantal regels en de uitvoergrootte; opslag vereist nog steeds
 een afzonderlijke Android-bestandskeuze. Het oorspronkelijke document
 blijft intact.
