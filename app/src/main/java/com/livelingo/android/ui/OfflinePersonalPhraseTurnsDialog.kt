@@ -363,6 +363,11 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                 OfflinePersonalTurnScriptExport(
                     turns = turns.map { it.note to it.fromMeaning }
                 )
+                OfflinePersonalTurnScriptShare(
+                    turns = turns.map {
+                        PrivateAuthoredConversationTurn(it.note, it.fromMeaning)
+                    }
+                )
                 OfflinePersonalTurnScriptImport(
                     current = turns.map {
                         PrivateAuthoredConversationTurn(it.note, it.fromMeaning)
