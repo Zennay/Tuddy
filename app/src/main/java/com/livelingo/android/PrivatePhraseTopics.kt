@@ -271,7 +271,8 @@ internal class PrivatePhraseTopics(context: Context) {
         }
         val names = readTopics() ?: return false
         val assignments = readAssignments() ?: return false
-        if (source !in names || destination !in names) return false
+        if (source !in names || destination !in names ||
+            assignments.values.any { it !in names }) return false
         val reassigned = assignments.mapValues { (_, topic) ->
             if (topic == source) destination else topic
         }
