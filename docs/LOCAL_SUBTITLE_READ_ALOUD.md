@@ -6,14 +6,15 @@ een taal in de bestaande lokale-stemkiezer. Tuddy leest de geselecteerde cue en
 de volgende regels in volgorde voor, met een zichtbare voortgangsteller. Je kunt vóór het starten kiezen tussen
 normaal en rustig tempo; de keuze geldt voor de hele reeks.
 
-Tijdens het voorlezen toont Tuddy ook de **actuele cue**. Wanneer de geïnstalleerde
-Android-TTS-stem tekstbereiken terugmeldt, markeert de app het bijbehorende
-tekstfragment in die cue. Sommige stemmen geven geen bereik of slechts grove
-fragmenten door; dan blijft alleen de actuele regel zichtbaar gemarkeerd. Tik
-**Open deze regel** om het voorlezen te stoppen en de actieve cue in de editor
-te openen. Dit zijn door de spraakdienst gemelde aanwijzingen, geen exacte
-fonetische timing of bewijs van woordgrenzen. De bronondertitels en tijdcodes
-worden niet gewijzigd.
+Bij zowel **Hoor lokaal / Rustig** voor één cue als bij een reeks toont Tuddy
+de **actuele cue** tijdens het voorlezen. Wanneer de geïnstalleerde Android-TTS-stem
+tekstbereiken terugmeldt, markeert de app het bijbehorende tekstfragment. Sommige
+stemmen geven geen bereik of slechts grove fragmenten door; dan blijft alleen
+de actuele regel zichtbaar gemarkeerd. Tijdens het afspelen worden de startknoppen
+uitgeschakeld om overlappende spraak te voorkomen. Tik **Open deze regel** om
+een reeks te stoppen en de actieve cue in de editor te openen. Dit zijn door de
+spraakdienst gemelde aanwijzingen, geen exacte fonetische timing of bewijs van
+woordgrenzen. De bronondertitels en tijdcodes worden niet gewijzigd.
 
 ## Veilig gedrag
 
