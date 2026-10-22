@@ -21,19 +21,25 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    handmatig omkeren.
 5. Gebruik ↑/↓ om de volgorde van de maximaal twaalf laatste beurten
    te veranderen; verwijder afzonderlijk of neem de laatste beurt terug.
-6. Kies **Speel dit eigen gesprek tegenover elkaar af** of bij een regel
+6. Bij een bestaande gespreksbeurt kun je **✎ Corrigeer mijn tekst** kiezen
+   om uitsluitend de bronzin of zelfgeschreven betekenis van die beurt te
+   corrigeren, zonder de opgeslagen woordenlijstkaart te overschrijven.
+   Dat maakt de beurt weer tijdelijk. Met **⇄ Wissel deze beurt**
+   draai je alleen voor die beurt de kijkrichting om; beide teksten blijven
+   letterlijk hetzelfde.
+7. Kies **Speel dit eigen gesprek tegenover elkaar af** of bij een regel
    **Toon aan beide kanten**. Leg de telefoon plat tussen twee mensen:
    de bovenste helft is omgekeerd en de onderste helft leesbaar vanaf
    jouw kant. Met **Kanten** bepaal je welke tekst aan welke persoon
    wordt getoond. Blader per beurt met Vorige/Volgende.
-7. Wil je een zelfgetypte tijdelijke beurt toch later kunnen hergebruiken,
+8. Wil je een zelfgetypte tijdelijke beurt toch later kunnen hergebruiken,
    kies expliciet **Bewaar dit eigen paar in mijn privéwoordenlijst…** bij
    die specifieke beurt. In het tweede venster zie je beide volledige
    zelfgeschreven teksten en beslis je afzonderlijk. Tuddy bewaart alleen
    dat ene zinnenpaar in de app-private woordenlijst, nooit het gesprek.
    Een reeds bestaande bronzin wordt **niet overschreven**; bij dubbele
    bronzinnen, volle opslag of een fout blijft de beurt alleen tijdelijk.
-8. Heb je meerdere nieuwe, tijdelijke eigen zinnen gemaakt, dan kun je
+9. Heb je meerdere nieuwe, tijdelijke eigen zinnen gemaakt, dan kun je
    ook **Bewaar alle tijdelijke eigen paren lokaal…** kiezen voor
    maximaal tien paren tegelijk. De tweede preview toont ieder volledig
    paar met zijn taal en eigen betekenis. Na jouw afzonderlijke toestemming
@@ -41,7 +47,7 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    duplicaten, een reeds bestaande bronzin of volle/onleesbare opslag
    wordt **helemaal niets** bewaard en blijft de tijdelijke conversatie
    gewoon beschikbaar; er wordt nooit een bestaande betekenis vervangen.
-9. Met **Terug** kom je zonder verlies terug bij de tijdelijke reeks.
+10. Met **Terug** kom je zonder verlies terug bij de tijdelijke reeks.
    **Sluiten en wis beurten** sluit deze sessie zonder hem op te slaan;
    een afzonderlijk bewust bewaarde privézin blijft natuurlijk wel
    in de zinnenlijst staan totdat je hem zelf verwijdert.
