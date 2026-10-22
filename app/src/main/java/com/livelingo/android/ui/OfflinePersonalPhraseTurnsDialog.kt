@@ -396,6 +396,34 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                         }
                     }
                 )
+                OfflinePersonalTurnScriptPaste(
+                    current = turns.map {
+                        PrivateAuthoredConversationTurn(it.note, it.fromMeaning)
+                    },
+                    onImport = { expected, selected, replace ->
+                        val actual = turns.map {
+                            PrivateAuthoredConversationTurn(it.note, it.fromMeaning)
+                        }
+                        if (actual != expected ||
+                            (!replace && turns.size + selected.size > 12)) {
+                            false
+                        } else {
+                            val restored = selected.map { item ->
+                                // Imported files are never enrolled in the saved deck.
+                                LocalPersonalTurn(
+                                    item.note, item.fromMeaning, temporary = true
+                                )
+                            }
+                            turns = if (replace) restored else turns + restored
+                            draft = ""
+                            manualOriginal = ""
+                            manualMeaning = ""
+                            choosingSaved = false
+                            saveNotice = ""
+                            true
+                        }
+                    }
+                )
                 Text("Deze zinnen zijn niet onafhankelijk beoordeeld. " +
                     "Gebruik ze niet bij urgente, medische of juridische beslissingen.",
                     style = MaterialTheme.typography.bodySmall,
