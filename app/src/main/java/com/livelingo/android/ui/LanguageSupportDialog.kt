@@ -240,16 +240,16 @@ internal fun LanguageSupportDialog(
                             onClick = {
                                 val opened = runCatching {
                                     context.startActivity(
-                                        android.content.Intent(android.provider.Settings.ACTION_TEXT_TO_SPEECH_SETTINGS)
+                                        android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
                                     )
                                 }.isSuccess
                                 localVoiceNotice = if (opened) {
-                                    "Android-steminstellingen geopend. Controleer opnieuw nadat je zelf een stem hebt geïnstalleerd."
+                                    "Android-toegankelijkheidsinstellingen geopend. Open Tekst-naar-spraakuitvoer en controleer daarna opnieuw."
                                 } else {
-                                    "Android biedt geen scherm voor steminstellingen op dit toestel."
+                                    "Android biedt geen toegankelijkheidsinstellingen op dit toestel."
                                 }
                             }
-                        ) { Text("Android-steminstellingen") }
+                        ) { Text("Android-toegankelijkheidsinstellingen") }
                     }
                     Text(
                         localVoiceNotice,
