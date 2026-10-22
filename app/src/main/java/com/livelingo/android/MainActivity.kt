@@ -903,13 +903,22 @@ private fun TuddyScreen(
                 val beganAt = speechTranslationStarted.remove(id)
                 if (beganAt != null) {
                     sessionDiagnostics = when (status) {
-                        "Lokaal vertaald" -> sessionDiagnostics.copy(
-                            localTranslations = sessionDiagnostics.localTranslations + 1,
-                            translationLatenciesMs = (
-                                sessionDiagnostics.translationLatenciesMs +
-                                    (SystemClock.elapsedRealtime() - beganAt).coerceAtLeast(0L)
-                            ).takeLast(10)
-                        )
+                        "Lokaal vertaald" -> {
+                            val translatedRow = lines[index]
+                            sessionDiagnostics.copy(
+                                localTranslations = sessionDiagnostics.localTranslations + 1,
+                                nlEnLocalTranslations = sessionDiagnostics.nlEnLocalTranslations +
+                                    if (translatedRow.sourceCode == "nl" &&
+                                        translatedRow.targetCode == "en") 1 else 0,
+                                enNlLocalTranslations = sessionDiagnostics.enNlLocalTranslations +
+                                    if (translatedRow.sourceCode == "en" &&
+                                        translatedRow.targetCode == "nl") 1 else 0,
+                                translationLatenciesMs = (
+                                    sessionDiagnostics.translationLatenciesMs +
+                                        (SystemClock.elapsedRealtime() - beganAt).coerceAtLeast(0L)
+                                ).takeLast(10)
+                            )
+                        }
                         "Model ontbreekt" -> sessionDiagnostics.copy(
                             missingTextModels = sessionDiagnostics.missingTextModels + 1
                         )
@@ -1722,8 +1731,17 @@ private fun TuddyScreen(
                     clearInterim()
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
+                        // Only the two direction-specific validation targets
+                        // are shown separately; all other local languages count
+                        // in the aggregate without being falsely relabeled.
+                        val nlEn = observedSource == "nl" && selectedTarget == "en"
+                        val enNl = observedSource == "en" && selectedTarget == "nl"
                         sessionDiagnostics = sessionDiagnostics.copy(
-                            finalUtterances = sessionDiagnostics.finalUtterances + 1
+                            finalUtterances = sessionDiagnostics.finalUtterances + 1,
+                            nlEnFinalUtterances = sessionDiagnostics.nlEnFinalUtterances +
+                                if (nlEn) 1 else 0,
+                            enNlFinalUtterances = sessionDiagnostics.enNlFinalUtterances +
+                                if (enNl) 1 else 0
                         )
                         speechTranslationStarted[id] = SystemClock.elapsedRealtime()
                         lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
