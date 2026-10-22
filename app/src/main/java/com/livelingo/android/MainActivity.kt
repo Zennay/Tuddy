@@ -744,6 +744,12 @@ private fun TuddyScreen(
         mutableStateOf<Triple<Long, Int, Int>?>(null)
     }
     var captionCorrectionDraft by remember { mutableStateOf("") }
+    // Manual translation edits are revision-fenced and remain RAM-only like captions.
+    var editingTranslationId by remember { mutableStateOf<Long?>(null) }
+    var translationCorrectionDraft by remember { mutableStateOf("") }
+    var translationCorrectionBaseline by remember { mutableStateOf("") }
+    var translationCorrectionRevision by remember { mutableIntStateOf(-1) }
+    var translationCorrectionGeneration by remember { mutableIntStateOf(-1) }
     var editingMeaning by remember { mutableStateOf<Triple<Long, String, Int>?>(null) }
     var meaningDraft by remember { mutableStateOf("") }
     var meaningNotice by remember { mutableStateOf("") }
@@ -1696,6 +1702,13 @@ private fun TuddyScreen(
                                 editingCaptionId = null
                                 captionCorrectionDraft = ""
                             }
+                            if (editingTranslationId == removed.id) {
+                                editingTranslationId = null
+                                translationCorrectionDraft = ""
+                                translationCorrectionBaseline = ""
+                                translationCorrectionRevision = -1
+                                translationCorrectionGeneration = -1
+                            }
                             if (editingMeaning?.first == removed.id) {
                                 editingMeaning = null
                                 meaningDraft = ""
@@ -1837,6 +1850,13 @@ private fun TuddyScreen(
                 editingCaptionId = null
                 pendingCaptionLanguageChange = null
                 captionCorrectionDraft = ""
+            }
+            if (editingTranslationId == removed.id) {
+                editingTranslationId = null
+                translationCorrectionDraft = ""
+                translationCorrectionBaseline = ""
+                translationCorrectionRevision = -1
+                translationCorrectionGeneration = -1
             }
         }
         // Short manually identified phrases must never be silently relabelled
@@ -2675,6 +2695,11 @@ private fun TuddyScreen(
                 editingCaptionId = null
                 pendingCaptionLanguageChange = null // dismiss sensitive caption tool on background
                 captionCorrectionDraft = ""
+                editingTranslationId = null
+                translationCorrectionDraft = ""
+                translationCorrectionBaseline = ""
+                translationCorrectionRevision = -1
+                translationCorrectionGeneration = -1
                 pendingSingleCaptionDelete = null
                 pendingStudyErase = false
             }
@@ -4132,6 +4157,112 @@ private fun TuddyScreen(
                         editingCaptionId = null
                         captionCorrectionDraft = ""
                     }) { Text("Annuleer") }
+                }
+            )
+        }
+        val translationCorrectionId = editingTranslationId
+        val translationCorrectionLine = lines.firstOrNull { it.id == translationCorrectionId }
+        if (translationCorrectionId != null && translationCorrectionLine != null) {
+            val translationStillCurrent = !listening &&
+                generation == translationCorrectionGeneration &&
+                translationCorrectionLine.translationRevision == translationCorrectionRevision &&
+                translationCorrectionLine.translated == translationCorrectionBaseline &&
+                translationCorrectionLine.status in setOf("Lokaal", "Lokaal vertaald")
+            val normalizedTranslationDraft =
+                OfflineTypedCaptionPolicy.normalize(translationCorrectionDraft)
+            AlertDialog(
+                onDismissRequest = {
+                    editingTranslationId = null
+                    translationCorrectionDraft = ""
+                    translationCorrectionBaseline = ""
+                    translationCorrectionRevision = -1
+                    translationCorrectionGeneration = -1
+                },
+                title = { Text("Corrigeer vertaling") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Pas de vertaling handmatig aan als die niet klopt. " +
+                                "Tuddy vertaalt deze wijziging niet opnieuw en controleert de tekst niet automatisch."
+                        )
+                        Text(
+                            "Origineel: ${translationCorrectionLine.original}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = translationCorrectionDraft,
+                            onValueChange = { candidate ->
+                                if (candidate.length <= OfflineTypedCaptionPolicy.MAX_INPUT_UNITS) {
+                                    translationCorrectionDraft = candidate
+                                }
+                            },
+                            label = { Text("Gecorrigeerde vertaling") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2,
+                            maxLines = 5
+                        )
+                        Text(
+                            "Alleen deze tijdelijke gespreksregel wordt aangepast. " +
+                                "De wijziging wordt niet in het privéwoordenboek opgeslagen.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (!translationStillCurrent) {
+                            Text(
+                                "De regel of vertaling is intussen gewijzigd. Sluit dit venster en open de correctie opnieuw.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = translationStillCurrent &&
+                            normalizedTranslationDraft != null &&
+                            normalizedTranslationDraft != translationCorrectionBaseline,
+                        onClick = {
+                            val corrected = OfflineTypedCaptionPolicy.normalize(
+                                translationCorrectionDraft
+                            ) ?: return@TextButton
+                            val index = lines.indexOfFirst { it.id == translationCorrectionId }
+                            val stillCurrent = index >= 0 && !listening &&
+                                generation == translationCorrectionGeneration &&
+                                lines[index].translationRevision == translationCorrectionRevision &&
+                                lines[index].translated == translationCorrectionBaseline &&
+                                lines[index].status in setOf("Lokaal", "Lokaal vertaald")
+                            if (stillCurrent) {
+                                val previous = lines[index]
+                                captionSpeaker.stop()
+                                pendingCaptionShare = null
+                                pendingTranscriptExport = null
+                                pendingSpeakerExport = null
+                                exportStatus = ""
+                                lines[index] = previous.copy(
+                                    translated = corrected,
+                                    translationRevision = previous.translationRevision + 1,
+                                    userCorrected = true
+                                )
+                                correctionNotice =
+                                    "Vertaling handmatig gecorrigeerd in dit tijdelijke gesprek; niet automatisch gecontroleerd."
+                            } else {
+                                correctionNotice = "De regel is gewijzigd; de vertaling is niet aangepast."
+                            }
+                            editingTranslationId = null
+                            translationCorrectionDraft = ""
+                            translationCorrectionBaseline = ""
+                            translationCorrectionRevision = -1
+                            translationCorrectionGeneration = -1
+                        }
+                    ) { Text("Bewaar correctie") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        editingTranslationId = null
+                        translationCorrectionDraft = ""
+                        translationCorrectionBaseline = ""
+                        translationCorrectionRevision = -1
+                        translationCorrectionGeneration = -1
+                    }) { Text("Annuleren") }
                 }
             )
         }
@@ -5842,6 +5973,13 @@ private fun TuddyScreen(
                                 editingCaptionId = null
                                 captionCorrectionDraft = ""
                             }
+                            if (editingTranslationId == id) {
+                                editingTranslationId = null
+                                translationCorrectionDraft = ""
+                                translationCorrectionBaseline = ""
+                                translationCorrectionRevision = -1
+                                translationCorrectionGeneration = -1
+                            }
                             if (lastCopiedCaptionId == id) {
                                 lastCopiedCaptionId = null
                                 copyStatus = ""
@@ -6098,6 +6236,11 @@ private fun TuddyScreen(
                         pendingSpeakerExport = null
                         editingCaptionId = null
                         captionCorrectionDraft = ""
+                        editingTranslationId = null
+                        translationCorrectionDraft = ""
+                        translationCorrectionBaseline = ""
+                        translationCorrectionRevision = -1
+                        translationCorrectionGeneration = -1
                         editingMeaning = null
                         meaningDraft = ""
                         meaningNotice = ""
@@ -7445,6 +7588,20 @@ private fun TuddyScreen(
                                             correctionNotice = ""
                                         }
                                     ) { Text("✎ Corrigeer tekst") }
+                                    TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = !listening &&
+                                            line.status in setOf("Lokaal", "Lokaal vertaald") &&
+                                            line.translated.isNotBlank(),
+                                        onClick = {
+                                            editingTranslationId = line.id
+                                            translationCorrectionDraft = line.translated
+                                            translationCorrectionBaseline = line.translated
+                                            translationCorrectionRevision = line.translationRevision
+                                            translationCorrectionGeneration = generation
+                                            correctionNotice = ""
+                                        }
+                                    ) { Text("✎ Corrigeer vertaling") }
                                     TextButton(
                                         modifier = Modifier.fillMaxWidth(),
                                         enabled = !listening && line.original.isNotBlank(),
