@@ -26,7 +26,7 @@ internal object PrivateOwnWordCsvHeader {
         if (fields.size != columns.size) return false
         return fields.indices.all { index ->
             fields[index] == columns[index] ||
-                fields[index] == "\"\u0024{columns[index]}\""
+                fields[index] == "\"" + columns[index] + "\""
         }
     }
 }
