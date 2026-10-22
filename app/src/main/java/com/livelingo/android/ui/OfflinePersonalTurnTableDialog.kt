@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -150,7 +151,9 @@ internal fun OfflinePersonalTurnTableDialog(
                     else TurnSide(prompt, promptLanguage, "TEGENOVER · MIJN BRONZIN", true, false)
                 }
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
@@ -269,6 +272,7 @@ internal fun OfflinePersonalTurnTableDialog(
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center
                     )
+                    PrivateTableScreenAwakeControl()
                     Text(
                         "Uitsluitend jouw zelfgeschreven, niet gecontroleerde zinnen. " +
                             "Tijdelijk in geheugen · geen spraakherkenning of automatische vertaling.",

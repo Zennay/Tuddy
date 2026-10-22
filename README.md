@@ -1,3 +1,16 @@
+## Nieuw: tafelmodus op kleinere schermen en scherm bewust aanhouden
+
+Beide tweepersoonsweergaven hebben nu een **scrollbare bedieningsstrook**
+zodat alle acties ook op een compact Android-scherm bereikbaar blijven.
+Optioneel kun je het scherm uitsluitend in de huidige tafelweergave
+wakker houden; standaard staat dit uit. De app gebruikt hiervoor de
+Android-dialog-View zonder wake lock, extra toestemming of wijziging
+van microfooninstellingen en schakelt het verzoek weer uit bij
+achtergrondgebruik of sluiten. [Privégesprek](docs/OFFLINE_PERSONAL_CONVERSATION.md)
+en [opgeslagen eigen zinnen](docs/PRIVATE_PHRASE_FACE_TO_FACE.md).
+
+---
+
 ## Nieuw: herhaal alleen je lastige tijdelijke gespreksbeurten
 
 In de schermvullende offline tafelmodus kun je zelf een beurt als
