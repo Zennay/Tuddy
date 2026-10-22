@@ -59,7 +59,7 @@ internal fun SessionCorrectionTransferDialog(
             scope.launch {
                 val success = withContext(Dispatchers.IO) {
                     runCatching {
-                        context.contentResolver.openOutputStream(uri, "wt")?.use { stream ->
+                        context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
                             stream.write(bytes)
                             stream.flush()
                         } ?: error("Kan geen bestand schrijven")
@@ -88,10 +88,15 @@ internal fun SessionCorrectionTransferDialog(
                             ?: error("Kan bestand niet openen")
                         input.use { stream ->
                             val buffer = ByteArray(4096)
+                            var emptyReads = 0
                             while (true) {
                                 val count = stream.read(buffer)
                                 if (count < 0) break
-                                if (count == 0) continue
+                                if (count == 0) {
+                                    if (++emptyReads > 16) error("Bestandsprovider reageert niet")
+                                    continue
+                                }
+                                emptyReads = 0
                                 if (count + out.size() > SessionTranslationCorrectionTransfer.MAX_BYTES)
                                     error("Bestand te groot")
                                 out.write(buffer, 0, count)
