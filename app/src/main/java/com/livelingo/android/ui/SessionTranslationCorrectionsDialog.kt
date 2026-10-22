@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.SessionTranslationCorrections
+import com.livelingo.android.SessionCorrectionLanguageCatalog
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.PrivateOfflineSearch
 
@@ -39,6 +40,7 @@ import com.livelingo.android.PrivateOfflineSearch
 @Composable
 internal fun SessionTranslationCorrectionsDialog(
     entries: List<SessionTranslationCorrection>,
+    initialTargetCode: String? = null,
     speaker: LocalCaptionSpeaker,
     onRemove: (SessionTranslationCorrection) -> Unit,
     onRevise: (SessionTranslationCorrection, String, String) -> Boolean,
@@ -99,6 +101,16 @@ internal fun SessionTranslationCorrectionsDialog(
                         "Geen voorstel wordt automatisch toegepast of opgeslagen.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (initialTargetCode in SessionCorrectionLanguageCatalog.manualOnlyCodes) {
+                    Text(
+                        "Je opende dit vanuit de preview-only taal " + initialTargetCode +
+                            ". Je kunt hier eigen zinnen schrijven of importeren, maar " +
+                            "dit maakt geen spraakherkenning, machinevertaling of live " +
+                            "ondersteuning voor die taal beschikbaar.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it.take(60) },
@@ -430,6 +442,7 @@ internal fun SessionTranslationCorrectionsDialog(
     if (manualAddOpen) {
         SessionCorrectionManualAddDialog(
             entries = entries,
+            initialTargetCode = initialTargetCode,
             onAdd = { snapshot, candidate ->
                 if (entries != snapshot ||
                     !SessionTranslationCorrections.validEntries(snapshot + candidate)) {
@@ -451,6 +464,7 @@ internal fun SessionTranslationCorrectionsDialog(
     if (manualBatchOpen) {
         SessionCorrectionManualBatchDialog(
             entries = entries,
+            initialTargetCode = initialTargetCode,
             onAddBatch = { snapshot, additions ->
                 if (entries != snapshot || additions.isEmpty() ||
                     additions.size > 10 ||
