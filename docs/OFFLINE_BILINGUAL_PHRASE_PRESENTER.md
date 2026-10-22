@@ -64,3 +64,19 @@ snelkoppelingen mee op. **Wis mijn oefengegevens** en de bestaande
 functie **Wis mijn volledige eigen zinnenlijst** verwijderen tevens
 alle favoriete zinnen. Persoonlijke favorieten gaan niet mee in de
 optionele JSON-back-up van de eigen zinnenlijst.
+
+## Tijdelijke volgmarkering bij lokale voorlezing
+
+In de grote persoonlijke gesprekskaart volgt de actieve weergave nu de
+**Eigen zin** of **Mijn betekenis** die je bewust laat voorlezen. De actieve
+zijde krijgt een tijdelijke achtergrondmarkering; als de geïnstalleerde
+Android-stem een tekstbereik terugmeldt, wordt alleen dat bereik gemarkeerd.
+Zonder zo'n callback blijft de actieve zijde zichtbaar, zonder dat Tuddy
+woordtiming afleidt uit een audio-opname. De zichtbare tekst gebruikt dezelfde
+witruimtenormalisatie als de spraakinvoer zodat de offsets passen.
+
+Een nieuwe kaart, stoppen, het delen openen, naar de tweezijdige weergave
+gaan of de app verlaten stopt de spraak en wist de tijdelijke markering.
+Er wordt geen audio, tekstbereik of afspeelgeschiedenis opgeslagen. Alleen
+reeds geïnstalleerde niet-netwerkafhankelijke Android-stemmen worden gebruikt;
+dit is geen bewijs van juiste uitspraak of vertaling.
