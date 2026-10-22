@@ -19,8 +19,9 @@ appears in the device snapshot.
 The form compares the installed base APK SHA-256 against the operator-supplied
 64-hex SHA-256 of the APK file (never the enclosing artifact ZIP), then records
 four explicit confirmations, aggregate successful-observation counts for NL→EN
-and EN→NL speech and translation (each 0–10), and the highest observed latency
-in milliseconds. A complete record is impossible unless the APK digests match
+and EN→NL speech and translation (each successful count out of ten attempts),
+and the highest observed latency in milliseconds. The report records successes,
+not raw utterances; failures remain visible as counts below ten. A complete record is impossible unless the APK digests match
 and Android reports airplane mode enabled in the captured device snapshot; the
 report shows a mismatch instead of accepting a manually checked identity box. It has no free-text notes field and never asks
 for sample phrases, transcript content or audio. A partial or failed session can
