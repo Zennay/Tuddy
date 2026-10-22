@@ -235,6 +235,10 @@ internal fun TwoWayConversationReadingBoard(
                 LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), state = scroll,
                     verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     itemsIndexed(selected) { index, row ->
+                        val originalActive = activeSpeechLineIndex == index &&
+                            activeSpeechSide == "original" && activeSpeechText != null
+                        val translatedActive = activeSpeechLineIndex == index &&
+                            activeSpeechSide == "translated" && activeSpeechText != null
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.fillMaxWidth()) {
                             Text(
@@ -243,35 +247,79 @@ internal fun TwoWayConversationReadingBoard(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            OfflineWordText(
-                                text = row.original,
-                                language = row.source,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize = if (large) 30.sp else 21.sp,
-                                    lineHeight = if (large) 39.sp else 29.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    textDirection = dir(row.source)
-                                ),
-                                onSaveWord = onSaveCuratedWord,
-                                readOwnMeaning = readOwnMeaning,
-                                saveOwnMeaning = onSaveOwnMeaning
-                            )
-                            if (completed(row)) {
-                                if (row.status == "Lokaal vertaald" &&
-                                    row.translated.isNotBlank()) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = if (originalActive)
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                else MaterialTheme.colorScheme.surface,
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    if (originalActive) Text(
+                                        if (activeSpeechRange != null)
+                                            "Nu voorgelezen · indicatieve tekstmarkering van de stem."
+                                        else "Nu voorgelezen · deze stem geeft geen woordbereik terug.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
                                     OfflineWordText(
-                                        text = row.translated,
-                                        language = row.target,
+                                        text = row.original,
+                                        language = row.source,
                                         style = MaterialTheme.typography.bodyLarge.copy(
-                                            color = MaterialTheme.colorScheme.primary,
                                             fontSize = if (large) 30.sp else 21.sp,
                                             lineHeight = if (large) 39.sp else 29.sp,
-                                            textDirection = dir(row.target)
+                                            fontWeight = FontWeight.Medium,
+                                            textDirection = dir(row.source)
                                         ),
                                         onSaveWord = onSaveCuratedWord,
                                         readOwnMeaning = readOwnMeaning,
-                                        saveOwnMeaning = onSaveOwnMeaning
+                                        saveOwnMeaning = onSaveOwnMeaning,
+                                        activeSpeechText = activeSpeechText.takeIf { originalActive },
+                                        activeSpeechRange = activeSpeechRange.takeIf { originalActive }
                                     )
+                                }
+                            }
+                            if (completed(row)) {
+                                if (row.status == "Lokaal vertaald" &&
+                                    row.translated.isNotBlank()) {
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = if (translatedActive)
+                                            MaterialTheme.colorScheme.secondaryContainer
+                                        else MaterialTheme.colorScheme.surface,
+                                        shape = MaterialTheme.shapes.medium
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            if (translatedActive) Text(
+                                                if (activeSpeechRange != null)
+                                                    "Nu voorgelezen · indicatieve tekstmarkering van de stem."
+                                                else "Nu voorgelezen · deze stem geeft geen woordbereik terug.",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                            )
+                                            OfflineWordText(
+                                                text = row.translated,
+                                                language = row.target,
+                                                style = MaterialTheme.typography.bodyLarge.copy(
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    fontSize = if (large) 30.sp else 21.sp,
+                                                    lineHeight = if (large) 39.sp else 29.sp,
+                                                    textDirection = dir(row.target)
+                                                ),
+                                                onSaveWord = onSaveCuratedWord,
+                                                readOwnMeaning = readOwnMeaning,
+                                                saveOwnMeaning = onSaveOwnMeaning,
+                                                activeSpeechText = activeSpeechText.takeIf { translatedActive },
+                                                activeSpeechRange = activeSpeechRange.takeIf { translatedActive }
+                                            )
+                                        }
+                                    }
                                 } else {
                                     Text("Geen afzonderlijke vertaling",
                                         style = MaterialTheme.typography.bodySmall)
@@ -283,8 +331,10 @@ internal fun TwoWayConversationReadingBoard(
                             }
                             OfflineReadingTurnAudioActions(
                                 turn = row,
-                                speaker = speaker,
-                                onNotice = { audioNotice = it }
+                                activeSpeechText = activeSpeechText,
+                                onSpeak = { text, language, side, pace ->
+                                    pronounceLine(index, text, language, side, pace)
+                                }
                             )
                             HorizontalDivider()
                         }
