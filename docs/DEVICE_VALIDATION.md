@@ -61,7 +61,7 @@ Previous app-code candidate (22 October 2026, after PR #333 and before PR #335):
 | Artifact ZIP SHA-256 | `2275f56609a701409d94abb3a32f95caf20cae608f2697871b913b29204e369a` |
 | Physical installation / airplane-mode proof | **NOT PROVIDED** |
 
-The PR #333 candidate remains historical; PR #335 is the current app-code candidate. The old and new artifact ZIP digests are not APK digests, and neither artifact proves physical acceptance.
+The PR #333 and #335 candidates are historical; PR #342 is the current app-code candidate. The old and new artifact ZIP digests are not APK digests, and neither artifact proves physical acceptance.
 
 Previous app-code candidate (22 October 2026, after PR #318 and before PR #320):
 
