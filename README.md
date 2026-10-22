@@ -1,23 +1,24 @@
-## Nieuw: tik een alternatief van de lokale Android-spraakherkenner aan
+## Nieuw: twintig eerlijke offline toestel-waarnemingen vastleggen
 
-Als Android bij een **daadwerkelijk herkende** livezin meerdere
-tekstvoorstellen teruggeeft, toont Tuddy maximaal drie verschillende
-alternatieven onder **⋯ Corrigeer, maak privékaart en meer →
-✎ Corrigeer tekst**, ook vanuit de bestaande grote leesmodus.
-Een tik **vult alleen het correctieveld**. Controleer zelf wat werkelijk
-is gezegd en bevestig bewust met **Corrigeer en vertaal**: pas daarna
-wordt de tijdelijke oorspronkelijke ondertitel aangepast en kan Tuddy
-een reeds voorbereid **lokaal** tekstmodel opnieuw gebruiken.
-Alternatieven zijn onbewezen Android-voorspellingen, geen tweede
-spraakherkenning en geen automatische kwaliteitscontrole.
+Via **Offline startcheck → Leg fysieke offline-waarnemingen vast** registreert
+een bevoegde gebruiker na een echte Android 12+-sessie tien NL→EN- en tien
+EN→NL-pogingen afzonderlijk. Voor elke poging noteer je of lokale
+spraakherkenning en vervolgens lokale vertaling lukten, plus desgewenst de
+zelf gemeten totale vertraging. Ook mislukte pogingen tellen mee.
+Een verkeerde invoer kun je per richting terugdraaien. Het resultaat
+vermeldt per richting **pogingen, geslaagde spraak, spraakfouten, geslaagde
+lokale vertalingen, vertaalfouten en gemeten latenties**. Er worden geen
+opnamen, gesproken zinnen, namen of volledige transcripties opgeslagen.
 
-De voorstellen staan uitsluitend vluchtig in het appgeheugen,
-maximaal drie per herkende regel; ze worden bij correctie, het wissen
-van de regel, buffer-uitval of een leeggemaakt gesprek verwijderd.
-Ze komen nooit mee in transcript- of subtitle-export, privékaarten,
-diagnostiek, clipboard of cloud. Bij ontbreken van alternatieven kan
-de gebruiker de zin gewoon zelf typen. Deze functie voegt geen
-Kurmanji/Sorani/Pasjtoe modelondersteuning toe.
+Een ingevuld rapport is **niet hetzelfde als geslaagde acceptatie**.
+De gebruiker moet zelf exact de APK- en ZIP-herkomst controleren,
+vliegtuigmodus en overige verbindingen onafhankelijk afsluiten en
+permissies, Stop, achtergrond en privacy beoordelen. Het rapport blijft
+zelfgerapporteerd en mag bewust ook als **onvolledig** worden opgeslagen,
+bijvoorbeeld om ontbrekende modellen of fouten zichtbaar te houden.
+De aparte fysieke acceptatie en alle Kurmanji/Sorani/Pasjtoe
+model-/licentiegates blijven vereist.
+[Android-toestelhandleiding](docs/DEVICE_VALIDATION.md).
 
 ---
 
@@ -3287,3 +3288,28 @@ van de app beëindigt de reeks. Alleen reeds geïnstalleerde niet-netwerkstemmen
 worden gebruikt; te lange regels blokkeren de reeks in plaats van stilzwijgend
 te worden afgekapt. Er wordt geen audio opgeslagen en het bronbestand blijft
 onaangeraakt. [Bediening en grenzen](docs/LOCAL_SUBTITLE_READ_ALOUD.md).
+
+---
+
+## Nieuw: tik een alternatief van de lokale Android-spraakherkenner aan
+
+Als Android bij een **daadwerkelijk herkende** livezin meerdere
+tekstvoorstellen teruggeeft, toont Tuddy maximaal drie verschillende
+alternatieven onder **⋯ Corrigeer, maak privékaart en meer →
+✎ Corrigeer tekst**, ook vanuit de bestaande grote leesmodus.
+Een tik **vult alleen het correctieveld**. Controleer zelf wat werkelijk
+is gezegd en bevestig bewust met **Corrigeer en vertaal**: pas daarna
+wordt de tijdelijke oorspronkelijke ondertitel aangepast en kan Tuddy
+een reeds voorbereid **lokaal** tekstmodel opnieuw gebruiken.
+Alternatieven zijn onbewezen Android-voorspellingen, geen tweede
+spraakherkenning en geen automatische kwaliteitscontrole.
+
+De voorstellen staan uitsluitend vluchtig in het appgeheugen,
+maximaal drie per herkende regel; ze worden bij correctie, het wissen
+van de regel, buffer-uitval of een leeggemaakt gesprek verwijderd.
+Ze komen nooit mee in transcript- of subtitle-export, privékaarten,
+diagnostiek, clipboard of cloud. Bij ontbreken van alternatieven kan
+de gebruiker de zin gewoon zelf typen. Deze functie voegt geen
+Kurmanji/Sorani/Pasjtoe modelondersteuning toe.
+
+---
