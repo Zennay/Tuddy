@@ -176,7 +176,7 @@ internal fun TwoWayTypedConversationDialog(
             speaker.close()
         }
     }
-    LaunchedEffect(from, to, recentLines.size) {
+    LaunchedEffect(from, to, recentLines) {
         clearSpeech()
         models.invalidate()
         modelStatus = OfflineTextReceipt(from, to, OfflineTextStage.UNCHECKED,
