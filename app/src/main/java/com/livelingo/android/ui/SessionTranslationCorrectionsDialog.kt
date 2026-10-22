@@ -41,6 +41,7 @@ internal fun SessionTranslationCorrectionsDialog(
     onDismiss: () -> Unit
 ) {
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
+    var practiceOpen by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<SessionTranslationCorrection?>(null) }
@@ -88,6 +89,12 @@ internal fun SessionTranslationCorrectionsDialog(
                     "Zichtbaar: " + visible.size + " van " + entries.size,
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (entries.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = { speaker.stop(); practiceOpen = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Oefen mijn correcties · tijdelijk") }
+                }
                 if (entries.isEmpty()) Text("Nog geen correcties onthouden.")
                 else if (visible.isEmpty()) Text("Geen passend voorstel gevonden.")
 
@@ -156,6 +163,7 @@ internal fun SessionTranslationCorrectionsDialog(
                         SessionCorrectionPlaybackActions(entry, speaker)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = {
+                                speaker.stop()
                                 editing = entry
                                 editedSource = entry.original
                                 editedTranslation = entry.translation
@@ -202,4 +210,7 @@ internal fun SessionTranslationCorrectionsDialog(
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Sluiten") } }
     )
+    if (practiceOpen) {
+        SessionCorrectionPracticeDialog(entries, speaker) { practiceOpen = false }
+    }
 }
