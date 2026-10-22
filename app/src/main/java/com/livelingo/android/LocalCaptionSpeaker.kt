@@ -52,11 +52,11 @@ internal class LocalCaptionSpeaker(context: Context) {
         onFinished: (completed: Boolean) -> Unit
     ) {
         stop()
-        val safeLines = lines.map { it.replace('\\n', ' ').replace('\\r', ' ').trim() }
+        val safeLines = lines.map { it.replace('\n', ' ').replace('\r', ' ').trim() }
         if (safeLines.isEmpty() || safeLines.size > MAX_SEQUENCE_LINES ||
             safeLines.any { line ->
                 line.isBlank() || line.length > MAX_LINE_CHARS ||
-                    line.any { ch -> ch == '\\u0000' || ch.isISOControl() }
+                    line.any { ch -> ch == '\u0000' || ch.isISOControl() }
             }
         ) {
             feedback("Voorlezen vereist 1–100 niet-lege regels van maximaal 400 tekens. Geen online fallback.")
