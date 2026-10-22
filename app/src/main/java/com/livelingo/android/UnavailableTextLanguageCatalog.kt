@@ -152,14 +152,16 @@ internal object UnavailableTextLanguageCatalog {
         category = "Tekstvertaling",
         title = "Helsinki-NLP/opus-mt-ine-ine · 59-talig",
         url = "https://huggingface.co/Helsinki-NLP/opus-mt-ine-ine",
-        declaredLicense = "Apache-2.0 volgens modelkaart; corpusrechten nog te controleren",
+        declaredLicense = "Hugging Face-modelkaart: Apache-2.0; OPUS-MT-train documentatie noemt openbare modellen CC-BY-4.0 — conflict onopgelost",
         footprint = "536 MB volledige repository; 266 MB PyTorch-gewichten plus tokenizer volgens bestandslijst",
         directionEvidence = "Modelkaart noemt kur_Arab, kur_Latn, pus, nld en eng; exacte taalrichtingen en dialectkwaliteit zijn niet bevestigd.",
         limitation = "De modelkaart noemt kur_Arab, kur_Latn, pus, nld en eng als bron-/doeltokens en vereist " +
-            "een doelprefix zoals >>nld<<. Dit is een veelbelovende kleinere MT-onderzoekskandidaat, maar " +
+            "een doelprefix zoals >>nld<<. De Hugging Face-kaart vermeldt Apache-2.0, terwijl de algemene " +
+            "OPUS-MT-train documentatie zegt dat publieke modellen CC-BY-4.0 worden verspreid; de exacte " +
+            "modellicentie en corpusrechten moeten worden verzoend vóór distributie. " +
             "kur_Arab/kur_Latn zijn geen dialectspecifiek bewijs voor Sorani/Kurmanji en pus-codecompatibiliteit " +
-            "moet worden gecontroleerd. Geen passende pair-specifieke kwaliteitsmetingen, dataset-/corpusrechten, " +
-            "Android-runtime, quantisatie, latency of geheugen zijn onafhankelijk geverifieerd. Niet geïntegreerd."
+            "moet worden gecontroleerd. Geen passende pair-specifieke kwaliteitsmetingen, Android-runtime, " +
+            "quantisatie, latency of geheugen zijn onafhankelijk geverifieerd. Niet geïntegreerd."
     )
 
     private val opusMtOnnxInt8ResearchCandidate = OfflineLanguageModelCandidate(
@@ -205,8 +207,10 @@ internal object UnavailableTextLanguageCatalog {
                     directionEvidence = "Spraak → tekst (ASR), Kurmanji volgens modelkaart en Common Voice; geen vertaling of Android-geschiktheid aangetoond.",
                     declaredLicense = "Apache-2.0 volgens modelkaart",
                     footprint = "modelbestand circa 967 MB",
-                    limitation = "Niet geïntegreerd of op Android getest. Trainingsdatarechten, " +
-                        "dialectnauwkeurigheid, latency en geheugenbeslag zijn niet geverifieerd."
+                    limitation = "Modelkaart noemt Common Voice Kurmanji, maar geen datasetversie of evaluatiescore. " +
+                        "Mozilla Data Collective publiceert Common Voice Kurmanji 26.0 onder CC0-1.0, maar zonder release-ID " +
+                        "is niet bewezen dat deze gewichten precies die versie gebruiken. Trainingsdatarechten, dialectnauwkeurigheid, " +
+                        "latency en geheugenbeslag zijn niet onafhankelijk geverifieerd. Niet geïntegreerd of op Android getest."
                 ),
                 kurmanjiCompactResearchCandidate,
                 kurmanjiWav2VecResearchCandidate
@@ -232,8 +236,9 @@ internal object UnavailableTextLanguageCatalog {
                     url = "https://huggingface.co/roshna-omer/whisper-small-Kurdish-Sorani",
                     declaredLicense = "Apache-2.0 volgens modelkaart",
                     footprint = "modelbestand circa 967 MB",
-                    limitation = "Niet geïntegreerd of op Android getest. Trainingsdatarechten, " +
-                        "Sorani-variantdekking, latency en geheugenbeslag zijn niet geverifieerd."
+                    limitation = "Modelkaart noemt de dataset als 'None' en rapporteert zelf WER 24,12% / orthografische WER 26,73% " +
+                        "op een niet nader beschreven evaluatieset. Datasetrechten, Sorani-variantdekking, latency en geheugenbeslag " +
+                        "zijn niet onafhankelijk geverifieerd. Niet geïntegreerd of op Android getest."
                 ),
                 soraniTinyResearchCandidate,
                 soraniBaseResearchCandidate,
@@ -259,10 +264,11 @@ internal object UnavailableTextLanguageCatalog {
                     category = "Spraakherkenning (ASR)",
                     title = "Sabtain-Dev/STT-Whisper-Pashto",
                     url = "https://huggingface.co/Sabtain-Dev/STT-Whisper-Pashto",
-                    declaredLicense = "MIT volgens modelkaart",
-                    footprint = "0,2B parameters; bestandsgrootte niet vastgesteld",
-                    limitation = "Modelkaart rapporteert zelf WER 43,83% op de eigen Pashto-ASR-dataset; dit is niet onafhankelijk herhaald. " +
-                        "Datasetlicentie, splitsing, gewichtenherkomst, dialectdekking en Android-prestaties zijn niet geverifieerd. " +
+                    declaredLicense = "MIT volgens model- en datasetkaart; rechtenherkomst niet onafhankelijk beoordeeld",
+                    footprint = "0,2B parameters; modelbestandsgrootte niet vastgesteld; gekoppelde datasetkaart meldt 4.819 rijen / circa 1,45 GB",
+                    limitation = "Model- en datasetkaart verklaren MIT; de gekoppelde dataset telt 4.819 rijen / circa 1,45 GB. " +
+                        "De gerapporteerde WER 43,83% is zelfgerapporteerd en niet onafhankelijk herhaald. " +
+                        "Datasetprovenance, representativiteit, dialectdekking en Android-prestaties blijven onbewezen. " +
                         "Niet geïntegreerd of op Android getest."
                 ),
                 pashtoGhagResearchCandidate

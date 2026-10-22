@@ -28,9 +28,9 @@ De taalondersteuningdialoog toont nu externe modelkaarten voor drie ASR-kandidat
 
 | Taal | ASR-onderzoekskandidaat | Modelbestand / licentie volgens kaart | Open punt |
 |---|---|---|---|
-| Kurmanji | [amedcj/whisper-kurmanji](https://huggingface.co/amedcj/whisper-kurmanji) | circa 967 MB; Apache-2.0 vermeld | Trainingsdatarechten, dialectnauwkeurigheid, Android-runtime en geheugen nog niet geverifieerd |
-| Sorani | [roshna-omer/whisper-small-Kurdish-Sorani](https://huggingface.co/roshna-omer/whisper-small-Kurdish-Sorani) | circa 967 MB; Apache-2.0 vermeld | Trainingsdatarechten, Sorani-variantdekking, Android-runtime en geheugen nog niet geverifieerd |
-| Pasjtoe | [Sabtain-Dev/STT-Whisper-Pashto](https://huggingface.co/Sabtain-Dev/STT-Whisper-Pashto) | MIT vermeld; bestandsgrootte nog niet vastgesteld | Dataset-/gewichtenherkomst, dialectdekking en Android-runtime nog niet geverifieerd |
+| Kurmanji | [amedcj/whisper-kurmanji](https://huggingface.co/amedcj/whisper-kurmanji) | circa 969 MB; Apache-2.0 vermeld; modelkaart noemt Common Voice maar geen release-ID/evaluatiescore | [Common Voice Kurmanji 26.0](https://mozilladatacollective.com/datasets/cmqinqhul00wynq07koxlxbo5) is CC0-1.0, maar de gebruikte release is onbekend; trainingsdatarechten, dialectnauwkeurigheid, Android-runtime en geheugen blijven onbevestigd |
+| Sorani | [roshna-omer/whisper-small-Kurdish-Sorani](https://huggingface.co/roshna-omer/whisper-small-Kurdish-Sorani) | circa 969 MB; Apache-2.0 vermeld; modelkaart noemt dataset `None` en zelfgerapporteerde WER 24,12% / orthografische WER 26,73% | Datasetrechten, evaluatieset, Sorani-variantdekking, Android-runtime en geheugen niet geverifieerd |
+| Pasjtoe | [Sabtain-Dev/STT-Whisper-Pashto](https://huggingface.co/Sabtain-Dev/STT-Whisper-Pashto) | MIT op model- en datasetkaart; dataset 4.819 rijen / circa 1,45 GB; zelfgerapporteerde WER 43,83% | Rechtenherkomst, representativiteit, dialectdekking en Android-runtime nog niet onafhankelijk geverifieerd |
 
 ### Waarom de vertaalroute nog geblokkeerd is
 
@@ -79,7 +79,7 @@ Dit is een expliciete licentie-/dialectwaarschuwing, geen juridische conclusie o
 
 ## Extra MT-lead — 22 oktober 2026: OPUS-MT ine-ine
 
-[Helsinki-NLP/opus-mt-ine-ine](https://huggingface.co/Helsinki-NLP/opus-mt-ine-ine) is een aanvullende onderzoekskandidaat met een door de modelkaart gedeclareerde Apache-2.0-licentie. De Hugging Face repository is circa 536 MB; de bestandslijst noemt een PyTorch-model van circa 266 MB plus tokenizers. De modelkaart noemt onder meer `kur_Arab`, `kur_Latn`, `pus`, `nld` en `eng` aan zowel bron- als doelzijde en vereist een doelprefix in de vorm `>>id<<`. Dit maakt het kleiner dan MADLAD-400-3B en NLLB-600M als eerste onderzoekspad voor een gedeelde MT-pack.
+[Helsinki-NLP/opus-mt-ine-ine](https://huggingface.co/Helsinki-NLP/opus-mt-ine-ine) is een aanvullende onderzoekskandidaat waarvan de Hugging Face-modelkaart Apache-2.0 vermeldt. De [algemene OPUS-MT-train documentatie](https://github.com/Helsinki-NLP/OPUS-MT-train) zegt echter dat publieke modellen CC-BY-4.0 worden verspreid. Dit licentieconflict is niet opgelost: behandel de kandidaat niet als distributiegereed totdat de model-specifieke voorwaarden en corpusrechten zijn bevestigd. De Hugging Face repository is circa 536 MB; de bestandslijst noemt een PyTorch-model van circa 266 MB plus tokenizers. De modelkaart noemt onder meer `kur_Arab`, `kur_Latn`, `pus`, `nld` en `eng` aan zowel bron- als doelzijde en vereist een doelprefix in de vorm `>>id<<`. Dit blijft een onderzoekslead, geen goedgekeurde MT-pack.
 
 **Niet als ondersteund beschouwen:** `kur_Arab`/`kur_Latn` zijn generieke taal-/schriftcodes en geen bewijs van native-speaker-goedgekeurde Sorani- of Kurmanji-kwaliteit; `pus` moet naar Tuddy's Pasjtoe-code worden gemapt. De modelkaart biedt geen bruikbare paar-specifieke kwaliteitsmeting voor deze dialecten, en corpus-/trainingsdatarechten zijn niet onafhankelijk geauditeerd. De Android-runtime, tokenizer, doelprefix, kwantisatie, geheugen, snelheid, batterij en daadwerkelijke offline werking zijn niet gevalideerd. Geen modelbestanden worden gedownload of ingebouwd door deze kaart.
 
