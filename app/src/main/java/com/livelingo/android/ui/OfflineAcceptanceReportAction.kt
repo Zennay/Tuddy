@@ -42,6 +42,7 @@ internal fun OfflineAcceptanceReportAction(
 ) {
     val context = LocalContext.current
     var baseline by remember { mutableStateOf<ByteArray?>(null) }
+    var recordedAt by remember { mutableStateOf(0L) }
     var opened by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var apkIdentityConfirmed by remember { mutableStateOf(false) }
@@ -74,7 +75,7 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Record format: aggregate observations only; no raw speech, audio or transcript")
             appendLine("Self-reported by device operator: yes")
             appendLine("Independently verified by Tuddy: no")
-            appendLine("Session recorded at epoch milliseconds UTC: ${System.currentTimeMillis()}")
+            appendLine("Session recorded at epoch milliseconds UTC: $recordedAt")
             appendLine("Observation completeness: ${if (complete) "all required observations marked complete" else "incomplete or one or more observations failed"}")
             appendLine("APK identity and SHA-256 matched the selected release candidate: $apkIdentityConfirmed")
             appendLine("Airplane mode enabled and Wi-Fi/mobile connectivity independently disabled: $disconnectedConfirmed")
@@ -141,6 +142,7 @@ internal fun OfflineAcceptanceReportAction(
                     message = "De exacte apparaat-/APK-identiteit is nog niet beschikbaar. Open de offline startcheck opnieuw."
                 } else {
                     baseline = captured.copyOf()
+                    recordedAt = System.currentTimeMillis()
                     opened = true
                     message = ""
                 }
@@ -220,8 +222,7 @@ internal fun OfflineAcceptanceReportAction(
             },
             confirmButton = {
                 TextButton(
-                    enabled = readyReport != null && !maxLatencyMs.isBlank() &&
-                        (latency(maxLatencyMs) != null),
+                    enabled = readyReport != null,
                     onClick = {
                         val capturedBaseline = baseline?.copyOf()
                         val fresh = deviceSnapshot()
