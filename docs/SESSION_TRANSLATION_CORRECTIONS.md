@@ -53,3 +53,28 @@ Deze snelkoppeling zet het exacte voorstel als bewerkbare tekst in het
 bestaande correctievenster, maar slaat het **niet** direct op: controleer
 de vertaling en tik vervolgens zelf op **Bewaar correctie**. Dezelfde
 oude-revisiecontrole geldt als bij elke andere handmatige correctie.
+
+## Eerdere correctie in de fullscreen-leesmodus
+
+In **Groot lezen** verschijnt bij een afgesloten live-ondertitel met
+precies dezelfde eerder onthouden zin en taalrichting de knop
+**Bekijk mijn eerdere vertaalcorrectie…**. Deze opent het bestaande
+revisie-beveiligde correctievenster met het eigen voorstel in het
+invoerveld. Pas een tweede, expliciete tik op **Bewaar correctie**
+wijzigt de betreffende regel. In een alleen-lezen privéarchief bestaat
+deze actie niet en blijft iedere eerdere archiefregel onaangeraakt.
+
+## Persoonlijke correcties lokaal terugvinden
+
+In het beheervenster kan je lokaal zoeken naar brontekst, handmatig
+vertaalde tekst of exacte taalrichting, met een zichtbaar resultaatcijfer.
+De zoektekst blijft uitsluitend in het geheugen van het geopende venster.
+Het wisselen van het filter wijzigt geen vertaling of bewaarde correctie;
+ook bij een filter kan het gehele tijdelijke overzicht uitsluitend via
+aparte wis-allesbevestiging worden gewist.
+
+Ook dit zoeken gebruikt de bestaande niet-destructieve Unicode-toetsenbord-
+normalisatie voor onder meer veelgebruikte Arabische/Persische yeh- en
+kafvarianten, zodat eigen Sorani/Pasjtoe-tekst beter terug te vinden is.
+De oorspronkelijk ingetypte letters en de opgeslagen correcties worden
+hierdoor niet gewijzigd of automatisch gelijkgesteld bij hergebruik.
