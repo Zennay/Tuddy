@@ -72,6 +72,18 @@ voldoen niet aan die P1-eisen.
 
 ## Alleen gekozen zinnen delen: taal- en themafilter
 
+### Ontvangen uit Android Delen
+
+Een bewust gedeelde vijfkoloms-CSV wordt in Tuddy herkend aan de exacte
+kopregel `language,phrase,meaningLanguage,ownMeaning,topic`. De kopregel
+is alleen routeringsinformatie: de volledige inhoud moet daarna opnieuw
+door de strikte parser binnen de limiet van 50.000 bytes. De app opent de
+bestaande volledige importpreview, toont de gekozen zinnen en thema's en
+vraagt afzonderlijk om samenvoegen of vervanging. Er wordt nooit automatisch
+geïmporteerd of naar de vertaalinvoer gestuurd. Een ongeldig, te groot of
+conflicterend importverzoek behoudt de huidige privézinnen.
+
+
 Je hoeft je hele persoonlijke boek niet uit te wisselen. Kies
 **Exporteer gekozen zinnen mét thema's als CSV…** en selecteer eerst
 bewust één van de drie brontalen of alle talen, en één eigen thema,
