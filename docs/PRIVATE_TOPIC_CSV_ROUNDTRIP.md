@@ -90,3 +90,18 @@ geschikt voor dezelfde vijfkoloms-import op een ander toestel.
 Ook deze export is een **bewuste externe kopie** en kan door
 een door jou gekozen Android-documentprovider online worden
 gesynchroniseerd. De interne persoonlijke lijst verandert niet.
+
+## Plak een thema-CSV bewust in Tuddy
+
+Naast Android Documenten kun je **Plak mijn eigen zinnen mét thema's
+als CSV…** kiezen. Plak zelf maximaal 12.000 tekens inclusief de
+verplichte vijfkoloms-kopregel. Tuddy leest niet automatisch het
+klembord, haalt niets van het netwerk en gebruikt geen spraakmodel.
+Dezelfde strikte CSV-regels en limieten gelden als bij bestandsimport.
+
+Ongeldige of dubbele regels worden vóór iedere wijziging geweigerd;
+de geplakte tekst blijft bewerkbaar totdat je de fout corrigeert of
+annuleert. Na een geldige invoer verschijnt **de volledige preview**
+van alle bronzinnen, eigen betekenissen en themanamen. Pas daarna
+kun je bewust veilig samenvoegen of destructief vervangen kiezen.
+Annuleren of het sluiten van de plakdialoog bewaart niets.
