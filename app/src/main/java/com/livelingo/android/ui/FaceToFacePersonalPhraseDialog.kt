@@ -13,12 +13,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
@@ -28,11 +34,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.LocalCaptionSpeaker
 
 /**
  * Explicitly presented, user-written words only. Keeps exactly the caller's
  * deck/filter and selection; never imports/sends notes or claims human review.
- * No TTS is started while two people look at the phone on the table.
+ * Audio is possible only on a deliberate tap with an already-installed
+ * Android voice that reports no network dependency. The saved cards never change.
  */
 @Composable
 internal fun FaceToFacePersonalPhraseDialog(
@@ -45,11 +53,32 @@ internal fun FaceToFacePersonalPhraseDialog(
     }
     var originalOnFarSide by remember { mutableStateOf(true) }
     var large by remember { mutableStateOf(true) }
+    var practice by remember { mutableStateOf(false) }
+    var revealed by remember(index, practice) { mutableStateOf(false) }
+    var audioNotice by remember { mutableStateOf("") }
     val selected = cards.getOrNull(index)
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current
+    val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    DisposableEffect(lifecycle, speaker) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) speaker.stop()
+        }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.lifecycle.removeObserver(observer)
+            speaker.close()
+        }
+    }
+    LaunchedEffect(index, originalOnFarSide, practice, selected) {
+        speaker.stop()
+        audioNotice = ""
+    }
+    val meaningHidden = practice && !revealed
     fun direction(lang: String): TextDirection =
         if (lang in setOf("ckb", "ps", "ar", "fa", "ur", "he"))
             TextDirection.Rtl else TextDirection.Ltr
-    fun returnToCard() = onBack(index)
+    fun returnToCard() { speaker.stop(); onBack(index) }
     Dialog(onDismissRequest = { returnToCard() },
         properties = DialogProperties(usePlatformDefaultWidth = false,
             dismissOnClickOutside = false)
@@ -68,7 +97,7 @@ internal fun FaceToFacePersonalPhraseDialog(
                         verticalArrangement = Arrangement.Center
                     ) {
                         val text = if (originalOnFarSide) selected?.phrase
-                            else selected?.ownMeaning
+                            else if (meaningHidden) "Eigen betekenis verborgen" else selected?.ownMeaning
                         val language = if (originalOnFarSide) selected?.language
                             else selected?.meaningLanguage
                         Text(if (originalOnFarSide) "TEGENOVER · EIGEN ZIN"
@@ -112,6 +141,38 @@ internal fun FaceToFacePersonalPhraseDialog(
                             Text("Terug")
                         }
                     }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(onClick = { practice = !practice }) {
+                            Text(if (practice) "✓ Oefenmodus" else "○ Oefenmodus")
+                        }
+                        TextButton(enabled = meaningHidden && selected != null,
+                            onClick = { revealed = true }) {
+                            Text(if (meaningHidden) "Toon betekenis" else "Betekenis zichtbaar")
+                        }
+                    }
+                    if (selected != null) {
+                        OfflinePhraseSpeechActions(
+                            original = selected.phrase,
+                            originalLanguage = selected.language,
+                            meaning = selected.ownMeaning,
+                            meaningLanguage = selected.meaningLanguage,
+                            originalLabel = "Mijn zin",
+                            meaningLabel = "Mijn betekenis",
+                            speaker = speaker,
+                            meaningReady = !meaningHidden,
+                            onNotice = { audioNotice = it }
+                        )
+                    }
+                    if (audioNotice.isNotBlank()) {
+                        Text(audioNotice,
+                            style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center)
+                    }
+                    Text("Voorlezen alleen na jouw tik met een door Android als lokaal " +
+                        "gemelde, geïnstalleerde stem. Ontbreekt die, dan geen cloudfallback.",
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center)
                     Text("Door jou geschreven, niet door Tuddy gecontroleerd. " +
                         "Geen delen, opslagwijziging of netwerkactie.",
                         style = MaterialTheme.typography.labelSmall,
@@ -126,8 +187,9 @@ internal fun FaceToFacePersonalPhraseDialog(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        val text = if (originalOnFarSide) selected?.ownMeaning
-                            else selected?.phrase
+                        val text = if (originalOnFarSide)
+                            if (meaningHidden) "Eigen betekenis verborgen" else selected?.ownMeaning
+                        else selected?.phrase
                         val language = if (originalOnFarSide) selected?.meaningLanguage
                             else selected?.language
                         Text(if (originalOnFarSide) "HIER · EIGEN BETEKENIS"
