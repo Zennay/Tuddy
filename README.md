@@ -1,3 +1,17 @@
+## Nieuw: privacybewust gesprek delen of terugplakken
+
+Een bewust gekozen offline gesprekscript kan na een **volledige
+voorafgaande preview** via Android Delen naar een door jou gekozen app.
+Om een ontvangen script te openen kun je zelf de complete tekst
+**plakken** of een Tuddy-`.txt` via Android Documenten kiezen.
+Tuddy controleert beide routes strikt op maximaal 8 KiB / 12 zinnenparen
+en vraagt apart of je de tijdelijke beurten vervangt of toevoegt.
+Er is geen automatische klembordlezing, upload, vertaling of opslag
+in je persoonlijke woordenlijst.
+[Gebruiksinformatie](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: corrigeer eigen gespreksbeurten zonder woordenlijstwijziging
 
 In de tijdelijke offline tweewegconversatie kun je een losse bronzin en
