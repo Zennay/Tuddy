@@ -11,7 +11,9 @@ internal data class OfflineLanguageModelCandidate(
     val url: String,
     val declaredLicense: String,
     val footprint: String,
-    val limitation: String
+    val limitation: String,
+    /** Advertised language codes or unresolved pair coverage; never proof of support. */
+    val directionEvidence: String = ""
 )
 
 internal data class UnavailableTextLanguage(
@@ -142,6 +144,7 @@ internal object UnavailableTextLanguageCatalog {
         url = "https://huggingface.co/Helsinki-NLP/opus-mt-ine-ine",
         declaredLicense = "Apache-2.0 volgens modelkaart; corpusrechten nog te controleren",
         footprint = "536 MB volledige repository; 266 MB PyTorch-gewichten plus tokenizer volgens bestandslijst",
+        directionEvidence = "Modelkaart noemt kur_Arab, kur_Latn, pus, nld en eng; exacte taalrichtingen en dialectkwaliteit zijn niet bevestigd.",
         limitation = "De modelkaart noemt kur_Arab, kur_Latn, pus, nld en eng als bron-/doeltokens en vereist " +
             "een doelprefix zoals >>nld<<. Dit is een veelbelovende kleinere MT-onderzoekskandidaat, maar " +
             "kur_Arab/kur_Latn zijn geen dialectspecifiek bewijs voor Sorani/Kurmanji en pus-codecompatibiliteit " +
@@ -155,6 +158,7 @@ internal object UnavailableTextLanguageCatalog {
         url = "https://huggingface.co/SashaSobchuk/opus-mt-onnx-int8",
         declaredLicense = "CC-BY-4.0 volgens conversierepo; upstream modelkaart Apache-2.0 — provenance onopgelost",
         footprint = "Bevat een opus-mt-ine-ine ONNX-int8-map; exacte omvang per benodigde richting niet vastgesteld",
+        directionEvidence = "pairs_map.json voor kur_Arab/kur_Latn/pus ↔ nld/eng is niet gecontroleerd; converter meldt alleen voorbeeldwoordchecks.",
         limitation = "Deze conversiecollectie is bedoeld voor lokale/on-device vertaling en bevat een ine-ine map, " +
             "maar de exacte pairs_map voor kur_Arab/kur_Latn/pus naar en van nld/eng is niet bevestigd. " +
             "De conversierepo zegt dat richtingen slechts op voorbeeldwoorden zijn gecontroleerd en noemt CC-BY-4.0, " +
@@ -338,7 +342,8 @@ internal object UnavailableTextLanguageCatalog {
                 candidate.url,
                 candidate.declaredLicense,
                 candidate.footprint,
-                candidate.limitation
+                candidate.limitation,
+                candidate.directionEvidence
             ))
         }
     }
@@ -353,7 +358,8 @@ internal object UnavailableTextLanguageCatalog {
                     candidate.url,
                     candidate.declaredLicense,
                     candidate.footprint,
-                    candidate.limitation
+                    candidate.limitation,
+                    candidate.directionEvidence
                 )
             }
             LanguageSearch.matches(
