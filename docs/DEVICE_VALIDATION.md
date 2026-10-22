@@ -6,40 +6,40 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest main candidate (22 October 2026):
+Latest app-code candidate (22 October 2026, after PR #316):
+
+| Field | Immutable evidence |
+|---|---|
+| Default-branch SHA | `d0abed8680c7e50949d20aeeb6af993f42fbe1b9` |
+| Hosted Android run | [#39718812370](https://github.com/Zennay/Tuddy/actions/runs/39718812370) — COMPLETED SUCCESS |
+| Build checkout commit (PR merge candidate) | `8978be2c0d41c1f0091d1f1a200b2675b509ad53` |
+| Git tree SHA for build checkout and main at that time | `9e0eb4dd83b8716a5b98a2fe9c142568caf85f4f` (identical on both commits) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39718812370/artifacts/12399873450) (ID `12399873450`, expires 5 November 2026) |
+| APK filename | `app-debug.apk` |
+| **APK SHA256** | `ebc1ae54a36a7d346eb36f4a2ce91e32d998e7ad40844bfd0fa7589b97b2aa98` |
+| Artifact ZIP SHA256 (not APK) | `92e5bd43986ba7da380efa0937bf2ca1abfabd5e87033f622f1508d2f34b142b` |
+| Package | `com.livelingo.android` (legacy ID retained until deliberate migration) |
+| Version | `0.4.0` |
+| Proof of physical installation | **NOT PROVIDED** |
+| Proof of airplane-mode session | **NOT PROVIDED** |
+
+The PR workflow built the proposed-merge checkout (`8978be2…`), not the final squash commit identifier. GitHub commit metadata confirms that this checkout and default main (`d0abed…`) had the same exact tree SHA `9e0eb4d…`; the hosted artifact therefore contains the then-current main app/source tree. The workflow computed and verified the APK SHA-256 before upload. The artifact ZIP digest is recorded separately and must never be substituted for the APK digest. **This proves build provenance only, not physical installation or device acceptance.**
+
+Previous app-code candidate (22 October 2026, before PR #316):
 
 | Field | Immutable evidence |
 |---|---|
 | Default-branch SHA | `8f2122efc9ad6cd1ed36787b9ae102fd83489dc6` |
 | Hosted Android run | [#39717970966](https://github.com/Zennay/Tuddy/actions/runs/39717970966) — COMPLETED SUCCESS |
 | Build checkout commit (PR merge candidate) | `b962a2e26a6b1844b9ddd84c6fc8d6ca1509372f` |
-| Git tree SHA for build checkout and main | `f59cced2174b61123c5b4e9aca140b8c066cc748` (identical on both commits) |
-| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39717970966/artifacts/12400280176) (ID `12400280176`, expires 5 November 2026) |
-| APK filename | `app-debug.apk` |
-| **APK SHA256** | `258f7ff9297ae8b163d4c1f8de411b533e2ba31edb0b717502dc395a5036a619` |
-| Artifact ZIP SHA256 (not APK) | `0bd62339f7225b25b17b1064d68822ef803d7144b6553b6820e0f71678f60a8a` |
-| Package | `com.livelingo.android` (legacy ID retained until deliberate migration) |
-| Version | `0.4.0` |
+| Git tree SHA | `f59cced2174b61123c5b4e9aca140b8c066cc748` |
+| Artifact | [Tuddy-debug-apk 12400280176](https://github.com/Zennay/Tuddy/actions/runs/39717970966/artifacts/12400280176) (expires 5 November 2026) |
+| APK SHA256 | `258f7ff9297ae8b163d4c1f8de411b533e2ba31edb0b717502dc395a5036a619` |
+| Artifact ZIP SHA256 | `0bd62339f7225b25b17b1064d68822ef803d7144b6553b6820e0f71678f60a8a` |
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-The PR workflow built its proposed-merge checkout (`b962a2e…`), not the final squash commit identifier. GitHub commit metadata confirms that this checkout and default main (`8f2122e…`) have the same exact tree SHA `f59cced…`; the hosted artifact therefore contains the current main source tree. The workflow computed and verified the APK SHA-256 before uploading. The artifact ZIP digest is recorded separately and must never be substituted for the APK digest. **This proves build provenance only, not physical installation or device acceptance.**
-
-Previous candidate (22 October 2026 before PR #314; superseded by current main):
-
-| Field | Immutable evidence |
-|---|---|
-| Default-branch SHA | `6efc1e645861734942c1be73160b9ad61c87c670` |
-| Hosted Android run | [#39717339120](https://github.com/Zennay/Tuddy/actions/runs/39717339120) — COMPLETED SUCCESS |
-| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39717339120/artifacts/12399837589) (ID `12399837589`, expires 5 November 2026) |
-| APK filename | `app-debug.apk` |
-| **APK SHA256** | `7684327f1b2d403fa26968abebb4bb53169082cc829486d531c852e4336ba318` |
-| Artifact ZIP SHA256 (not APK) | `d7e8c5e909a05d88560c09d25370047a06cd94c51e2707af7312c3cbd292e43f` |
-| Package | `com.livelingo.android` |
-| Proof of physical installation | **NOT PROVIDED** |
-| Proof of airplane-mode session | **NOT PROVIDED** |
-
-The 6efc1e6 table is historical evidence only; do not use that APK as the current main candidate. For the current candidate, download artifact `12400280176` from run `39717970966` and independently verify `source-commit.txt` plus the APK SHA-256 before installation. If main changes, derive a new exact source/APK pair. Neither successful CI nor a matching checksum substitutes for a physical Android 12+ airplane-mode acceptance record.
+The 8f2122 table is historical evidence only; the current app-code candidate is artifact `12399873450` from run `39718812370`. Independently verify the bundled `source-commit.txt` plus APK SHA-256 before installing. If app code changes, derive a new exact source/APK pair. Neither successful CI nor a matching checksum substitutes for a physical Android 12+ airplane-mode acceptance record.
 
 Previous candidate (21 October 2026; superseded by the 22 October main candidate):
 
