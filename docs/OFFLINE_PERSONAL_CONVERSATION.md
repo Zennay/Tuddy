@@ -32,6 +32,18 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    de bovenste helft is omgekeerd en de onderste helft leesbaar vanaf
    jouw kant. Met **Kanten** bepaal je welke tekst aan welke persoon
    wordt getoond. Blader per beurt met Vorige/Volgende.
+### Eén tik om het hele gesprek privé af te schermen
+
+Tik op **◼ Verberg direct beide zijden** om zowel je eigen schermhelft als
+de omgekeerde schermhelft te bedekken. Lopende lokale voorlezing stopt
+onmiddellijk en alle voorleesknoppen zijn geblokkeerd zolang de
+privéstand aanstaat. Kies zelf **👁 Laat beide zijden weer zien** om verder
+te gaan. Een eerder onthuld oefenantwoord blijft na ontgrendeling weer
+afgedekt. De instelling verdwijnt bij sluiten; er wordt geen tekst
+gewist, gedeeld, bewaard of naar een server gestuurd. Dit is slechts
+een zichtbaarheidsschakelaar, geen toestelvergrendeling: omstanders
+kunnen het scherm weer zichtbaar maken met een tik.
+
 ### Optioneel scherm aanhouden in tafelmodus
 
 Kies **☼ Scherm aanhouden tijdens dit tafelgesprek** om alleen gedurende
