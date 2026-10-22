@@ -25,7 +25,9 @@ internal fun BilingualCaptionColumns(
     status: String,
     fontScale: Float,
     isInterim: Boolean,
-    searchQuery: String = ""
+    searchQuery: String = "",
+    enableOfflineWordCards: Boolean = false,
+    allowWordSpeech: Boolean = true
 ) {
     val translated = status == "Lokaal vertaald" || status == "Lokaal"
     val originalStyle = MaterialTheme.typography.titleLarge.copy(
@@ -47,7 +49,12 @@ internal fun BilingualCaptionColumns(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                SessionCaptionSearchText(original, searchQuery, originalStyle)
+                SessionCaptionSearchText(
+                    original, searchQuery, originalStyle,
+                    enableOfflineWordCards = enableOfflineWordCards,
+                    wordLanguage = sourceCode,
+                    allowWordSpeech = allowWordSpeech
+                )
             }
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -68,7 +75,12 @@ internal fun BilingualCaptionColumns(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else if (translated) {
-                SessionCaptionSearchText(translation, searchQuery, translatedStyle)
+                SessionCaptionSearchText(
+                    translation, searchQuery, translatedStyle,
+                    enableOfflineWordCards = enableOfflineWordCards,
+                    wordLanguage = targetCode,
+                    allowWordSpeech = allowWordSpeech
+                )
             } else {
                 Text("[Vertaling niet voltooid: $status]",
                     style = MaterialTheme.typography.bodyMedium,

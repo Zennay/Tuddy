@@ -270,6 +270,12 @@ internal fun FocusTranscriptDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
                 }
+                Text(
+                    "Tik in een afgeronde zin of vertaling op een woord voor een lokale woordkaart. " +
+                        "Zoekmarkering blijft zichtbaar. Geen online woordenboek of automatische betekenis.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 HorizontalDivider()
                 LazyColumn(
                     state = listState,
@@ -345,21 +351,29 @@ internal fun FocusTranscriptDialog(
                                         status = line.status,
                                         fontScale = fontScale,
                                         isInterim = false,
-                                        searchQuery = captionQuery
+                                        searchQuery = captionQuery,
+                                        enableOfflineWordCards = true,
+                                        allowWordSpeech = !listening
                                     )
                                 } else {
                                     SessionCaptionSearchText(line.original, captionQuery,
                                     style = MaterialTheme.typography.headlineSmall.copy(
                                         fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
                                         textDirection = TextDirection.ContentOrRtl
-                                    ))
+                                    ),
+                                    enableOfflineWordCards = true,
+                                    wordLanguage = line.sourceCode,
+                                    allowWordSpeech = !listening)
                                     if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
                                     SessionCaptionSearchText(line.translated, captionQuery,
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             color = MaterialTheme.colorScheme.primary,
                                             fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
                                             textDirection = TextDirection.ContentOrRtl
-                                        ))
+                                        ),
+                                        enableOfflineWordCards = true,
+                                        wordLanguage = line.targetCode,
+                                        allowWordSpeech = !listening)
                                 } else {
                                     Text("[Vertaling niet voltooid: ${line.status}]",
                                         style = MaterialTheme.typography.bodyMedium,
