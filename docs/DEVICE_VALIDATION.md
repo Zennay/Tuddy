@@ -67,49 +67,45 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Current hosted debug-APK handoff (22 October 2026, after merged product PR #364).
-This is the newest known Android code build as of this handoff, **not** a
+Current hosted debug-APK handoff (22 October 2026, after PR #392 merged to main).
+This is the latest exact-main hosted debug build recorded here, **not** a
 physical installation, signed release, demonstrated airplane-mode operation or
-language-model acceptance. The artifact is bound to GitHub's exact proposed-merge
-checkout, which may have a different commit ID from the squash-merged `main`.
+language-model acceptance.
 
 | Field | Immutable evidence |
 |---|---|
-| App-code merge (PR #364) | [`f448dd584cd75f805a2ec480ebb88adf13614d49`](https://github.com/Zennay/Tuddy/commit/f448dd584cd75f805a2ec480ebb88adf13614d49) (`merged=true`) |
-| Hosted Android run | [#39756620318](https://github.com/Zennay/Tuddy/actions/runs/39756620318) — source-head and build completed successfully |
-| Exact build checkout/source identity | `81046cb702d07fccbbbcf71b78651d2007351b4b` (GitHub build's `EXPECTED_SHA` and `source-commit.txt`) |
-| Artifact | [Tuddy-debug-apk #12416246932](https://github.com/Zennay/Tuddy/actions/runs/39756620318/artifacts/12416246932) (expires 5 November 2026 09:39:16 UTC) |
+| Exact app-code main commit | [`0c537553ea69bf69e1bc877d476010eee48f7846`](https://github.com/Zennay/Tuddy/commit/0c537553ea69bf69e1bc877d476010eee48f7846) — PR #392 `merged=true` |
+| Hosted Android run | [#39791430220](https://github.com/Zennay/Tuddy/actions/runs/39791430220) — build completed successfully on the exact main commit; the hosted workflow verified checkout identity, APK manifest and checksum |
+| Exact build checkout/source identity | `0c537553ea69bf69e1bc877d476010eee48f7846` (matches `source-commit.txt` and `build-manifest.txt`) |
+| Artifact | [Tuddy-debug-apk #12431009115](https://github.com/Zennay/Tuddy/actions/runs/39791430220/artifacts/12431009115) (expires 5 November 2026 14:01:29 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `3e15949f299e885022bf086294c852ceff83ed8f2ffa93fbb9b5df3e9c64e815` |
-| **Artifact ZIP SHA-256 (different file)** | `77ee8642cef211ca26f2e0c4cb48cf6eab415832afd2b08dc29cb0407041b0a5` |
-| Package/version | `com.livelingo.android` / `0.4.0` |
+| **APK SHA-256** | `86658441301fa869ff86db41339cee024ae173a84c186d47c18324d437735b29` |
+| **Artifact ZIP SHA-256 (different file)** | `e38c62bbd79a0cc7d01d620ea76dd2706a5319eba8cbfb1bf557f73d558a1f7a` |
+| APK bytes / package-version | `104462582` / `com.livelingo.android` / `0.4.0` |
 | Physical installation and real airplane-mode session | **NOT PROVIDED** |
 
-The hosted workflow verified `app-debug.apk: OK` against its generated
-checksum sidecar and printed the APK SHA above before publishing the artifact.
-This candidate includes PR #363 original-caption correction and PR #364's
-content-free RAM-only speech/translation counters, bounded translation latencies
-and manual airplane-mode settings shortcut. It does **not** prove correct speech
-recognition, external radios off, accurate offline translation, or production
-support for Kurmanji, Sorani or Pashto.
+The downloaded artifact ZIP was inspected: the embedded `build-manifest.txt`
+and `source-commit.txt` both identify `0c537553ea69bf69e1bc877d476010eee48f7846`;
+the APK bytes hash to the exact SHA-256 above, matching
+`app-debug.apk.sha256`. This establishes reproducible artifact identity only.
 
-Download the artifact ZIP yourself, and from a Tuddy checkout verify exact
+Download the artifact ZIP yourself, and from a Tuddy source checkout verify exact
 provenance before attempting any authorized handset installation:
 
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  77ee8642cef211ca26f2e0c4cb48cf6eab415832afd2b08dc29cb0407041b0a5 \
-  3e15949f299e885022bf086294c852ceff83ed8f2ffa93fbb9b5df3e9c64e815 \
-  81046cb702d07fccbbbcf71b78651d2007351b4b \
-  39756620318
+  e38c62bbd79a0cc7d01d620ea76dd2706a5319eba8cbfb1bf557f73d558a1f7a \
+  86658441301fa869ff86db41339cee024ae173a84c186d47c18324d437735b29 \
+  0c537553ea69bf69e1bc877d476010eee48f7846 \
+  39791430220
 ```
 
 The verifier checks artifact integrity and provenance only. The user-controlled
 in-app observation form still requires a human to verify airplane mode,
 independently disabled remaining connections, NL↔EN speech/translation outcomes,
 Stop/lifecycle behavior and privacy after installation. Do not mark accepted
-without the signed-off human device evidence.
+without signed-off human device evidence.
 
 ---
 
