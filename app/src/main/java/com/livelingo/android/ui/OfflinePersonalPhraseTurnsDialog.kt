@@ -48,7 +48,9 @@ internal fun OfflinePersonalPhraseTurnsDialog(
 ) {
     val context = LocalContext.current
     val deck = remember(context) { PrivatePhraseDeck(context) }
-    var notes by remember(deck) { mutableStateOf(deck.entries()) }
+    var storedNotes by remember(deck) { mutableStateOf(deck.entries()) }
+    // Immutable rendering snapshot enables safe nullable smart casts.
+    val notes = storedNotes
     var language by remember(initialLanguage) {
         mutableStateOf(initialLanguage.takeIf { it in setOf("kmr", "ckb", "ps") } ?: "kmr")
     }
@@ -385,7 +387,7 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                             proposed.meaningLanguage, proposed.ownMeaning
                         )
                         if (saved) {
-                            notes = deck.entries()
+                            storedNotes = deck.entries()
                             turns = turns.mapIndexed { index, item ->
                                 if (index == position) item.copy(temporary = false) else item
                             }
