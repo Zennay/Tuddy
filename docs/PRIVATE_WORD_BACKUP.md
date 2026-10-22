@@ -9,6 +9,21 @@ The existing **Mijn woorden** list now offers two explicit actions:
   admitted words. **Vervang woorden** must then be selected separately.
   Cancel, invalid data or a failed write leaves the existing list unchanged.
 
+## Direct delen vanuit Mijn woorden
+
+Kies **Deel JSON-back-up…** om de opgeslagen woorden eerst in een volledige
+preview te bekijken. Alleen de canonieke taalcode en woordidentiteiten worden
+in de back-up opgenomen; definities, gesprekken, audio, oefenscores en
+herhaalplanning worden niet meegestuurd. Na **Deel via Android…** opent Tuddy
+de Android Sharesheet. Jij kiest zelf een ontvanger; Tuddy stuurt niets naar
+een server en start geen automatische upload. Annuleren sluit de preview
+zonder iets te delen.
+
+Als de woordenlijst verandert terwijl de preview openstaat, weigert Tuddy
+de verouderde momentopname te delen. Maak dan een nieuwe preview zodat de
+gedeelde kopie exact bij de actuele lijst past. De ontvangende app kan de
+tekst die jij daarheen stuurt zelf opslaan, uploaden of doorsturen.
+
 ## Ontvangen via Android Delen
 
 Een gebruiker kan de JSON-back-up ook vanuit Android Bestanden of een andere
