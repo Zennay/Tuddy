@@ -8,7 +8,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import com.livelingo.android.PrivateOfflineSearch
 
 /**
@@ -44,22 +43,43 @@ internal fun highlightedCaptionText(
     text: String,
     query: String,
     background: Color,
-    foreground: Color
+    foreground: Color,
+    activeRange: Pair<Int, Int>? = null,
+    activeRangeBackground: Color? = null,
+    activeRangeForeground: Color? = null
 ): AnnotatedString {
     val term = query.trim().take(120)
-    if (term.isEmpty()) return AnnotatedString(text)
     return buildAnnotatedString {
-        var from = 0
-        while (from < text.length) {
-            val match = text.indexOf(term, startIndex = from, ignoreCase = true)
-            if (match < 0) break
-            append(text.substring(from, match))
-            withStyle(SpanStyle(background = background, color = foreground)) {
-                append(text.substring(match, match + term.length))
+        append(text)
+        if (term.isNotEmpty()) {
+            var from = 0
+            while (from < text.length) {
+                val match = text.indexOf(term, startIndex = from, ignoreCase = true)
+                if (match < 0) break
+                addStyle(
+                    SpanStyle(background = background, color = foreground),
+                    match,
+                    match + term.length
+                )
+                from = match + term.length
             }
-            from = match + term.length
         }
-        append(text.substring(from))
+        val range = activeRange
+        val rangeBackground = activeRangeBackground
+        val rangeForeground = activeRangeForeground
+        if (range != null && rangeBackground != null && rangeForeground != null &&
+            range.first >= 0 && range.second > range.first && range.second <= text.length
+        ) {
+            addStyle(
+                SpanStyle(
+                    background = rangeBackground,
+                    color = rangeForeground,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                ),
+                range.first,
+                range.second
+            )
+        }
     }
 }
 
