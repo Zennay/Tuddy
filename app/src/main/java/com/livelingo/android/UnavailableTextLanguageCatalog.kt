@@ -86,6 +86,18 @@ internal object UnavailableTextLanguageCatalog {
             "Niet geïntegreerd of geactiveerd."
     )
 
+    private val omnilingualCtc300MResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "OpenVoiceOS/omnilingual-asr-ctc-300m-onnx · INT8",
+        url = "https://huggingface.co/OpenVoiceOS/omnilingual-asr-ctc-300m-onnx",
+        directionEvidence = "ASR-modelkaartfamilie omvat volgens de officiële taal-ID-lijst ckb_Arab, pbt_Arab en pus_Arab; dit is geen target-specifieke CTC-benchmark en kmr_Latn ontbreekt in de lijst.",
+        declaredLicense = "Apache-2.0 voor Meta-model/gewichten en ONNX-export; trainingscorpus CC-BY-4.0",
+        footprint = "328 MB INT8 ONNX; 1,3 GB FP32",
+        limitation = "Modelkaart meldt alleen sanity-checks op en/fr/de/es en spot-checks op pt/sw; geen specifieke ckb/pbt/pus-evaluatie voor deze 300M-export. " +
+            "CTC-model is niet taalgeconditioneerd en kan de verkeerde schriftsoort produceren; meestal geen interpunctie/hoofdletters, audio korter dan 40 seconden. " +
+            "CPU-snelheid is op desktop gemeten, niet op Android. Vereist een onnx-asr-integratieruntime; geen Android-packaging, native-speakerreview of vliegtuigmodusacceptatie. Niet geïntegreerd of geactiveerd."
+    )
+
     private val kurmanjiWav2VecResearchCandidate = OfflineLanguageModelCandidate(
         category = "Spraakherkenning (ASR)",
         title = "salamhasan/wav2vec2-large-xlsr-kurmanji",
@@ -244,7 +256,8 @@ internal object UnavailableTextLanguageCatalog {
                 soraniBaseResearchCandidate,
                 soraniSmallResearchCandidate,
                 soraniApacheResearchCandidate,
-                soraniOnnxResearchCandidate
+                soraniOnnxResearchCandidate,
+                omnilingualCtc300MResearchCandidate
             ),
             translationCandidates = listOf(
                 nllbResearchCandidate, madladResearchCandidate,
@@ -271,7 +284,8 @@ internal object UnavailableTextLanguageCatalog {
                         "Datasetprovenance, representativiteit, dialectdekking en Android-prestaties blijven onbewezen. " +
                         "Niet geïntegreerd of op Android getest."
                 ),
-                pashtoGhagResearchCandidate
+                pashtoGhagResearchCandidate,
+                omnilingualCtc300MResearchCandidate
             ),
             translationCandidates = listOf(
                 nllbResearchCandidate,
