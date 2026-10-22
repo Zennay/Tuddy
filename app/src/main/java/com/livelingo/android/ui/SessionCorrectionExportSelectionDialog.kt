@@ -33,6 +33,7 @@ import com.livelingo.android.SessionTranslationCorrection
 internal fun SessionCorrectionExportSelectionDialog(
     entries: List<SessionTranslationCorrection>,
     onExport: (List<SessionTranslationCorrection>) -> Unit,
+    onExportCsv: (List<SessionTranslationCorrection>) -> Unit,
     onDismiss: () -> Unit
 ) {
     // A frozen snapshot prevents a silent change to the export list while open.
@@ -51,7 +52,7 @@ internal fun SessionCorrectionExportSelectionDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    "Kies uitsluitend de zinnen die in jouw eigen JSON-bestand " +
+                    "Kies uitsluitend de zinnen die in jouw eigen JSON- of CSV-bestand " +
                         "komen. Het opslaan gebeurt pas na keuze van een Android-" +
                         "bestandslocatie. Die provider kan zelf naar de cloud synchroniseren.",
                     style = MaterialTheme.typography.bodySmall
@@ -121,7 +122,12 @@ internal fun SessionCorrectionExportSelectionDialog(
                     enabled = chosen.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { onExport(chosen.toList()) }
-                ) { Text("Bewaar mijn geselecteerde correcties…") }
+                ) { Text("Bewaar selectie als JSON…") }
+                Button(
+                    enabled = chosen.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onExportCsv(chosen.toList()) }
+                ) { Text("Bewaar selectie als bewerkbare CSV…") }
             }
         },
         confirmButton = {

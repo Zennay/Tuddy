@@ -78,3 +78,43 @@ normalisatie voor onder meer veelgebruikte Arabische/Persische yeh- en
 kafvarianten, zodat eigen Sorani/Pasjtoe-tekst beter terug te vinden is.
 De oorspronkelijk ingetypte letters en de opgeslagen correcties worden
 hierdoor niet gewijzigd of automatisch gelijkgesteld bij hergebruik.
+
+
+## Bewerkbare CSV uitwisselen, alleen na een bewuste keuze
+
+Open **Gesprekstools → Tijdelijke vertaalcorrecties → Mijn eigen correcties
+meenemen**. Je kunt nu naast de bestaande JSON-back-up een gewone UTF-8
+CSV bewaren. De kolommen hebben een vaste volgorde:
+`sourceCode,targetCode,original,translation`. Iedere rij bevat precies
+één **zelfgeschreven**, niet-gevalideerde correctie voor één exacte
+taalrichting. Komma's, aanhalingstekens en regeleinden binnen zinnen
+worden volgens CSV-conventies ge-escaped. Excel en andere spreadsheetapps
+kunnen het bestand bewerken; export van cellen die met
+`=`, `+`, `-` of `@` beginnen wordt uit voorzorg geweigerd om
+onbedoelde spreadsheetformules te voorkomen. De bestaande JSON-route
+blijft bruikbaar voor die zinnen.
+
+Via **Kies zinnen voor export…** kun je ook per correctie en per exact
+taalpaar bepalen welke persoonlijke zinnen meegaan, afzonderlijk als
+JSON of als CSV. De Android-documentkiezer wordt pas na een expliciete
+exportactie geopend; een gekozen cloudbestandsprovider kan zelf
+synchroniseren. Tuddy start geen automatische opslag of upload.
+
+Met **Open eerder opgeslagen correcties…** kan een zelfgekozen JSON-
+of CSV-bestand worden geopend. CSV-import vereist exact de vier kolommen,
+strikte UTF-8, valide quoting en maximaal 40 unieke, begrensde paren.
+Ongeldige gegevens worden zonder mutatie geweigerd. Controleer altijd
+alle regels in de bestaande voorvertoning, selecteer desgewenst slechts
+één taalpaar of individuele rijen, en kies daarna expliciet of je wilt
+samenvoegen met handmatige conflictkeuzes of volledig vervangen.
+De tijdelijke **Undo** blijft beschikbaar zolang de bestaande
+voorwaarden gelden; de gespreksregels blijven onaangetast. Importeren
+activeert geen model en valideert de menselijke vertaling niet.
+
+
+Je kunt ook **Plak eigen correcties-CSV…** openen en de CSV-tekst
+zelf in een begrensd invoerveld plakken. Tuddy leest het Android-klembord
+niet automatisch en accepteert maximaal 48 KB tekst. Een geldige invoer
+toont dezelfde selecteerbare importvoorvertoning als de bestandsroute;
+pas een volgende bewuste keuze mag de RAM-correcties wijzigen.
+Het sluiten van het plakveld gooit de ingevoerde tekst weg.

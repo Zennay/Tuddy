@@ -18,6 +18,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.SessionTranslationCorrectionTransfer
+import com.livelingo.android.SessionTranslationCorrectionCsv
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,7 +52,10 @@ internal fun SessionCorrectionTransferDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingCsvExport by remember { mutableStateOf<ByteArray?>(null) }
     var exportSelectionOpen by remember { mutableStateOf(false) }
+    var pasteOpen by remember { mutableStateOf(false) }
+    var pastedCsv by remember { mutableStateOf("") }
     var preview by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
     var selectedRows by remember { mutableStateOf(emptySet<Int>()) }
     var pairPickerOpen by remember { mutableStateOf(false) }
@@ -85,6 +90,31 @@ internal fun SessionCorrectionTransferDialog(
         }
     }
 
+    val saveCsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri: Uri? ->
+        val bytes = pendingCsvExport
+        pendingCsvExport = null
+        if (uri != null && bytes != null) {
+            busy = true
+            scope.launch {
+                val success = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                            stream.write(bytes)
+                            stream.flush()
+                        } ?: error("Kan geen CSV-bestand schrijven")
+                    }.isSuccess
+                }
+                busy = false
+                notice = if (success) {
+                    "Bewerkbare CSV bewust opgeslagen bij jouw bestandsprovider. " +
+                        "Tuddy bewaart zelf geen kopie."
+                } else "CSV opslaan mislukt; huidige correcties blijven ongewijzigd."
+            }
+        }
+    }
+
     val open = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -114,12 +144,14 @@ internal fun SessionCorrectionTransferDialog(
                                 out.write(buffer, 0, count)
                             }
                         }
-                        SessionTranslationCorrectionTransfer.decode(out.toByteArray())
+                        val bytes = out.toByteArray()
+                        SessionTranslationCorrectionTransfer.decode(bytes)
+                            ?: SessionTranslationCorrectionCsv.decode(bytes)
                     }.getOrNull()
                 }
                 busy = false
                 if (decoded == null) {
-                    notice = "Bestand geweigerd: verwacht een geldig Tuddy-JSON met " +
+                    notice = "Bestand geweigerd: verwacht geldig Tuddy-JSON of CSV met " +
                         "maximaal 40 exacte eigen correcties. Er is niets gewijzigd."
                 } else {
                     preview = decoded
@@ -141,8 +173,8 @@ internal fun SessionCorrectionTransferDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    "Alleen handmatig: exporteer een apart JSON-bestand of open " +
-                        "een eerder door jezelf opgeslagen Tuddy-bestand. " +
+                    "Alleen handmatig: exporteer een JSON of een bewerkbare CSV, of open " +
+                        "een eerder door jezelf opgeslagen Tuddy-correctiebestand. " +
                         "De eigen correcties blijven in Tuddy verder alleen in RAM. " +
                         "Kies bij voorkeur lokale opslag: een externe bestandsprovider " +
                         "kan bestanden naar een clouddienst synchroniseren.",
@@ -167,17 +199,86 @@ internal fun SessionCorrectionTransferDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Bewaar mijn eigen JSON-bestand…") }
                 OutlinedButton(
+                    onClick = {
+                        val bytes = SessionTranslationCorrectionCsv.encode(entries)
+                        if (bytes == null) {
+                            notice = "CSV geweigerd: ongeldige gegevens of een zin die " +
+                                "in een rekenblad als formule kan worden gelezen. " +
+                                "Gebruik voor zulke zinnen de veilige JSON-export."
+                        } else {
+                            pendingCsvExport = bytes
+                            notice = ""
+                            saveCsv.launch("tuddy-eigen-vertaalcorrecties.csv")
+                        }
+                    },
+                    enabled = !busy && entries.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Bewaar bewerkbare correcties als CSV…") }
+                OutlinedButton(
                     onClick = { exportSelectionOpen = true },
                     enabled = !busy && entries.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Kies zinnen voor export…") }
                 OutlinedButton(
                     onClick = { preview = null; notice = ""; open.launch(
-                        arrayOf("application/json", "text/plain")
+                        arrayOf("application/json", "text/plain", "text/csv", "application/vnd.ms-excel")
                     ) },
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Open eerder opgeslagen correcties…") }
+                OutlinedButton(
+                    onClick = {
+                        pasteOpen = !pasteOpen
+                        if (!pasteOpen) pastedCsv = ""
+                    },
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(if (pasteOpen) "Sluit plakveld" else "Plak eigen correcties-CSV…") }
+                if (pasteOpen) {
+                    Text(
+                        "Plak bewust een eigen CSV inclusief de kolomkoppen. " +
+                            "Tuddy leest je klembord niet automatisch, slaat deze " +
+                            "tekst niet op en toont eerst een importvoorbeeld.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedTextField(
+                        value = pastedCsv,
+                        onValueChange = { candidate ->
+                            if (candidate.toByteArray(Charsets.UTF_8).size <=
+                                SessionTranslationCorrectionCsv.MAX_BYTES) {
+                                pastedCsv = candidate
+                            } else {
+                                notice = "CSV-plaktekst is groter dan 48 KB en geweigerd."
+                            }
+                        },
+                        label = { Text("Eigen CSV-tekst (maximaal 48 KB)") },
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp),
+                        minLines = 3,
+                        maxLines = 6,
+                        enabled = !busy
+                    )
+                    Button(
+                        onClick = {
+                            val decoded = SessionTranslationCorrectionCsv.decode(
+                                pastedCsv.toByteArray(Charsets.UTF_8)
+                            )
+                            if (decoded == null) {
+                                notice = "Ongeldige CSV: controleer de vier exacte " +
+                                    "kolommen en maximaal 40 unieke correcties. " +
+                                    "Er is niets gewijzigd."
+                            } else {
+                                preview = decoded
+                                selectedRows = decoded.indices.toSet()
+                                pastedCsv = ""
+                                pasteOpen = false
+                                notice = "Controleer eerst alle geplakte correcties. " +
+                                    "Kies daarna bewust samenvoegen of vervangen."
+                            }
+                        },
+                        enabled = !busy && pastedCsv.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Toon importvoorbeeld van geplakte CSV") }
+                }
                 if (notice.isNotBlank()) Text(
                     notice, style = MaterialTheme.typography.bodySmall
                 )
@@ -340,6 +441,18 @@ internal fun SessionCorrectionTransferDialog(
                     exportSelectionOpen = false
                     notice = ""
                     save.launch("tuddy-geselecteerde-vertaalcorrecties.json")
+                }
+            },
+            onExportCsv = { chosen ->
+                val bytes = SessionTranslationCorrectionCsv.encode(chosen)
+                if (bytes == null) {
+                    notice = "CSV geweigerd: ongeldige inhoud of mogelijke " +
+                        "rekenbladformule. Bewaar deze selectie liever als JSON."
+                } else {
+                    pendingCsvExport = bytes
+                    exportSelectionOpen = false
+                    notice = ""
+                    saveCsv.launch("tuddy-geselecteerde-vertaalcorrecties.csv")
                 }
             },
             onDismiss = { exportSelectionOpen = false }
