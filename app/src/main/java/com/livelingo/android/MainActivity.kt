@@ -1708,10 +1708,10 @@ private fun TuddyScreen(
                         )
                         scheduleRestart(voiceToken, retry) { start(forceRestart = true) }
                     } else {
+                        stop() // never retry permissions, unsupported languages or unknown errors
                         sessionDiagnostics = sessionDiagnostics.copy(
                             terminalSpeechErrors = sessionDiagnostics.terminalSpeechErrors + 1
                         )
-                        stop() // never retry permissions, unsupported languages or unknown errors
                         error = "Offline spraakherkenning niet beschikbaar of onderbroken (code $code). Controleer het gedownloade spraakpakket."
                     }
                 }
