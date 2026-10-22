@@ -46,6 +46,17 @@ internal fun LanguageSupportDialog(
     var researchCopyNotice by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
     var modelTaskFilter by remember { mutableStateOf("Alle") }
+    var modelAccessFilter by remember { mutableStateOf("Alle") }
+    fun candidateAccessClass(license: String, limitation: String): String {
+        val evidence = "$license $limitation".lowercase()
+        return when {
+            listOf("cc-by-nc", "niet-commercieel", "non-commercial", "noncommercial")
+                .any { phrase -> evidence.contains(phrase) } -> "Niet-commercieel"
+            listOf("gated", "contactinformatie", "contact information", "share contact")
+                .any { phrase -> evidence.contains(phrase) } -> "Toegang beperkt"
+            else -> "Overig/onbekend"
+        }
+    }
     val normalizedQuery = LanguageSearch.normalize(query)
     val textTargets = remember(normalizedQuery) {
         TargetCatalog.search(query)
@@ -64,14 +75,19 @@ internal fun LanguageSupportDialog(
         unavailable.none { item ->
             LanguageSearch.matches(query, listOf(item.code, item.title, item.aliases, item.reason))
         }
-    val taskFilteredCandidates = remember(normalizedQuery, unavailable, modelTaskFilter) {
+    val taskFilteredCandidates = remember(
+        normalizedQuery, unavailable, modelTaskFilter, modelAccessFilter
+    ) {
         unavailable.associateWith { item ->
             UnavailableTextLanguageCatalog.candidatesFor(item, query).filter { candidate ->
-                when (modelTaskFilter) {
+                val taskMatches = when (modelTaskFilter) {
                     "ASR" -> candidate.category.contains("ASR", ignoreCase = true)
                     "MT" -> candidate.category.contains("Tekstvertaling", ignoreCase = true)
                     else -> true
                 }
+                val accessMatches = modelAccessFilter == "Alle" ||
+                    candidateAccessClass(candidate.declaredLicense, candidate.limitation) == modelAccessFilter
+                taskMatches && accessMatches
             }
         }.filterValues { it.isNotEmpty() }
     }
@@ -79,10 +95,13 @@ internal fun LanguageSupportDialog(
         UnavailableTextLanguageCatalog.candidatesFor(it, query).isNotEmpty()
     }
     val hasResearchCandidates = taskFilteredCandidates.isNotEmpty()
-    val researchSummary = remember(normalizedQuery, taskFilteredCandidates, modelTaskFilter) {
+    val researchSummary = remember(
+        normalizedQuery, taskFilteredCandidates, modelTaskFilter, modelAccessFilter
+    ) {
         val fullSummary = buildString {
             appendLine("Tuddy — modelonderzoek")
-            appendLine("Filter: ${modelTaskFilter}; onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd.")
+            appendLine("Taakfilter: ${modelTaskFilter}; licentie-/toegangsfilter: ${modelAccessFilter}.")
+            appendLine("Onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd; labels zijn geen distributiegoedkeuring.")
             taskFilteredCandidates.forEach { (item, candidates) ->
                 appendLine()
                 appendLine("${item.title} (${item.code})")
@@ -181,7 +200,7 @@ internal fun LanguageSupportDialog(
                 } else {
                     if (taskFilteredCandidates.isEmpty()) {
                         Text(
-                            "Geen modelkandidaten voor dit filter en deze zoekopdracht. Kies Alle modellen of pas de zoektekst aan.",
+                            "Geen modelkandidaten voor deze taak-/toegangsfilters en zoekopdracht. Kies Alle filters of pas de zoektekst aan.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -213,9 +232,38 @@ internal fun LanguageSupportDialog(
                                 )
                             }
                         }
+                        Text("Filter licentie/toegang", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("Alle", "Niet-commercieel", "Toegang beperkt", "Overig/onbekend").forEach { filter ->
+                                FilterChip(
+                                    selected = modelAccessFilter == filter,
+                                    onClick = {
+                                        modelAccessFilter = filter
+                                        researchCopyNotice = ""
+                                    },
+                                    label = {
+                                        Text(
+                                            when (filter) {
+                                                "Niet-commercieel" -> "Niet-commercieel"
+                                                "Toegang beperkt" -> "Toegang gated"
+                                                "Overig/onbekend" -> "Overig / onbekend"
+                                                else -> "Alle statussen"
+                                            }
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                        Text(
+                            "Dit filter classificeert alleen tekst uit de modelkaart/catalogus. Ook Apache- of MIT-labels zijn geen automatische vrijgave.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     if (hasResearchCandidates &&
-                        (normalizedQuery.isNotEmpty() || modelTaskFilter != "Alle")
+                        (normalizedQuery.isNotEmpty() || modelTaskFilter != "Alle" || modelAccessFilter != "Alle")
                     ) {
                         TextButton(onClick = {
                             clipboard.setText(AnnotatedString(researchSummary))
@@ -250,6 +298,12 @@ internal fun LanguageSupportDialog(
                                     Text("Licentie volgens modelkaart: " + candidate.declaredLicense +
                                         ". Omvang: " + candidate.footprint + ".",
                                         style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        "Classificatie: " + candidateAccessClass(
+                                            candidate.declaredLicense, candidate.limitation
+                                        ) + " · alleen op catalogustekst gebaseerd; geen vrijgave.",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
                                     if (candidate.directionEvidence.isNotBlank()) {
                                         Text("Taalrichtingen/codes (onbevestigd): " + candidate.directionEvidence,
                                             style = MaterialTheme.typography.bodySmall,
