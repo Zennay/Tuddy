@@ -830,10 +830,11 @@ internal fun MyOfflinePhrasesPanel(
                         csvConsent = true
                     }
                 ) { Text("Exporteer gekozen zinnen als CSV…") }
-                Text("Kies vooraf welke taal en eventueel welke themagroep naar " +
-                    "TSV gaat. Controleer alle zinnen vóór je ze extern opslaat. " +
-                    "Het bestand is bewerkbaar en later opnieuw te importeren; " +
-                    "geen van de betekenissen is onafhankelijk gecontroleerd.",
+                Text("Kies vooraf taal en themagroep voor TSV of CSV. Controleer alle " +
+                    "zelfgeschreven zinnen en betekenissen in de volledige preview " +
+                    "vóórdat je Android een externe opslaglocatie laat kiezen. " +
+                    "De tekstbestanden zijn bewerkbaar en opnieuw te importeren; " +
+                    "Tuddy controleert geen betekenissen.",
                     style = MaterialTheme.typography.bodySmall)
                 Text("Importeer jouw eigen UTF-8-zinnen met vier kolommen: " +
                     "language, phrase, meaningLanguage, ownMeaning. " +
