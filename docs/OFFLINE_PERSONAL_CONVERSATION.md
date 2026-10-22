@@ -89,6 +89,22 @@ eventuele bestanden onafhankelijk van Tuddy.
 - Zelfgeschreven betekenissen zijn niet onafhankelijk gecontroleerd:
   ongeschikt voor medische, juridische of andere urgente beslissingen.
 
+## Deel alleen wat je zelf vooraf controleert
+
+Naast bewaren als `.txt` kun je **Deel dit volledige eigen gesprekscript
+bewust…** kiezen. Een afzonderlijke, scrollbare preview toont alle
+opgenomen zinnen, taalrichtingen en de tekst die een eventuele externe
+app ontvangt (maximaal 12 beurten en 8 KiB). Kies pas daarna zelf
+**Open Android-deelvenster…**. Als het gesprek na openen van de
+preview verandert, wordt het delen geweigerd en moet je opnieuw
+toestemming geven. Andere woordenlijstkaarten, audio en onzichtbare
+geschiedenis worden niet meegenomen.
+
+Een door jou gekozen Android-app kan de tekst daarna opslaan, uploaden
+of doorsturen; Tuddy kan dat niet terugdraaien. Zonder afzonderlijke
+toestemming wordt er niets gedeeld. Je eigen betekenissen worden
+niet onafhankelijk gecontroleerd.
+
 ## Niet ondersteund
 
 Deze werkwijze lost [P1 #2](https://github.com/Zennay/Tuddy/issues/2)
