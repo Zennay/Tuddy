@@ -60,7 +60,7 @@ import com.livelingo.android.ui.DailyStudyHub
 import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.ArchivePrivatePhraseCaptureDialog
-import com.livelingo.android.ui.ArchivePrivatePhraseBatchCaptureDialog
+import com.livelingo.android.ui.PrivatePhraseBatchCaptureDialog
 import com.livelingo.android.ui.OfflinePhraseQuickPicker
 import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.SessionMeaningIndexDialog
@@ -294,6 +294,11 @@ private data class Line(
     val userCorrected: Boolean = false,
     // Human-authored session-only meaning: never overwrite model result or exports.
     val personalMeaning: String? = null
+)
+
+private data class PendingLivePhraseBatchCapture(
+    val generation: Int,
+    val lines: List<Line>
 )
 
 class MainActivity : ComponentActivity() {
@@ -744,6 +749,11 @@ private fun TuddyScreen(
     // Captions never become permanent phrasebook entries without the user's
     // own two text fields and a separate explicit save confirmation.
     var pendingLivePhraseCapture by remember { mutableStateOf<PendingLivePhraseCapture?>(null) }
+    var pendingLivePhraseBatchCapture by remember {
+        mutableStateOf<PendingLivePhraseBatchCapture?>(null)
+    }
+    var livePhraseBatchSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var livePhraseBatchSelectionMode by remember { mutableStateOf(false) }
     var capturedPhraseLanguage by remember { mutableStateOf("kmr") }
     var capturedPhraseText by remember { mutableStateOf("") }
     var capturedMeaningLanguage by remember { mutableStateOf("nl") }
@@ -1513,6 +1523,11 @@ private fun TuddyScreen(
             return
         }
         if (listening && !forceRestart) return
+        if (!forceRestart) {
+            pendingLivePhraseBatchCapture = null
+            livePhraseBatchSelection = emptySet()
+            livePhraseBatchSelectionMode = false
+        }
         try {
             // Every start, including a rapid restart after Android's own end-of-speech,
             // must invalidate the previous recognizer's delayed callbacks.
@@ -2526,6 +2541,9 @@ private fun TuddyScreen(
                 presentedCaptionId = null
                 meaningIndexOpen = false
                 pendingLivePhraseCapture = null
+                pendingLivePhraseBatchCapture = null
+                livePhraseBatchSelection = emptySet()
+                livePhraseBatchSelectionMode = false
                 capturedPhraseText = ""
                 capturedMeaningText = ""
                 quickTypedOpen = false
@@ -2627,6 +2645,9 @@ private fun TuddyScreen(
             editingCaptionId = null
             captionCorrectionDraft = ""
             pendingLivePhraseCapture = null
+            pendingLivePhraseBatchCapture = null
+            livePhraseBatchSelection = emptySet()
+            livePhraseBatchSelectionMode = false
             capturedPhraseText = ""
             capturedMeaningText = ""
             pendingSingleCaptionDelete = null
@@ -3006,6 +3027,49 @@ private fun TuddyScreen(
                 }
             )
         }
+        val livePhraseBatchRequest = pendingLivePhraseBatchCapture
+        if (livePhraseBatchRequest != null) {
+            val request = livePhraseBatchRequest
+            val rows = request.lines.map { line ->
+                TranscriptExportRow(
+                    line.original, line.translated, line.status,
+                    line.sourceCode, line.targetCode, line.recordedAtMillis
+                )
+            }
+            val stillCurrent = !listening && generation == request.generation &&
+                request.lines.size in 1..10 &&
+                request.lines.all { snapshot -> snapshot.original.isNotBlank() && lines.any { it == snapshot } }
+            PrivatePhraseBatchCaptureDialog(
+                rows = rows,
+                referenceLabel = "Gespreksreferentie",
+                originLabel = "gespreksregel",
+                stillCurrent = stillCurrent,
+                existingPhrases = personalPhrases.entries(),
+                onSave = { batch ->
+                    val current = pendingLivePhraseBatchCapture
+                    if (current != null && !listening &&
+                        generation == current.generation &&
+                        current.lines == request.lines &&
+                        current.lines.size in 1..10 &&
+                        current.lines.all { snapshot -> snapshot.original.isNotBlank() && lines.any { it == snapshot } } &&
+                        batch.size == current.lines.size &&
+                        personalPhrases.saveNewBatch(batch)) {
+                        capturedPhraseNotice =
+                            "${batch.size} eigen privékaarten bewust opgeslagen vanuit dit gesprek. Open Mijn eigen offline zinnen om ze te bekijken."
+                        pendingLivePhraseBatchCapture = null
+                        livePhraseBatchSelection = emptySet()
+                        livePhraseBatchSelectionMode = false
+                        true
+                    } else false
+                },
+                onDismiss = {
+                    pendingLivePhraseBatchCapture = null
+                    livePhraseBatchSelection = emptySet()
+                    livePhraseBatchSelectionMode = false
+                }
+            )
+        }
+
         val phraseCapture = pendingLivePhraseCapture
         if (phraseCapture != null) {
             val sourceRow = lines.firstOrNull { it.id == phraseCapture.captionId }
@@ -3023,6 +3087,9 @@ private fun TuddyScreen(
             AlertDialog(
                 onDismissRequest = {
                     pendingLivePhraseCapture = null
+                    pendingLivePhraseBatchCapture = null
+                    livePhraseBatchSelection = emptySet()
+                    livePhraseBatchSelectionMode = false
                     capturedPhraseText = ""
                     capturedMeaningText = ""
                 },
@@ -3106,6 +3173,9 @@ private fun TuddyScreen(
                                 capturedPhraseNotice =
                                     "Eigen taalkaart bewust opgeslagen. Open Mijn eigen offline zinnen om die te bekijken."
                                 pendingLivePhraseCapture = null
+                                pendingLivePhraseBatchCapture = null
+                                livePhraseBatchSelection = emptySet()
+                                livePhraseBatchSelectionMode = false
                                 capturedPhraseText = ""
                                 capturedMeaningText = ""
                             } else {
@@ -3118,6 +3188,9 @@ private fun TuddyScreen(
                 dismissButton = {
                     TextButton(onClick = {
                         pendingLivePhraseCapture = null
+                        pendingLivePhraseBatchCapture = null
+                        livePhraseBatchSelection = emptySet()
+                        livePhraseBatchSelectionMode = false
                         capturedPhraseText = ""
                         capturedMeaningText = ""
                     }) { Text("Annuleren") }
@@ -4361,8 +4434,10 @@ private fun TuddyScreen(
             val stillCurrent = !listening && generation == request.generation &&
                 previewArchiveRows === request.archive &&
                 request.rows.size in 1..10 && request.rows.all { it in request.archive }
-            ArchivePrivatePhraseBatchCaptureDialog(
+            PrivatePhraseBatchCaptureDialog(
                 rows = request.rows,
+                referenceLabel = "Archiefreferentie",
+                originLabel = "archiefregel",
                 stillCurrent = stillCurrent,
                 existingPhrases = personalPhrases.entries(),
                 onSave = { batch ->
@@ -5678,6 +5753,8 @@ private fun TuddyScreen(
                         } else {
                             captionDeleteNotice = "Regel is gewijzigd; niets verwijderd."
                         }
+                        livePhraseBatchSelection =
+                            livePhraseBatchSelection - deleteRequest.first
                         pendingSingleCaptionDelete = null
                     }) { Text("Wis deze regel") }
                 },
@@ -5880,6 +5957,9 @@ private fun TuddyScreen(
                         meaningNotice = ""
                         meaningIndexOpen = false
                         pendingLivePhraseCapture = null
+                        pendingLivePhraseBatchCapture = null
+                        livePhraseBatchSelection = emptySet()
+                        livePhraseBatchSelectionMode = false
                         capturedPhraseText = ""
                         capturedMeaningText = ""
                         capturedPhraseNotice = ""
@@ -6947,6 +7027,56 @@ private fun TuddyScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                if (!listening && lines.isNotEmpty()) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            val next = !livePhraseBatchSelectionMode
+                            livePhraseBatchSelectionMode = next
+                            if (!next) livePhraseBatchSelection = emptySet()
+                        }
+                    ) {
+                        Text(if (livePhraseBatchSelectionMode)
+                            "Sluit selectie eigen privékaarten"
+                        else "＋ Selecteer meerdere gespreksregels voor eigen privékaarten")
+                    }
+                }
+                if (livePhraseBatchSelectionMode) {
+                    Text(
+                        "Kies maximaal 10 regels uit dit tijdelijke gesprek. De bron is alleen referentie; " +
+                            "iedere kaart begint leeg en vraagt jouw eigen zin en betekenis.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${livePhraseBatchSelection.size} van maximaal 10 geselecteerd",
+                            style = MaterialTheme.typography.labelSmall)
+                        TextButton(
+                            enabled = livePhraseBatchSelection.isNotEmpty(),
+                            onClick = { livePhraseBatchSelection = emptySet() }
+                        ) { Text("Wis selectie") }
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !listening && livePhraseBatchSelection.isNotEmpty() &&
+                            livePhraseBatchSelection.size <= 10 &&
+                            lines.count { it.id in livePhraseBatchSelection } ==
+                                livePhraseBatchSelection.size,
+                        onClick = {
+                            val selectedLines = lines.filter { it.id in livePhraseBatchSelection && it.original.isNotBlank() }
+                            if (selectedLines.size in 1..10 &&
+                                selectedLines.size == livePhraseBatchSelection.size) {
+                                pendingLivePhraseBatchCapture = PendingLivePhraseBatchCapture(
+                                    generation, selectedLines
+                                )
+                                capturedPhraseNotice = ""
+                            }
+                        }
+                    ) { Text("Schrijf ${livePhraseBatchSelection.size} eigen privékaarten…") }
+                }
                 if (captionDeleteNotice.isNotBlank()) {
                     Text(captionDeleteNotice, style = MaterialTheme.typography.bodySmall)
                 }
@@ -7017,6 +7147,23 @@ private fun TuddyScreen(
                             )
                         ) {
                             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (livePhraseBatchSelectionMode) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = line.id in livePhraseBatchSelection,
+                                            enabled = !listening && line.original.isNotBlank() &&
+                                                (line.id in livePhraseBatchSelection ||
+                                                    livePhraseBatchSelection.size < 10),
+                                            onCheckedChange = { checked ->
+                                                livePhraseBatchSelection =
+                                                    if (checked) livePhraseBatchSelection + line.id
+                                                    else livePhraseBatchSelection - line.id
+                                            }
+                                        )
+                                        Text("Selecteer voor eigen privékaart",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
                                 Text(
                                     DateFormat.getTimeInstance(DateFormat.SHORT)
                                         .format(Date(line.recordedAtMillis)),
