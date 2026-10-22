@@ -79,41 +79,41 @@ internal fun LanguageSupportDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (!modelOnlyQuery) {
-                HorizontalDivider()
-                Text(
-                    "Tekstvertaling · " + TargetCatalog.targets.size + " talen",
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Text(
-                    "De talen hieronder zijn ML Kit-tekstvertalingsdoelen. Voor een gekozen paar moeten de vereiste modellen lokaal klaarstaan; controleer dat via Offline startcheck.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                if (textTargets.isEmpty()) {
-                    Text("Geen tekstdoel gevonden.", style = MaterialTheme.typography.bodySmall)
-                } else {
-                    textTargets.forEach { target ->
-                        Text(
-                            target.title + " (" + target.code + ")",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                    HorizontalDivider()
+                    Text(
+                        "Tekstvertaling · " + TargetCatalog.targets.size + " talen",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        "De talen hieronder zijn ML Kit-tekstvertalingsdoelen. Voor een gekozen paar moeten de vereiste modellen lokaal klaarstaan; controleer dat via Offline startcheck.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (textTargets.isEmpty()) {
+                        Text("Geen tekstdoel gevonden.", style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        textTargets.forEach { target ->
+                            Text(
+                                target.title + " (" + target.code + ")",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
-                }
-                HorizontalDivider()
-                Text(
-                    "Spraakherkenning · " + spokenCandidates.size + " kandidaatkeuzes",
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Text(
-                    "Dit zijn alleen locale-kandidaten uit de Android-spraakdienst. Werkelijke ondersteuning en installatie worden per toestel gecontroleerd; Tuddy schakelt niet over op cloudspraak.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                if (speechCandidates.isEmpty()) {
-                    Text("Geen spraakkandidaat gevonden.", style = MaterialTheme.typography.bodySmall)
-                } else {
-                    speechCandidates.forEach { candidate ->
-                        Text(candidate, style = MaterialTheme.typography.bodyMedium)
+                    HorizontalDivider()
+                    Text(
+                        "Spraakherkenning · " + spokenCandidates.size + " kandidaatkeuzes",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        "Dit zijn alleen locale-kandidaten uit de Android-spraakdienst. Werkelijke ondersteuning en installatie worden per toestel gecontroleerd; Tuddy schakelt niet over op cloudspraak.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (speechCandidates.isEmpty()) {
+                        Text("Geen spraakkandidaat gevonden.", style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        speechCandidates.forEach { candidate ->
+                            Text(candidate, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
-                }
                 }
                 HorizontalDivider()
                 Text(
