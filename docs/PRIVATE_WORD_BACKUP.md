@@ -13,26 +13,17 @@ The existing **Mijn woorden** list now offers two explicit actions:
 
 Een gebruiker kan de JSON-back-up ook vanuit Android Bestanden of een andere
 bestandsapp met **Delen → Tuddy** openen. Tuddy herkent uitsluitend het eigen
-formaat `tuddy-own-words-v1`, begrenst het document op 50.000 bytes en voert
-dezelfde strikte parser uit als bij **Herstel back-up…**. Geldige invoer opent
-de bestaande volledige preview met de afzonderlijke keuzes om nieuwe woorden
-samen te voegen of de lijst te vervangen. Ongeldige inhoud wordt geweigerd
-en nooit als gewone vertaaltekst geopend. Er worden geen bestanden automatisch
-gelezen, geüpload of geïmporteerd.
+formaat `tuddy-curated-word-keys-v1`, begrenst het document op 16 KiB en voert
+dezelfde strikte parser uit als bij **Herstel back-up…**. De woorden moeten nog
+steeds in de lokaal geïnstalleerde, gecontroleerde woordenlijst voorkomen.
+Ongeldige versies, dubbele sleutels, onbekende woorden en extra JSON-velden
+worden geweigerd voordat de lijst wordt vervangen.
 
-## Importeren vanuit geplakte tekst
-
-Als je een back-up als tekst hebt ontvangen, kun je **Plak JSON-back-up…**
-kiezen en de volledige JSON zelf in het veld plakken. Tuddy leest het
-klembord niet automatisch. De invoer blijft lokaal en is begrensd op 50.000
-UTF-8-bytes; versie, schema, UTF-8, taalcodes, dubbele identiteiten en
-capaciteit worden opnieuw door dezelfde strikte parser gecontroleerd.
-
-Een geldige back-up opent eerst de volledige woord-preview. Je kiest daarna
-afzonderlijk **Voeg alleen nieuwe woorden toe** of **Vervang volledige eigen
-lijst**. Ongeldige, te grote of geannuleerde invoer wijzigt geen bestaande
-woorden. Dit is een handmatige invoerroute, geen automatisch importeren of
-delen en geen cloudfunctie.
+De bestaande bevestiging toont de volledige lijst met taalcode en woord.
+Pas na **Vervang woorden** wordt de huidige lijst vervangen; de import start
+een eventuele herhaalplanning opnieuw. Een gedeeld bestand wordt nooit als
+gewone vertaaltekst geopend. Tuddy leest geen klembord automatisch, uploadt
+niets en importeert niets op de achtergrond.
 
 ## Data contract
 
