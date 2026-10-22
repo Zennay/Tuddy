@@ -45,3 +45,26 @@ favorieten of herhaalplanning**.
 Tuddy blijft Incubate / Verifying tot de afzonderlijke
 hardware-, model-, licentie-, native-speaker- en signinggates echt
 afgerond zijn. Geen productie-admission of toestelacceptatie geclaimd.
+
+
+## Twee eigen themagroepen bewust samenvoegen
+
+In **Mijn privéthema's** verschijnt bij elke groep, zodra er minimaal
+twee groepen bestaan, **Voeg dit thema samen met een ander thema…**.
+Kies vervolgens expliciet de doelgroep. De app laat eerst alle werkelijk
+betrokken, zelfgeschreven bronzinnen met hun eigen betekenissen zien.
+Ook het aantal verhuisde zinnen wordt getoond, zodat een lege groep
+eveneens bewust kan worden opgeruimd.
+
+Pas na **Bevestig samenvoegen** verplaatst Tuddy alle bestaande
+themakoppelingen van de bron naar het gekozen doel en verwijdert de oude
+groepsnaam. Dit gebeurt in één lokale, atomaire opslagtransactie.
+De persoonlijke zinnen, betekenissen, favorieten en herhaalplanning
+blijven onaangeroerd. Andere thema's veranderen niet.
+
+De preview wordt vergeleken met de actuele lokale zinnen en
+thema-back-up. Is er tussentijds iets veranderd, dan weigert Tuddy
+zonder gedeeltelijke samenvoeging. Samenvoegen is niet mogelijk als
+er maar één eigen thema bestaat en een thema kan nooit naar zichzelf
+worden samengevoegd. Er is geen automatische taalindeling, netwerk
+of upload.
