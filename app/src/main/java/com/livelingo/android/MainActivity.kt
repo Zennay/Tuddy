@@ -1523,6 +1523,11 @@ private fun TuddyScreen(
             return
         }
         if (listening && !forceRestart) return
+        if (!forceRestart) {
+            pendingLivePhraseBatchCapture = null
+            livePhraseBatchSelection = emptySet()
+            livePhraseBatchSelectionMode = false
+        }
         try {
             // Every start, including a rapid restart after Android's own end-of-speech,
             // must invalidate the previous recognizer's delayed callbacks.
@@ -2536,6 +2541,9 @@ private fun TuddyScreen(
                 presentedCaptionId = null
                 meaningIndexOpen = false
                 pendingLivePhraseCapture = null
+                pendingLivePhraseBatchCapture = null
+                livePhraseBatchSelection = emptySet()
+                livePhraseBatchSelectionMode = false
                 capturedPhraseText = ""
                 capturedMeaningText = ""
                 quickTypedOpen = false
@@ -2637,6 +2645,9 @@ private fun TuddyScreen(
             editingCaptionId = null
             captionCorrectionDraft = ""
             pendingLivePhraseCapture = null
+            pendingLivePhraseBatchCapture = null
+            livePhraseBatchSelection = emptySet()
+            livePhraseBatchSelectionMode = false
             capturedPhraseText = ""
             capturedMeaningText = ""
             pendingSingleCaptionDelete = null
@@ -3076,6 +3087,9 @@ private fun TuddyScreen(
             AlertDialog(
                 onDismissRequest = {
                     pendingLivePhraseCapture = null
+                    pendingLivePhraseBatchCapture = null
+                    livePhraseBatchSelection = emptySet()
+                    livePhraseBatchSelectionMode = false
                     capturedPhraseText = ""
                     capturedMeaningText = ""
                 },
@@ -3159,6 +3173,9 @@ private fun TuddyScreen(
                                 capturedPhraseNotice =
                                     "Eigen taalkaart bewust opgeslagen. Open Mijn eigen offline zinnen om die te bekijken."
                                 pendingLivePhraseCapture = null
+                                pendingLivePhraseBatchCapture = null
+                                livePhraseBatchSelection = emptySet()
+                                livePhraseBatchSelectionMode = false
                                 capturedPhraseText = ""
                                 capturedMeaningText = ""
                             } else {
@@ -3171,6 +3188,9 @@ private fun TuddyScreen(
                 dismissButton = {
                     TextButton(onClick = {
                         pendingLivePhraseCapture = null
+                        pendingLivePhraseBatchCapture = null
+                        livePhraseBatchSelection = emptySet()
+                        livePhraseBatchSelectionMode = false
                         capturedPhraseText = ""
                         capturedMeaningText = ""
                     }) { Text("Annuleren") }
@@ -5733,6 +5753,8 @@ private fun TuddyScreen(
                         } else {
                             captionDeleteNotice = "Regel is gewijzigd; niets verwijderd."
                         }
+                        livePhraseBatchSelection =
+                            livePhraseBatchSelection - deleteRequest.first
                         pendingSingleCaptionDelete = null
                     }) { Text("Wis deze regel") }
                 },
@@ -5935,6 +5957,9 @@ private fun TuddyScreen(
                         meaningNotice = ""
                         meaningIndexOpen = false
                         pendingLivePhraseCapture = null
+                        pendingLivePhraseBatchCapture = null
+                        livePhraseBatchSelection = emptySet()
+                        livePhraseBatchSelectionMode = false
                         capturedPhraseText = ""
                         capturedMeaningText = ""
                         capturedPhraseNotice = ""
