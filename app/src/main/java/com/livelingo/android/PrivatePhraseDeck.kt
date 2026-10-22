@@ -519,16 +519,20 @@ internal class PrivatePhraseDeck(context: Context) {
 
     /**
      * Non-destructive offline import. Existing user-written meanings, themes,
-     * favorite pins and spaced-repetition dates always win. Only unseen
-     * language+phrase identities and safely mapped new topics are added.
-     * A single SharedPreferences transaction writes both groups or neither.
+     * favorite pins and spaced-repetition dates win by default. Only unseen
+     * language+phrase identities are added unless the user explicitly selected
+     * existing exact-source notes for meaning correction in the complete preview.
+     * Correcting a meaning resets only that card's due date, since the old
+     * answer can no longer count as learned. Topic/favorite identities survive.
+     * A single SharedPreferences transaction writes every change or none.
      */
     @Synchronized
     fun mergeArchiveIfUnchanged(
         context: Context,
         candidate: PrivatePhraseArchive,
         expectedNotes: List<PersonalPhrase>?,
-        expectedThemes: ByteArray?
+        expectedThemes: ByteArray?,
+        correctedIds: Set<String> = emptySet()
     ): Boolean {
         if (expectedNotes == null || entries() != expectedNotes) return false
         val themeDeck = PrivatePhraseTopics(context)
@@ -544,9 +548,30 @@ internal class PrivatePhraseDeck(context: Context) {
         val current = decode() ?: return false
         fun identity(note: PersonalPhrase) =
             note.language + "|" + note.phrase.lowercase(Locale.ROOT)
-        val owned = current.map(::identity).toSet()
-        val additions = candidate.notes.filterNot { identity(it) in owned }
-        val combined = current + additions
+        val existingByIdentity = current.associateBy(::identity)
+        if (existingByIdentity.size != current.size) return false
+        val additions = candidate.notes.filterNot { identity(it) in existingByIdentity }
+        val incomingByIdentity = candidate.notes.associateBy(::identity)
+        if (incomingByIdentity.size != candidate.notes.size) return false
+
+        // Fingerprints bind to the exact original source text, never a
+        // case-insensitive approximate match. All opted-in corrections must
+        // exist both locally and in the already validated candidate.
+        val replacements = mutableMapOf<String, PersonalPhrase>()
+        for (incoming in candidate.notes) {
+            val id = PrivatePhraseShortcuts.fingerprint(incoming)
+            if (id !in correctedIds) continue
+            val currentNote = existingByIdentity[identity(incoming)] ?: return false
+            if (currentNote.language != incoming.language ||
+                currentNote.phrase != incoming.phrase ||
+                currentNote == incoming || id in replacements) return false
+            replacements[id] = incoming
+        }
+        if (replacements.keys != correctedIds || correctedIds.size > MAX_ROWS) return false
+
+        val combined = current.map { original ->
+            replacements[PrivatePhraseShortcuts.fingerprint(original)] ?: original
+        } + additions
         if (combined.size > MAX_ROWS) return false
         val serialized = toJson(combined).toString()
         if (serialized.length > MAX_JSON) return false
@@ -557,7 +582,13 @@ internal class PrivatePhraseDeck(context: Context) {
         val canonical = mutableMapOf<String, String>()
         localNames.forEach { canonical[it.lowercase(Locale.ROOT)] = it }
         val names = localNames.toMutableList()
-        candidate.topics.forEach { name ->
+        // Only themes belonging to genuinely new notes are imported. A
+        // meaning correction must never create/rename themes behind the user's
+        // back; unrelated imported themes remain external until selected.
+        val needed = additions.mapNotNull { note ->
+            candidate.assignments[PrivatePhraseShortcuts.fingerprint(note)]
+        }.toSet()
+        candidate.topics.filter { it in needed }.forEach { name ->
             val key = name.lowercase(Locale.ROOT)
             if (key !in canonical) {
                 if (names.size >= PrivatePhraseTopics.MAX_TOPICS) return false
@@ -587,11 +618,16 @@ internal class PrivatePhraseDeck(context: Context) {
         if (linked.size > MAX_ROWS) return false
         val rows = linked.map { (hash, topic) -> "$hash|$topic" }.toSet()
         return try {
-            prefs.edit().putString(KEY, serialized)
+            val editor = prefs.edit().putString(KEY, serialized)
                 .putStringSet(PrivatePhraseTopics.TOPICS_KEY, names.toSet())
                 .putStringSet(PrivatePhraseTopics.ASSIGNMENTS_KEY, rows)
-                // Do not touch pinned notes or review schedule when merging.
-                .commit()
+            if (replacements.isNotEmpty()) {
+                // Hashes are based on source language + phrase, so bookmarks
+                // remain stable, but due dates for corrected answers must reset.
+                val remainingReviews = reviewRows().filterKeys { it !in correctedIds }
+                editor.putStringSet(REVIEW_ROWS, encodeReviews(remainingReviews))
+            }
+            editor.commit()
         } catch (_: RuntimeException) { false }
     }
 
