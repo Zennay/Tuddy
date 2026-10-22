@@ -195,16 +195,24 @@ internal fun PrivateSubtitleTranslationDialog(
                     message = error ?: "Vertaling niet voltooid. Het concept is ongewijzigd."
                 } else {
                     var updated: List<PrivateSubtitleCue>? = selectedCues.toList()
+                    var failedSourceRow: Int? = null
                     texts.forEachIndexed { index, text ->
                         val current = updated
                         if (current != null) {
-                            updated = PrivateSubtitleDraftEditor.revise(current, index, text)
+                            val revised = PrivateSubtitleDraftEditor.revise(current, index, text)
+                            if (revised == null) {
+                                failedSourceRow = indices.getOrNull(index)?.plus(1)
+                            }
+                            updated = revised
                         }
                     }
                     if (updated == null) {
                         receipt = null
                         translatedIndices = emptyList()
-                        message = "Een vertaalde regel past niet binnen de veilige ondertitelgrenzen. " +
+                        message = failedSourceRow?.let {
+                            "Vertaalde regel $it past niet binnen de veilige ondertitelgrenzen. " +
+                                "Het concept is ongewijzigd."
+                        } ?: "Een vertaalde regel past niet binnen de veilige ondertitelgrenzen. " +
                             "Het concept is ongewijzigd."
                     } else {
                         translatedIndices = indices
