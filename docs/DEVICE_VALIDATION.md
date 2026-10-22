@@ -1,4 +1,4 @@
-> **Current hosted debug-APK handoff — 22 October 2026 after PR #398:** main commit `ef1e9cdfbbbdf32a2cd488fd2c748e671695d234` is merged. The current artifact identity is recorded below. The hosted APK was built from proposed-merge checkout `d1d87c5aaed8619aad0d504f1e17061fa5d196d9`; its manifest, source commit, checksum sidecar and APK digest were inspected, and both changed-file blobs match post-merge main. This establishes build identity only. Physical installation, airplane-mode behavior and offline language acceptance remain **NOT PROVIDED**.
+> **Current hosted debug-APK handoff — 22 October 2026 after PR #400:** main commit `1f2c46f5769a0d227489cdb0edac605bb4bd27ca` is merged. The current artifact identity is recorded below. The hosted APK was built from proposed-merge checkout `21197d4fb0e8e361c0bf5e4d0f2f62c8922e60b5`; its manifest, source commit, checksum sidecar and APK digest were inspected, and all seven changed-file blobs match post-merge main. This establishes build identity only. Physical installation, airplane-mode behavior and offline language acceptance remain **NOT PROVIDED**.
 
 ---
 
@@ -71,32 +71,34 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Current hosted debug-APK handoff (22 October 2026, after PR #398 merged to main).
-This is the newest hosted debug build whose code tree matches main, **not** a
+Current hosted debug-APK handoff (22 October 2026, after PR #400 merged to main).
+This is the newest hosted debug build whose app-code tree matches main, **not** a
 physical installation, signed release, demonstrated airplane-mode operation or
 language-model acceptance.
 
 | Field | Immutable evidence |
 |---|---|
-| App-code merge (PR #398) | [`ef1e9cdfbbbdf32a2cd488fd2c748e671695d234`](https://github.com/Zennay/Tuddy/commit/ef1e9cdfbbbdf32a2cd488fd2c748e671695d234) — `merged=true` |
-| Hosted Android run | [#39806737593](https://github.com/Zennay/Tuddy/actions/runs/39806737593) — required `build` and `source-head` checks succeeded |
-| Exact build checkout/source identity | `d1d87c5aaed8619aad0d504f1e17061fa5d196d9` (matches `source-commit.txt` and `build-manifest.txt`; GitHub proposed-merge checkout) |
-| Main-tree correspondence | Both PR #398 changed-file blob IDs match post-merge `main`; remaining files are inherited unchanged from the shared base |
-| Artifact | [Tuddy-debug-apk #12436799738](https://github.com/Zennay/Tuddy/actions/runs/39806737593/artifacts/12436799738) (expires 5 November 2026 15:41:06 UTC) |
+| App-code merge (PR #400) | [`1f2c46f5769a0d227489cdb0edac605bb4bd27ca`](https://github.com/Zennay/Tuddy/commit/1f2c46f5769a0d227489cdb0edac605bb4bd27ca) — `merged=true` |
+| Hosted Android run | [#39811588411](https://github.com/Zennay/Tuddy/actions/runs/39811588411) — required `build` and `source-head` checks succeeded |
+| Exact build checkout/source identity | `21197d4fb0e8e361c0bf5e4d0f2f62c8922e60b5` (matches `source-commit.txt` and `build-manifest.txt`; GitHub proposed-merge checkout) |
+| Main-tree correspondence | All seven PR #400 changed-file blob IDs match post-merge `main`; remaining files are inherited unchanged from the shared base |
+| Artifact | [Tuddy-debug-apk #12439598692](https://github.com/Zennay/Tuddy/actions/runs/39811588411/artifacts/12439598692) (expires 5 November 2026 16:12:44 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `328910b01aceb1ab4d218874fc3188a0902553732b809d4f924a8623905f4bbc` |
-| **Artifact ZIP SHA-256 (different file)** | `95164e0735bee5760ed64eb280df28f1aed88f1a93d1570a9e2623e5d77b8f81` |
-| APK bytes / package-version | `104528118` / `com.livelingo.android` / `0.4.0` |
+| **APK SHA-256** | `474975b4a4e8218a3a94a5f9e34f2d580e8d49cc69e112ff9f085e4846419adc` |
+| **Artifact ZIP SHA-256 (different file)** | `bb3ca533c364b03e57bdd1c143b4e439a2dc0e40d654b594712d04b36085c3d1` |
+| APK bytes / package-version | `104544502` / `com.livelingo.android` / `0.4.0` |
 | Physical installation and real airplane-mode session | **NOT PROVIDED** |
 
 The downloaded artifact ZIP was inspected. Its embedded `build-manifest.txt` and
-`source-commit.txt` both identify `d1d87c5aaed8619aad0d504f1e17061fa5d196d9`;
+`source-commit.txt` both identify `21197d4fb0e8e361c0bf5e4d0f2f62c8922e60b5`;
 the APK bytes hash to the APK SHA-256 above and match `app-debug.apk.sha256`.
-The ZIP digest also matches GitHub's artifact metadata. This is provenance and
-integrity evidence only, not a device acceptance or production-release claim.
-The candidate includes PR #398's direct file-share route, PR #396's text-share
-import preview, PR #395's selected JSON sharing, and the earlier manual
-phrasebook workflow.
+The ZIP digest also matches GitHub's artifact metadata. All seven changed-file
+blobs in the proposed-merge checkout match post-merge main. This is provenance
+and integrity evidence only, not device acceptance or a production-release claim.
+The candidate includes PR #400's safe shared private-phrase CSV return path, PR
+#398's direct correction-file share route, PR #396's correction text-share preview,
+PR #395's selected correction JSON sharing, and the earlier manual phrasebook
+workflow.
 
 Download the artifact ZIP yourself, and from a Tuddy source checkout verify exact
 provenance before attempting any authorized handset installation:
@@ -104,10 +106,10 @@ provenance before attempting any authorized handset installation:
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  95164e0735bee5760ed64eb280df28f1aed88f1a93d1570a9e2623e5d77b8f81 \
-  328910b01aceb1ab4d218874fc3188a0902553732b809d4f924a8623905f4bbc \
-  d1d87c5aaed8619aad0d504f1e17061fa5d196d9 \
-  39806737593
+  bb3ca533c364b03e57bdd1c143b4e439a2dc0e40d654b594712d04b36085c3d1 \
+  474975b4a4e8218a3a94a5f9e34f2d580e8d49cc69e112ff9f085e4846419adc \
+  21197d4fb0e8e361c0bf5e4d0f2f62c8922e60b5 \
+  39811588411
 ```
 
 
