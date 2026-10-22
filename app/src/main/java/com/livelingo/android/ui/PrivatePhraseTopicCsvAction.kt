@@ -86,6 +86,8 @@ internal fun PrivatePhraseTopicCsvAction(
     // Existing meanings are never modified unless individually opted in here.
     // Kept in RAM only for this exact CSV preview.
     var correctedImportRows by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // Explicit theme changes are independent from meaning corrections.
+    var reassignedImportRows by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
@@ -147,6 +149,7 @@ internal fun PrivatePhraseTopicCsvAction(
                 importTopic = null
                 excludedImportRows = emptySet()
                 correctedImportRows = emptySet()
+                reassignedImportRows = emptySet()
                 notice = ""
             }
         }
@@ -247,6 +250,7 @@ internal fun PrivatePhraseTopicCsvAction(
                         importTopic = null
                         excludedImportRows = emptySet()
                         correctedImportRows = emptySet()
+                        reassignedImportRows = emptySet()
                         pasteOpen = false
                         pasteText = ""
                         pasteError = ""
@@ -532,7 +536,19 @@ internal fun PrivatePhraseTopicCsvAction(
                 old.language == incoming.language && old.phrase == incoming.phrase &&
                 old != incoming) id else null
         }.toSet()
-        val unchangedCount = existingCount - correctedIds.size
+        val retopicIds = chosenNotes.mapNotNull { note ->
+            val old = storedVersion(note)
+            val id = PrivatePhraseShortcuts.fingerprint(note)
+            val proposed = review.archive.assignments[id]
+            if (id in reassignedImportRows && old != null &&
+                old.language == note.language && old.phrase == note.phrase &&
+                !topics.topicFor(old).equals(proposed, ignoreCase = true)) id else null
+        }.toSet()
+        val unchangedCount = chosenNotes.count { note ->
+            alreadyStored(note) &&
+                PrivatePhraseShortcuts.fingerprint(note) !in correctedIds &&
+                PrivatePhraseShortcuts.fingerprint(note) !in retopicIds
+        }
         AlertDialog(
             onDismissRequest = { importReview = null },
             title = { Text("Eigen CSV-zinnen én thema's controleren") },
@@ -579,6 +595,7 @@ internal fun PrivatePhraseTopicCsvAction(
                         importTopic = null
                         excludedImportRows = emptySet()
                         correctedImportRows = emptySet()
+                        reassignedImportRows = emptySet()
                         mergeOnly = true
                     }) { Text("↺ Herstel volledige CSV-selectie") }
                     TextButton(
@@ -608,15 +625,17 @@ internal fun PrivatePhraseTopicCsvAction(
                         " van " + review.archive.notes.size + " eigen zinnen. " +
                         newCount + " nieuw, " + correctedIds.size +
                         " bestaande betekenissen bewust geselecteerd voor correctie, " +
-                        unchangedCount + " bestaande zinnen blijven gelijk. " +
-                        "Thema's en favorieten blijven altijd lokaal leidend.",
+                        retopicIds.size + " bestaande thema's bewust geselecteerd " +
+                        "voor herindeling, " + unchangedCount + " ongewijzigd. " +
+                        "Favorieten blijven lokaal behouden.",
                         style = MaterialTheme.typography.labelMedium)
                     TextButton(onClick = { mergeOnly = true }) {
                         Text(if (mergeOnly) "☑ Veilig samenvoegen / gekozen correcties"
                             else "☐ Veilig samenvoegen / gekozen correcties")
                     }
                     TextButton(
-                        enabled = !scoped && correctedImportRows.isEmpty(),
+                        enabled = !scoped && correctedImportRows.isEmpty() &&
+                            reassignedImportRows.isEmpty(),
                         onClick = { mergeOnly = false }
                     ) {
                         Text(if (!mergeOnly) "☑ Vervang hele privé-lijst (destructief)"
@@ -625,10 +644,10 @@ internal fun PrivatePhraseTopicCsvAction(
                     Text(
                         if (mergeOnly)
                             "Nieuwe zinnen worden toegevoegd. Bestaande betekenissen " +
-                                "veranderen uitsluitend na de aparte keuze bij die rij. " +
-                                "Een gecorrigeerd antwoord begint opnieuw met leren; " +
-                                "favoriet en huidig thema blijven behouden. Alle andere " +
-                                "herhaaldatums blijven onaangeroerd."
+                                "en thema's wijzigen alleen via de twee afzonderlijke " +
+                                "keuzes bij die rij. Een gecorrigeerd antwoord begint " +
+                                "opnieuw met leren; uitsluitend een themawijziging " +
+                                "behoudt de leerplanning. Favorieten blijven behouden."
                         else
                             "Let op: dit verwijdert al je bestaande eigen zinnen, " +
                                 "thema's, favorieten en herhaalplanning. Alleen de " +
@@ -696,8 +715,32 @@ internal fun PrivatePhraseTopicCsvAction(
                                 "thema toegevoegd bij veilig samenvoegen.",
                             style = MaterialTheme.typography.labelSmall
                         )
-                        Text("Thema: " + (review.archive.assignments[identity]
-                            ?: "zonder thema"), style = MaterialTheme.typography.labelMedium)
+                        if (storedVersion(note) != null) {
+                            val old = storedVersion(note)!!
+                            val incomingTheme = review.archive.assignments[identity]
+                            val existingTheme = topics.topicFor(old)
+                            val matching = existingTheme.equals(
+                                incomingTheme, ignoreCase = true
+                            )
+                            Text("Lokaal thema: " + (existingTheme ?: "zonder thema") +
+                                " · CSV-thema: " + (incomingTheme ?: "zonder thema"),
+                                style = MaterialTheme.typography.labelMedium)
+                            if (old.phrase == note.phrase && !matching) {
+                                TextButton(enabled = included, onClick = {
+                                    reassignedImportRows =
+                                        if (identity in reassignedImportRows)
+                                            reassignedImportRows - identity
+                                        else reassignedImportRows + identity
+                                    mergeOnly = true
+                                }) {
+                                    Text(if (identity in reassignedImportRows)
+                                        "☑ Neem voorgesteld CSV-thema over"
+                                    else "☐ Verander alleen dit bestaande thema (apart akkoord)")
+                                }
+                            }
+                        } else Text("Nieuw thema: " +
+                            (review.archive.assignments[identity] ?: "zonder thema"),
+                            style = MaterialTheme.typography.labelMedium)
                     }
                     Text("Dit zijn zelfgeschreven, niet beoordeelde betekenissen. " +
                         "De bestanden zijn nooit automatisch uit een gesprek gekopieerd.",
@@ -709,7 +752,7 @@ internal fun PrivatePhraseTopicCsvAction(
                     val saved = if (mergeOnly || scoped) {
                         deck.mergeArchiveIfUnchanged(
                             context, chosenArchive, review.originalNotes, review.originalTopics,
-                            correctedIds
+                            correctedIds, retopicIds
                         )
                     } else {
                         deck.replaceArchiveIfUnchanged(
@@ -719,7 +762,8 @@ internal fun PrivatePhraseTopicCsvAction(
                     if (saved) onChanged()
                     notice = if (saved && (mergeOnly || scoped))
                         "Geselecteerde zinnen verwerkt: " + newCount + " nieuw, " +
-                            correctedIds.size + " bestaande betekenissen bewust gecorrigeerd. " +
+                            correctedIds.size + " bestaande betekenissen gecorrigeerd, " +
+                            retopicIds.size + " themawijzigingen gekozen. " +
                             "Overige gegevens blijven behouden."
                     else if (saved)
                         "Eigen zinnen en thema's bewust vervangen; oude planning gewist."
