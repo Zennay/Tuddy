@@ -4212,6 +4212,23 @@ private fun TuddyScreen(
                                 "Je selectie blijft behouden wanneer je de zoekterm wijzigt.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${archivePhraseBatchSelection.size} van maximaal 10 geselecteerd",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            TextButton(
+                                enabled = archivePhraseBatchSelection.isNotEmpty(),
+                                onClick = {
+                                    archivePhraseBatchSelection = emptySet()
+                                    archivePhraseCaptureNotice = ""
+                                }
+                            ) { Text("Wis selectie") }
+                        }
                         OutlinedButton(
                             enabled = !listening && archivePhraseBatchSelection.isNotEmpty() &&
                                 archivePhraseBatchSelection.size <= 10 &&
