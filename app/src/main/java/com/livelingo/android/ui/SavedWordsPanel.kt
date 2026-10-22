@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -69,6 +70,7 @@ internal fun SavedWordsPanel(
     var confirmStartReview by remember { mutableStateOf(false) }
     var confirmEraseReview by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingShareSnapshot by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var pendingStudySheet by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var pendingImport by remember { mutableStateOf<List<String>?>(null) }
     var transferStatus by remember { mutableStateOf("") }
@@ -143,8 +145,8 @@ internal fun SavedWordsPanel(
     LaunchedEffect(incomingBackupJsonText) {
         val shared = incomingBackupJsonText ?: return@LaunchedEffect
         val bytes = shared.toByteArray(Charsets.UTF_8)
-        if (pendingImport != null || pendingExport != null || pendingStudySheet != null ||
-            practiceOpen || scheduledReviewOpen) {
+        if (pendingImport != null || pendingExport != null || pendingShareSnapshot != null ||
+            pendingStudySheet != null || practiceOpen || scheduledReviewOpen) {
             transferStatus = "Er staat al een woordenlijstimport of export open. Sluit die eerst " +
                 "en deel de back-up opnieuw; je huidige woorden blijven behouden."
         } else {
@@ -270,6 +272,22 @@ internal fun SavedWordsPanel(
                         openBackup.launch(arrayOf("application/json", "text/plain"))
                     }) { Text("Herstel back-up…") }
                 }
+                OutlinedButton(
+                    enabled = allWords.isNotEmpty() && pendingImport == null &&
+                        pendingExport == null && pendingShareSnapshot == null &&
+                        pendingStudySheet == null,
+                    onClick = {
+                        val snapshot = deck.exportSnapshot()
+                        val keys = snapshot?.let(deck::previewImport)
+                        if (snapshot == null || keys == null) {
+                            transferStatus = "Geen geldige woordenback-up beschikbaar om te delen."
+                        } else {
+                            pendingShareSnapshot = revision to snapshot
+                            transferStatus = ""
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Deel JSON-back-up…") }
                 Text(
                     "JSON-back-up: alleen gecontroleerde woordidentiteiten, nooit gesprekken. " +
                         "Een gekozen cloudbestandsprovider kan bestanden extern synchroniseren.",
@@ -438,6 +456,76 @@ internal fun SavedWordsPanel(
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) { Text("Annuleren") }
+            }
+        )
+    }
+
+    val shareSnapshot = pendingShareSnapshot
+    val shareCandidate = shareSnapshot?.second?.let(deck::previewImport)
+    if (shareSnapshot != null) {
+        AlertDialog(
+            onDismissRequest = { pendingShareSnapshot = null },
+            title = { Text("Deel opgeslagen woorden?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Je deelt een momentopname van ${shareCandidate?.size ?: 0} gecontroleerde " +
+                            "woordidentiteiten. Alleen taalcode en woord worden gedeeld; geen " +
+                            "definities, gesprekken, audio of oefengegevens. Android toont daarna " +
+                            "de apps waar je de tekst zelf naartoe kunt sturen."
+                    )
+                    Text("Volledige lijst die wordt gedeeld:", style = MaterialTheme.typography.labelMedium)
+                    if (shareCandidate == null) {
+                        Text(
+                            "De momentopname kan niet meer worden gelezen. Er wordt niets gedeeld.",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        shareCandidate.forEachIndexed { index, key ->
+                            HorizontalDivider()
+                            Text("${index + 1}. ${key.substringBefore('|').uppercase()} · ${key.substringAfter('|')}")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = shareCandidate != null,
+                    onClick = {
+                        val snapshot = pendingShareSnapshot
+                        val keys = snapshot?.second?.let(deck::previewImport)
+                        if (snapshot == null || keys == null) {
+                            transferStatus = "De back-up kon niet veilig worden gedeeld."
+                        } else if (snapshot.first != revision) {
+                            transferStatus = "De woordenlijst is gewijzigd. Er is niets gedeeld; open de deelpreview opnieuw."
+                        } else {
+                            val launched = runCatching {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, "Tuddy-woordenlijstback-up")
+                                    putExtra(Intent.EXTRA_TEXT, snapshot.second.toString(Charsets.UTF_8))
+                                }
+                                context.startActivity(
+                                    Intent.createChooser(shareIntent, "Deel Tuddy-woordenlijstback-up")
+                                )
+                            }.isSuccess
+                            transferStatus = if (launched)
+                                "Android Delen geopend. Kies zelf een ontvanger; Tuddy uploadt niets."
+                            else "Delen kon niet worden geopend. Je lokale woorden zijn ongewijzigd."
+                        }
+                        pendingShareSnapshot = null
+                    }
+                ) { Text("Deel via Android…") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pendingShareSnapshot = null
+                    transferStatus = "Delen geannuleerd; er is niets verstuurd."
+                }) { Text("Annuleren") }
             }
         )
     }
