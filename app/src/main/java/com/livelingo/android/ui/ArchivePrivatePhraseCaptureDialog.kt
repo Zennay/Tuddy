@@ -115,6 +115,10 @@ internal fun ArchivePrivatePhraseCaptureDialog(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Mijn eigen zin (max. 120 tekens)") },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        textDirection = if (language == "ckb" || language == "ps")
+                            TextDirection.Rtl else TextDirection.Ltr
+                    ),
                     keyboardOptions = KeyboardOptions(autoCorrect = false),
                     minLines = 2,
                     maxLines = 4
