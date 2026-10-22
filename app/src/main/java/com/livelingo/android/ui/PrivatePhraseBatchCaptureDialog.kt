@@ -103,6 +103,11 @@ internal fun PrivatePhraseBatchCaptureDialog(
                         "tot je de volledige batch hieronder bevestigt.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                Text(
+                    "${candidates.size} van ${rows.size} kaarten compleet",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 val row = rows.getOrNull(currentIndex)
                 if (row != null) {
                     Text(
