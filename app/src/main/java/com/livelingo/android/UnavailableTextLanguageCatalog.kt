@@ -129,9 +129,9 @@ internal object UnavailableTextLanguageCatalog {
         title = "SECT19N/whisper-small-ckb-merged · ZarosASR",
         url = "https://huggingface.co/SECT19N/whisper-small-ckb-merged",
         directionEvidence = "Spraak → tekst (ASR), Sorani/ckb volgens modelkaart; WER 7,96% op Common Voice 24.0-test is door de auteur gerapporteerd, niet onafhankelijk herhaald.",
-        declaredLicense = "Apache-2.0 volgens modelkaart; Common Voice 24.0 is CC0-1.0; volledige upstream-weightketen nog te beoordelen",
+        declaredLicense = "Apache-2.0 volgens modelkaart; gewichten gated achter contactinformatievoorwaarden; Common Voice 24.0 is CC0-1.0; upstream-weightketen nog te beoordelen",
         footprint = "circa 0,2B parameters; exacte kandidaatbestandsgrootte niet geverifieerd (Whisper-small upstream circa 967 MB)",
-        limitation = "De modelkaart is publiek toegankelijk; de eerder gemelde contact-gate is niet meer zichtbaar. WER 7,96% is zelfgerapporteerd en niet onafhankelijk herhaald. " +
+        limitation = "De modelkaart is publiek leesbaar, maar toegang tot modelbestanden vereist akkoord met voorwaarden voor het delen van contactinformatie. WER 7,96% is zelfgerapporteerd en niet onafhankelijk herhaald. " +
             "Gebruikt de Perzische decoder-token als Sorani-workaround; geen bewijs voor spontane conversatie, Android-latency, geheugen of een gequantiseerde runtime. " +
             "Controleer exacte gewichten, herkomst en licentiecompatibiliteit vóór distributie. Niet geïntegreerd of geactiveerd."
     )
