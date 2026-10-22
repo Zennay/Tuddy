@@ -750,12 +750,19 @@ private fun TuddyScreen(
         source.speechCode, source.translateCode, target.translateCode,
         spoken.map { it.speechCode to it.translateCode }
     )
-    val normalizedHistoryQuery = historySearchQuery.trim()
+    // Apply the same search-only script folding as the private phrasebook.
+    // Stored captions and translations are never normalized or rewritten.
+    val normalizedHistoryQuery = PrivatePhraseScriptSearch.fold(historySearchQuery.trim())
+    fun historySearchMatches(line: Line): Boolean =
+        normalizedHistoryQuery.isNotBlank() && (
+            PrivatePhraseScriptSearch.contains(line.original, normalizedHistoryQuery) ||
+                PrivatePhraseScriptSearch.contains(line.translated, normalizedHistoryQuery) ||
+                line.personalMeaning?.let {
+                    PrivatePhraseScriptSearch.contains(it, normalizedHistoryQuery)
+                } == true
+        )
     val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
-        else lines.indices.filter { index ->
-            lines[index].original.contains(normalizedHistoryQuery, ignoreCase = true) ||
-                lines[index].translated.contains(normalizedHistoryQuery, ignoreCase = true)
-        }
+        else lines.indices.filter { historySearchMatches(lines[it]) }
 
     fun captureCombinedStudyBook(): ByteArray? =
         PrivateCombinedStudyBook.snapshot(
@@ -6754,7 +6761,10 @@ private fun TuddyScreen(
                         value = historySearchQuery,
                         onValueChange = { historySearchQuery = it.take(80) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Zoek originele tekst of vertaling") },
+                        label = { Text("Zoek tekst, vertaling of eigen uitleg") },
+                        supportingText = {
+                            Text("Zoekt ook met veelvoorkomende Arabisch/Perzische toetsenbordvarianten; opgeslagen tekst blijft exact behouden.")
+                        },
                         singleLine = true
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -6802,18 +6812,13 @@ private fun TuddyScreen(
                         }
                     }
                     items(lines, key = { it.id }) { line ->
+                        val isHistorySearchMatch = historySearchMatches(line)
                         Card(
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth(),
                             border = BorderStroke(
-                                if (normalizedHistoryQuery.isNotBlank() && (
-                                        line.original.contains(normalizedHistoryQuery, ignoreCase = true) ||
-                                            line.translated.contains(normalizedHistoryQuery, ignoreCase = true)
-                                    )) 2.dp else 1.dp,
-                                if (normalizedHistoryQuery.isNotBlank() && (
-                                        line.original.contains(normalizedHistoryQuery, ignoreCase = true) ||
-                                            line.translated.contains(normalizedHistoryQuery, ignoreCase = true)
-                                    )) MaterialTheme.colorScheme.primary
+                                if (isHistorySearchMatch) 2.dp else 1.dp,
+                                if (isHistorySearchMatch) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.outlineVariant
                             )
                         ) {
