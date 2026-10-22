@@ -196,11 +196,11 @@ internal fun OfflinePersonalTurnTableDialog(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         TextButton(enabled = turn != null &&
-                            (!responseHidden || turn.second), onClick = {
+                            (!responseHidden || !turn.second), onClick = {
                             turn?.first?.let { readAuthored(it.phrase, it.language) }
                         }) { Text("🔊 Eigen zin") }
                         TextButton(enabled = turn != null &&
-                            (!responseHidden || !turn.second), onClick = {
+                            (!responseHidden || turn.second), onClick = {
                             turn?.first?.let { readAuthored(it.ownMeaning, it.meaningLanguage) }
                         }) { Text("🔊 Betekenis") }
                         TextButton(onClick = {
