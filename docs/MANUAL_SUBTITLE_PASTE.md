@@ -342,7 +342,10 @@ De Android-bestandskeuze bij later opslaan blijft een aparte handeling.
 ## Gevonden zinnen bewust als een eigen selectie overnemen
 
 Bij het zoeken in de preview kun je nu op **Gebruik gevonden regels als selectie**
-tikken. Tuddy vertaalt de momenteel **zichtbare zoekresultatenset** naar
+tikken. Ook veelvoorkomende Arabische/Perzische toetsenbordvarianten en
+optioneel weggelaten klinkertekens tellen hierbij uitsluitend voor het zoeken mee.
+De oorspronkelijke spelling blijft behouden. Tuddy vertaalt de momenteel
+**zichtbare zoekresultatenset** naar
 een compacte, bewerkbare lijst originele bronnummers (bijvoorbeeld
 `1-3,7,9-11`). De bestaande paginaweergave van 15 items beperkt dit niet:
 alle resultaten binnen je huidige gekozen bronselectie tellen mee.
@@ -616,9 +619,10 @@ weggegooid. De volledige samengevoegde kopie blijft apart
 doorbladerbaar in pagina's van vijf.
 
 Gebruik **Controleer elke bronregel-koppeling** om tot maximaal 500
-voorgestelde bronparen gericht te onderzoeken: typ een letterlijk
-woord of zinsdeel uit **één van beide originele teksten** (zoeken
-negeert hoofdletters), en/of vul het **exacte oorspronkelijke
+voorgestelde bronparen gericht te onderzoeken: typ een woord of zinsdeel
+uit **één van beide originele teksten** (zoeken negeert hoofdletters en
+herkent gangbare Arabisch/Perzische toetsenbordvarianten zonder de tekst
+te wijzigen), en/of vul het **exacte oorspronkelijke
 regelnummer uit spoor 2** in. De twee filters beperken uitsluitend
 de vier-paren-per-pagina-weergave. Het echte koppelen, uitsluiten,
 tijdcorrecties en de volledige resultaatpreview blijven gebaseerd
