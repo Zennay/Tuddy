@@ -2322,6 +2322,10 @@ geen account, pushmelding, cloud of taalvaardigheidsclaim.
 
 Open bewust een eerder opgeslagen privé-JSON-archief, zoek in
 de regels en tik **▣ Lees gevonden archiefregels groot**.
+Zoeken herkent ook veelvoorkomende Arabisch/Perzische yeh- en
+kaf-toetsenbordvarianten, optionele klinkertekens, tatweel, ZWNJ
+en Unicode-presentatievormen. Alleen de zoekvergelijking verandert;
+de geïmporteerde tekst blijft exact behouden.
 De bestaande tweetalige leesmodus toont uitsluitend deze
 zoekresultaten groter, bij voldoende schermbreedte naast elkaar.
 Sluiten brengt je terug naar hetzelfde archief, zonder iets
