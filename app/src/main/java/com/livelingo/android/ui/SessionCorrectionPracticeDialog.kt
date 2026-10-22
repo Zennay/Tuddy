@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.SessionTranslationCorrection
+import com.livelingo.android.PrivateOfflineSearch
 
 /**
  * Voluntary, non-persistent recall practice using only corrections the user
@@ -53,11 +57,19 @@ internal fun SessionCorrectionPracticeDialog(
     var speechMessage by remember { mutableStateOf("") }
     var pairMenuOpen by remember { mutableStateOf(false) }
     var selectedPair by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var chosenCards by remember { mutableStateOf(snapshot.toSet()) }
+    var selectionOpen by remember { mutableStateOf(false) }
+    var selectionQuery by remember { mutableStateOf("") }
+    var shuffled by remember { mutableStateOf(false) }
+    var shuffledCards by remember { mutableStateOf(snapshot.shuffled()) }
+    var batchSize by remember { mutableIntStateOf(12) }
     val pairs = snapshot.map { it.sourceCode to it.targetCode }.distinct()
-    val filtered = if (selectedPair == null) snapshot else snapshot.filter {
-        (it.sourceCode to it.targetCode) == selectedPair
+    val ordered = if (shuffled) shuffledCards else snapshot
+    val filtered = ordered.filter {
+        it in chosenCards &&
+            (selectedPair == null || (it.sourceCode to it.targetCode) == selectedPair)
     }
-    val batch = if (retryOnly) retryCards else filtered.drop(offset).take(12)
+    val batch = if (retryOnly) retryCards else filtered.drop(offset).take(batchSize)
     val current = batch.getOrNull(currentIndex)
     val prompt = current?.let { if (reverse) it.translation else it.original }
     val answer = current?.let { if (reverse) it.original else it.translation }
@@ -65,10 +77,8 @@ internal fun SessionCorrectionPracticeDialog(
     val answerLang = current?.let { if (reverse) it.sourceCode else it.targetCode }
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
 
-    fun selectPair(pair: Pair<String, String>?) {
+    fun resetRound() {
         speaker.stop()
-        selectedPair = pair
-        pairMenuOpen = false
         offset = 0
         currentIndex = 0
         revealed = false
@@ -78,6 +88,12 @@ internal fun SessionCorrectionPracticeDialog(
         retryCards = emptyList()
         retryOnly = false
         speechMessage = ""
+    }
+
+    fun selectPair(pair: Pair<String, String>?) {
+        selectedPair = pair
+        pairMenuOpen = false
+        resetRound()
     }
 
     fun advance(known: Boolean) {
@@ -132,6 +148,94 @@ internal fun SessionCorrectionPracticeDialog(
                         }
                     }
                 }
+                if (snapshot.isNotEmpty()) {
+                    Text(
+                        "Gekozen voor deze oefensessie: " + chosenCards.size +
+                            " van " + snapshot.size + " eigen correcties. " +
+                            "Een selectie wijzigt of bewaart geen zinnen.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { speaker.stop(); selectionOpen = !selectionOpen }
+                    ) { Text(if (selectionOpen) "Sluit mijn kaartselectie"
+                        else "Kies zelf welke correcties ik oefen…") }
+                    if (selectionOpen) {
+                        OutlinedTextField(
+                            value = selectionQuery,
+                            onValueChange = { selectionQuery = it.take(70) },
+                            singleLine = true,
+                            label = { Text("Zoek correcties voor selectie") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        val matching = snapshot.filter { row ->
+                            val query = PrivateOfflineSearch.fold(selectionQuery.trim())
+                            query.isEmpty() || PrivateOfflineSearch.contains(row.original, query) ||
+                                PrivateOfflineSearch.contains(row.translation, query) ||
+                                PrivateOfflineSearch.contains(
+                                    row.sourceCode + " → " + row.targetCode, query
+                                )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = {
+                                chosenCards = chosenCards + matching
+                                resetRound()
+                            }) { Text("Voeg zichtbare toe") }
+                            TextButton(onClick = {
+                                chosenCards = chosenCards - matching.toSet()
+                                resetRound()
+                            }) { Text("Haal zichtbare weg") }
+                        }
+                        matching.forEach { entry ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Checkbox(
+                                    checked = entry in chosenCards,
+                                    onCheckedChange = { checked ->
+                                        chosenCards = if (checked) chosenCards + entry
+                                            else chosenCards - entry
+                                        resetRound()
+                                    }
+                                )
+                                Text(
+                                    entry.sourceCode + " → " + entry.targetCode +
+                                        "\n" + entry.original + " → " + entry.translation,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = {
+                            shuffled = !shuffled
+                            if (shuffled) shuffledCards = snapshot.shuffled()
+                            resetRound()
+                        }) {
+                            Text(if (shuffled) "✓ Willekeurige volgorde" else "Mix kaarten")
+                        }
+                        TextButton(onClick = {
+                            if (shuffled) shuffledCards = snapshot.shuffled()
+                            resetRound()
+                        }) { Text("Ronde opnieuw") }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(5, 10, 12).forEach { size ->
+                            TextButton(onClick = {
+                                batchSize = size
+                                resetRound()
+                            }) {
+                                Text(if (batchSize == size) "✓ " + size + " kaarten"
+                                    else size.toString() + " kaarten")
+                            }
+                        }
+                    }
+                }
                 if (filtered.isEmpty()) {
                     Text("Er zijn nog geen eigen correcties om te oefenen.")
                 } else if (current == null) {
@@ -157,7 +261,7 @@ internal fun SessionCorrectionPracticeDialog(
                         ) { Text("Herhaal mijn moeilijke zinnen (" +
                             hardCards.size + ")") }
                     }
-                    val normalSize = filtered.drop(offset).take(12).size
+                    val normalSize = filtered.drop(offset).take(batchSize).size
                     val hasNextBatch = offset + normalSize < filtered.size
                     Button(
                         onClick = {
@@ -201,7 +305,8 @@ internal fun SessionCorrectionPracticeDialog(
                             offset + currentIndex + 1) + " van " +
                             (if (retryOnly) batch.size else filtered.size) + " · " +
                             promptLang + " → " + answerLang +
-                            (if (retryOnly) " · moeilijke zinnen" else ""),
+                            (if (retryOnly) " · moeilijke zinnen" else "") +
+                            (if (shuffled && !retryOnly) " · gemixt" else ""),
                         style = MaterialTheme.typography.labelMedium
                     )
                     Text(prompt.orEmpty(), style = MaterialTheme.typography.titleLarge)
