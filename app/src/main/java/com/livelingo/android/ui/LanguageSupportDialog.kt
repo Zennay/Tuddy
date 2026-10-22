@@ -2,11 +2,14 @@ package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -42,6 +45,7 @@ internal fun LanguageSupportDialog(
     var linkNotice by remember { mutableStateOf("") }
     var researchCopyNotice by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
+    var modelTaskFilter by remember { mutableStateOf("Alle") }
     val normalizedQuery = LanguageSearch.normalize(query)
     val textTargets = remember(normalizedQuery) {
         TargetCatalog.search(query)
@@ -60,29 +64,35 @@ internal fun LanguageSupportDialog(
         unavailable.none { item ->
             LanguageSearch.matches(query, listOf(item.code, item.title, item.aliases, item.reason))
         }
-    val hasResearchCandidates = unavailable.any {
-        UnavailableTextLanguageCatalog.candidatesFor(it, query).isNotEmpty()
+    val taskFilteredCandidates = remember(normalizedQuery, unavailable, modelTaskFilter) {
+        unavailable.associateWith { item ->
+            UnavailableTextLanguageCatalog.candidatesFor(item, query).filter { candidate ->
+                when (modelTaskFilter) {
+                    "ASR" -> candidate.category.contains("ASR", ignoreCase = true)
+                    "MT" -> candidate.category.contains("Tekstvertaling", ignoreCase = true)
+                    else -> true
+                }
+            }
+        }.filterValues { it.isNotEmpty() }
     }
-    val researchSummary = remember(normalizedQuery, unavailable) {
+    val hasResearchCandidates = taskFilteredCandidates.isNotEmpty()
+    val researchSummary = remember(normalizedQuery, taskFilteredCandidates) {
         val fullSummary = buildString {
             appendLine("Tuddy — modelonderzoek")
-            appendLine("Onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd.")
-            unavailable.forEach { item ->
-                val candidates = UnavailableTextLanguageCatalog.candidatesFor(item, query)
-                if (candidates.isNotEmpty()) {
-                    appendLine()
-                    appendLine("${item.title} (${item.code})")
-                    appendLine(item.reason)
-                    candidates.forEach { candidate ->
-                        appendLine("- ${candidate.category}: ${candidate.title}")
-                        appendLine("  Modelkaart: ${candidate.url}")
-                        appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
-                        appendLine("  Omvang: ${candidate.footprint}")
-                        if (candidate.directionEvidence.isNotBlank()) {
-                            appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
-                        }
-                        appendLine("  Beperking: ${candidate.limitation}")
+            appendLine("Filter: ${modelTaskFilter}; onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd.")
+            taskFilteredCandidates.forEach { (item, candidates) ->
+                appendLine()
+                appendLine("${item.title} (${item.code})")
+                appendLine(item.reason)
+                candidates.forEach { candidate ->
+                    appendLine("- ${candidate.category}: ${candidate.title}")
+                    appendLine("  Modelkaart: ${candidate.url}")
+                    appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
+                    appendLine("  Omvang: ${candidate.footprint}")
+                    if (candidate.directionEvidence.isNotBlank()) {
+                        appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
                     }
+                    appendLine("  Beperking: ${candidate.limitation}")
                 }
             }
         }
@@ -111,6 +121,32 @@ internal fun LanguageSupportDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (taskFilteredCandidates.isNotEmpty()) {
+                    Text("Filter modelonderzoek", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Alle", "ASR", "MT").forEach { filter ->
+                            FilterChip(
+                                selected = modelTaskFilter == filter,
+                                onClick = {
+                                    modelTaskFilter = filter
+                                    researchCopyNotice = ""
+                                },
+                                label = {
+                                    Text(
+                                        when (filter) {
+                                            "ASR" -> "Spraak → tekst"
+                                            "MT" -> "Tekstvertaling"
+                                            else -> "Alle modellen"
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
                 if (!modelOnlyQuery) {
                     HorizontalDivider()
                     Text(
@@ -166,6 +202,12 @@ internal fun LanguageSupportDialog(
                 if (unavailable.isEmpty()) {
                     Text("Geen niet-beschikbare taal of modelkandidaat gevonden.", style = MaterialTheme.typography.bodySmall)
                 } else {
+                    if (taskFilteredCandidates.isEmpty()) {
+                        Text(
+                            "Geen modelkandidaten voor dit filter en deze zoekopdracht. Kies Alle modellen of pas de zoektekst aan.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Text("Modelkaarten hieronder zijn alleen onderzoekskandidaten. " +
                         "Openen gaat naar een externe website; Tuddy downloadt of activeert niets.",
                         style = MaterialTheme.typography.bodySmall)
@@ -193,7 +235,7 @@ internal fun LanguageSupportDialog(
                             val languageMatchesQuery = LanguageSearch.matches(
                                 query, listOf(item.code, item.title, item.aliases, item.reason)
                             )
-                            val candidates = UnavailableTextLanguageCatalog.candidatesFor(item, query)
+                            val candidates = taskFilteredCandidates[item].orEmpty()
                             if (candidates.isNotEmpty()) {
                                 Text("Modelonderzoek · niet in Tuddy geïntegreerd",
                                     style = MaterialTheme.typography.labelMedium)
