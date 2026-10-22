@@ -317,6 +317,32 @@ internal object UnavailableTextLanguageCatalog {
         )
     )
 
+    /**
+     * Return only the candidate cards relevant to a model-specific query.
+     * A language-name query intentionally keeps all cards for that language.
+     */
+    fun candidatesFor(
+        item: UnavailableTextLanguage,
+        query: String
+    ): List<OfflineLanguageModelCandidate> {
+        val candidates = item.speechCandidates + item.translationCandidates
+        if (LanguageSearch.normalize(query).isEmpty() ||
+            LanguageSearch.matches(query, listOf(item.code, item.title, item.aliases, item.reason))
+        ) {
+            return candidates
+        }
+        return candidates.filter { candidate ->
+            LanguageSearch.matches(query, listOf(
+                candidate.category,
+                candidate.title,
+                candidate.url,
+                candidate.declaredLicense,
+                candidate.footprint,
+                candidate.limitation
+            ))
+        }
+    }
+
     fun search(query: String): List<UnavailableTextLanguage> {
         if (LanguageSearch.normalize(query).isEmpty()) return emptyList()
         return entries.filter { item ->
