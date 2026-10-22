@@ -37,6 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.OwnWord
+import com.livelingo.android.SavedWord
 import com.livelingo.android.PrivateVocabularyDeck
 import com.livelingo.android.PrivateVocabularyStudySheet
 import com.livelingo.android.LocalCaptionSpeaker
@@ -49,7 +50,7 @@ import java.io.ByteArrayOutputStream
  */
 @Composable
 private fun SavedWordFollowText(
-    word: OwnWord,
+    word: SavedWord,
     activeSpeechKey: String?,
     activeSpeechText: String?,
     activeSpeechRange: Pair<Int, Int>?
