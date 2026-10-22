@@ -1,3 +1,7 @@
+> **Current-source warning — 22 October 2026:** GitHub main now includes product PR #395 at `1d44e88be21e1766798b63fcf33df58fdbde4ba4`. The APK table below still identifies the earlier #392 build and is **not the current main APK**. Do not install or accept that older artifact as the latest app. Refresh this handoff only after the post-merge hosted Android workflow has produced an artifact whose source identity and checksums are recorded. Physical installation and airplane-mode acceptance remain **NOT PROVIDED**.
+
+---
+
 ## Optioneel: APK-checksum uit lokale sidecar overnemen
 
 Download bij de **bewust gekozen, vertrouwde** GitHub Actions debug-APK
