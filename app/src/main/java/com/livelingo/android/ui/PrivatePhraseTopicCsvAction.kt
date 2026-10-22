@@ -37,7 +37,9 @@ private data class TopicCsvExport(
     val bytes: ByteArray,
     val archive: PrivatePhraseArchive,
     val language: String?,
-    val topic: String?
+    val topic: String?,
+    // Exactly the previewed rows: no newly added row can slip into a share.
+    val selectedIds: Set<String>
 )
 private data class TopicCsvImport(
     val archive: PrivatePhraseArchive,
@@ -64,6 +66,7 @@ internal fun PrivatePhraseTopicCsvAction(
     var choosingScope by remember { mutableStateOf(false) }
     var selectedLanguage by remember { mutableStateOf<String?>(null) }
     var selectedTopic by remember { mutableStateOf<String?>(null) }
+    var excludedExportRows by remember { mutableStateOf<Set<String>>(emptySet()) }
     fun selection(language: String?, topic: String?): List<PersonalPhrase>? =
         deck.entries()?.filter { note ->
             (language == null || note.language == language) &&
@@ -87,7 +90,9 @@ internal fun PrivatePhraseTopicCsvAction(
         val pending = pendingWrite
         pendingWrite = null
         if (uri != null && pending != null) {
-            val selected = selection(pending.language, pending.topic)
+            val selected = selection(pending.language, pending.topic)?.filter {
+                PrivatePhraseShortcuts.fingerprint(it) in pending.selectedIds
+            }
             val fresh = selected?.let { PrivatePhraseTopicCsv.snapshot(context, deck, it)?.first }
             if (fresh == null || !fresh.contentEquals(pending.bytes)) {
                 notice = "Eigen zinnen of thema's zijn veranderd: controleer CSV opnieuw."
@@ -150,6 +155,7 @@ internal fun PrivatePhraseTopicCsvAction(
             onClick = {
                 selectedLanguage = null
                 selectedTopic = null
+                excludedExportRows = emptySet()
                 choosingScope = true
                 notice = ""
             }
@@ -254,7 +260,10 @@ internal fun PrivatePhraseTopicCsvAction(
     }
 
     if (choosingScope) {
-        val selected = selection(selectedLanguage, selectedTopic).orEmpty()
+        val visible = selection(selectedLanguage, selectedTopic).orEmpty()
+        val selected = visible.filter {
+            PrivatePhraseShortcuts.fingerprint(it) !in excludedExportRows
+        }
         AlertDialog(
             onDismissRequest = { choosingScope = false },
             title = { Text("Kies bewust welke eigen zinnen in CSV komen") },
@@ -286,9 +295,47 @@ internal fun PrivatePhraseTopicCsvAction(
                             Text(if (selectedTopic == title) "✓ " + title else title)
                         }
                     }
-                    Text("Geselecteerd: " + selected.size +
-                        " van maximaal 80 zelfgeschreven zinnen. " +
-                        "Hierna volgt eerst een volledige inhoudscontrole.")
+                    Text("Alleen regels met ☑ Meenemen komen in het externe bestand. " +
+                        "Je kunt iedere rij afzonderlijk uitsluiten of herstellen; " +
+                        "de resterende selectie volgt eerst een volledige privacy-preview.",
+                        style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = {
+                        excludedExportRows = emptySet()
+                    }) { Text("↺ Herstel alle zichtbare zinnen") }
+                    TextButton(
+                        enabled = visible.any {
+                            PrivatePhraseShortcuts.fingerprint(it) !in excludedExportRows
+                        },
+                        onClick = {
+                            excludedExportRows = excludedExportRows + visible.map {
+                                PrivatePhraseShortcuts.fingerprint(it)
+                            }
+                        }
+                    ) { Text("☐ Sla alle zichtbare zinnen over") }
+                    visible.forEachIndexed { index, note ->
+                        val identity = PrivatePhraseShortcuts.fingerprint(note)
+                        val included = identity !in excludedExportRows
+                        HorizontalDivider()
+                        TextButton(onClick = {
+                            excludedExportRows = if (included)
+                                excludedExportRows + identity else excludedExportRows - identity
+                        }) {
+                            Text((if (included) "☑ Meenemen" else "☐ Overgeslagen") +
+                                " · regel " + (index + 1))
+                        }
+                        Text(note.language.uppercase() + " · " +
+                            note.phrase, style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = if (note.language == "ckb" || note.language == "ps")
+                                    TextDirection.Rtl else TextDirection.Ltr
+                            ))
+                        Text("Mijn eigen betekenis: " + note.ownMeaning,
+                            style = MaterialTheme.typography.labelSmall)
+                        Text("Thema: " + (topics.topicFor(note) ?: "zonder thema"),
+                            style = MaterialTheme.typography.labelSmall)
+                    }
+                    Text("Geselecteerd voor export: " + selected.size +
+                        " van " + visible.size + " getoonde zinnen. " +
+                        "Hierna volgt eerst de volledige inhoudscontrole.")
                 }
             },
             confirmButton = {
@@ -300,7 +347,10 @@ internal fun PrivatePhraseTopicCsvAction(
                             notice = "Selectie ongeldig of intussen gewijzigd; kies opnieuw."
                         } else {
                             exportReview = TopicCsvExport(
-                                candidate.first, candidate.second, selectedLanguage, selectedTopic
+                                candidate.first, candidate.second, selectedLanguage,
+                                selectedTopic, selected.map {
+                                    PrivatePhraseShortcuts.fingerprint(it)
+                                }.toSet()
                             )
                             choosingScope = false
                             notice = ""
@@ -400,7 +450,9 @@ internal fun PrivatePhraseTopicCsvAction(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val selected = selection(sharing.language, sharing.topic)
+                    val selected = selection(sharing.language, sharing.topic)?.filter {
+                        PrivatePhraseShortcuts.fingerprint(it) in sharing.selectedIds
+                    }
                     val fresh = selected?.let {
                         PrivatePhraseTopicCsv.snapshot(context, deck, it)?.first
                     }
