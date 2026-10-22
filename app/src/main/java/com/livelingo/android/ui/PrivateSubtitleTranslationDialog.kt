@@ -339,7 +339,8 @@ internal fun PrivateSubtitleTranslationDialog(
                     )
                 }
                 OutlinedButton(
-                    enabled = !detectingSource && !checking && !translating && preview == null,
+                    enabled = validSelectedIndices.isNotEmpty() &&
+                        !detectingSource && !checking && !translating && preview == null,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { detectSourceLanguage() }
                 ) {
