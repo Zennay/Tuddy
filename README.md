@@ -2340,7 +2340,11 @@ als het persoonlijke zinnenboek; opgeslagen archieftekst blijft ongewijzigd.
 Bij een regel kun je ook **＋ Maak eigen privékaart…** kiezen:
 de archieftekst is alleen referentie, beide velden blijven leeg en
 alleen jouw eigen invoer wordt na bevestiging aan het privézinnenboek
-toegevoegd. De bestaande tweetalige leesmodus toont uitsluitend deze
+toegevoegd. Wil je meerdere kaarten maken, selecteer dan maximaal tien
+regels en doorloop per regel de lege eigen-zin-/betekenisvelden; de
+volledige batch wordt pas na één bevestiging atomair opgeslagen.
+Dubbele zinnen, ongeldige invoer en onvoldoende ruimte blokkeren de
+hele batch in plaats van gedeeltelijk opslaan. De bestaande tweetalige leesmodus toont uitsluitend deze
 zoekresultaten groter, bij voldoende schermbreedte naast elkaar.
 Sluiten brengt je terug naar hetzelfde archief, zonder iets
 in het live gesprek te importeren of automatisch op te slaan.
