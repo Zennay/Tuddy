@@ -172,18 +172,18 @@ internal fun OfflinePersonalTurnTableDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(enabled = position > 0,
-                            onClick = { visit(navigation[position - 1]) } {
+                            onClick = { visit(navigation[position - 1]) }) {
                             Text("← Vorige")
                         }
                         Text(
                             if (repeatOnly)
                                 "Herhalen ${if (position >= 0) position + 1 else 0}/${navigation.size}"
-                            else "Beurt ${if (turn == null) 0 else index + 1}/${turns.size}",
+                            else "Beurt ${if (turn == null) 0 else position + 1}/${navigation.size}",
                             style = MaterialTheme.typography.labelMedium
                         )
                         TextButton(enabled = position >= 0 &&
                             position < navigation.lastIndex,
-                            onClick = { visit(navigation[position + 1]) } {
+                            onClick = { visit(navigation[position + 1]) }) {
                             Text("Volgende →")
                         }
                     }
