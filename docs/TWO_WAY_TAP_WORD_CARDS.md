@@ -46,3 +46,9 @@ Stoppen, een nieuwe beurt, richtingwissel, het openen van de grotere lees- of
 oefenweergave en het verlaten van het scherm beëindigen de spraak en wissen
 de tijdelijke markering. Geen audio, bereik of afspeelgeschiedenis wordt
 opgeslagen; de gesprekregels blijven uitsluitend sessie-RAM.
+
+### Grote leesweergave
+
+Dezelfde volgmarkering is beschikbaar in de grote leesweergave met maximaal
+80 tijdelijke regels. Zoeken/filteren, richting wisselen, sluiten, stoppen of
+de app op de achtergrond zetten wist de actieve spraakmarkering.
