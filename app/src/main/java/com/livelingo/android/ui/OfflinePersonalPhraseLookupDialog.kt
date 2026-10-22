@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivatePhraseDeck
+import com.livelingo.android.PrivatePhraseScriptSearch
 import java.util.Locale
 
 /** Exact user-authored offline notes only: not a generated or reviewed translation. */
@@ -43,17 +44,19 @@ internal fun OfflinePersonalPhraseLookupDialog(
     var query by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<PersonalPhrase?>(null) }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
-    val search = query.trim().lowercase(Locale.ROOT)
+    val search = PrivatePhraseScriptSearch.fold(query.trim())
     val matches = notes.orEmpty().filter { note ->
         (language == null || note.language == language) &&
             (meaningLanguage == null || note.meaningLanguage == meaningLanguage) &&
-            (search.isEmpty() || note.phrase.lowercase(Locale.ROOT).contains(search) ||
-                note.ownMeaning.lowercase(Locale.ROOT).contains(search))
+            (search.isEmpty() || PrivatePhraseScriptSearch.contains(note.phrase, search) ||
+                PrivatePhraseScriptSearch.contains(note.ownMeaning, search))
     }.sortedWith(compareBy<PersonalPhrase>(
         { if (search.isNotEmpty() &&
-            (it.phrase.equals(search, true) || it.ownMeaning.equals(search, true))) 0 else 1 },
+            (PrivatePhraseScriptSearch.equalsTo(it.phrase, search) ||
+                PrivatePhraseScriptSearch.equalsTo(it.ownMeaning, search))) 0 else 1 },
         { if (search.isNotEmpty() &&
-            (it.phrase.startsWith(search, true) || it.ownMeaning.startsWith(search, true))) 0 else 1 },
+            (PrivatePhraseScriptSearch.beginsWith(it.phrase, search) ||
+                PrivatePhraseScriptSearch.beginsWith(it.ownMeaning, search))) 0 else 1 },
         { it.language }, { it.phrase.lowercase(Locale.ROOT) }
     ))
     selected?.let { note ->
