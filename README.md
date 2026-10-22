@@ -2344,12 +2344,14 @@ toegevoegd. Wil je meerdere kaarten maken, selecteer dan maximaal tien
 regels en doorloop per regel de lege eigen-zin-/betekenisvelden; de
 volledige batch wordt pas na één bevestiging atomair opgeslagen.
 Dubbele zinnen, ongeldige invoer en onvoldoende ruimte blokkeren de
-hele batch in plaats van gedeeltelijk opslaan. De bestaande tweetalige leesmodus toont uitsluitend deze
-zoekresultaten groter, bij voldoende schermbreedte naast elkaar.
+hele batch in plaats van gedeeltelijk opslaan.
+De bestaande tweetalige leesmodus toont uitsluitend deze zoekresultaten
+groter, bij voldoende schermbreedte naast elkaar.
 Sluiten brengt je terug naar hetzelfde archief, zonder iets
 in het live gesprek te importeren of automatisch op te slaan.
 [Bediening en privacy](docs/PRIVATE_ARCHIVE_FULLSCREEN_READER.md) ·
-[Eigen privékaart schrijven](docs/ARCHIVE_TO_PRIVATE_PHRASE_CARD.md).
+[Eigen privékaart schrijven](docs/ARCHIVE_TO_PRIVATE_PHRASE_CARD.md) ·
+[Meerdere kaarten schrijven](docs/ARCHIVE_BATCH_TO_PRIVATE_PHRASE_CARDS.md).
 
 ## Nieuw: woord bekijken zolang je het indrukt
 
