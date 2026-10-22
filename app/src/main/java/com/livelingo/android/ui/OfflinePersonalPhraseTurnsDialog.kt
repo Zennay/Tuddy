@@ -25,9 +25,14 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivatePhraseDeck
+import com.livelingo.android.PrivatePhraseTextPolicy
 import java.util.Locale
 
-private data class LocalPersonalTurn(val note: PersonalPhrase, val fromMeaning: Boolean)
+private data class LocalPersonalTurn(
+    val note: PersonalPhrase,
+    val fromMeaning: Boolean,
+    val temporary: Boolean = false
+)
 
 /**
  * Finite phrase-memory conversation, not machine translation: a turn is
@@ -49,6 +54,9 @@ internal fun OfflinePersonalPhraseTurnsDialog(
     var meaningLanguage by remember { mutableStateOf("nl") }
     var fromMeaning by remember { mutableStateOf(true) }
     var draft by remember { mutableStateOf("") }
+    var manualOriginal by remember { mutableStateOf("") }
+    var manualMeaning by remember { mutableStateOf("") }
+    var manualNotice by remember { mutableStateOf("") }
     var alternate by remember { mutableStateOf(true) }
     var turns by remember { mutableStateOf<List<LocalPersonalTurn>>(emptyList()) }
     var shown by remember { mutableStateOf<PersonalPhrase?>(null) }
@@ -90,7 +98,11 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                     style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     listOf("kmr", "ckb", "ps").forEach { option ->
-                        TextButton(onClick = { language = option; draft = "" }) {
+                        TextButton(onClick = {
+                            language = option
+                            draft = ""; manualOriginal = ""; manualMeaning = ""
+                            manualNotice = ""
+                        }) {
                             Text((if (language == option) "✓ " else "") +
                                 (labels[option] ?: option),
                                 style = MaterialTheme.typography.labelSmall)
@@ -99,7 +111,11 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf("nl", "en").forEach { code ->
-                        TextButton(onClick = { meaningLanguage = code; draft = "" }) {
+                        TextButton(onClick = {
+                            meaningLanguage = code
+                            draft = ""; manualOriginal = ""; manualMeaning = ""
+                            manualNotice = ""
+                        }) {
                             Text((if (meaningLanguage == code) "✓ " else "") +
                                 (if (code == "nl") "Nederlands" else "English"))
                         }
@@ -173,6 +189,53 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                     }
                 }
                 HorizontalDivider()
+                Text("Nieuw: maak één tijdelijke beurt met twee zelfgetypte zinnen.",
+                    style = MaterialTheme.typography.labelMedium)
+                Text("Dit is géén automatische vertaling: beide teksten moet jij zelf " +
+                    "schrijven of met je gesprekspartner afspreken. Deze invoer wordt " +
+                    "niet toegevoegd aan Mijn eigen zinnen en verdwijnt bij sluiten.",
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = manualOriginal,
+                    onValueChange = { manualOriginal = it.take(120); manualNotice = "" },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3,
+                    label = { Text("Zelfgeschreven " + (labels[language] ?: language) + "-zin") },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        textDirection = if (language in setOf("ckb", "ps"))
+                            TextDirection.Rtl else TextDirection.Ltr
+                    )
+                )
+                OutlinedTextField(
+                    value = manualMeaning,
+                    onValueChange = { manualMeaning = it.take(180); manualNotice = "" },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3,
+                    label = { Text("Mijn eigen betekenis (" + meaningLanguage.uppercase() + ")") }
+                )
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = manualOriginal.isNotBlank() && manualMeaning.isNotBlank(),
+                    onClick = {
+                        val original = manualOriginal.trim()
+                        val meaning = manualMeaning.trim()
+                        if (!PrivatePhraseTextPolicy.valid(original, 120) ||
+                            !PrivatePhraseTextPolicy.valid(meaning, 180)) {
+                            manualNotice = "Tekst bevat ongeldige tekens of is te lang."
+                        } else {
+                            val own = PersonalPhrase(language, original, meaningLanguage, meaning)
+                            turns = (turns + LocalPersonalTurn(own, fromMeaning, temporary = true))
+                                .takeLast(12)
+                            manualOriginal = ""; manualMeaning = ""
+                            manualNotice = "Tijdelijk paar toegevoegd, nergens opgeslagen."
+                            if (alternate) fromMeaning = !fromMeaning
+                        }
+                    }
+                ) { Text("Voeg mijn twee tijdelijke zinnen als beurt toe") }
+                if (manualNotice.isNotBlank()) {
+                    Text(manualNotice, style = MaterialTheme.typography.bodySmall)
+                }
+                HorizontalDivider()
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(onClick = { alternate = !alternate }) {
                         Text(if (alternate) "✓ Wissel na beurt" else "☐ Wissel na beurt")
@@ -211,7 +274,9 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                     val note = turn.note
                     val prompt = if (turn.fromMeaning) note.ownMeaning else note.phrase
                     val result = if (turn.fromMeaning) note.phrase else note.ownMeaning
-                    Text("Beurt " + (index + 1) + ": " + prompt,
+                    Text("Beurt " + (index + 1) +
+                        (if (turn.temporary) " · alleen tijdelijk" else " · opgeslagen paar") +
+                        ": " + prompt,
                         style = MaterialTheme.typography.bodySmall)
                     Text(result, style = MaterialTheme.typography.bodyLarge.copy(
                         textDirection = if (turn.fromMeaning && note.language in setOf("ckb", "ps"))
@@ -242,8 +307,10 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                             Text("Verwijder")
                         }
                     }
-                    TextButton(onClick = { shown = note }) {
-                        Text("Toon deze eigen zin groot")
+                    if (!turn.temporary) {
+                        TextButton(onClick = { shown = note }) {
+                            Text("Toon deze opgeslagen zin groot")
+                        }
                     }
                 }
                 OfflinePersonalTurnScriptExport(
