@@ -1,3 +1,21 @@
+## Nieuw: offline eigen tweewegzinnen — zonder spraak- of vertaalmodel
+
+Open **Gesprek met eigen offline zinnen**. Kies exact een opgeslagen eigen zin
+of typ **zelf beide kanten** van één nieuw, tijdelijk zinnenpaar. Tuddy toont
+maximaal twaalf gekozen beurten, die je kunt herschikken, afzonderlijk
+verwijderen of in een schermvullende **tafelmodus** beurt voor beurt aan
+twee mensen tegenover elkaar kunt laten zien. Sorani en Pasjtoe worden
+rechts-naar-links weergegeven. De app spreekt hierbij niet automatisch,
+vertaalt niets vrij, gebruikt geen internet en slaat het gesprek niet op.
+Een zelfgetypte tijdelijke beurt komt ook **niet** in je eigen zinnenlijst.
+
+Wil je toch een kopie, dan moet je afzonderlijk de volledige tekst
+controleren en via Android bewust een bestandslocatie kiezen. Controleer
+betekenissen met een deskundige; dit is géén offline Kurmanji/Sorani/Pasjtoe
+ASR of machinevertaling. [Gebruiksaanwijzing](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: gekozen TTML-ondertitelclips bewaren en delen
 
 Selecteer in de ondertiteleditor bronregels of tijdvensters, kies TTML en bewaar de gekozen regels als een afzonderlijk `.ttml`-bestand. Of deel maximaal 24 gekozen TTML-cues als letterlijke XML-tekst (16 KiB), met aparte bevestiging. Bronbestand, overige tekst, audio en oorspronkelijke timing blijven intact, tenzij je zelf een compact fragment vanaf nul kiest. [Details](docs/TTML_DFXP_SUBTITLE_IMPORT.md).
