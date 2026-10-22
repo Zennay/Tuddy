@@ -400,6 +400,7 @@ private fun TuddyScreen(
     val translationMemory = remember { SessionTranslationCorrections() }
     var translationMemoryRevision by remember { mutableIntStateOf(0) }
     var translationMemoryOpen by remember { mutableStateOf(false) }
+    var translationMemoryInitialTargetCode by remember { mutableStateOf<String?>(null) }
     // Only on-device recognizer suggestions for manual correction, never
     // persisted or included in any archive, subtitle or diagnostic export.
     val offlineSpeechChoices = remember { mutableStateMapOf<Long, List<String>>() }
@@ -3024,6 +3025,11 @@ private fun TuddyScreen(
                     starterPhraseboardTarget = code
                     starterPhraseboardOpen = true
                 },
+                onCreateOwnPhrases = { code ->
+                    languageSupportOpen = false
+                    translationMemoryInitialTargetCode = code
+                    translationMemoryOpen = true
+                },
                 onDismiss = { languageSupportOpen = false }
             )
         }
@@ -3068,6 +3074,7 @@ private fun TuddyScreen(
             translationMemoryRevision
             com.livelingo.android.ui.SessionTranslationCorrectionsDialog(
                 entries = translationMemory.entries(),
+                initialTargetCode = translationMemoryInitialTargetCode,
                 speaker = captionSpeaker,
                 onRemove = { entry ->
                     if (translationMemory.forget(entry)) translationMemoryRevision++
@@ -3086,7 +3093,10 @@ private fun TuddyScreen(
                     translationMemory.clear()
                     translationMemoryRevision++
                 },
-                onDismiss = { translationMemoryOpen = false }
+                onDismiss = {
+                    translationMemoryOpen = false
+                    translationMemoryInitialTargetCode = null
+                }
             )
         }
         if (offlineReadinessOpen) {

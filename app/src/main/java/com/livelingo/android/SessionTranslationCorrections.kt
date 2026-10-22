@@ -47,7 +47,8 @@ internal class SessionTranslationCorrections {
     ): Boolean = original.isNotBlank() && translation.isNotBlank() &&
         original == original.trim() && translation == translation.trim() &&
         original.length <= MAX_TEXT_UNITS && translation.length <= MAX_TEXT_UNITS &&
-        sourceCode in TargetCatalog.codes && targetCode in TargetCatalog.codes &&
+        sourceCode in SessionCorrectionLanguageCatalog.codes &&
+        targetCode in SessionCorrectionLanguageCatalog.codes &&
         sourceCode != targetCode &&
         listOf(original, translation).none { value ->
             value.any { it == '\u0000' || (it.isISOControl() && it != '\n' && it != '\t') }

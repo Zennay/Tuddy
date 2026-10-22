@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.SessionTranslationCorrections
-import com.livelingo.android.TargetCatalog
+import com.livelingo.android.SessionCorrectionLanguageCatalog
 
 private data class HumanBatchDraft(val original: String, val translation: String)
 
@@ -39,6 +39,7 @@ private data class HumanBatchDraft(val original: String, val translation: String
 @Composable
 internal fun SessionCorrectionManualBatchDialog(
     entries: List<SessionTranslationCorrection>,
+    initialTargetCode: String? = null,
     onAddBatch: (List<SessionTranslationCorrection>, List<SessionTranslationCorrection>) -> Boolean,
     onDismiss: () -> Unit
 ) {
@@ -47,12 +48,16 @@ internal fun SessionCorrectionManualBatchDialog(
     val capacity = (SessionTranslationCorrections.MAX_ENTRIES - snapshot.size).coerceAtLeast(0)
     val maxBatch = minOf(10, capacity)
     var sourceCode by remember { mutableStateOf("nl") }
-    var targetCode by remember { mutableStateOf("en") }
+    var targetCode by remember {
+        mutableStateOf(initialTargetCode?.takeIf {
+            it in SessionCorrectionLanguageCatalog.manualOnlyCodes
+        } ?: "en")
+    }
     var sourcePickerOpen by remember { mutableStateOf(false) }
     var targetPickerOpen by remember { mutableStateOf(false) }
     var confirmed by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
-    val labels = TargetCatalog.targets.associate { it.code to it.title }
+    val labels = SessionCorrectionLanguageCatalog.targets.associate { it.code to it.title }
     val additions = drafts.map {
         SessionTranslationCorrection(it.original, it.translation, sourceCode, targetCode)
     }
@@ -84,6 +89,16 @@ internal fun SessionCorrectionManualBatchDialog(
                         "Beschikbare ruimte voor deze batch: " + maxBatch + ".",
                     style = MaterialTheme.typography.labelMedium
                 )
+                if (sourceCode in SessionCorrectionLanguageCatalog.manualOnlyCodes ||
+                    targetCode in SessionCorrectionLanguageCatalog.manualOnlyCodes) {
+                    Text(
+                        "Handmatige eigen zinnen voor een preview-only taal: geen ASR/MT " +
+                            "model, geen live vertaling en geen gecontroleerde vertaling. " +
+                            "Alle regels blijven voorstellen die jij zelf hebt geschreven.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 Box {
                     TextButton(onClick = { sourcePickerOpen = true }) {
                         Text("Brontaal: " + (labels[sourceCode] ?: sourceCode) + " ▾")
@@ -92,7 +107,7 @@ internal fun SessionCorrectionManualBatchDialog(
                         expanded = sourcePickerOpen,
                         onDismissRequest = { sourcePickerOpen = false }
                     ) {
-                        TargetCatalog.targets.forEach { language ->
+                        SessionCorrectionLanguageCatalog.targets.forEach { language ->
                             DropdownMenuItem(
                                 text = { Text(language.title + " (" + language.code + ")") },
                                 onClick = {
@@ -112,7 +127,7 @@ internal fun SessionCorrectionManualBatchDialog(
                         expanded = targetPickerOpen,
                         onDismissRequest = { targetPickerOpen = false }
                     ) {
-                        TargetCatalog.targets.forEach { language ->
+                        SessionCorrectionLanguageCatalog.targets.forEach { language ->
                             DropdownMenuItem(
                                 text = { Text(language.title + " (" + language.code + ")") },
                                 onClick = {

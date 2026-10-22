@@ -29,3 +29,14 @@ Geen automatische opslag, cloud- of modelactie, geen audio-opname en
 geen native-speaker-validatie. Fysieke Android 12+ acceptatie en
 onafhankelijk onderzoek naar volledig vrijgegeven
 Kurmanji/Sorani/Pasjtoe ASR+MT blijven vereist.
+
+
+Voor Kurmanji (`kmr`), Sorani (`ckb`) en Pasjtoe (`ps`) is de keuze
+bedoeld als **handmatig phrasebook**: je mag zelf de exacte zin en je eigen
+vertaling invoeren, maar deze codes worden niet toegevoegd aan de echte
+ML Kit-tekstdoelen of Android-spraakcatalogus. Er is geen lokale stem of
+automatische vertaling voor deze route bevestigd. Gebruik **Taal- en
+modelinstellingen → Bekijk alle taalondersteuning → Schrijf eigen zinnen
+zonder model…** om met een van deze talen te beginnen. De bestaande oefen- en
+exportacties kunnen de eigen tekst gebruiken; dit heft de openstaande
+volledige offline ASR+MT-gate niet op.

@@ -32,6 +32,7 @@ import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.PrivateOfflineSearch
+import com.livelingo.android.SessionCorrectionLanguageCatalog
 
 /**
  * Voluntary, non-persistent recall practice using only corrections the user
@@ -310,11 +311,20 @@ internal fun SessionCorrectionPracticeDialog(
                         style = MaterialTheme.typography.labelMedium
                     )
                     Text(prompt.orEmpty(), style = MaterialTheme.typography.titleLarge)
-                    TextButton(onClick = {
-                        speaker.speak(
-                            prompt.orEmpty(), promptLang.orEmpty(), LocalSpeechPace.NORMAL
-                        ) { speechMessage = it }
-                    }) { Text("🔊 Beluister vraag lokaal") }
+                    if (promptLang.orEmpty() in
+                        SessionCorrectionLanguageCatalog.manualOnlyCodes) {
+                        Text(
+                            "Geen lokale spraakstem bevestigd voor " + promptLang +
+                                "; dit is een tekstuele oefening.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    } else {
+                        TextButton(onClick = {
+                            speaker.speak(
+                                prompt.orEmpty(), promptLang.orEmpty(), LocalSpeechPace.NORMAL
+                            ) { speechMessage = it }
+                        }) { Text("🔊 Beluister vraag lokaal") }
+                    }
                     if (!revealed) {
                         Text(
                             "Probeer de andere taalrichting zelf te herinneren. " +
@@ -331,11 +341,20 @@ internal fun SessionCorrectionPracticeDialog(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        TextButton(onClick = {
-                            speaker.speak(
-                                answer.orEmpty(), answerLang.orEmpty(), LocalSpeechPace.SLOW
-                            ) { speechMessage = it }
-                        }) { Text("🔊 Beluister antwoord rustig lokaal") }
+                        if (answerLang.orEmpty() in
+                            SessionCorrectionLanguageCatalog.manualOnlyCodes) {
+                            Text(
+                                "Geen lokale spraakstem bevestigd voor " + answerLang +
+                                    "; gebruik je eigen tekstuele beoordeling.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        } else {
+                            TextButton(onClick = {
+                                speaker.speak(
+                                    answer.orEmpty(), answerLang.orEmpty(), LocalSpeechPace.SLOW
+                                ) { speechMessage = it }
+                            }) { Text("🔊 Beluister antwoord rustig lokaal") }
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { advance(false) }) {
                                 Text("Nog oefenen")
