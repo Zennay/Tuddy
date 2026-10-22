@@ -5,7 +5,7 @@ import android.content.Intent
 /**
  * Opt-in Android Sharesheet and text-selection ingress. Accept literal
  * text/plain ACTION_SEND or ACTION_PROCESS_TEXT only; never follow URLs,
- * attachments or HTML providers. Known Tuddy phrasebook/correction formats
+ * attachments or HTML providers. Known Tuddy word/phrasebook/correction formats
  * route to their existing explicit import previews; other text remains a draft.
  * Nothing is automatically translated, imported or exported.
  */
@@ -21,7 +21,9 @@ internal data class IncomingSharedText(
     // The exact five-column personal phrasebook CSV is handed to its own preview.
     val personalPhraseCsvText: String? = null,
     // A Tuddy private phrase backup is routed to the existing merge/replace preview.
-    val personalPhraseBackupJson: String? = null
+    val personalPhraseBackupJson: String? = null,
+    // A Tuddy private-word backup is routed to its existing import preview.
+    val ownWordBackupJson: String? = null
 )
 
 internal object SharedPlainTextIntent {
@@ -75,6 +77,12 @@ internal object SharedPlainTextIntent {
                 // and presents a human-confirmed import preview.
                 if (PrivatePhraseTopicCsv.hasPortableHeader(candidate)) {
                     return IncomingSharedText(null, null, personalPhraseCsvText = candidate)
+                }
+                // Tuddy's own private-word backup must never fall through as a translation prompt.
+                // The word panel reuses the strict parser and explicit merge/replace preview.
+                if (candidate.trimStart().startsWith("{") &&
+                    candidate.contains("\"tuddy-own-words-v1\"")) {
+                    return IncomingSharedText(null, null, ownWordBackupJson = candidate)
                 }
                 // Tuddy's own private phrase backup must never fall through
                 // as a translation prompt. The phrasebook screen performs the
