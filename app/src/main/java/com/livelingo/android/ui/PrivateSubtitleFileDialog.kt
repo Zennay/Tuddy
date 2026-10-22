@@ -810,6 +810,17 @@ internal fun PrivateSubtitleFileDialog(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
+                                    TextButton(onClick = {
+                                        speaker.stop()
+                                        sequenceReading = false
+                                        sequenceProgress = 0
+                                        sequenceTotal = 0
+                                        sequenceStartIndex = -1
+                                        sequenceLineIndex = -1
+                                        sequenceWordRange = null
+                                        query = ""
+                                        shownIndex = activeIndex
+                                    }) { Text("Open deze regel") }
                                 }
                             }
                         }
