@@ -7,7 +7,7 @@ verwijderen of in een schermvullende **tafelmodus** beurt voor beurt aan
 twee mensen tegenover elkaar kunt laten zien. Sorani en Pasjtoe worden
 rechts-naar-links weergegeven. De app spreekt hierbij niet automatisch,
 vertaalt niets vrij, gebruikt geen internet en slaat het gesprek niet op.
-Een zelfgetypte tijdelijke beurt komt ook **niet** in je eigen zinnenlijst.
+Een zelfgetypte tijdelijke beurt komt **niet vanzelf** in je eigen zinnenlijst. Je kunt later bewust één gekozen paar met een volledige controlepreview permanent lokaal bewaren, zonder ooit een bestaande zin te overschrijven.
 
 Wil je toch een kopie, dan moet je afzonderlijk de volledige tekst
 controleren en via Android bewust een bestandslocatie kiezen. Controleer
