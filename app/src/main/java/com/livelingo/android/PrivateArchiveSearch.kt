@@ -14,14 +14,14 @@ internal object PrivateArchiveSearch {
         rows: List<TranscriptExportRow>,
         userQuery: String
     ): List<TranscriptExportRow> {
-        val query = normalizedQuery(userQuery)
+        val query = PrivateOfflineSearch.fold(normalizedQuery(userQuery))
         if (query.isBlank()) return rows
         return rows.filter { row ->
-            row.original.contains(query, ignoreCase = true) ||
+            PrivateOfflineSearch.contains(row.original, query) ||
                 (row.status == "Lokaal vertaald" &&
-                    row.translated.contains(query, ignoreCase = true)) ||
-                row.sourceCode.contains(query, ignoreCase = true) ||
-                row.targetCode.contains(query, ignoreCase = true)
+                    PrivateOfflineSearch.contains(row.translated, query)) ||
+                PrivateOfflineSearch.contains(row.sourceCode, query) ||
+                PrivateOfflineSearch.contains(row.targetCode, query)
         }
     }
 }
