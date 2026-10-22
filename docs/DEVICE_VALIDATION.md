@@ -1,3 +1,7 @@
+> **Current hosted debug-APK handoff — 22 October 2026 after PR #396:** main commit `2bc0e92f8179bd4c910bc136bfabb4b095bf69c2` is merged. The current artifact identity is recorded below. The hosted APK was built from proposed-merge checkout `d84f217c3b8d69db2c53ca02164784230c733dad`; its manifest, source commit, checksum sidecar and APK digest were inspected, and all five changed-file blobs match post-merge main. This establishes build identity only. Physical installation, airplane-mode behavior and offline language acceptance remain **NOT PROVIDED**.
+
+---
+
 ## Optioneel: APK-checksum uit lokale sidecar overnemen
 
 Download bij de **bewust gekozen, vertrouwde** GitHub Actions debug-APK
@@ -67,49 +71,77 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Current hosted debug-APK handoff (22 October 2026, after merged product PR #364).
-This is the newest known Android code build as of this handoff, **not** a
+Current hosted debug-APK handoff (22 October 2026, after PR #396 merged to main).
+This is the newest hosted debug build whose code tree matches main, **not** a
 physical installation, signed release, demonstrated airplane-mode operation or
-language-model acceptance. The artifact is bound to GitHub's exact proposed-merge
-checkout, which may have a different commit ID from the squash-merged `main`.
+language-model acceptance.
 
 | Field | Immutable evidence |
 |---|---|
-| App-code merge (PR #364) | [`f448dd584cd75f805a2ec480ebb88adf13614d49`](https://github.com/Zennay/Tuddy/commit/f448dd584cd75f805a2ec480ebb88adf13614d49) (`merged=true`) |
-| Hosted Android run | [#39756620318](https://github.com/Zennay/Tuddy/actions/runs/39756620318) — source-head and build completed successfully |
-| Exact build checkout/source identity | `81046cb702d07fccbbbcf71b78651d2007351b4b` (GitHub build's `EXPECTED_SHA` and `source-commit.txt`) |
-| Artifact | [Tuddy-debug-apk #12416246932](https://github.com/Zennay/Tuddy/actions/runs/39756620318/artifacts/12416246932) (expires 5 November 2026 09:39:16 UTC) |
+| App-code merge (PR #396) | [`2bc0e92f8179bd4c910bc136bfabb4b095bf69c2`](https://github.com/Zennay/Tuddy/commit/2bc0e92f8179bd4c910bc136bfabb4b095bf69c2) — `merged=true` |
+| Hosted Android run | [#39803279250](https://github.com/Zennay/Tuddy/actions/runs/39803279250) — required `build` and `source-head` checks succeeded |
+| Exact build checkout/source identity | `d84f217c3b8d69db2c53ca02164784230c733dad` (matches `source-commit.txt` and `build-manifest.txt`; GitHub proposed-merge checkout) |
+| Main-tree correspondence | All five PR #396 changed-file blob IDs match post-merge `main`; remaining files are inherited unchanged from the shared base |
+| Artifact | [Tuddy-debug-apk #12436886507](https://github.com/Zennay/Tuddy/actions/runs/39803279250/artifacts/12436886507) (expires 5 November 2026 15:20:04 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `3e15949f299e885022bf086294c852ceff83ed8f2ffa93fbb9b5df3e9c64e815` |
-| **Artifact ZIP SHA-256 (different file)** | `77ee8642cef211ca26f2e0c4cb48cf6eab415832afd2b08dc29cb0407041b0a5` |
-| Package/version | `com.livelingo.android` / `0.4.0` |
+| **APK SHA-256** | `f28292cb2d264c785b2a6ca6c08a924d35343200d26e81d833f2219419284eb6` |
+| **Artifact ZIP SHA-256 (different file)** | `0fd3b8c8bfff16f92d90cf756e0d0f5cc9847b63124971914de31abc0d9723ab` |
+| APK bytes / package-version | `104528118` / `com.livelingo.android` / `0.4.0` |
 | Physical installation and real airplane-mode session | **NOT PROVIDED** |
 
-The hosted workflow verified `app-debug.apk: OK` against its generated
-checksum sidecar and printed the APK SHA above before publishing the artifact.
-This candidate includes PR #363 original-caption correction and PR #364's
-content-free RAM-only speech/translation counters, bounded translation latencies
-and manual airplane-mode settings shortcut. It does **not** prove correct speech
-recognition, external radios off, accurate offline translation, or production
-support for Kurmanji, Sorani or Pashto.
+The downloaded artifact ZIP was inspected. Its embedded `build-manifest.txt` and
+`source-commit.txt` both identify `d84f217c3b8d69db2c53ca02164784230c733dad`;
+the APK bytes hash to the APK SHA-256 above and match `app-debug.apk.sha256`.
+The ZIP digest also matches GitHub's artifact metadata. This is provenance and
+integrity evidence only, not a device acceptance or production-release claim.
+The candidate includes PR #396's direct Android-share-to-import-preview route,
+PR #395's selected JSON sharing, and the earlier manual phrasebook workflow.
 
-Download the artifact ZIP yourself, and from a Tuddy checkout verify exact
+Download the artifact ZIP yourself, and from a Tuddy source checkout verify exact
 provenance before attempting any authorized handset installation:
 
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  77ee8642cef211ca26f2e0c4cb48cf6eab415832afd2b08dc29cb0407041b0a5 \
-  3e15949f299e885022bf086294c852ceff83ed8f2ffa93fbb9b5df3e9c64e815 \
-  81046cb702d07fccbbbcf71b78651d2007351b4b \
-  39756620318
+  0fd3b8c8bfff16f92d90cf756e0d0f5cc9847b63124971914de31abc0d9723ab \
+  f28292cb2d264c785b2a6ca6c08a924d35343200d26e81d833f2219419284eb6 \
+  d84f217c3b8d69db2c53ca02164784230c733dad \
+  39803279250
 ```
+
+
+## Install the exact debug APK on an authorized handset
+
+1. Open the workflow and download the `Tuddy-debug-apk` artifact ZIP from the
+   exact run in the table. Do not use a similarly named APK from an older run.
+2. Verify the **artifact ZIP** SHA-256 listed above before extracting it. On
+   macOS use `shasum -a 256 artifact.zip`; on Linux use
+   `sha256sum artifact.zip`. These hashes are for different files: never
+   compare the ZIP digest with the APK digest.
+3. Extract `app-debug.apk`, `app-debug.apk.sha256`,
+   `source-commit.txt` and `build-manifest.txt`. Run the repository
+   verifier shown above when a source checkout is available. Confirm the
+   manifest/source commit equals the exact source SHA in the table and the
+   APK checksum matches the sidecar.
+4. Transfer that exact APK to the **authorized physical Android 12+ device**
+   using a trusted local transfer route. Open it from the device's file
+   manager and follow Android's package-installer prompt. If Android asks
+   permission for that file manager to install APKs, grant it only if you
+   trust the source and revoke it afterwards if no longer needed.
+5. This is a **debug-signed** APK, not a production release. If Android reports
+   an update-signature conflict with an existing Tuddy install, do not
+   uninstall the existing app unless you have knowingly accepted possible
+   local-data loss. Stop and record the conflict instead.
+6. After installation, open **Offline startcheck**, read the sidecar through
+   the in-app document picker, and continue with the actual airplane-mode
+   and speech/translation observations below. Installing the APK or matching
+   its hash is not acceptance evidence by itself.
 
 The verifier checks artifact integrity and provenance only. The user-controlled
 in-app observation form still requires a human to verify airplane mode,
 independently disabled remaining connections, NL↔EN speech/translation outcomes,
 Stop/lifecycle behavior and privacy after installation. Do not mark accepted
-without the signed-off human device evidence.
+without signed-off human device evidence.
 
 ---
 
