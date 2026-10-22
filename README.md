@@ -1,3 +1,16 @@
+## Nieuw: oefen ook met opgeslagen eigen zinnen tegenover elkaar
+
+De tweezijdige tafelmodus voor **bestaande privékaarten** heeft nu ook
+een oefenstand: de zelfgeschreven betekenis blijft verborgen totdat
+je **Toon betekenis** kiest en wordt bij elke nieuwe kaart opnieuw
+afgedekt. Een reeds geïnstalleerde, door Android als offline gemelde
+stem kan na een bewuste tik de eigen zin of betekenis voorlezen en
+wordt gestopt bij kaarten wisselen, achtergrondgebruik of sluiten.
+Geen cloudspraak, automatische vertaling of wijziging in de
+woordenlijst. [Handleiding](docs/PRIVATE_PHRASE_FACE_TO_FACE.md).
+
+---
+
 ## Nieuw: deel alleen zelf aangevinkte gespreksbeurten
 
 Bij het extern delen van je offline eigen-zinnengesprek kiest Tuddy
