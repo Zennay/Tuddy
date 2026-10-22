@@ -78,6 +78,9 @@ internal fun LanguageSupportDialog(
                         appendLine("  Modelkaart: ${candidate.url}")
                         appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
                         appendLine("  Omvang: ${candidate.footprint}")
+                        if (candidate.directionEvidence.isNotBlank()) {
+                            appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
+                        }
                         appendLine("  Beperking: ${candidate.limitation}")
                     }
                 }
@@ -200,6 +203,11 @@ internal fun LanguageSupportDialog(
                                     Text("Licentie volgens modelkaart: " + candidate.declaredLicense +
                                         ". Omvang: " + candidate.footprint + ".",
                                         style = MaterialTheme.typography.bodySmall)
+                                    if (candidate.directionEvidence.isNotBlank()) {
+                                        Text("Taalrichtingen/codes (onbevestigd): " + candidate.directionEvidence,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                     Text(candidate.limitation,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
