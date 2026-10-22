@@ -757,17 +757,21 @@ internal fun PrivateSubtitleFileDialog(
                         val activeIndex = sequenceStartIndex + sequenceLineIndex
                         val activeCue = draft.getOrNull(activeIndex)
                         if (activeCue != null) {
+                            // Match the exact whitespace normalization sent to Android TTS;
+                            // callback offsets are relative to this displayed string.
+                            val spokenText = activeCue.text.replace('\n', ' ')
+                                .replace('\r', ' ').trim()
                             val range = sequenceWordRange
                             val highlightBackground = MaterialTheme.colorScheme.primary
                             val highlightForeground = MaterialTheme.colorScheme.onPrimary
                             val activeText = remember(
-                                activeCue.text, range, highlightBackground, highlightForeground
+                                spokenText, range, highlightBackground, highlightForeground
                             ) {
                                 buildAnnotatedString {
-                                    append(activeCue.text)
+                                    append(spokenText)
                                     if (range != null && range.first >= 0 &&
                                         range.second > range.first &&
-                                        range.second <= activeCue.text.length
+                                        range.second <= spokenText.length
                                     ) {
                                         addStyle(
                                             SpanStyle(
