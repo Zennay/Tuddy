@@ -61,3 +61,22 @@ exportactie en er wordt niets nieuw opgeslagen. Deel geen gevoelige
 persoonsgegevens op een zichtbaar scherm.
 Een fysiek Android-vliegtuigmodusbewijs en een getekende release ontbreken
 nog steeds.
+
+## Wisselende volgorde en tijdelijk gericht herhalen
+
+De tafelmodus heeft nu **⇄ Mix**: de geselecteerde, al bestaande kaarten
+verschijnen in een willekeurige volgorde. **✓ Mix** schakelt terug naar de
+oorspronkelijke volgorde. De kaart zelf en de privéwoordenlijst blijven
+ongewijzigd. Met **↻ Lastig** markeer je een kaart die je nog wilt
+herhalen. **Herhaal (aantal)** toont uitsluitend die gemarkeerde kaarten;
+**Alle kaarten** herstelt de gehele selectie, ook als Mix actief is.
+Het label met huidige positie telt binnen de zichtbare selectie.
+
+Een kaart die je uit de lastige selectie haalt, verdwijnt direct uit
+deze oefenronde. Wanneer de laatste markering verdwijnt, keren alle
+kaarten terug. Wisselen, filteren en bladeren stopt eventuele lokale
+voorlezing; een eerder onthulde betekenis wordt opnieuw afgedekt zodra
+een nieuwe oefenvraag begint. De volgorde, markeringen en oefenstatus
+bestaan **alleen zolang het tafelvenster open is**. Geen automatische
+gegevensopslag, leerscore of netwerkverzoek; bestaande persoonlijke
+spaced-repetitiongegevens worden niet aangeraakt.

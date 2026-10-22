@@ -1,3 +1,19 @@
+## Nieuw: wisselende offline oefenrondes met eigen zinnen
+
+In beide schermvullende tafelmodi kun je **Mix** kiezen om bestaande
+zelfgeschreven kaarten of tijdelijke gesprekbeurten in willekeurige
+volgorde te oefenen. In de kaartmodus markeer je met **Lastig** de
+kaarten die je extra wilt herhalen en kies je **Herhaal** voor
+een gerichte ronde. In de gespreksmodus werkt de bestaande
+lastige-beurten-selectie nu ook met de gemixte volgorde.
+De originele volgorde blijft bereikbaar; antwoorden worden niet
+automatisch onthuld en lokale voorlezing stopt bij wisselen.
+Alle oefenkeuzes blijven uitsluitend in het tijdelijke appgeheugen.
+[Eigen kaarten](docs/PRIVATE_PHRASE_FACE_TO_FACE.md) ·
+[Eigen gesprekken](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: tafelmodus op kleinere schermen en scherm bewust aanhouden
 
 Beide tweepersoonsweergaven hebben nu een **scrollbare bedieningsstrook**

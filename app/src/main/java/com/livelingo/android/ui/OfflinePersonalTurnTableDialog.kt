@@ -57,12 +57,21 @@ internal fun OfflinePersonalTurnTableDialog(
     var swapSides by remember { mutableStateOf(false) }
     var large by remember { mutableStateOf(true) }
     var practice by remember { mutableStateOf(false) }
-    var revealed by remember(index, practice) { mutableStateOf(false) }
+    var revealStep by remember { mutableIntStateOf(0) }
+    var revealed by remember(index, practice, revealStep) { mutableStateOf(false) }
     var slowSpeech by remember { mutableStateOf(false) }
     var repeatIndices by remember(turns) { mutableStateOf<Set<Int>>(emptySet()) }
     var repeatOnly by remember(turns) { mutableStateOf(false) }
-    val navigation = if (repeatOnly) repeatIndices.sorted() else turns.indices.toList()
+    var mixed by remember(turns) { mutableStateOf(false) }
+    var reviewOrder by remember(turns) { mutableStateOf(turns.indices.toList()) }
+    val navigation = reviewOrder.filter { !repeatOnly || it in repeatIndices }
     val position = navigation.indexOf(index)
+    fun visit(next: Int) {
+        if (next in turns.indices) {
+            index = next
+            revealStep++ // Never carry an answer reveal to a new recall question.
+        }
+    }
     var audioNotice by remember { mutableStateOf("") }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
@@ -163,18 +172,18 @@ internal fun OfflinePersonalTurnTableDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(enabled = position > 0,
-                            onClick = { index = navigation[position - 1] }) {
+                            onClick = { visit(navigation[position - 1]) }) {
                             Text("← Vorige")
                         }
                         Text(
                             if (repeatOnly)
                                 "Herhalen ${if (position >= 0) position + 1 else 0}/${navigation.size}"
-                            else "Beurt ${if (turn == null) 0 else index + 1}/${turns.size}",
+                            else "Beurt ${if (turn == null) 0 else position + 1}/${navigation.size}",
                             style = MaterialTheme.typography.labelMedium
                         )
                         TextButton(enabled = position >= 0 &&
                             position < navigation.lastIndex,
-                            onClick = { index = navigation[position + 1] }) {
+                            onClick = { visit(navigation[position + 1]) }) {
                             Text("Volgende →")
                         }
                     }
@@ -205,8 +214,7 @@ internal fun OfflinePersonalTurnTableDialog(
                                     if (remaining.isEmpty()) {
                                         repeatOnly = false
                                     } else {
-                                        index = remaining.sorted().firstOrNull { it > index }
-                                            ?: remaining.minOrNull()!!
+                                        visit(reviewOrder.first { it in remaining })
                                     }
                                 }
                             }
@@ -219,7 +227,7 @@ internal fun OfflinePersonalTurnTableDialog(
                             onClick = {
                                 repeatOnly = !repeatOnly
                                 if (repeatOnly && index !in repeatIndices) {
-                                    index = repeatIndices.minOrNull() ?: index
+                                    visit(reviewOrder.first { it in repeatIndices })
                                 }
                             }
                         ) {
@@ -228,6 +236,25 @@ internal fun OfflinePersonalTurnTableDialog(
                         }
                         Text("${repeatIndices.size} lastig",
                             style = MaterialTheme.typography.labelSmall)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(enabled = turns.size > 1, onClick = {
+                            mixed = !mixed
+                            reviewOrder = if (mixed) turns.indices.shuffled()
+                                else turns.indices.toList()
+                            revealStep++
+                            speaker.stop()
+                        }) {
+                            Text(if (mixed) "✓ Willekeurig" else "⇄ Mix beurten")
+                        }
+                        Text(
+                            if (mixed) "Willekeurige oefenvolgorde"
+                            else "Oorspronkelijke volgorde",
+                            style = MaterialTheme.typography.labelSmall
+                        )
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
