@@ -2529,8 +2529,11 @@ achtergrondgang stopt het vorige geluid.
 De grote eigen-zinnenkaart én de vijf ingebouwde voorbeeldwoorden
 bieden nu **🔊 Zin/Bronwoord**, **🔊 Betekenis/Doelwoord**, **Rustig**
 en **Stop**. De app gebruikt alleen een stem die Android zelf als
-reeds geïnstalleerd en niet-netwerkafhankelijk meldt. Als een
-Kurmanji-, Sorani- of Pasjtoe-stem ontbreekt, blijft de knop zonder
+reeds geïnstalleerd en niet-netwerkafhankelijk meldt. Tijdens het spreken
+blijft de juiste eigen zin of betekenis gemarkeerd; als de stem een
+tekstbereik terugmeldt, markeert Tuddy dat bereik. Zonder bereik toont
+Tuddy alleen welke zijde actief is en claimt het geen exacte woordtiming.
+Als een Kurmanji-, Sorani- of Pasjtoe-stem ontbreekt, blijft de knop zonder
 online uitwijkroute stil en verschijnt een melding. Wisselen van
 kaart, achtergrond en sluiten stoppen het geluid. Eigen betekenissen
 zijn **niet geverifieerd**.
