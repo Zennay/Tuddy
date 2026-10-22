@@ -43,7 +43,8 @@ import com.livelingo.android.TargetCatalog
 internal fun PrivateSubtitleTranslationDialog(
     cues: List<PrivateSubtitleCue>,
     onApply: (List<PrivateSubtitleCue>) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    initialSelectionExpression: String? = null
 ) {
     val controller = remember { PrivateSubtitleTranslationController() }
     val detector = remember { LocalLanguageDetector() }
@@ -57,7 +58,13 @@ internal fun PrivateSubtitleTranslationDialog(
     var translatedCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var translatedIndices by remember(cues) { mutableStateOf<List<Int>>(emptyList()) }
     var previewPage by remember(cues) { mutableIntStateOf(0) }
-    var cueSelectionExpression by remember(cues) { mutableStateOf("1-${cues.size}") }
+    var cueSelectionExpression by remember(cues, initialSelectionExpression) {
+        mutableStateOf(
+            initialSelectionExpression?.takeIf {
+                PrivateSubtitleRowSelection.parse(it, cues.size) != null
+            } ?: "1-${cues.size}"
+        )
+    }
     var bilingualOutput by remember(cues) { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var detectingSource by remember { mutableStateOf(false) }
