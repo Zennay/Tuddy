@@ -43,3 +43,13 @@ Geen automatische uitspraakherkenning voor Kurmanji, Sorani of Pasjtoe
 is door dit onderdeel toegevoegd. De fysieke Android-acceptatie en het
 onderzoek naar de rechten en kwaliteit van volledige on-device modellen
 blijven open.
+
+## Snelle toegang vanuit de live-ondertitel
+
+In een afgesloten, lokaal vertaalde gespreksregel is onder de
+bewerktaken **Bekijk mijn vorige correctie** zichtbaar wanneer precies
+dezelfde originele zin en taalrichting eerder bewust zijn onthouden.
+Deze snelkoppeling zet het exacte voorstel als bewerkbare tekst in het
+bestaande correctievenster, maar slaat het **niet** direct op: controleer
+de vertaling en tik vervolgens zelf op **Bewaar correctie**. Dezelfde
+oude-revisiecontrole geldt als bij elke andere handmatige correctie.
