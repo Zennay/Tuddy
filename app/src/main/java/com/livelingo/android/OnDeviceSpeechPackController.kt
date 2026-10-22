@@ -142,8 +142,10 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
         }
         val network = context.getSystemService(ConnectivityManager::class.java)
         val activeNetwork = network?.activeNetwork
-        val capabilities = activeNetwork?.let { active ->
-            runCatching { network.getNetworkCapabilities(active) }.getOrNull()
+        val capabilities = if (network == null || activeNetwork == null) {
+            null
+        } else {
+            runCatching { network.getNetworkCapabilities(activeNetwork) }.getOrNull()
         }
         val networkBlocker = when {
             capabilities == null ->
