@@ -613,49 +613,113 @@ internal fun TwoWayTypedConversationDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("🧠 Oefen dit tijdelijke gesprek · zonder opslaan") }
-                recentLines.takeLast(6).forEach { row ->
+                val firstVisibleLineIndex = (recentLines.size - 6).coerceAtLeast(0)
+                recentLines.takeLast(6).forEachIndexed { visibleIndex, row ->
+                    val lineIndex = firstVisibleLineIndex + visibleIndex
+                    val originalActive = activeSpeechLineIndex == lineIndex &&
+                        activeSpeechSide == "original" && activeSpeechText != null
+                    val translatedActive = activeSpeechLineIndex == lineIndex &&
+                        activeSpeechSide == "translated" && activeSpeechText != null
                     Text(row.source.uppercase() + " → " + row.target.uppercase() +
                         " · " + row.status, style = MaterialTheme.typography.labelSmall)
-                    OfflineWordText(
-                        text = row.original,
-                        language = row.source,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            textDirection = if (row.source in rtlLanguages)
-                                TextDirection.Rtl else TextDirection.Ltr
-                        ),
-                        onSaveWord = onSaveCuratedWord,
-                        readOwnMeaning = readOwnMeaning,
-                        saveOwnMeaning = onSaveOwnMeaning
-                    )
-                    TextButton(onClick = {
-                        speaker.speak(row.original, row.source, LocalSpeechPace.NORMAL) {
-                            speechNotice = it
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = if (originalActive) MaterialTheme.colorScheme.secondaryContainer
+                            else MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (originalActive) Text(
+                                if (activeSpeechRange != null)
+                                    "Nu voorgelezen · indicatieve tekstmarkering van de stem."
+                                else "Nu voorgelezen · deze stem geeft geen woordbereik terug.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            OfflineWordText(
+                                text = row.original,
+                                language = row.source,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (row.source in rtlLanguages)
+                                        TextDirection.Rtl else TextDirection.Ltr
+                                ),
+                                onSaveWord = onSaveCuratedWord,
+                                readOwnMeaning = readOwnMeaning,
+                                saveOwnMeaning = onSaveOwnMeaning,
+                                activeSpeechText = activeSpeechText.takeIf { originalActive },
+                                activeSpeechRange = activeSpeechRange.takeIf { originalActive }
+                            )
                         }
-                    }) { Text("🔊 Origineel lokaal voorlezen") }
+                    }
+                    TextButton(
+                        enabled = activeSpeechText == null && row.original.isNotBlank() &&
+                            row.original.length <= 400,
+                        onClick = {
+                            pronounceLine(
+                                lineIndex, row.original, row.source, "original",
+                                LocalSpeechPace.NORMAL
+                            )
+                        }
+                    ) { Text("🔊 Origineel lokaal voorlezen") }
                     if (row.status == "Lokaal vertaald" || row.status == "Lokaal") {
-                        OfflineWordText(
-                            text = row.translated,
-                            language = row.target,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.primary,
-                                textDirection = if (row.target in rtlLanguages)
-                                    TextDirection.Rtl else TextDirection.Ltr
-                            ),
-                            onSaveWord = onSaveCuratedWord,
-                            readOwnMeaning = readOwnMeaning,
-                            saveOwnMeaning = onSaveOwnMeaning
-                        )
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = if (translatedActive)
+                                MaterialTheme.colorScheme.secondaryContainer
+                            else MaterialTheme.colorScheme.surface,
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (translatedActive) Text(
+                                    if (activeSpeechRange != null)
+                                        "Nu voorgelezen · indicatieve tekstmarkering van de stem."
+                                    else "Nu voorgelezen · deze stem geeft geen woordbereik terug.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                OfflineWordText(
+                                    text = row.translated,
+                                    language = row.target,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        textDirection = if (row.target in rtlLanguages)
+                                            TextDirection.Rtl else TextDirection.Ltr
+                                    ),
+                                    onSaveWord = onSaveCuratedWord,
+                                    readOwnMeaning = readOwnMeaning,
+                                    saveOwnMeaning = onSaveOwnMeaning,
+                                    activeSpeechText = activeSpeechText.takeIf { translatedActive },
+                                    activeSpeechRange = activeSpeechRange.takeIf { translatedActive }
+                                )
+                            }
+                        }
                         if (row.status == "Lokaal vertaald" &&
                             row.translated.isNotBlank()) {
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                TextButton(onClick = {
-                                    speaker.speak(row.translated, row.target,
-                                        LocalSpeechPace.NORMAL) { speechNotice = it }
-                                }) { Text("🔊 Vertaling") }
-                                TextButton(onClick = {
-                                    speaker.speak(row.translated, row.target,
-                                        LocalSpeechPace.SLOW) { speechNotice = it }
-                                }) { Text("Rustiger") }
+                                TextButton(
+                                    enabled = activeSpeechText == null && row.translated.length <= 400,
+                                    onClick = {
+                                        pronounceLine(
+                                            lineIndex, row.translated, row.target, "translated",
+                                            LocalSpeechPace.NORMAL
+                                        )
+                                    }
+                                ) { Text("🔊 Vertaling") }
+                                TextButton(
+                                    enabled = activeSpeechText == null && row.translated.length <= 400,
+                                    onClick = {
+                                        pronounceLine(
+                                            lineIndex, row.translated, row.target, "translated",
+                                            LocalSpeechPace.SLOW
+                                        )
+                                    }
+                                ) { Text("Rustiger") }
                             }
                         }
                     } else {
@@ -664,7 +728,7 @@ internal fun TwoWayTypedConversationDialog(
                     }
                     HorizontalDivider()
                 }
-                if (recentLines.isNotEmpty()) {
+                                if (recentLines.isNotEmpty()) {
                     TextButton(onClick = {
                         speaker.stop()
                         speechNotice = "Voorlezen gestopt."
