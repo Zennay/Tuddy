@@ -33,7 +33,15 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    dat ene zinnenpaar in de app-private woordenlijst, nooit het gesprek.
    Een reeds bestaande bronzin wordt **niet overschreven**; bij dubbele
    bronzinnen, volle opslag of een fout blijft de beurt alleen tijdelijk.
-8. Met **Terug** kom je zonder verlies terug bij de tijdelijke reeks.
+8. Heb je meerdere nieuwe, tijdelijke eigen zinnen gemaakt, dan kun je
+   ook **Bewaar alle tijdelijke eigen paren lokaal…** kiezen voor
+   maximaal tien paren tegelijk. De tweede preview toont ieder volledig
+   paar met zijn taal en eigen betekenis. Na jouw afzonderlijke toestemming
+   bewaart Tuddy alle nieuwe paren in één lokale opslagtransactie. Bij
+   duplicaten, een reeds bestaande bronzin of volle/onleesbare opslag
+   wordt **helemaal niets** bewaard en blijft de tijdelijke conversatie
+   gewoon beschikbaar; er wordt nooit een bestaande betekenis vervangen.
+9. Met **Terug** kom je zonder verlies terug bij de tijdelijke reeks.
    **Sluiten en wis beurten** sluit deze sessie zonder hem op te slaan;
    een afzonderlijk bewust bewaarde privézin blijft natuurlijk wel
    in de zinnenlijst staan totdat je hem zelf verwijdert.
