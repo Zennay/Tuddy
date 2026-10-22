@@ -75,6 +75,21 @@ de huidige lijst. Na export blijft de externe kopie buiten Tuddy's
 verwijderfunctie vallen. Androids platformbackup voor de app blijft uit;
 dit is uitsluitend een handmatige, expliciete back-up.
 
+## Een JSON-back-up plakken of delen
+
+Bij **Mijn eigen woorden → Plak JSON-back-up…** kun je de volledige
+`tuddy-own-words-v1`-JSON-tekst zelf plakken. Tuddy leest het klembord niet
+automatisch. De invoer blijft lokaal en wordt begrensd op 50.000 UTF-8-bytes;
+versie, schema, UTF-8, taalcodes, dubbele identiteiten en capaciteit worden
+opnieuw door dezelfde strikte parser gecontroleerd.
+
+Je kunt zo'n bestand ook bewust vanuit Android Bestanden of een andere app
+met **Delen → Tuddy** openen. De eigen-woordenlijst ontvangt het bestand en
+toont de volledige preview met aparte keuzes om alleen nieuwe notities toe
+te voegen of de volledige eigen lijst te vervangen. Ongeldige of te grote
+invoer verandert niets; geen gesprekken, audio of providerdata worden
+geïmporteerd. Een gekozen externe bestandsprovider kan zelf synchroniseren.
+
 ## Een eigen woordenlijst in één keer toevoegen (TSV)
 
 Bij **Mijn eigen offline woorden → Importeer eigen woordenlijst (TSV)…**

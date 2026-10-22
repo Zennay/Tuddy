@@ -22,6 +22,8 @@ internal data class IncomingSharedText(
     val personalPhraseCsvText: String? = null,
     // A Tuddy private phrase backup is routed to the existing merge/replace preview.
     val personalPhraseBackupJson: String? = null,
+    // A Tuddy curated glossary-key backup is routed to its replacement preview.
+    val curatedWordBackupJson: String? = null,
     // A Tuddy private-word backup is routed to its existing import preview.
     val ownWordBackupJson: String? = null
 )
@@ -77,6 +79,11 @@ internal object SharedPlainTextIntent {
                 // and presents a human-confirmed import preview.
                 if (PrivatePhraseTopicCsv.hasPortableHeader(candidate)) {
                     return IncomingSharedText(null, null, personalPhraseCsvText = candidate)
+                }
+                // Curated glossary-key backups must never fall through as translation text.
+                if (candidate.trimStart().startsWith("{") &&
+                    candidate.contains("\"tuddy-curated-word-keys-v1\"")) {
+                    return IncomingSharedText(null, null, curatedWordBackupJson = candidate)
                 }
                 // Tuddy's own private-word backup must never fall through as a translation prompt.
                 // The word panel reuses the strict parser and explicit merge/replace preview.
