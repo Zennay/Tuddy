@@ -48,7 +48,9 @@ internal fun OfflinePersonalPhraseTurnsDialog(
 ) {
     val context = LocalContext.current
     val deck = remember(context) { PrivatePhraseDeck(context) }
-    val notes = remember(deck) { deck.entries() }
+    var storedNotes by remember(deck) { mutableStateOf(deck.entries()) }
+    // Immutable rendering snapshot enables safe nullable smart casts.
+    val notes = storedNotes
     var language by remember(initialLanguage) {
         mutableStateOf(initialLanguage.takeIf { it in setOf("kmr", "ckb", "ps") } ?: "kmr")
     }
@@ -58,6 +60,8 @@ internal fun OfflinePersonalPhraseTurnsDialog(
     var manualOriginal by remember { mutableStateOf("") }
     var manualMeaning by remember { mutableStateOf("") }
     var manualNotice by remember { mutableStateOf("") }
+    var saveNotice by remember { mutableStateOf("") }
+    var pendingSave by remember { mutableStateOf<Pair<Int, PersonalPhrase>?>(null) }
     var alternate by remember { mutableStateOf(true) }
     var turns by remember { mutableStateOf<List<LocalPersonalTurn>>(emptyList()) }
     var shown by remember { mutableStateOf<PersonalPhrase?>(null) }
@@ -271,6 +275,9 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                     Text("Nog geen gekozen beurt. Alleen expliciet gekozen " +
                         "paren verschijnen hieronder.", style = MaterialTheme.typography.bodySmall)
                 }
+                if (saveNotice.isNotBlank()) {
+                    Text(saveNotice, style = MaterialTheme.typography.bodySmall)
+                }
                 turns.forEachIndexed { index, turn ->
                     HorizontalDivider()
                     val note = turn.note
@@ -315,7 +322,14 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                             Text("Verwijder")
                         }
                     }
-                    if (!turn.temporary) {
+                    if (turn.temporary) {
+                        TextButton(onClick = {
+                            pendingSave = index to note
+                            saveNotice = ""
+                        }) {
+                            Text("Bewaar dit eigen paar in mijn privéwoordenlijst…")
+                        }
+                    } else {
                         TextButton(onClick = { shown = note }) {
                             Text("Toon deze opgeslagen zin groot")
                         }
@@ -335,4 +349,61 @@ internal fun OfflinePersonalPhraseTurnsDialog(
             TextButton(onClick = onManagePhrases) { Text("Mijn eigen zinnen beheren…") }
         }
     )
+    val request = pendingSave
+    if (request != null) {
+        val (position, proposed) = request
+        AlertDialog(
+            onDismissRequest = { pendingSave = null },
+            title = { Text("Dit paar voortaan op dit toestel bewaren?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Je verlaat de tijdelijke gespreksmodus voor uitsluitend " +
+                        "dit zelfgeschreven paar. Het blijft dan lokaal in je " +
+                        "persoonlijke zinnenlijst totdat je het zelf verwijdert. " +
+                        "Er wordt niets gedeeld of automatisch vertaald.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text(proposed.language.uppercase() + ": " + proposed.phrase,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            textDirection = if (proposed.language in setOf("ckb", "ps"))
+                                TextDirection.Rtl else TextDirection.Ltr
+                        ))
+                    Text(proposed.meaningLanguage.uppercase() + ": " + proposed.ownMeaning,
+                        style = MaterialTheme.typography.bodyLarge)
+                    Text("Een bestaande zin wordt nooit overschreven. " +
+                        "Deze eigen betekenis is niet gecontroleerd.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val current = turns.getOrNull(position)
+                    if (current == null || !current.temporary || current.note != proposed) {
+                        saveNotice = "De gekozen tijdelijke beurt is gewijzigd. " +
+                            "Kies opnieuw bewaren."
+                    } else {
+                        val saved = deck.saveNew(
+                            proposed.language, proposed.phrase,
+                            proposed.meaningLanguage, proposed.ownMeaning
+                        )
+                        if (saved) {
+                            storedNotes = deck.entries()
+                            turns = turns.mapIndexed { index, item ->
+                                if (index == position) item.copy(temporary = false) else item
+                            }
+                            saveNotice = "Alleen dit eigen zinnenpaar is lokaal bewaard."
+                        } else {
+                            saveNotice = "Niet opgeslagen. Deze bronzin bestaat al, " +
+                                "de privéwoordenlijst is vol of opslag is niet beschikbaar. " +
+                                "Bestaande betekenissen zijn niet gewijzigd."
+                        }
+                    }
+                    pendingSave = null
+                }) { Text("Bewaar alleen dit zelfgeschreven paar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingSave = null }) { Text("Tijdelijk houden") }
+            }
+        )
+    }
 }

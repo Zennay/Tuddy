@@ -26,12 +26,21 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    de bovenste helft is omgekeerd en de onderste helft leesbaar vanaf
    jouw kant. Met **Kanten** bepaal je welke tekst aan welke persoon
    wordt getoond. Blader per beurt met Vorige/Volgende.
-7. Met **Terug** kom je zonder verlies terug bij de tijdelijke reeks.
-   **Sluiten en wis beurten** sluit deze sessie zonder hem op te slaan.
+7. Wil je een zelfgetypte tijdelijke beurt toch later kunnen hergebruiken,
+   kies expliciet **Bewaar dit eigen paar in mijn privéwoordenlijst…** bij
+   die specifieke beurt. In het tweede venster zie je beide volledige
+   zelfgeschreven teksten en beslis je afzonderlijk. Tuddy bewaart alleen
+   dat ene zinnenpaar in de app-private woordenlijst, nooit het gesprek.
+   Een reeds bestaande bronzin wordt **niet overschreven**; bij dubbele
+   bronzinnen, volle opslag of een fout blijft de beurt alleen tijdelijk.
+8. Met **Terug** kom je zonder verlies terug bij de tijdelijke reeks.
+   **Sluiten en wis beurten** sluit deze sessie zonder hem op te slaan;
+   een afzonderlijk bewust bewaarde privézin blijft natuurlijk wel
+   in de zinnenlijst staan totdat je hem zelf verwijdert.
 
 ## Externe kopie is een afzonderlijke bewuste stap
 
-Een gesprek wordt standaard niet opgeslagen of gedeeld. Alleen via
+Een gesprek wordt standaard niet opgeslagen of gedeeld. Een afzonderlijk\nzelfgeschreven zinnenpaar kan na expliciete bevestiging lokaal bewaard worden.\nAlleen via
 **Bewaar uitsluitend deze eigen beurten als tekst…** en de volledige
 tekstpreview kun je bewust Androids bestandskiezer openen. De app vergelijkt
 vóór schrijven de actuele beurten opnieuw met die preview; verandert de
