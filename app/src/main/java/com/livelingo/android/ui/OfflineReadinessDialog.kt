@@ -186,6 +186,12 @@ internal fun OfflineReadinessDialog(
                     onPickerStarted = onReportPickerStarted,
                     onPickerFinished = onReportPickerFinished
                 )
+                OfflineAcceptanceReportAction(
+                    enabled = !isListening,
+                    deviceSnapshot = onReportSnapshot,
+                    onPickerStarted = onReportPickerStarted,
+                    onPickerFinished = onReportPickerFinished
+                )
                 Text("Het rapport bevat alleen apparaat-, taal- en modelstatus; geen transcript of audio.",
                     style = MaterialTheme.typography.bodySmall)
                 if (!isListening) {
