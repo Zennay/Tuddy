@@ -107,8 +107,11 @@ eventuele bestanden onafhankelijk van Tuddy.
 
 ## Bewust een geselecteerd gesprek via Android delen
 
-**Deel dit volledige eigen gesprekscript bewust…** opent eerst een
-volledige preview van de maximaal twaalf geselecteerde beurten
+Kies vooraf zelf precies welke gespreksbeurten je wilt delen.
+Standaard is **geen enkele beurt geselecteerd**. Gebruik desgewenst
+**Kies alle beurten** of vink alleen noodzakelijke zinnen aan.
+**Deel alleen mijn geselecteerde beurt(en)…** opent eerst een
+volledige preview van uitsluitend de maximaal twaalf zelf geselecteerde beurten
 (hoogstens 8192 UTF-8 bytes). Alleen wanneer jij daarna apart
 **Open Android-deelvenster…** kiest, krijgt Android het getoonde
 tekstscript. Tuddy controleert vlak vóór het delen opnieuw dat de
