@@ -18,6 +18,17 @@ internal object PrivatePhraseTopicCsv {
     private const val MAX_ROWS = 80
     private const val MAX_TOPICS = 12
 
+    /**
+     * Recognize only the exact exported five-column phrasebook header before
+     * the general text-share path can treat a CSV as a translation draft.
+     * Full parsing and user-confirmed import remain in the phrasebook UI.
+     */
+    fun hasPortableHeader(text: String): Boolean {
+        val firstLine = text.removePrefix("\uFEFF")
+            .lineSequence().firstOrNull()?.removeSuffix("\r")
+        return firstLine == HEADER
+    }
+
     private fun validTopic(name: String): Boolean =
         name.length in 1..30 && name == name.trim() &&
             !name.startsWith("__") && name.none { character ->

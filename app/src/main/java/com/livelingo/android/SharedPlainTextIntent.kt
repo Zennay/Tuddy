@@ -15,8 +15,10 @@ internal data class IncomingSharedText(
     val subtitleDraft: String? = null,
     val subtitleIsLrc: Boolean = false,
     val subtitleTimedSheetMode: PlainSubtitleSplitMode? = null,
-    // A valid, explicitly shared Tuddy phrasebook is handed to its import preview.
-    val correctionTransferText: String? = null
+    // A valid, explicitly shared Tuddy correction JSON is handed to its import preview.
+    val correctionTransferText: String? = null,
+    // The exact five-column personal phrasebook CSV is handed to its own preview.
+    val personalPhraseCsvText: String? = null
 )
 
 internal object SharedPlainTextIntent {
@@ -64,9 +66,16 @@ internal object SharedPlainTextIntent {
         if (candidate != null) {
             val bytes = candidate.toByteArray(Charsets.UTF_8)
             if (bytes.isNotEmpty() && bytes.size <= PrivateSubtitleFileReader.MAX_BYTES) {
-                // Tuddy's own portable phrasebook must never fall through as a
-                // translation prompt. Accept only its bounded, strictly decoded
-                // format and send it to the explicit correction-import preview.
+                // Tuddy's own portable phrasebook CSV must never fall through
+                // as a translation prompt. Recognize only its exact exported
+                // header; the phrasebook screen performs full bounded parsing
+                // and presents a human-confirmed import preview.
+                if (PrivatePhraseTopicCsv.hasPortableHeader(candidate)) {
+                    return IncomingSharedText(null, null, personalPhraseCsvText = candidate)
+                }
+                // Tuddy's own correction JSON must never fall through as a
+                // translation prompt. Validate its strict, bounded format and
+                // send it to the explicit correction-import preview.
                 if (candidate.trimStart().startsWith("{") &&
                     candidate.contains("\"tuddy-human-corrections\"")) {
                     val decoded = if (bytes.size <= SessionTranslationCorrectionTransfer.MAX_BYTES)

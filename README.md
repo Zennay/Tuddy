@@ -138,6 +138,11 @@ Tuddy toont alle kaarten en daarna nog de volledige CSV-tekst
 met een expliciete waarschuwing over externe apps. Alleen na jouw
 tweede toestemming en een nieuwe check van de geselecteerde data
 wordt Android Delen geopend. Geen stilzwijgende upload.
+Wanneer die tekst vanuit Android Delen naar Tuddy wordt teruggestuurd,
+herkent de ontvanger de exacte vijfkoloms-kopregel en opent dezelfde
+begrensde importpreview — nooit de gewone vertaalinvoer. De volledige
+CSV wordt opnieuw gecontroleerd en pas na jouw afzonderlijke keuze
+samengevoegd of vervangen; ongeldige of te grote inhoud wordt geweigerd.
 [Privacy en werkwijze](docs/PRIVATE_TOPIC_CSV_ROUNDTRIP.md).
 
 ---

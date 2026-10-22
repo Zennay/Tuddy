@@ -107,7 +107,9 @@ internal fun PrivatePhraseTopicCsvAction(
     deck: PrivatePhraseDeck,
     onChanged: () -> Unit,
     incomingDocument: IncomingPersonalCsvDocument? = null,
-    onIncomingDocumentConsumed: (Long) -> Unit = {}
+    onIncomingDocumentConsumed: (Long) -> Unit = {},
+    incomingSharedCsvText: String? = null,
+    onIncomingSharedCsvConsumed: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val topics = remember(context) { PrivatePhraseTopics(context) }
@@ -148,6 +150,40 @@ internal fun PrivatePhraseTopicCsvAction(
     // Only an explicit Android Open-with / one-file Share request can enter
     // here. Read bounded bytes on IO, preview only; do not write until the
     // user makes a separate, visible import choice in the existing dialog.
+    LaunchedEffect(incomingSharedCsvText) {
+        val shared = incomingSharedCsvText ?: return@LaunchedEffect
+        val bytes = shared.toByteArray(Charsets.UTF_8)
+        if (importReview != null || pasteOpen || exportReview != null ||
+            sharePreview != null || choosingScope || pendingWrite != null) {
+            notice = "Er staat al een CSV-overdracht open. Sluit die eerst en deel opnieuw; " +
+                "de huidige selectie is behouden."
+        } else {
+            val candidate = if (bytes.size <= 50_000)
+                PrivatePhraseTopicCsv.preview(bytes, deck) else null
+            val baseline = deck.entries()
+            if (candidate == null || baseline == null) {
+                notice = "Gedeelde Tuddy-zinnen-CSV geweigerd: ongeldige vijfkolomsindeling, " +
+                    "ongeldige tekst of groter dan 50 KB. Er is niets geïmporteerd."
+            } else {
+                importReview = TopicCsvImport(
+                    candidate, baseline.toList(), topics.exportSnapshot()
+                )
+                mergeOnly = true
+                importLanguage = null
+                importTopic = null
+                excludedImportRows = emptySet()
+                correctedImportRows = emptySet()
+                reassignedImportRows = emptySet()
+                pasteOpen = false
+                pasteText = ""
+                pasteError = ""
+                notice = "Gedeelde Tuddy-zinnen-CSV ontvangen. Controleer de regels; " +
+                    "er is nog niets geïmporteerd."
+            }
+        }
+        onIncomingSharedCsvConsumed(shared)
+    }
+
     LaunchedEffect(incomingDocument?.requestId) {
         val incomingRequest = incomingDocument ?: return@LaunchedEffect
         importReview = null

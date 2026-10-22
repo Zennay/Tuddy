@@ -65,6 +65,8 @@ internal fun MyOfflinePhrasesPanel(
     initialLanguage: String,
     incomingCsvDocument: IncomingPersonalCsvDocument? = null,
     onIncomingCsvConsumed: (Long) -> Unit = {},
+    incomingSharedCsvText: String? = null,
+    onIncomingSharedCsvConsumed: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     var language by remember { mutableStateOf(initialLanguage.takeIf {
@@ -811,7 +813,9 @@ internal fun MyOfflinePhrasesPanel(
                     deck = deck,
                     onChanged = { revision++ },
                     incomingDocument = incomingCsvDocument,
-                    onIncomingDocumentConsumed = onIncomingCsvConsumed
+                    onIncomingDocumentConsumed = onIncomingCsvConsumed,
+                    incomingSharedCsvText = incomingSharedCsvText,
+                    onIncomingSharedCsvConsumed = onIncomingSharedCsvConsumed
                 )
                 OutlinedButton(
                     enabled = phrases?.isNotEmpty() == true,

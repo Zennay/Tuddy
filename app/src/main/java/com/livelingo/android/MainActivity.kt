@@ -544,6 +544,8 @@ private fun TuddyScreen(
     var previewTarget by remember { mutableStateOf("kmr") }
     val personalPhrases = remember(context) { PrivatePhraseDeck(context) }
     var personalPhrasesOpen by remember { mutableStateOf(false) }
+    // Sharesheet CSV stays in RAM until the private phrasebook preview consumes it.
+    var pendingSharedPersonalPhraseCsv by remember { mutableStateOf<String?>(null) }
     // A user explicitly opened one private CSV: expose its preview-only
     // phrasebook screen. Do not read, translate, or save the external bytes here.
     LaunchedEffect(incomingPersonalCsv?.requestId) {
@@ -3010,7 +3012,21 @@ private fun TuddyScreen(
     LaunchedEffect(incomingExternalText) {
         val shared = incomingExternalText
         if (shared != null) {
-            if (shared.correctionTransferText != null) {
+            if (shared.personalPhraseCsvText != null) {
+                // Tuddy's selected private phrasebook CSV must open its own
+                // explicit row-by-row import preview, never the translation box.
+                stop()
+                quickTypedOpen = false
+                twoWayTypedOpen = false
+                sharedTextToTwoWay = null
+                draftFromExternalShare = false
+                manualText = ""
+                pendingCorrectionTransferText = null
+                translationMemoryOpen = false
+                pendingSharedPersonalPhraseCsv = shared.personalPhraseCsvText
+                personalPhrasesOpen = true
+                error = ""
+            } else if (shared.correctionTransferText != null) {
                 // Explicit incoming phrasebook share: open the correction manager
                 // and its import preview, never the ordinary translation input.
                 stop()
@@ -6310,6 +6326,11 @@ private fun TuddyScreen(
                 initialLanguage = previewTarget,
                 incomingCsvDocument = incomingPersonalCsv,
                 onIncomingCsvConsumed = onPersonalCsvConsumed,
+                incomingSharedCsvText = pendingSharedPersonalPhraseCsv,
+                onIncomingSharedCsvConsumed = { received ->
+                    if (pendingSharedPersonalPhraseCsv == received)
+                        pendingSharedPersonalPhraseCsv = null
+                },
                 onDismiss = {
                     personalPhrasesOpen = false
                     incomingPersonalCsv?.let { onPersonalCsvConsumed(it.requestId) }
