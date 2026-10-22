@@ -103,10 +103,10 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Microphone permission and explicit Stop/lifecycle behavior observed: $permissionAndStopConfirmed")
             appendLine("No cloud/network speech or translation fallback observed: $noCloudFallbackConfirmed")
             appendLine("Conversation cleared and no old transcript returned after relaunch: $privacyClearingConfirmed")
-            appendLine("NL to EN successful offline speech utterances (0-10): ${nlEnSpeech.ifBlank { "not recorded" }}")
-            appendLine("EN to NL successful offline speech utterances (0-10): ${enNlSpeech.ifBlank { "not recorded" }}")
-            appendLine("NL to EN successful local translations (0-10): ${nlEnTranslation.ifBlank { "not recorded" }}")
-            appendLine("EN to NL successful local translations (0-10): ${enNlTranslation.ifBlank { "not recorded" }}")
+            appendLine("NL to EN successful offline speech utterances out of 10 attempts (0-10): ${nlEnSpeech.ifBlank { "not recorded" }}")
+            appendLine("EN to NL successful offline speech utterances out of 10 attempts (0-10): ${enNlSpeech.ifBlank { "not recorded" }}")
+            appendLine("NL to EN successful local translations out of 10 attempts (0-10): ${nlEnTranslation.ifBlank { "not recorded" }}")
+            appendLine("EN to NL successful local translations out of 10 attempts (0-10): ${enNlTranslation.ifBlank { "not recorded" }}")
             appendLine("Maximum observed end-to-end latency in milliseconds: ${maxLatencyMs.ifBlank { "not recorded" }}")
             appendLine()
             appendLine("Device and installed-build snapshot (captured before this session report):")
@@ -252,11 +252,11 @@ internal fun OfflineAcceptanceReportAction(
                         "Gesprek gewist; na herstart kwam geen oude transcripttekst terug.",
                         privacyClearingConfirmed
                     ) { privacyClearingConfirmed = it }
-                    Text("Geslaagde waarnemingen", fontWeight = FontWeight.SemiBold)
-                    CountField("NL → EN · offline spraak (0–10)", nlEnSpeech) { nlEnSpeech = it }
-                    CountField("EN → NL · offline spraak (0–10)", enNlSpeech) { enNlSpeech = it }
-                    CountField("NL → EN · lokale vertaling (0–10)", nlEnTranslation) { nlEnTranslation = it }
-                    CountField("EN → NL · lokale vertaling (0–10)", enNlTranslation) { enNlTranslation = it }
+                    Text("Voer 10 pogingen per richting uit; registreer hoeveel er slaagden.", fontWeight = FontWeight.SemiBold)
+                    CountField("NL → EN · spraak geslaagd van 10", nlEnSpeech) { nlEnSpeech = it }
+                    CountField("EN → NL · spraak geslaagd van 10", enNlSpeech) { enNlSpeech = it }
+                    CountField("NL → EN · vertaling geslaagd van 10", nlEnTranslation) { nlEnTranslation = it }
+                    CountField("EN → NL · vertaling geslaagd van 10", enNlTranslation) { enNlTranslation = it }
                     OutlinedTextField(
                         value = maxLatencyMs,
                         onValueChange = { maxLatencyMs = it.filter(Char::isDigit).take(6) },
