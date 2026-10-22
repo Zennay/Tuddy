@@ -60,12 +60,23 @@ internal fun OfflineAcceptanceReportAction(
 
     fun count(value: String): Int? = value.toIntOrNull()?.takeIf { it in 0..10 }
     fun latency(value: String): Long? = value.toLongOrNull()?.takeIf { it in 1..600000 }
+    fun hasExactApkDigest(bytes: ByteArray?): Boolean {
+        val line = bytes?.toString(Charsets.UTF_8)?.lineSequence()
+            ?.firstOrNull { it.startsWith("Installed base APK SHA-256:") } ?: return false
+        return line.substringAfter(':').trim().matches(Regex("(?i)[0-9a-f]{64}"))
+    }
+    fun reportsAirplaneModeOn(bytes: ByteArray?): Boolean =
+        bytes?.toString(Charsets.UTF_8)?.lineSequence()
+            ?.any { it.trim() == "Airplane mode: true" } == true
     fun reportBytes(): ByteArray? {
         val identity = baseline ?: return null
+        val exactApkDigestAvailable = hasExactApkDigest(identity)
+        val airplaneModeReportedOn = reportsAirplaneModeOn(identity)
         val speechCounts = listOf(nlEnSpeech, enNlSpeech).map(::count)
         val translationCounts = listOf(nlEnTranslation, enNlTranslation).map(::count)
         val worstLatency = latency(maxLatencyMs)
-        val complete = apkIdentityConfirmed && disconnectedConfirmed &&
+        val complete = exactApkDigestAvailable && airplaneModeReportedOn &&
+            apkIdentityConfirmed && disconnectedConfirmed &&
             permissionAndStopConfirmed && noCloudFallbackConfirmed &&
             privacyClearingConfirmed && speechCounts.all { it == 10 } &&
             translationCounts.all { it == 10 } && worstLatency != null
@@ -175,13 +186,32 @@ internal fun OfflineAcceptanceReportAction(
                             "Een vinkje of dit rapport verandert geen releasegate en wordt niet automatisch geverifieerd.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (!hasExactApkDigest(baseline)) {
+                        Text(
+                            "De geïnstalleerde APK-hash is niet als 64-tekens SHA-256 beschikbaar. " +
+                                "Dit rapport kan worden opgeslagen, maar nooit als compleet worden aangeduid.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     AcceptanceObservationCheck(
                         "Geïnstalleerde APK en SHA-256 komen exact overeen met de gekozen build.",
-                        apkIdentityConfirmed
+                        apkIdentityConfirmed,
+                        enabled = hasExactApkDigest(baseline)
                     ) { apkIdentityConfirmed = it }
+                    if (!reportsAirplaneModeOn(baseline)) {
+                        Text(
+                            "Android rapporteert momenteel geen vliegtuigmodus aan. " +
+                                "De sessie kan als mislukt/onvolledig worden vastgelegd; " +
+                                "een complete offline-waarneming is pas mogelijk nadat je de verbinding verbreekt.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     AcceptanceObservationCheck(
                         "Vliegtuigmodus aan; wifi en mobiele data zijn onafhankelijk uitgeschakeld.",
-                        disconnectedConfirmed
+                        disconnectedConfirmed,
+                        enabled = reportsAirplaneModeOn(baseline)
                     ) { disconnectedConfirmed = it }
                     AcceptanceObservationCheck(
                         "Microfoonmachtiging, expliciet Stoppen en stoppen bij verlaten van de app waargenomen.",
@@ -255,13 +285,14 @@ internal fun OfflineAcceptanceReportAction(
 private fun AcceptanceObservationCheck(
     label: String,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
         Text(label, modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium)
     }
