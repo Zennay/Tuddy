@@ -8,7 +8,9 @@ internal object PrivateArchiveSearch {
     private const val MAX_QUERY_UNITS = 80
 
     fun normalizedQuery(input: String): String =
-        input.trim().take(MAX_QUERY_UNITS).filterNot { it.isISOControl() }
+        PrivatePhraseScriptSearch.fold(
+            input.trim().take(MAX_QUERY_UNITS).filterNot { it.isISOControl() }
+        )
 
     fun filter(
         rows: List<TranscriptExportRow>,
@@ -17,11 +19,11 @@ internal object PrivateArchiveSearch {
         val query = normalizedQuery(userQuery)
         if (query.isBlank()) return rows
         return rows.filter { row ->
-            row.original.contains(query, ignoreCase = true) ||
+            PrivatePhraseScriptSearch.contains(row.original, query) ||
                 (row.status == "Lokaal vertaald" &&
-                    row.translated.contains(query, ignoreCase = true)) ||
-                row.sourceCode.contains(query, ignoreCase = true) ||
-                row.targetCode.contains(query, ignoreCase = true)
+                    PrivatePhraseScriptSearch.contains(row.translated, query)) ||
+                PrivatePhraseScriptSearch.contains(row.sourceCode, query) ||
+                PrivatePhraseScriptSearch.contains(row.targetCode, query)
         }
     }
 }
