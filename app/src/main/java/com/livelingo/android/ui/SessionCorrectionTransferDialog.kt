@@ -67,7 +67,7 @@ internal fun SessionCorrectionTransferDialog(
     var exportSelectionOpen by remember { mutableStateOf(false) }
     var sharePreview by remember { mutableStateOf<SessionCorrectionSharePreview?>(null) }
     var pasteOpen by remember { mutableStateOf(false) }
-    var pastedCsv by remember { mutableStateOf("") }
+    var pastedCorrections by remember { mutableStateOf("") }
     var preview by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
     var selectedRows by remember { mutableStateOf(emptySet<Int>()) }
     var importSearch by remember { mutableStateOf("") }
@@ -269,29 +269,30 @@ internal fun SessionCorrectionTransferDialog(
                 OutlinedButton(
                     onClick = {
                         pasteOpen = !pasteOpen
-                        if (!pasteOpen) pastedCsv = ""
+                        if (!pasteOpen) pastedCorrections = ""
                     },
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth()
-                ) { Text(if (pasteOpen) "Sluit plakveld" else "Plak eigen correcties-CSV…") }
+                ) { Text(if (pasteOpen) "Sluit plakveld" else "Plak eigen JSON of CSV…") }
                 if (pasteOpen) {
                     Text(
-                        "Plak bewust een eigen CSV inclusief de kolomkoppen. " +
-                            "Tuddy leest je klembord niet automatisch, slaat deze " +
-                            "tekst niet op en toont eerst een importvoorbeeld.",
+                        "Plak bewust de complete Tuddy-JSON uit Android Delen " +
+                            "of een eigen CSV inclusief de kolomkoppen. Tuddy " +
+                            "leest het klembord niet automatisch, bewaart de " +
+                            "tekst niet en toont eerst een importvoorbeeld.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedTextField(
-                        value = pastedCsv,
+                        value = pastedCorrections,
                         onValueChange = { candidate ->
                             if (candidate.toByteArray(Charsets.UTF_8).size <=
-                                SessionTranslationCorrectionCsv.MAX_BYTES) {
-                                pastedCsv = candidate
+                                SessionTranslationCorrectionTransfer.MAX_BYTES) {
+                                pastedCorrections = candidate
                             } else {
-                                notice = "CSV-plaktekst is groter dan 48 KB en geweigerd."
+                                notice = "Correctie-JSON/CSV is groter dan 48 KB en geweigerd."
                             }
                         },
-                        label = { Text("Eigen CSV-tekst (maximaal 48 KB)") },
+                        label = { Text("Eigen Tuddy-JSON of CSV (maximaal 48 KB)") },
                         modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp),
                         minLines = 3,
                         maxLines = 6,
@@ -299,25 +300,25 @@ internal fun SessionCorrectionTransferDialog(
                     )
                     Button(
                         onClick = {
-                            val decoded = SessionTranslationCorrectionCsv.decode(
-                                pastedCsv.toByteArray(Charsets.UTF_8)
-                            )
+                            val bytes = pastedCorrections.toByteArray(Charsets.UTF_8)
+                            val decoded = SessionTranslationCorrectionTransfer.decode(bytes)
+                                ?: SessionTranslationCorrectionCsv.decode(bytes)
                             if (decoded == null) {
-                                notice = "Ongeldige CSV: controleer de vier exacte " +
-                                    "kolommen en maximaal 40 unieke correcties. " +
-                                    "Er is niets gewijzigd."
+                                notice = "Ongeldige JSON/CSV: verwacht volledige Tuddy-JSON " +
+                                    "of vier exacte CSV-kolommen, met maximaal " +
+                                    "40 unieke correcties. Er is niets gewijzigd."
                             } else {
                                 preview = decoded
                                 selectedRows = decoded.indices.toSet()
-                                pastedCsv = ""
+                                pastedCorrections = ""
                                 pasteOpen = false
                                 notice = "Controleer eerst alle geplakte correcties. " +
                                     "Kies daarna bewust samenvoegen of vervangen."
                             }
                         },
-                        enabled = !busy && pastedCsv.isNotBlank(),
+                        enabled = !busy && pastedCorrections.isNotBlank(),
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Toon importvoorbeeld van geplakte CSV") }
+                    ) { Text("Toon importvoorbeeld van geplakte JSON/CSV") }
                 }
                 if (notice.isNotBlank()) Text(
                     notice, style = MaterialTheme.typography.bodySmall
