@@ -3821,6 +3821,19 @@ private fun TuddyScreen(
                         translationCorrectionGeneration = generation
                         correctionNotice = ""
                     }
+                },
+                onRequestOriginalCorrection = { id ->
+                    // Deliberate live-session correction only: archive view
+                    // never exposes this callback or changes the active session.
+                    val current = lines.firstOrNull { it.id == id }
+                    if (!listening && current != null &&
+                        current.original.isNotBlank()
+                    ) {
+                        focusMode = false
+                        editingCaptionId = id
+                        captionCorrectionDraft = current.original
+                        correctionNotice = ""
+                    }
                 }
             )
         }
