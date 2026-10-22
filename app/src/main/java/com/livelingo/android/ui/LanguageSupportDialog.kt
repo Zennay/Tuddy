@@ -327,7 +327,7 @@ internal fun LanguageSupportDialog(
                                     "Alleen vijf vaste basiswoorden; geen vrije zinsvertaling of bewezen ASR.",
                                     style = MaterialTheme.typography.bodySmall
                                 )
-                                if (item.code in setOf("kmr", "ckb", "ps")) {
+                                if (item.code in SessionCorrectionLanguageCatalog.manualOnlyCodes) {
                                     TextButton(
                                         onClick = { onPreviewLanguage(item.code) }
                                     ) {
