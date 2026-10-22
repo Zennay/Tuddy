@@ -102,6 +102,9 @@ internal fun MyOfflinePhrasesPanel(
     var pasteCsv by remember { mutableStateOf(false) }
     var pasteLines by remember { mutableStateOf("") }
     var pasteError by remember { mutableStateOf("") }
+    var pasteBackupOpen by remember { mutableStateOf(false) }
+    var pasteBackupText by remember { mutableStateOf("") }
+    var pasteBackupError by remember { mutableStateOf("") }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingTsvExport by remember { mutableStateOf<PendingScopedTsv?>(null) }
     var pendingCsvExport by remember { mutableStateOf<PendingScopedCsv?>(null) }
@@ -363,6 +366,94 @@ internal fun MyOfflinePhrasesPanel(
         }
     }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
+
+    if (pasteBackupOpen) {
+        AlertDialog(
+            onDismissRequest = {
+                pasteBackupOpen = false
+                pasteBackupText = ""
+                pasteBackupError = ""
+            },
+            title = { Text("Plak eigen-zinnen JSON-back-up · offline") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "Plak zelf de volledige Tuddy tuddy-private-phrases-v1 JSON-back-up. " +
+                            "Tuddy leest het klembord niet automatisch. Maximaal 50.000 UTF-8-bytes.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedTextField(
+                        value = pasteBackupText,
+                        onValueChange = { incoming ->
+                            if (incoming.toByteArray(Charsets.UTF_8).size <= 50_000) {
+                                pasteBackupText = incoming
+                                pasteBackupError = ""
+                            } else {
+                                pasteBackupError = "Back-up te groot; maximaal 50.000 UTF-8-bytes."
+                            }
+                        },
+                        label = { Text("JSON-back-up") },
+                        supportingText = {
+                            Text("Eerst strikte controle en een volledige preview; niets wordt automatisch opgeslagen.")
+                        },
+                        minLines = 5,
+                        maxLines = 12,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (pasteBackupError.isNotBlank()) Text(
+                        pasteBackupError,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        "Ongeldige JSON, onbekende versies, dubbele sleutels, ongeldige UTF-8 " +
+                            "en ongeldige of dubbele zinnen worden geweigerd. Daarna kies je apart " +
+                            "samenvoegen of vervangen. Annuleren bewaart niets.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val bytes = pasteBackupText.toByteArray(Charsets.UTF_8)
+                    val validText = bytes.toString(Charsets.UTF_8) == pasteBackupText
+                    val candidate = if (validText && bytes.isNotEmpty() && bytes.size <= 50_000)
+                        deck.previewImport(bytes) else null
+                    val baseline = deck.entries()
+                    if (candidate == null) {
+                        pasteBackupError =
+                            "Back-up geweigerd: ongeldige JSON/UTF-8, onbekende versie, " +
+                                "dubbele of ongeldige zinnen, of groter dan 50.000 bytes. " +
+                                "Je huidige zinnen zijn behouden."
+                    } else if (baseline == null) {
+                        pasteBackupError =
+                            "Je huidige privézinnen konden niet veilig worden gelezen. " +
+                                "Er is niets gewijzigd; herstel de lokale opslag eerst."
+                    } else {
+                        pendingImport = candidate
+                        pendingImportBase = baseline.toList()
+                        importSource = "json-paste"
+                        pasteBackupOpen = false
+                        pasteBackupText = ""
+                        pasteBackupError = ""
+                        info = "JSON-back-up gecontroleerd. Bekijk de volledige preview " +
+                            "en kies daarna bewust samenvoegen of vervangen."
+                    }
+                }) { Text("Controleer en bekijk preview") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pasteBackupOpen = false
+                    pasteBackupText = ""
+                    pasteBackupError = ""
+                }) { Text("Annuleren") }
+            }
+        )
+        return
+    }
 
     if (pasteOpen) {
         AlertDialog(
@@ -834,6 +925,13 @@ internal fun MyOfflinePhrasesPanel(
                         openBackup.launch(arrayOf("application/json", "text/plain",
                             "application/octet-stream"))
                     }) { Text("Herstel back-up…") }
+                    OutlinedButton(onClick = {
+                        pendingImport = null
+                        pendingImportBase = null
+                        pasteBackupText = ""
+                        pasteBackupError = ""
+                        pasteBackupOpen = true
+                    }) { Text("Plak JSON-back-up…") }
                 }
                 PrivatePhraseArchiveAction(deck = deck, onChanged = { revision++ })
                 PrivatePhraseTopicCsvAction(
@@ -1358,7 +1456,8 @@ internal fun MyOfflinePhrasesPanel(
             },
             title = { Text(if (importSource == "paste")
                 "Geplakte eigen zinnen bekijken" else if (importSource == "csv-paste")
-                "Geplakte CSV-zinnen bekijken" else if (importSource == "tsv" || importSource == "csv")
+                "Geplakte CSV-zinnen bekijken" else if (importSource == "json-paste")
+                "Geplakte JSON-back-up bekijken?" else if (importSource == "tsv" || importSource == "csv")
                 "Eigen zinnenlijst importeren?" else "Eigen zinnen vervangen?") },
             text = {
                 Column(

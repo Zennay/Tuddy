@@ -187,10 +187,11 @@ Importeren toont eveneens een volledige preview, waarna je expliciet kiest
 tussen veilig alleen nieuwe zinnen/thema's samenvoegen of de hele
 persoonlijke lijst vervangen. De bestaande vierkoloms-CSV en een
 volledige JSON-back-up blijven apart bestaan. Een eigen Tuddy-JSON-back-up
-kun je ook via Android Bestanden of bewust gedeelde tekst naar Tuddy openen:
-de versie en inhoud worden strikt gevalideerd en verschijnen eerst in dezelfde
-merge/replace-preview. Geen automatische machinevertaling, netwerkspraak of
-opslag zonder toestemming.
+kun je ook via Android Bestanden of bewust gedeelde tekst naar Tuddy openen,
+of handmatig plakken via **Plak JSON-back-up…**. De versie en inhoud worden
+strikt gevalideerd en verschijnen eerst in dezelfde merge/replace-preview.
+Tuddy leest het klembord niet automatisch. Geen automatische machinevertaling,
+netwerkspraak of opslag zonder toestemming.
 [Handleiding en formaat](docs/PRIVATE_TOPIC_CSV_ROUNDTRIP.md).
 
 ---
