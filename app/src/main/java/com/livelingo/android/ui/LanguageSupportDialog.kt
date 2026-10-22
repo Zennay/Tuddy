@@ -92,6 +92,10 @@ internal fun LanguageSupportDialog(
                     appendLine("  Modelkaart: ${candidate.url}")
                     appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
                     appendLine("  Omvang: ${candidate.footprint}")
+                    appendLine("  Vastgezette revisie: " +
+                        candidate.sourceRevision.ifBlank { "NIET VASTGEZET" })
+                    appendLine("  Gewichtbestand SHA-256: " +
+                        candidate.artifactSha256.ifBlank { "NIET VASTGEZET" })
                     if (candidate.directionEvidence.isNotBlank()) {
                         appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
                     }
@@ -250,6 +254,14 @@ internal fun LanguageSupportDialog(
                                     Text("Licentie volgens modelkaart: " + candidate.declaredLicense +
                                         ". Omvang: " + candidate.footprint + ".",
                                         style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        "Vastgezette revisie: " +
+                                            candidate.sourceRevision.ifBlank { "niet vastgezet" } +
+                                            ". Gewichtbestand SHA-256: " +
+                                            candidate.artifactSha256.ifBlank { "niet vastgelegd" } + ".",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                     if (candidate.directionEvidence.isNotBlank()) {
                                         Text("Taalrichtingen/codes (onbevestigd): " + candidate.directionEvidence,
                                             style = MaterialTheme.typography.bodySmall,
