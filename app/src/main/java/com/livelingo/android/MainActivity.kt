@@ -908,11 +908,11 @@ private fun TuddyScreen(
                             sessionDiagnostics.copy(
                                 localTranslations = sessionDiagnostics.localTranslations + 1,
                                 nlEnLocalTranslations = sessionDiagnostics.nlEnLocalTranslations +
-                                    if (translatedRow.sourceCode == "nl" &&
-                                        translatedRow.targetCode == "en") 1 else 0,
+                                    (if (translatedRow.sourceCode == "nl" &&
+                                        translatedRow.targetCode == "en") 1 else 0),
                                 enNlLocalTranslations = sessionDiagnostics.enNlLocalTranslations +
-                                    if (translatedRow.sourceCode == "en" &&
-                                        translatedRow.targetCode == "nl") 1 else 0,
+                                    (if (translatedRow.sourceCode == "en" &&
+                                        translatedRow.targetCode == "nl") 1 else 0),
                                 translationLatenciesMs = (
                                     sessionDiagnostics.translationLatenciesMs +
                                         (SystemClock.elapsedRealtime() - beganAt).coerceAtLeast(0L)
@@ -1739,9 +1739,9 @@ private fun TuddyScreen(
                         sessionDiagnostics = sessionDiagnostics.copy(
                             finalUtterances = sessionDiagnostics.finalUtterances + 1,
                             nlEnFinalUtterances = sessionDiagnostics.nlEnFinalUtterances +
-                                if (nlEn) 1 else 0,
+                                (if (nlEn) 1 else 0),
                             enNlFinalUtterances = sessionDiagnostics.enNlFinalUtterances +
-                                if (enNl) 1 else 0
+                                (if (enNl) 1 else 0)
                         )
                         speechTranslationStarted[id] = SystemClock.elapsedRealtime()
                         lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
