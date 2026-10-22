@@ -28,6 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -41,21 +43,74 @@ import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.PersonalPhrase
 
 @Composable
-private fun PhraseSide(text: String, code: String, label: String, large: Boolean) {
+private fun PhraseSide(
+    text: String,
+    code: String,
+    label: String,
+    large: Boolean,
+    contentKind: String,
+    activeSpeechSide: String?,
+    activeSpeechText: String?,
+    activeSpeechRange: Pair<Int, Int>?
+) {
     val rtl = code in setOf("ckb", "ps", "ar", "fa", "ur")
+    val normalized = text.replace('\n', ' ').replace('\r', ' ').trim()
+    val followsSpeech = activeSpeechSide == contentKind &&
+        activeSpeechText != null && normalized == activeSpeechText
+    val displayedText = if (followsSpeech) activeSpeechText.orEmpty() else text
+    val range = activeSpeechRange.takeIf { followsSpeech }
+    val active = activeSpeechSide == contentKind && activeSpeechText != null
+    val background = MaterialTheme.colorScheme.primary
+    val foreground = MaterialTheme.colorScheme.onPrimary
+    val annotatedText = remember(displayedText, range, background, foreground) {
+        buildAnnotatedString {
+            append(displayedText)
+            if (range != null && range.first >= 0 &&
+                range.second > range.first && range.second <= displayedText.length
+            ) {
+                addStyle(
+                    SpanStyle(
+                        background = background,
+                        color = foreground,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    range.first,
+                    range.second
+                )
+            }
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            text,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontSize = if (large) 34.sp else 25.sp,
-                lineHeight = if (large) 44.sp else 34.sp,
-                textDirection = if (rtl) TextDirection.Rtl else TextDirection.Ltr,
-                fontWeight = FontWeight.Medium
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
+        if (active) {
+            Text(
+                if (range != null)
+                    "Nu voorgelezen · indicatieve tekstmarkering van de stem."
+                else "Nu voorgelezen · deze stem geeft geen woordbereik terug.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = if (active) MaterialTheme.colorScheme.secondaryContainer
+                else MaterialTheme.colorScheme.surface,
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Text(
+                annotatedText,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = if (large) 34.sp else 25.sp,
+                    lineHeight = if (large) 44.sp else 34.sp,
+                    textDirection = if (rtl) TextDirection.Rtl else TextDirection.Ltr,
+                    fontWeight = FontWeight.Medium
+                ),
+                color = if (active) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth().padding(10.dp)
+            )
+        }
     }
 }
 
@@ -87,6 +142,9 @@ internal fun OfflinePhrasePresenter(
     var pendingShare by remember { mutableStateOf<PersonalPhrase?>(null) }
     var shareNotice by remember { mutableStateOf("") }
     var audioNotice by remember { mutableStateOf("") }
+    var activeSpeechSide by remember { mutableStateOf<String?>(null) }
+    var activeSpeechText by remember { mutableStateOf<String?>(null) }
+    var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val context = LocalContext.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -94,6 +152,10 @@ internal fun OfflinePhrasePresenter(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
                 speaker.stop()
+                activeSpeechSide = null
+                activeSpeechText = null
+                activeSpeechRange = null
+                audioNotice = "Voorlezen gestopt bij verlaten van het scherm."
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -106,7 +168,69 @@ internal fun OfflinePhrasePresenter(
     LaunchedEffect(selected?.phrase, selected?.ownMeaning, selected?.language) {
         // Navigating to another private card must never keep reading the last.
         speaker.stop()
+        activeSpeechSide = null
+        activeSpeechText = null
+        activeSpeechRange = null
         audioNotice = ""
+    }
+    fun pronouncePhrase(text: String, language: String, side: String, pace: LocalSpeechPace) {
+        val safe = text.replace('\n', ' ').replace('\r', ' ').trim()
+        if (safe.isBlank() || safe.length > 400 ||
+            safe.any { it.isISOControl() } || language.isBlank()
+        ) {
+            speaker.stop()
+            activeSpeechSide = null
+            activeSpeechText = null
+            activeSpeechRange = null
+            audioNotice = "Deze eigen tekst kan niet veilig met een lokale stem worden voorgelezen."
+            return
+        }
+        activeSpeechSide = side
+        activeSpeechText = safe
+        activeSpeechRange = null
+        audioNotice = "Lokale voorlezing voorbereiden…"
+        speaker.speakSequence(
+            lines = listOf(safe),
+            languageTag = language,
+            pace = pace,
+            onProgress = { completed, total ->
+                audioNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { audioNotice = it },
+            onFinished = { completed ->
+                activeSpeechSide = null
+                activeSpeechText = null
+                activeSpeechRange = null
+                if (completed) audioNotice = "Voorlezen voltooid."
+            },
+            onLineStarted = {
+                activeSpeechRange = null
+                audioNotice = if (side == "phrase")
+                    "Nu voorgelezen: eigen zin." else "Nu voorgelezen: eigen betekenis."
+            },
+            onWordRange = { _, start, endExclusive ->
+                activeSpeechRange = start to endExclusive
+            }
+        )
+    }
+    @Composable
+    fun RenderPhraseSide(text: String, code: String, label: String, kind: String) {
+        PhraseSide(
+            text = text,
+            code = code,
+            label = label,
+            large = large,
+            contentKind = kind,
+            activeSpeechSide = activeSpeechSide,
+            activeSpeechText = activeSpeechText,
+            activeSpeechRange = activeSpeechRange
+        )
+    }
+    fun clearSpeech() {
+        speaker.stop()
+        activeSpeechSide = null
+        activeSpeechText = null
+        activeSpeechRange = null
     }
     fun confirmShare(includeOwnMeaning: Boolean) {
         val chosen = pendingShare
@@ -177,7 +301,7 @@ internal fun OfflinePhrasePresenter(
                 ) {
                     Text("Mijn gesprekskaart · " + label,
                         style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = { speaker.stop(); onDismiss() }) { Text("Sluiten") }
+                    TextButton(onClick = { clearSpeech(); onDismiss() }) { Text("Sluiten") }
                 }
                 Text(
                     "Door jou geschreven · geen geverifieerde vertaling. " +
@@ -192,7 +316,7 @@ internal fun OfflinePhrasePresenter(
                 if (selected != null) {
                     OutlinedButton(
                         onClick = {
-                            speaker.stop()
+                            clearSpeech()
                             tableMode = true
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -212,31 +336,78 @@ internal fun OfflinePhrasePresenter(
                         verticalArrangement = Arrangement.spacedBy(15.dp)
                     ) {
                         if (showMeaningFirst) {
-                            PhraseSide(selected.ownMeaning, selected.meaningLanguage,
-                                "Eigen betekenis (" + selected.meaningLanguage.uppercase() + ")", large)
+                            RenderPhraseSide(selected.ownMeaning, selected.meaningLanguage,
+                                "Eigen betekenis (" + selected.meaningLanguage.uppercase() + ")", "meaning")
                             HorizontalDivider()
-                            PhraseSide(selected.phrase, selected.language,
-                                "Eigen zin (" + label + ")", large)
+                            RenderPhraseSide(selected.phrase, selected.language,
+                                "Eigen zin (" + label + ")", "phrase")
                         } else {
-                            PhraseSide(selected.phrase, selected.language,
-                                "Eigen zin (" + label + ")", large)
+                            RenderPhraseSide(selected.phrase, selected.language,
+                                "Eigen zin (" + label + ")", "phrase")
                             HorizontalDivider()
-                            PhraseSide(selected.ownMeaning, selected.meaningLanguage,
-                                "Eigen betekenis (" + selected.meaningLanguage.uppercase() + ")", large)
+                            RenderPhraseSide(selected.ownMeaning, selected.meaningLanguage,
+                                "Eigen betekenis (" + selected.meaningLanguage.uppercase() + ")", "meaning")
                         }
                     }
                 }
                 if (selected != null) {
-                    OfflinePhraseSpeechActions(
-                        original = selected.phrase,
-                        originalLanguage = selected.language,
-                        meaning = selected.ownMeaning,
-                        meaningLanguage = selected.meaningLanguage,
-                        originalLabel = "Eigen zin",
-                        meaningLabel = "Mijn betekenis",
-                        speaker = speaker,
-                        onNotice = { audioNotice = it }
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            TextButton(
+                                enabled = activeSpeechText == null &&
+                                    selected.phrase.isNotBlank() && selected.phrase.length <= 400,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    pronouncePhrase(
+                                        selected.phrase, selected.language, "phrase",
+                                        LocalSpeechPace.NORMAL
+                                    )
+                                }
+                            ) { Text("🔊 Eigen zin") }
+                            TextButton(
+                                enabled = activeSpeechText == null &&
+                                    selected.ownMeaning.isNotBlank() &&
+                                    selected.ownMeaning.length <= 400,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    pronouncePhrase(
+                                        selected.ownMeaning, selected.meaningLanguage, "meaning",
+                                        LocalSpeechPace.NORMAL
+                                    )
+                                }
+                            ) { Text("🔊 Mijn betekenis") }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            TextButton(
+                                enabled = activeSpeechText == null &&
+                                    selected.ownMeaning.isNotBlank() &&
+                                    selected.ownMeaning.length <= 400,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    pronouncePhrase(
+                                        selected.ownMeaning, selected.meaningLanguage, "meaning",
+                                        LocalSpeechPace.SLOW
+                                    )
+                                }
+                            ) { Text("Rustig mijn betekenis") }
+                            TextButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    clearSpeech()
+                                    audioNotice = "Lokale voorlezing gestopt."
+                                }
+                            ) { Text("■ Stop") }
+                        }
+                    }
                 }
                 if (audioNotice.isNotBlank()) {
                     Text(audioNotice, style = MaterialTheme.typography.bodySmall,
@@ -254,6 +425,7 @@ internal fun OfflinePhrasePresenter(
                     }
                     TextButton(enabled = selected != null,
                         onClick = {
+                            clearSpeech()
                             pendingShare = selected
                             shareNotice = ""
                         }) { Text("Deel…") }
