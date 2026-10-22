@@ -214,7 +214,9 @@ internal fun LanguageSupportDialog(
                             }
                         }
                     }
-                    if (normalizedQuery.isNotEmpty() && hasResearchCandidates) {
+                    if (hasResearchCandidates &&
+                        (normalizedQuery.isNotEmpty() || modelTaskFilter != "Alle")
+                    ) {
                         TextButton(onClick = {
                             clipboard.setText(AnnotatedString(researchSummary))
                             researchCopyNotice = "Gekopieerd: alleen openbare modelmetadata, geen gesprekken of audio."
