@@ -32,6 +32,7 @@ import com.livelingo.android.PrivateOwnWordQuiz
 @Composable
 internal fun OwnWordQuizDialog(
     notes: List<OwnWord>,
+    curated: Boolean = false,
     onDismiss: () -> Unit
 ) {
     var reverse by remember { mutableStateOf(false) }
@@ -55,7 +56,7 @@ internal fun OwnWordQuizDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Kies de betekenis · privéquiz") },
+        title = { Text(if (curated) "Quiz · bewaarde basiswoorden" else "Kies de betekenis · privéquiz") },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 510.dp)
@@ -63,7 +64,11 @@ internal fun OwnWordQuizDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    "Oefen alleen woorden die jij zelf hebt opgeslagen. De quiz " +
+                    if (curated) "Kies bij je bewust bewaarde basiswoorden de kleine " +
+                        "ingebouwde woordenboekbetekenis. Dit is geen vrije vertaling " +
+                        "en bewijst geen dialectkwaliteit. Geen microfoon, internet " +
+                        "of opgeslagen score."
+                    else "Oefen alleen woorden die jij zelf hebt opgeslagen. De quiz " +
                         "controleert uitsluitend of je jouw eigen betekenis terugvindt: " +
                         "die is niet door Tuddy of een native speaker geverifieerd. " +
                         "Geen microfoon, internet, opgeslagen score of automatische vertaling.",
@@ -85,7 +90,7 @@ internal fun OwnWordQuizDialog(
                 if (card == null) {
                     if (cards.isEmpty()) {
                         Text("Deze selectie heeft minimaal twee woorden met " +
-                            "verschillende eigen betekenissen in dezelfde taal nodig. " +
+                            "verschillende betekenissen in dezelfde taal nodig. " +
                             "Woorden met een identieke betekenis worden bewust " +
                             "overgeslagen, zodat er geen dubbel juist antwoord ontstaat.")
                     } else {
@@ -119,8 +124,13 @@ internal fun OwnWordQuizDialog(
                                 TextDirection.Rtl else TextDirection.ContentOrLtr
                         )
                     )
-                    Text("Welke ${if (reverse) "woordvorm" else "eigen betekenis"} " +
-                        "heb je zelf bij deze kaart opgeslagen?",
+                    Text(if (curated) {
+                        "Welke ${if (reverse) "woordvorm" else "ingebouwde basisbetekenis"} " +
+                            "hoort volgens Tuddy's kleine woordenlijst bij deze kaart?"
+                    } else {
+                        "Welke ${if (reverse) "woordvorm" else "eigen betekenis"} " +
+                            "heb je zelf bij deze kaart opgeslagen?"
+                    },
                         style = MaterialTheme.typography.bodySmall)
                     card.choices.forEach { choice ->
                         val revealed = selected != null
@@ -152,9 +162,13 @@ internal fun OwnWordQuizDialog(
                         }
                     }
                     if (selected != null) {
-                        Text(if (selected == card.correctAnswer)
-                            "Goed onthouden volgens je eigen woordenlijst."
-                        else "Je had zelf opgeslagen: ${card.correctAnswer}",
+                        Text(if (selected == card.correctAnswer) {
+                            if (curated) "Goed onthouden volgens de ingebouwde basiswoordenlijst."
+                            else "Goed onthouden volgens je eigen woordenlijst."
+                        } else {
+                            if (curated) "Ingebouwde betekenis: ${card.correctAnswer}"
+                            else "Je had zelf opgeslagen: ${card.correctAnswer}"
+                        },
                             color = MaterialTheme.colorScheme.primary)
                         Button(
                             modifier = Modifier.fillMaxWidth(),
@@ -168,7 +182,7 @@ internal fun OwnWordQuizDialog(
                 }
                 Text(
                     "De maximaal 20 vragen en alle antwoorden verdwijnen wanneer " +
-                        "je dit scherm sluit. Je oorspronkelijke woordnotities " +
+                        "je dit scherm sluit. Je opgeslagen woorden, privénotities " +
                         "en herhaalplanning worden niet gewijzigd.",
                     style = MaterialTheme.typography.bodySmall
                 )
