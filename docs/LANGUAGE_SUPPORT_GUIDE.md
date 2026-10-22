@@ -63,3 +63,13 @@ These cards improve research visibility only. None is downloaded, bundled, integ
 - [Nasimbahar/pashto-ghag-whisper-medium-asr](https://huggingface.co/Nasimbahar/pashto-ghag-whisper-medium-asr): Apache-2.0 on the model card, 3.06 GB / 0.8B parameters (FP32), with self-reported balanced mean WER 14.63% / CER 4.66% across three held-out splits from 54.4 hours of validated Pashto Common Voice 17.0. This is a stronger reported quality baseline but too large for broad Android deployment without quantization; no Android runtime or device performance is validated.
 
 A permissive model-card license is not a dataset/provenance audit. These leads do not meet the full offline ASR+MT gate and must not change the Kurmanji, Sorani or Pashto preview-only status.
+
+
+## Model-herkomst update — 22 oktober 2026
+
+Twee nieuwe onderzoekskaarten zijn zichtbaar in het doorzoekbare taaloverzicht. Ze veranderen de status van Kurmanji, Sorani of Pasjtoe niet: geen model wordt gedownload, ingebouwd of als ondersteund gekozen.
+
+- [asounimelb/whisper-small-ckb-onnx](https://huggingface.co/asounimelb/whisper-small-ckb-onnx) vermeldt Apache-2.0 en is als ONNX-export gepubliceerd. De modelkaart noemt 244M parameters en een encoderbestand van circa 353 MB FP32; het volledige pakket is groter. De Engelse decoder-token is een workaround omdat Whisper geen native Sorani-token heeft. Dat maakt het een mogelijke ONNX Runtime-onderzoeksroute, geen gevalideerde Android-feature: datarechten, totale downloadgrootte, decoderkwaliteit, geheugen en toestelprestaties zijn nog niet onafhankelijk vastgesteld.
+- [arkanit/badini-nllb-translator](https://huggingface.co/arkanit/badini-nllb-translator) vermeldt MIT op de afgeleide modelkaart, maar noemt NLLB-200 distilled 600M als basis. De upstream [NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-distilled-600M) heeft CC-BY-NC-4.0. De afgeleide kaart beschrijft Badini en gebruikt `ckb_Arab`; dit bewijst geen standaard Kurmanji `kmr_Latn` of algemene Sorani-dekking. De licentie- en modelherkomstketen is dus **onopgelost**: Tuddy mag dit niet bundelen of activeren op basis van alleen het MIT-label.
+
+Dit is een expliciete licentie-/dialectwaarschuwing, geen juridische conclusie over afgeleide gewichten. Vóór integratie zijn schriftelijke herkomst-/rechten-verduidelijking en een geschikte Android-runtime/footprint nodig. De bestaande volledige offline ASR+MT-gate en de vijf-zinnen-previewlabels blijven ongewijzigd.
