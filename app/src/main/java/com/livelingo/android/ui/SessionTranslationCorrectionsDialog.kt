@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,7 +47,9 @@ internal fun SessionTranslationCorrectionsDialog(
     onRevise: (SessionTranslationCorrection, String, String) -> Boolean,
     onReplace: (List<SessionTranslationCorrection>) -> Boolean,
     onClear: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    incomingTransferText: String? = null,
+    onIncomingTransferTextConsumed: (String) -> Unit = {}
 ) {
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
     var practiceOpen by remember { mutableStateOf(false) }
@@ -72,6 +75,21 @@ internal fun SessionTranslationCorrectionsDialog(
     var editedTranslation by remember { mutableStateOf("") }
     var editError by remember { mutableStateOf("") }
     val foldedQuery = PrivateOfflineSearch.fold(query.trim())
+    LaunchedEffect(incomingTransferText) {
+        if (incomingTransferText != null) {
+            speaker.stop()
+            practiceOpen = false
+            manualAddOpen = false
+            manualBatchOpen = false
+            confirmClear = false
+            batchMode = false
+            batchSnapshot = null
+            chosenCorrections = emptySet()
+            confirmBatch = false
+            editing = null
+            transferOpen = true
+        }
+    }
     val visible = entries.asReversed().filter { entry ->
         foldedQuery.isBlank() ||
             PrivateOfflineSearch.contains(entry.original, foldedQuery) ||
@@ -427,6 +445,8 @@ internal fun SessionTranslationCorrectionsDialog(
     if (transferOpen) {
         SessionCorrectionTransferDialog(
             entries = entries,
+            initialPastedText = incomingTransferText,
+            onInitialPastedTextConsumed = onIncomingTransferTextConsumed,
             onReplace = { imported ->
                 speaker.stop()
                 onReplace(imported).also { changed ->
