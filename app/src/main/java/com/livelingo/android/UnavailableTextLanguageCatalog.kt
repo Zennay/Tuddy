@@ -152,14 +152,16 @@ internal object UnavailableTextLanguageCatalog {
         category = "Tekstvertaling",
         title = "Helsinki-NLP/opus-mt-ine-ine · 59-talig",
         url = "https://huggingface.co/Helsinki-NLP/opus-mt-ine-ine",
-        declaredLicense = "Apache-2.0 volgens modelkaart; corpusrechten nog te controleren",
+        declaredLicense = "Hugging Face-modelkaart: Apache-2.0; OPUS-MT-train documentatie noemt openbare modellen CC-BY-4.0 — conflict onopgelost",
         footprint = "536 MB volledige repository; 266 MB PyTorch-gewichten plus tokenizer volgens bestandslijst",
         directionEvidence = "Modelkaart noemt kur_Arab, kur_Latn, pus, nld en eng; exacte taalrichtingen en dialectkwaliteit zijn niet bevestigd.",
         limitation = "De modelkaart noemt kur_Arab, kur_Latn, pus, nld en eng als bron-/doeltokens en vereist " +
-            "een doelprefix zoals >>nld<<. Dit is een veelbelovende kleinere MT-onderzoekskandidaat, maar " +
+            "een doelprefix zoals >>nld<<. De Hugging Face-kaart vermeldt Apache-2.0, terwijl de algemene " +
+            "OPUS-MT-train documentatie zegt dat publieke modellen CC-BY-4.0 worden verspreid; de exacte " +
+            "modellicentie en corpusrechten moeten worden verzoend vóór distributie. " +
             "kur_Arab/kur_Latn zijn geen dialectspecifiek bewijs voor Sorani/Kurmanji en pus-codecompatibiliteit " +
-            "moet worden gecontroleerd. Geen passende pair-specifieke kwaliteitsmetingen, dataset-/corpusrechten, " +
-            "Android-runtime, quantisatie, latency of geheugen zijn onafhankelijk geverifieerd. Niet geïntegreerd."
+            "moet worden gecontroleerd. Geen passende pair-specifieke kwaliteitsmetingen, Android-runtime, " +
+            "quantisatie, latency of geheugen zijn onafhankelijk geverifieerd. Niet geïntegreerd."
     )
 
     private val opusMtOnnxInt8ResearchCandidate = OfflineLanguageModelCandidate(
