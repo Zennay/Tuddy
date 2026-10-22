@@ -57,6 +57,7 @@ internal fun OfflinePersonalTurnTableDialog(
     var swapSides by remember { mutableStateOf(false) }
     var large by remember { mutableStateOf(true) }
     var practice by remember { mutableStateOf(false) }
+    var privacyCurtain by remember { mutableStateOf(false) }
     var revealed by remember(index, practice) { mutableStateOf(false) }
     var slowSpeech by remember { mutableStateOf(false) }
     var repeatIndices by remember(turns) { mutableStateOf<Set<Int>>(emptySet()) }
@@ -120,7 +121,8 @@ internal fun OfflinePersonalTurnTableDialog(
         ) {
             Text(label, style = MaterialTheme.typography.labelLarge)
             Text(
-                if (hidden) "Antwoord verborgen · onthul in het midden"
+                if (privacyCurtain) "Privéstand · tekst afgeschermd"
+                else if (hidden) "Antwoord verborgen · onthul in het midden"
                 else text.ifBlank { "Geen geselecteerde zin." },
                 style = MaterialTheme.typography.bodyLarge.copy(
                     textDirection = direction(language)
@@ -130,7 +132,8 @@ internal fun OfflinePersonalTurnTableDialog(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
             )
-            Text(language.uppercase(), style = MaterialTheme.typography.labelSmall)
+            Text(if (privacyCurtain) "—" else language.uppercase(),
+                style = MaterialTheme.typography.labelSmall)
         }
     }
 
@@ -191,6 +194,18 @@ internal fun OfflinePersonalTurnTableDialog(
                             onBack()
                         }) { Text("Terug") }
                     }
+                    TextButton(
+                        onClick = {
+                            speaker.stop()
+                            privacyCurtain = !privacyCurtain
+                            revealed = false
+                            audioNotice = ""
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (privacyCurtain) "👁 Laat beide zijden weer zien"
+                            else "◼ Verberg direct beide zijden")
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -248,11 +263,11 @@ internal fun OfflinePersonalTurnTableDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        TextButton(enabled = turn != null &&
+                        TextButton(enabled = turn != null && !privacyCurtain &&
                             (!responseHidden || !turn.second), onClick = {
                             turn?.first?.let { readAuthored(it.phrase, it.language) }
                         }) { Text("🔊 Eigen zin") }
-                        TextButton(enabled = turn != null &&
+                        TextButton(enabled = turn != null && !privacyCurtain &&
                             (!responseHidden || turn.second), onClick = {
                             turn?.first?.let { readAuthored(it.ownMeaning, it.meaningLanguage) }
                         }) { Text("🔊 Betekenis") }
