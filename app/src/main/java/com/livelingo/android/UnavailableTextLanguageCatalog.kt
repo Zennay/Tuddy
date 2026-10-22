@@ -133,7 +133,7 @@ internal object UnavailableTextLanguageCatalog {
         footprint = "circa 0,2B parameters; exacte kandidaatbestandsgrootte niet geverifieerd (Whisper-small upstream circa 967 MB)",
         limitation = "De modelkaart is publiek leesbaar, maar toegang tot modelbestanden vereist akkoord met voorwaarden voor het delen van contactinformatie. WER 7,96% is zelfgerapporteerd en niet onafhankelijk herhaald. " +
             "Gebruikt de Perzische decoder-token als Sorani-workaround; geen bewijs voor spontane conversatie, Android-latency, geheugen of een gequantiseerde runtime. " +
-            "Controleer exacte gewichten, herkomst en licentiecompatibiliteit vóór distributie. Niet geïntegreerd of geactiveerd."
+            "Geen immutable modelrevisie of bestands-SHA vastgelegd omdat de gewichten gated zijn. Controleer exacte gewichten, herkomst en licentiecompatibiliteit vóór distributie. Niet geïntegreerd of geactiveerd."
     )
 
     private val pashtoGhagResearchCandidate = OfflineLanguageModelCandidate(
