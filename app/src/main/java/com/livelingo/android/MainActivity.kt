@@ -3049,7 +3049,7 @@ private fun TuddyScreen(
                         onClick = {
                             val latest = lines.firstOrNull { it.id == phraseCapture.captionId }
                             if (!listening && generation == phraseCapture.generation &&
-                                latest?.original == phraseCapture.original &&
+                                latest != null && latest.original == phraseCapture.original &&
                                 latest.translationRevision == phraseCapture.revision &&
                                 PrivatePhraseTextPolicy.valid(personalSentence, 120) &&
                                 PrivatePhraseTextPolicy.valid(personalMeaning, 180) &&
