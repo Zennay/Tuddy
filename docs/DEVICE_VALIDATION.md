@@ -36,11 +36,11 @@ Download the artifact ZIP yourself, and from a Tuddy checkout verify exact
 provenance before attempting any authorized handset installation:
 
 ```sh
-bash scripts/verify-tuddy-apk-artifact.sh \\
-  artifact.zip \\
-  77ee8642cef211ca26f2e0c4cb48cf6eab415832afd2b08dc29cb0407041b0a5 \\
-  3e15949f299e885022bf086294c852ceff83ed8f2ffa93fbb9b5df3e9c64e815 \\
-  81046cb702d07fccbbbcf71b78651d2007351b4b \\
+bash scripts/verify-tuddy-apk-artifact.sh \
+  artifact.zip \
+  77ee8642cef211ca26f2e0c4cb48cf6eab415832afd2b08dc29cb0407041b0a5 \
+  3e15949f299e885022bf086294c852ceff83ed8f2ffa93fbb9b5df3e9c64e815 \
+  81046cb702d07fccbbbcf71b78651d2007351b4b \
   39756620318
 ```
 
