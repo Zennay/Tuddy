@@ -110,3 +110,11 @@ samenvoegen met handmatige conflictkeuzes of volledig vervangen.
 De tijdelijke **Undo** blijft beschikbaar zolang de bestaande
 voorwaarden gelden; de gespreksregels blijven onaangetast. Importeren
 activeert geen model en valideert de menselijke vertaling niet.
+
+
+Je kunt ook **Plak eigen correcties-CSV…** openen en de CSV-tekst
+zelf in een begrensd invoerveld plakken. Tuddy leest het Android-klembord
+niet automatisch en accepteert maximaal 48 KB tekst. Een geldige invoer
+toont dezelfde selecteerbare importvoorvertoning als de bestandsroute;
+pas een volgende bewuste keuze mag de RAM-correcties wijzigen.
+Het sluiten van het plakveld gooit de ingevoerde tekst weg.
