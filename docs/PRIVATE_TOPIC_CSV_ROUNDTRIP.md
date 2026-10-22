@@ -105,3 +105,23 @@ annuleert. Na een geldige invoer verschijnt **de volledige preview**
 van alle bronzinnen, eigen betekenissen en themanamen. Pas daarna
 kun je bewust veilig samenvoegen of destructief vervangen kiezen.
 Annuleren of het sluiten van de plakdialoog bewaart niets.
+
+## Selectief overnemen uit een grote eigen thema-CSV
+
+Ook bij de **import** kun je na het lezen van een geldige vijfkoloms-CSV
+bewust één brontaal en/of één thema kiezen. De standaard is **alles**.
+De preview toont telkens precies de zinnen en zelfgeschreven betekenissen
+die daadwerkelijk bij bevestiging worden verwerkt.
+
+Een **deelimport is alleen veilig samenvoegen**: destructief vervangen
+is uitgeschakeld zodra je een filter instelt. Zo kan het importeren van
+één thema nooit per ongeluk alle andere eigen zinnen, favorieten of
+herhaaldatums wissen. Kies je expliciet weer alle talen én alle thema's,
+dan blijft de eerder bestaande volledig-destructieve vervangoptie
+beschikbaar met haar eigen waarschuwing.
+
+Een lege selectie heeft geen importknop. Een gewijzigde huidige
+woordenlijst/thema-indeling na het bekijken van de CSV zorgt nog
+steeds voor een volledige weigering in plaats van een gedeeltelijke
+opslag. Bestandsselectie en handmatig plakken gebruiken dezelfde
+selectieregels, atomaire toevoeging en volledige voorafgaande preview.
