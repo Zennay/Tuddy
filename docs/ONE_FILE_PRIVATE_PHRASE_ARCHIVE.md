@@ -9,11 +9,13 @@ Choose **Bewaar zinnen én thema’s in één bestand…**. Tuddy builds a bound
 
 ### Receive through Android sharing
 
-The exported `tuddy-private-phrase-archive-v1` JSON can also be explicitly
-shared back to Tuddy as `text/plain` or opened from an Android document
-provider. Tuddy recognizes only this archive marker, validates the complete
-UTF-8 archive under 70,000 bytes with the existing strict archive parser, and
-opens this same phrase-and-topic restore preview. The user must still choose
+The full export preview now offers a second, explicit **Share** path that
+shows the exact JSON before opening Android Sharesheet. The exported
+`tuddy-private-phrase-archive-v1` JSON can be shared as `text/plain` to another
+Tuddy instance or opened from an Android document provider. Tuddy recognizes
+only this archive marker, validates the complete UTF-8 archive under 70,000
+bytes with the existing strict archive parser, and opens this same
+phrase-and-topic restore preview. The user must still choose
 merge or replace. Invalid or oversized data is refused instead of being
 treated as subtitle or translation text. No automatic restore, clipboard read,
 network upload or persistence is performed.
