@@ -6,31 +6,29 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest app-code candidate (22 October 2026, after PR #344; built from the docs-only follow-up commit for PR #345):
+Latest app-code candidate (22 October 2026, after PR #350; built from its exact proposed-merge checkout and now merged to main):
 
 | Field | Immutable evidence |
 |---|---|
-| Latest app-code merge (PR #344) | `093638d677e53b778f856fc53dfa93341dffa47f` |
-| Git tree SHA for build checkout | `fdd14b145ecf6840b70d9a1ff8908118b45aa429` |
-| Hosted Android run | [#39740034759](https://github.com/Zennay/Tuddy/actions/runs/39740034759) — COMPLETED SUCCESS; `build` succeeded |
-| Build checkout commit | `3e92a9ba6a7a2fd39239bf166e773dfb6f2fac84` (includes the latest app code plus PR #345's docs-only changes; matches the build manifest) |
-| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39740034759/artifacts/12408374317) (ID `12408374317`, expires 5 November 2026 07:26:04 UTC) |
+| Latest app-code merge (PR #350) | `f110e01567ae3a3ba8503ccd61e032d061030fe6` |
+| Tree identity | Proposed-merge checkout `7bd47d508d5a8a0cd8a407d5c4122ff44e42da36` and merged main have identical blobs for all three PR #350 changed files; both derive unchanged files from base `b98d82c12aab4396b2e84736fa5c942d6d3582f8` |
+| Hosted Android run | [#39742767457](https://github.com/Zennay/Tuddy/actions/runs/39742767457) — COMPLETED SUCCESS; source-head, build, APK manifest and checksum steps succeeded |
+| Build checkout commit | `7bd47d508d5a8a0cd8a407d5c4122ff44e42da36` (proposed-merge checkout; matches the artifact's `source-commit.txt`) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39742767457/artifacts/12409927941) (ID `12409927941`, expires 5 November 2026 07:49:04 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `db5f7f5405d1e42604822ceee0bd3e0dbd80bc0050054dc821c5c4c98721004e` |
+| **APK SHA-256** | `052e2f0d8a3842de7f32c998d511cd6f52783a7605ea9f6840ec08c8404606cc` |
 | APK size | See `build-manifest.txt` inside the artifact |
-| Artifact ZIP SHA-256 (not APK) | `c125527743b9891eae01bf6345e5f0cffdd02131f4ef2d5dfd155c83c2408502` |
+| Artifact ZIP SHA-256 (not APK) | `884b05fc27e45abaa4b10f3a131618e6c8e0981b6a81cf57a836769062e62069` |
 | Package | `com.livelingo.android` |
 | Version | `0.4.0` |
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-This artifact includes PR #341's privacy-safe manual offline acceptance report, PR #342's
-bounded offline subtitle read-aloud, and PR #344's fail-closed requirement for an
-active Wi-Fi connection with Android-reported internet capability and validation
-before a speech-pack request. The checksum sidecar was verified by the hosted
-build (`app-debug.apk: OK`). This is build provenance only: it does not prove
-physical installation, actual offline speech quality, zero network traffic or
-device acceptance.
+This artifact includes PR #350's selected-cue offline subtitle translation workflow alongside
+the existing on-device speech, private subtitle editing and fail-closed speech-pack
+network checks. The checksum sidecar was verified by the hosted build (`app-debug.apk: OK`).
+This is build provenance only: it does not prove physical installation, actual offline
+speech quality, zero network traffic or device acceptance.
 
 From a Tuddy source checkout, after downloading the artifact ZIP as
 `artifact.zip`, run the reusable integrity verifier:
@@ -38,10 +36,10 @@ From a Tuddy source checkout, after downloading the artifact ZIP as
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  c125527743b9891eae01bf6345e5f0cffdd02131f4ef2d5dfd155c83c2408502 \
-  db5f7f5405d1e42604822ceee0bd3e0dbd80bc0050054dc821c5c4c98721004e \
-  3e92a9ba6a7a2fd39239bf166e773dfb6f2fac84 \
-  39740034759
+  884b05fc27e45abaa4b10f3a131618e6c8e0981b6a81cf57a836769062e62069 \
+  052e2f0d8a3842de7f32c998d511cd6f52783a7605ea9f6840ec08c8404606cc \
+  7bd47d508d5a8a0cd8a407d5c4122ff44e42da36 \
+  39742767457
 ```
 
 The helper checks the ZIP digest before extraction, rejects archive path-traversal
