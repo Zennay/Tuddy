@@ -24,7 +24,7 @@ internal object PrivateOwnWordCsv {
         if (deck.exportTsvSelection(entries) == null) return null
         if (entries.any { row ->
             listOf(row.word, row.ownMeaning).any { value ->
-                value.firstOrNull() in formulaPrefix
+                value.isNotEmpty() && value.first() in formulaPrefix
             }
         }) return null
         val text = buildString {
