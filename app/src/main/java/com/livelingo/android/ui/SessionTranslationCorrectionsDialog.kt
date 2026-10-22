@@ -101,7 +101,8 @@ internal fun SessionTranslationCorrectionsDialog(
                         "Geen voorstel wordt automatisch toegepast of opgeslagen.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                if (initialTargetCode in SessionCorrectionLanguageCatalog.manualOnlyCodes) {
+                if (initialTargetCode != null &&
+                    initialTargetCode in SessionCorrectionLanguageCatalog.manualOnlyCodes) {
                     Text(
                         "Je opende dit vanuit de preview-only taal " + initialTargetCode +
                             ". Je kunt hier eigen zinnen schrijven of importeren, maar " +
