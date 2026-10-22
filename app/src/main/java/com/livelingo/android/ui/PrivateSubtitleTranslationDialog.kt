@@ -30,6 +30,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.OfflineTextReceipt
 import com.livelingo.android.OfflineTextStage
+import com.livelingo.android.LocalLanguageDetector
 import com.livelingo.android.PrivateSubtitleCue
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateSubtitleTranslationController
@@ -43,6 +44,7 @@ internal fun PrivateSubtitleTranslationDialog(
     onDismiss: () -> Unit
 ) {
     val controller = remember { PrivateSubtitleTranslationController() }
+    val detector = remember { LocalLanguageDetector() }
     val lifecycleOwner = LocalLifecycleOwner.current
     var sourceCode by remember(cues) { mutableStateOf("") }
     var targetCode by remember(cues) { mutableStateOf("") }
@@ -53,9 +55,14 @@ internal fun PrivateSubtitleTranslationDialog(
     var translatedCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var bilingualOutput by remember(cues) { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
+    var detectingSource by remember { mutableStateOf(false) }
+    var detectionMessage by remember { mutableStateOf("") }
 
     fun resetForLanguageChange() {
         controller.cancel()
+        detector.close()
+        detectingSource = false
+        detectionMessage = ""
         receipt = null
         checking = false
         translating = false
@@ -92,6 +99,46 @@ internal fun PrivateSubtitleTranslationDialog(
             receipt = status
             checking = status.stage == OfflineTextStage.CHECKING
             if (status.stage != OfflineTextStage.CHECKING) message = ""
+        }
+    }
+
+    fun detectSourceLanguage() {
+        if (detectingSource || checking || translating || translatedCues != null) return
+        val sample = cues.asSequence()
+            .map { it.text.replace('\n', ' ').trim() }
+            .filter { it.isNotBlank() }
+            .take(12)
+            .joinToString(" ")
+            .take(1200)
+        if (sample.length < 8) {
+            detectionMessage = "Er staat te weinig tekst in dit bestand om de brontaal lokaal te schatten."
+            return
+        }
+        detector.close()
+        detectingSource = true
+        detectionMessage = "Taalvoorstel lokaal berekenen…"
+        detector.identify(sample) { detected ->
+            detectingSource = false
+            val supported = detected?.takeIf { it in TargetCatalog.codes }
+            if (supported == null) {
+                detectionMessage = if (detected == null) {
+                    "De brontaal kon niet betrouwbaar worden voorgesteld. Kies de taal handmatig."
+                } else {
+                    "De herkenning gaf '$detected', buiten de ML Kit-vertaalcatalogus. Kies de taal handmatig."
+                }
+            } else {
+                controller.cancel()
+                receipt = null
+                checking = false
+                translating = false
+                progress = 0
+                translatedCues = null
+                bilingualOutput = false
+                message = ""
+                sourceCode = supported
+                val label = TargetCatalog.targets.firstOrNull { it.code == supported }?.title ?: supported
+                detectionMessage = "Brontaalvoorstel: $label ($supported). Controleer dit zelf; daarna moet je de lokale modellen apart controleren."
+            }
         }
     }
 
@@ -140,6 +187,8 @@ internal fun PrivateSubtitleTranslationDialog(
             if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE) {
                 val wasBusy = checking || translating
                 controller.cancel()
+                detector.close()
+                detectingSource = false
                 checking = false
                 translating = false
                 receipt = null
@@ -154,6 +203,7 @@ internal fun PrivateSubtitleTranslationDialog(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             controller.cancel()
+            detector.close()
         }
     }
 
@@ -205,6 +255,27 @@ internal fun PrivateSubtitleTranslationDialog(
                             resetForLanguageChange()
                             targetCode = it
                         }
+                    )
+                }
+                OutlinedButton(
+                    enabled = !detectingSource && !checking && !translating && preview == null,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { detectSourceLanguage() }
+                ) {
+                    Text(if (detectingSource) "Brontaal lokaal herkennen…"
+                        else "Stel brontaal voor op basis van dit bestand")
+                }
+                Text(
+                    "De suggestie gebruikt maximaal de eerste 12 niet-lege regels (tot 1.200 tekens), " +
+                        "lokaal op dit toestel. Het is een voorstel, geen automatische taalkeuze.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (detectionMessage.isNotBlank()) {
+                    Text(
+                        detectionMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (detectionMessage.startsWith("Brontaalvoorstel:"))
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Text(
