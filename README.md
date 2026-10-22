@@ -1,3 +1,16 @@
+## Nieuw: eigen CSV-zinnenboek exporteren en terug importeren
+
+Kies bij **Mijn eigen offline zinnen** bewust een taal of themagroep
+en **Exporteer gekozen zinnen als CSV…**. Tuddy laat vooraf álle
+te exporteren zelfgeschreven zinnen zien. Pas na bevestiging kies
+je zelf een Android-opslaglocatie. Een beperkte CSV bevat nooit
+automatisch de rest van je persoonlijke woordenboek, thema's,
+oefendatums of favorieten. Bewerk het bestand later zelf en importeer
+het opnieuw met de aparte volledige controlepreview. Tuddy controleert
+de inhoud niet als vertaling. [Handleiding](docs/PERSONAL_PHRASE_CSV_IMPORT.md).
+
+---
+
 ## Nieuw: importeer eigen Kurmanji-, Sorani- en Pasjtoe-zinnen als CSV
 
 Tuddy accepteert nu naast TSV en JSON ook zelfgemaakte **UTF-8 CSV**

@@ -47,3 +47,27 @@ halen of zelf synchroniseren. Tuddy vraagt zelf geen netwerktoegang.
 Het gaat om persoonlijke, niet onafhankelijk gecontroleerde studiekaarten,
 **niet** om volledige offline Kurmanji/Sorani/Pasjtoe ASR/MT of
 de open acceptatiegates in GitHub issues #1 en #2.
+
+## Export van een zelfgekozen deel van de zinnenlijst
+
+Open **Mijn eigen offline zinnen → Exporteer gekozen zinnen als CSV…**.
+Kies of de huidige taal of alle drie talen meegaan en, wanneer een
+specifiek thema geselecteerd is, of je alleen dat thema wilt exporteren.
+De **volledige lijst met te exporteren privézinnen** verschijnt eerst
+op het scherm. Alleen na jouw aparte bevestiging opent de Android
+Documenten-kiezer met een `.csv`-bestandsnaam.
+
+Vóór het daadwerkelijke wegschrijven leest Tuddy de huidige eigen
+zinnen en thema-indeling opnieuw. Als de geselecteerde tekst tussentijds
+wijzigt, weigert de app te exporteren en moet je opnieuw bevestigen.
+Een leeg of beschadigd deel wordt niet geëxporteerd. Tuddy gebruikt
+hetzelfde beperkte UTF-8 CSV-formaat als de import: speciale komma's
+en dubbele aanhalingstekens blijven behouden.
+
+De export bevat bewust **geen** gesprekshistorie, audio, favoriete
+markeringen, thema-indelingen of herhaaldata. Een gekozen externe
+Android-documentprovider kan zelf synchroniseren; dat is een bewuste
+actie buiten Tuddy. Je kunt het bestand in je eigen spreadsheet-editor
+bewerken zolang je de vier kolommen en regels behoudt, en later bewust
+via **Importeer eigen zinnen uit CSV…** opnieuw kiezen. Duplicaten
+worden bij veilig samenvoegen niet overschreven.
