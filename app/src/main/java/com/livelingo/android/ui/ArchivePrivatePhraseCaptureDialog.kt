@@ -102,14 +102,16 @@ internal fun ArchivePrivatePhraseCaptureDialog(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     labels.forEach { (code, label) ->
-                        TextButton(onClick = { language = code }) {
+                        TextButton(onClick = { language = code; saveError = "" }) {
                             Text((if (language == code) "✓ " else "") + label)
                         }
                     }
                 }
                 OutlinedTextField(
                     value = phrase,
-                    onValueChange = { if (it.length <= 120) phrase = it },
+                    onValueChange = { candidate ->
+                        if (candidate.length <= 120) { phrase = candidate; saveError = "" }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Mijn eigen zin (max. 120 tekens)") },
                     minLines = 2,
@@ -119,14 +121,16 @@ internal fun ArchivePrivatePhraseCaptureDialog(
                     style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     meaningLabels.forEach { (code, label) ->
-                        TextButton(onClick = { meaningLanguage = code }) {
+                        TextButton(onClick = { meaningLanguage = code; saveError = "" }) {
                             Text((if (meaningLanguage == code) "✓ " else "") + label)
                         }
                     }
                 }
                 OutlinedTextField(
                     value = meaning,
-                    onValueChange = { if (it.length <= 180) meaning = it },
+                    onValueChange = { candidate ->
+                        if (candidate.length <= 180) { meaning = candidate; saveError = "" }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Mijn eigen betekenis (max. 180 tekens)") },
                     minLines = 2,
