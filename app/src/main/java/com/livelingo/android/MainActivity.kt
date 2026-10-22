@@ -95,6 +95,12 @@ import java.security.MessageDigest
 import java.text.DateFormat
 import java.util.Date
 
+private sealed class SharedDocumentImportResult {
+    data class Subtitle(val cues: List<PrivateSubtitleCue>) : SharedDocumentImportResult()
+    data class CorrectionJson(val json: String) : SharedDocumentImportResult()
+    data class Rejected(val reason: String) : SharedDocumentImportResult()
+}
+
 /**
  * Hash the installed base APK for a user-requested device-readiness report.
  * Call from Dispatchers.IO; never block the Compose main thread on APK I/O.
@@ -2569,6 +2575,59 @@ private fun TuddyScreen(
         }
     }
 
+    // A single explicitly shared content:// file can be either a subtitle or
+    // Tuddy's own bounded correction JSON. Inspect the exact selected bytes once;
+    // correction files go to the existing human-confirmed import preview.
+    suspend fun readSelectedSharedDocument(uri: Uri): SharedDocumentImportResult {
+        if (uri.scheme != "content") return SharedDocumentImportResult.Rejected(
+            "Geen geldige Android-documentprovider; bestaande inhoud blijft behouden."
+        )
+        return withContext(Dispatchers.IO) {
+            when (val selected = PrivateSubtitleImportDocument.read(
+                context.contentResolver, uri
+            )) {
+                is PrivateSubtitleImportDocument.Result.Rejected ->
+                    SharedDocumentImportResult.Rejected(selected.reason)
+                is PrivateSubtitleImportDocument.Result.Ready -> {
+                    val bytes = selected.text.toByteArray(Charsets.UTF_8)
+                    val looksLikeTuddyCorrections =
+                        selected.text.trimStart().startsWith("{") &&
+                            selected.text.contains("\"format\"") &&
+                            selected.text.contains("\"tuddy-human-corrections\"")
+                    if (looksLikeTuddyCorrections) {
+                        val decoded = if (selected.sizeBytes <= SessionTranslationCorrectionTransfer.MAX_BYTES &&
+                            bytes.size <= SessionTranslationCorrectionTransfer.MAX_BYTES) {
+                            SessionTranslationCorrectionTransfer.decode(bytes)
+                        } else null
+                        if (decoded != null) {
+                            SharedDocumentImportResult.CorrectionJson(selected.text)
+                        } else {
+                            SharedDocumentImportResult.Rejected(
+                                "Gedeeld Tuddy-correctiebestand is ongeldig of groter dan 48 KB. " +
+                                    "Niets geïmporteerd."
+                            )
+                        }
+                    } else {
+                        val parsed = PrivateSubtitleFileReader.read(bytes)
+                            ?: PrivateAssSubtitleReader.read(selected.text)
+                            ?: PrivateTtmlSubtitleReader.read(selected.text)
+                            ?: PrivateLrcSubtitleDraft.preview(selected.text)
+                            ?: PrivateTimedSubtitleSheet.readAuthored(selected.text)
+                            ?: PrivateSbvSubtitleReader.read(selected.text)
+                            ?: PrivateYoutubeJson3SubtitleReader.read(selected.text)
+                        if (parsed == null) {
+                            SharedDocumentImportResult.Rejected(
+                                "Geen geldig SRT/VTT/ASS/SSA/TTML/LRC/CSV/TSV/SBV/JSON3- of Tuddy-correctiedocument."
+                            )
+                        } else {
+                            SharedDocumentImportResult.Subtitle(parsed)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val openSubtitleFile = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -2921,16 +2980,25 @@ private fun TuddyScreen(
             viewedSubtitlePreview != null || pendingManualSubtitleDocument != null) {
             error = "Er is al een ondertitelconcept open. Sluit dat eerst en open opnieuw."
         } else {
-            val (loaded, reason) = readSelectedSubtitle(request.uri)
+            val loaded = readSelectedSharedDocument(request.uri)
             if (currentGeneration == generation &&
                 lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) &&
                 incomingViewedSubtitle?.requestId == request.requestId) {
-                if (loaded == null) {
-                    error = reason + " Het huidige gesprek blijft ongewijzigd."
-                } else {
-                    stop() // Do not combine a file preview with live microphone capture.
-                    viewedSubtitlePreview = loaded.toList()
-                    error = ""
+                when (loaded) {
+                    is SharedDocumentImportResult.Rejected ->
+                        error = loaded.reason + " Het huidige gesprek blijft ongewijzigd."
+                    is SharedDocumentImportResult.Subtitle -> {
+                        stop() // Do not combine a file preview with live microphone capture.
+                        viewedSubtitlePreview = loaded.cues.toList()
+                        error = ""
+                    }
+                    is SharedDocumentImportResult.CorrectionJson -> {
+                        stop()
+                        translationMemoryInitialTargetCode = null
+                        pendingCorrectionTransferText = loaded.json
+                        translationMemoryOpen = true
+                        error = ""
+                    }
                 }
             }
         }
