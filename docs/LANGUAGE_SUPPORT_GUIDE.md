@@ -28,7 +28,7 @@ De taalondersteuningdialoog toont nu externe modelkaarten voor drie ASR-kandidat
 
 | Taal | ASR-onderzoekskandidaat | Modelbestand / licentie volgens kaart | Open punt |
 |---|---|---|---|
-| Kurmanji | [amedcj/whisper-kurmanji](https://huggingface.co/amedcj/whisper-kurmanji) | circa 969 MB; Apache-2.0 vermeld; modelkaart noemt Common Voice Kurmanji maar geen datasetversie of evaluatiescore | Trainingsdatarechten, dialectnauwkeurigheid, Android-runtime en geheugen nog niet geverifieerd |
+| Kurmanji | [amedcj/whisper-kurmanji](https://huggingface.co/amedcj/whisper-kurmanji) | circa 969 MB; Apache-2.0 vermeld; modelkaart noemt Common Voice maar geen release-ID/evaluatiescore | [Common Voice Kurmanji 26.0](https://mozilladatacollective.com/datasets/cmqinqhul00wynq07koxlxbo5) is CC0-1.0, maar de gebruikte release is onbekend; trainingsdatarechten, dialectnauwkeurigheid, Android-runtime en geheugen blijven onbevestigd |
 | Sorani | [roshna-omer/whisper-small-Kurdish-Sorani](https://huggingface.co/roshna-omer/whisper-small-Kurdish-Sorani) | circa 969 MB; Apache-2.0 vermeld; modelkaart noemt dataset `None` en zelfgerapporteerde WER 24,12% / orthografische WER 26,73% | Datasetrechten, evaluatieset, Sorani-variantdekking, Android-runtime en geheugen niet geverifieerd |
 | Pasjtoe | [Sabtain-Dev/STT-Whisper-Pashto](https://huggingface.co/Sabtain-Dev/STT-Whisper-Pashto) | MIT op model- en datasetkaart; dataset 4.819 rijen / circa 1,45 GB; zelfgerapporteerde WER 43,83% | Rechtenherkomst, representativiteit, dialectdekking en Android-runtime nog niet onafhankelijk geverifieerd |
 
