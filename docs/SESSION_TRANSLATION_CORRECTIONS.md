@@ -63,3 +63,12 @@ revisie-beveiligde correctievenster met het eigen voorstel in het
 invoerveld. Pas een tweede, expliciete tik op **Bewaar correctie**
 wijzigt de betreffende regel. In een alleen-lezen privéarchief bestaat
 deze actie niet en blijft iedere eerdere archiefregel onaangeraakt.
+
+## Persoonlijke correcties lokaal terugvinden
+
+In het beheervenster kan je lokaal zoeken naar brontekst, handmatig
+vertaalde tekst of exacte taalrichting, met een zichtbaar resultaatcijfer.
+De zoektekst blijft uitsluitend in het geheugen van het geopende venster.
+Het wisselen van het filter wijzigt geen vertaling of bewaarde correctie;
+ook bij een filter kan het gehele tijdelijke overzicht uitsluitend via
+aparte wis-allesbevestiging worden gewist.
