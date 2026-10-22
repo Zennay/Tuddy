@@ -30,7 +30,9 @@ en behoudt de bestaande tijdcodes.
    tijdelijke lokale vertaler.
 6. De voortgang telt de geselecteerde regels. **Annuleer** stopt het volgen.
    Een vertaalfout, annulering of overgang naar de achtergrond past geen
-   gedeeltelijke vertaling toe. De bronfile op schijf blijft onaangeraakt.
+   gedeeltelijke vertaling toe. Foutmeldingen verwijzen naar de oorspronkelijke
+   regelnummers in het bestand, ook als je niet-aaneengesloten cues selecteerde.
+   De bronfile op schijf blijft onaangeraakt.
 7. Blader met **Vorige voorbeeldregels** en **Volgende voorbeeldregels** door
    de volledige vertaling (vijf cues per pagina) en kies **Alleen vertaling** of
    **Origineel + vertaling**. De tweetalige modus zet het origineel boven de
