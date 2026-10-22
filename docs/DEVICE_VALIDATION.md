@@ -1,3 +1,29 @@
+## Optioneel: APK-checksum uit lokale sidecar overnemen
+
+Download bij de **bewust gekozen, vertrouwde** GitHub Actions debug-APK
+ook de `app-debug.apk.sha256` uit hetzelfde `Tuddy-debug-apk`-artifact.
+In Tuddy kun je via **Offline startcheck → Leg fysieke offline-waarnemingen
+vast → Lees app-debug.apk.sha256 uit zelf gekozen bestand…** dat bestand
+handmatig aanwijzen via Android Documenten. De app leest hoogstens
+256 bytes op een IO-thread en accepteert alleen één exacte regel in
+het formaat `<64 hex>  app-debug.apk`, optioneel met afsluitende
+newline. Er worden geen padnamen, extra regels, tekst, spraakbestanden
+of checksum-metadata bewaard. Ongeldige invoer laat het bestaande
+verwachte hashveld ongemoeid.
+
+De lokale ingestelde verwachte SHA-256 moet exact gelijk zijn aan de
+door Tuddy berekende **geïnstalleerde base-APK-hash**. Het gekozen
+sidecarbestand is op zichzelf niet cryptografisch geauthenticeerd:
+controleer buiten Tuddy de GitHub-run, exacte bron, artifact-herkomst
+en ZIP-checksum apart. Een overeenkomst bewijst alleen identiteit
+tussen de twee vergeleken waarden, **niet** dat de maker vertrouwd is
+of dat offline spraak en alle radio's aantoonbaar geïsoleerd zijn.
+Een door de gebruiker gekozen Android Document-provider kan via een
+eigen externe dienst synchroniseren. Zonder zelf gekozen bestand is
+handmatige invoer van de verwachte hash nog steeds mogelijk.
+
+---
+
 ## Fysieke observaties vastleggen — ook wanneer een poging mislukt
 
 De Android-app bevat via **Offline startcheck → Leg fysieke offline-waarnemingen
