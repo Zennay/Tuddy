@@ -21,7 +21,7 @@ expected_apk_sha=$(printf '%s' "$3" | tr '[:upper:]' '[:lower:]')
 expected_source_sha="${4:-}"
 expected_run_id="${5:-}"
 
-for cmd in sha256sum unzip find realpath awk; do
+for cmd in sha256sum unzip find realpath awk grep tr wc; do
   command -v "$cmd" >/dev/null 2>&1 || {
     printf 'Required command not found: %s\n' "$cmd" >&2
     exit 1
@@ -77,8 +77,17 @@ mapfile -t manifests < <(find "$tmp_dir" -type f -name build-manifest.txt -print
 
 source_sha=$(tr -d '[:space:]' < "${source_files[0]}")
 manifest="${manifests[0]}"
+grep -Fxq "source_sha=$source_sha" "$manifest" || {
+  printf 'Build manifest source SHA does not match source-commit.txt.\n' >&2
+  exit 1
+}
 grep -Fxq "apk_sha256=$expected_apk_sha" "$manifest" || {
   printf 'Build manifest APK digest does not match the requested APK digest.\n' >&2
+  exit 1
+}
+actual_apk_bytes=$(wc -c < "$apk" | tr -d '[:space:]')
+grep -Fxq "apk_bytes=$actual_apk_bytes" "$manifest" || {
+  printf 'Build manifest APK byte count does not match the APK file.\n' >&2
   exit 1
 }
 if [[ -n "$expected_source_sha" ]]; then
