@@ -43,7 +43,8 @@ internal fun OfflineWordText(
     onSaveWord: ((String, String) -> Boolean)? = null,
     readOwnMeaning: ((String, String) -> String?)? = null,
     saveOwnMeaning: ((String, String, String) -> Boolean)? = null,
-    allowSpeech: Boolean = true
+    allowSpeech: Boolean = true,
+    highlightQuery: String = ""
 ) {
     var layout by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
     var dialogOpen by remember(text, language) { mutableStateOf(false) }
@@ -53,8 +54,16 @@ internal fun OfflineWordText(
     var meaningDraft by remember(text, language) { mutableStateOf("") }
     var noteMessage by remember(text, language) { mutableStateOf("") }
 
+    // Styled match spans retain exactly the same character offsets, so wordAt()
+    // still selects the visible source word, even inside a search highlight.
+    val markedText = highlightedCaptionText(
+        text,
+        highlightQuery,
+        MaterialTheme.colorScheme.tertiaryContainer,
+        MaterialTheme.colorScheme.onTertiaryContainer
+    )
     Text(
-        text = text,
+        text = markedText,
         style = style,
         onTextLayout = { layout = it },
         modifier = Modifier
