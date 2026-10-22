@@ -26,8 +26,24 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateAuthoredConversationScript
 import com.livelingo.android.PrivateAuthoredConversationTurn
 import kotlinx.coroutines.Dispatchers
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private fun readPrivateScriptBounded(stream: InputStream): ByteArray? {
+    val output = ByteArrayOutputStream()
+    val chunk = ByteArray(2048)
+    while (output.size() <= PrivateAuthoredConversationScript.MAX_BYTES) {
+        val size = stream.read(chunk)
+        if (size < 0) return output.toByteArray()
+        if (size > 0) {
+            if (output.size() + size > PrivateAuthoredConversationScript.MAX_BYTES) return null
+            output.write(chunk, 0, size)
+        }
+    }
+    return null
+}
 
 /**
  * Read one explicitly selected text script into RAM after a full consent
@@ -71,7 +87,7 @@ internal fun OfflinePersonalTurnScriptImport(
                 val bytes = withContext(Dispatchers.IO) {
                     runCatching {
                         context.contentResolver.openInputStream(uri)?.use { input ->
-                            input.readNBytes(PrivateAuthoredConversationScript.MAX_BYTES + 1)
+                            readPrivateScriptBounded(input)
                         }
                     }.getOrNull()
                 }
