@@ -92,3 +92,28 @@ Dit is een expliciete licentie-/dialectwaarschuwing, geen juridische conclusie o
 [SashaSobchuk/opus-mt-onnx-int8](https://huggingface.co/SashaSobchuk/opus-mt-onnx-int8) publishes quantized ONNX model folders for local/on-device translation and lists an `opus-mt-ine-ine` folder. Its card says each language direction was checked only on sample words and points to a `pairs_map.json` for directions that produced output. This may reduce Android runtime/conversion work compared with converting the original 536 MB repository from scratch.
 
 **Still not ready to ship:** the conversion repository declares CC-BY-4.0 and says the source models are CC-BY-4.0, while the official [Helsinki-NLP/opus-mt-ine-ine](https://huggingface.co/Helsinki-NLP/opus-mt-ine-ine) card declares Apache-2.0. That metadata/provenance mismatch is unresolved. The exact `kur_Arab`, `kur_Latn`, `pus`, `nld` and `eng` direction entries in `pairs_map.json`, model hashes and actual sentence quality have not been confirmed. Do not bundle, download or activate this converted pack until source/license provenance and exact direction coverage are clear, then native-speaker and real Android offline behavior are reviewed.
+
+
+## Eigen zinnen voor Kurmanji, Sorani en Pasjtoe zonder model
+
+Bij de vijfwoordenpreview staat **Schrijf eigen zinnen zonder model…**.
+Deze route opent de bestaande tijdelijke correctiebeheerfunctie met de
+gekozen taal als doeltaal. Je kunt één eigen zin of maximaal tien eigen
+zinnen per batch schrijven, of je eigen JSON/CSV openen. De bron-/doeltaal
+kan ook handmatig worden omgedraaid. De invoer is uitsluitend een door jou
+zelf geschreven tekstpaar; Tuddy controleert de vertaling niet en voegt
+geen ASR-, MT- of TTS-model toe.
+
+De codes `kmr`, `ckb` en `ps` zijn alleen toegestaan in deze menselijke,
+tijdelijke correctie-/phrasebookcatalogus. Ze worden **niet** toegevoegd
+aan de ML Kit-tekstdoelen of Android-spraakondersteuning, en veranderen de
+live vertaalroute niet. Oefenen blijft tekstueel voor een van deze talen
+omdat een lokale stem daarvoor niet bevestigd is. Correcties blijven in
+RAM tot het gesprek wordt gewist; alleen een bewuste JSON/CSV/HTML-export
+kan een gekozen kopie bij een door de gebruiker aangewezen provider bewaren.
+
+Dit is een bruikbare handmatige phrasebook-uitweg voorbij de vijf vaste
+woorden, maar **geen vrije automatische vertaling of spraakherkenning**.
+Issue #2 blijft open totdat de drie talen een rechtengecontroleerde,
+Android-geïntegreerde offline ASR+MT-route hebben met native-speakerreview
+en echte vliegtuigmodusacceptatie.
