@@ -259,6 +259,8 @@ class MainActivity : ComponentActivity() {
     private var pendingExternalText by mutableStateOf<IncomingSharedText?>(null)
     private var pendingViewedSubtitle by mutableStateOf<IncomingViewedSubtitleDocument?>(null)
     private var nextViewedSubtitleRequest = 0L
+    private var pendingPersonalCsv by mutableStateOf<IncomingPersonalCsvDocument?>(null)
+    private var nextPersonalCsvRequest = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -268,9 +270,13 @@ class MainActivity : ComponentActivity() {
         // A deliberate single-file share takes precedence over text/plain:
         // it cannot be misread as a translation prompt or rejected by the
         // ordinary text-only sharesheet ingress.
-        pendingViewedSubtitle = if (savedInstanceState == null)
+        pendingPersonalCsv = if (savedInstanceState == null)
+            ExternalPersonalCsvIntent.read(intent, ++nextPersonalCsvRequest) else null
+        pendingViewedSubtitle = if (savedInstanceState == null &&
+            pendingPersonalCsv == null)
             ExternalSubtitleDocumentIntent.read(intent, ++nextViewedSubtitleRequest) else null
         pendingExternalText = if (savedInstanceState == null &&
+            pendingPersonalCsv == null &&
             pendingViewedSubtitle == null) SharedPlainTextIntent.read(intent) else null
         // Do not keep the original other-app text in Activity Intent extras.
         intent?.removeExtra(Intent.EXTRA_TEXT)
@@ -286,6 +292,10 @@ class MainActivity : ComponentActivity() {
                 incomingViewedSubtitle = pendingViewedSubtitle,
                 onViewedSubtitleConsumed = { id ->
                     if (pendingViewedSubtitle?.requestId == id) pendingViewedSubtitle = null
+                },
+                incomingPersonalCsv = pendingPersonalCsv,
+                onPersonalCsvConsumed = { id ->
+                    if (pendingPersonalCsv?.requestId == id) pendingPersonalCsv = null
                 }
             )
         }
@@ -293,11 +303,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        pendingViewedSubtitle = ExternalSubtitleDocumentIntent.read(
-            intent, ++nextViewedSubtitleRequest
+        pendingPersonalCsv = ExternalPersonalCsvIntent.read(
+            intent, ++nextPersonalCsvRequest
         )
-        pendingExternalText = if (pendingViewedSubtitle == null)
-            SharedPlainTextIntent.read(intent) else null
+        pendingViewedSubtitle = if (pendingPersonalCsv == null)
+            ExternalSubtitleDocumentIntent.read(intent, ++nextViewedSubtitleRequest)
+            else null
+        pendingExternalText = if (pendingPersonalCsv == null &&
+            pendingViewedSubtitle == null) SharedPlainTextIntent.read(intent) else null
         if (intent.action == Intent.ACTION_VIEW) intent.data = null
         intent.removeExtra(Intent.EXTRA_TEXT)
         intent.removeExtra(Intent.EXTRA_PROCESS_TEXT)
@@ -312,7 +325,9 @@ private fun TuddyScreen(
     incomingExternalText: IncomingSharedText?,
     onExternalTextConsumed: () -> Unit,
     incomingViewedSubtitle: IncomingViewedSubtitleDocument?,
-    onViewedSubtitleConsumed: (Long) -> Unit
+    onViewedSubtitleConsumed: (Long) -> Unit,
+    incomingPersonalCsv: IncomingPersonalCsvDocument?,
+    onPersonalCsvConsumed: (Long) -> Unit
 ) {
     val context = LocalContext.current
     // Reuse ML Kit's bundled on-device language detector across live captions;
@@ -465,6 +480,11 @@ private fun TuddyScreen(
     var previewTarget by remember { mutableStateOf("kmr") }
     val personalPhrases = remember(context) { PrivatePhraseDeck(context) }
     var personalPhrasesOpen by remember { mutableStateOf(false) }
+    // A user explicitly opened one private CSV: expose its preview-only
+    // phrasebook screen. Do not read, translate, or save the external bytes here.
+    LaunchedEffect(incomingPersonalCsv?.requestId) {
+        if (incomingPersonalCsv != null) personalPhrasesOpen = true
+    }
     var quickPhrasePickerOpen by remember { mutableStateOf(false) }
     var starterPhraseboardOpen by remember { mutableStateOf(false) }
     var offlinePersonalTurnsOpen by remember { mutableStateOf(false) }
@@ -5234,7 +5254,12 @@ private fun TuddyScreen(
             MyOfflinePhrasesPanel(
                 deck = personalPhrases,
                 initialLanguage = previewTarget,
-                onDismiss = { personalPhrasesOpen = false }
+                incomingCsvDocument = incomingPersonalCsv,
+                onIncomingCsvConsumed = onPersonalCsvConsumed,
+                onDismiss = {
+                    personalPhrasesOpen = false
+                    incomingPersonalCsv?.let { onPersonalCsvConsumed(it.requestId) }
+                }
             )
         }
         val deleteRequest = pendingSingleCaptionDelete
