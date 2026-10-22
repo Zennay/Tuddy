@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.LanguageSearch
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.UnavailableTextLanguageCatalog
+import com.livelingo.android.SessionCorrectionLanguageCatalog
 
 /**
  * User-facing capability inventory. It intentionally separates target text
@@ -38,6 +39,7 @@ import com.livelingo.android.UnavailableTextLanguageCatalog
 internal fun LanguageSupportDialog(
     spokenCandidates: List<String>,
     onPreviewLanguage: (String) -> Unit,
+    onCreateOwnPhrases: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -330,6 +332,11 @@ internal fun LanguageSupportDialog(
                                         onClick = { onPreviewLanguage(item.code) }
                                     ) {
                                         Text("Open vijfwoordenpreview")
+                                    }
+                                    TextButton(
+                                        onClick = { onCreateOwnPhrases(item.code) }
+                                    ) {
+                                        Text("Schrijf eigen zinnen zonder model…")
                                     }
                                 }
                             }
