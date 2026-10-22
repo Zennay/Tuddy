@@ -296,6 +296,7 @@ internal fun PrivateSubtitleFileDialog(
     var sequenceReading by remember { mutableStateOf(false) }
     var sequenceProgress by remember { mutableIntStateOf(0) }
     var sequenceTotal by remember { mutableIntStateOf(0) }
+    var sequenceSlow by remember { mutableStateOf(false) }
     DisposableEffect(speaker, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE) {
@@ -362,7 +363,7 @@ internal fun PrivateSubtitleFileDialog(
         speaker.speakSequence(
             lines = safeLines,
             languageTag = lang,
-            pace = LocalSpeechPace.NORMAL,
+            pace = if (sequenceSlow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL,
             onProgress = { completed, total ->
                 sequenceProgress = completed
                 sequenceTotal = total
@@ -725,6 +726,12 @@ internal fun PrivateSubtitleFileDialog(
                             sequenceTotal = 0
                             spokenNotice = "Uitspraak gestopt."
                         }) { Text("■ Stop") }
+                    }
+                    TextButton(
+                        enabled = !sequenceReading,
+                        onClick = { sequenceSlow = !sequenceSlow }
+                    ) {
+                        Text(if (sequenceSlow) "🐢 Rustig tempo aan" else "Normaal tempo · tik voor rustig")
                     }
                     OutlinedButton(
                         enabled = chosenVoiceLanguage != null && !sequenceReading,
