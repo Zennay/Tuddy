@@ -31,6 +31,7 @@ import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivatePhraseShortcuts
 import com.livelingo.android.PrivatePhraseTopicCsv
 import com.livelingo.android.PrivatePhraseTopics
+import com.livelingo.android.PrivatePhraseRollback
 import java.io.ByteArrayOutputStream
 
 private data class TopicCsvExport(
@@ -45,6 +46,14 @@ private data class TopicCsvImport(
     val archive: PrivatePhraseArchive,
     val originalNotes: List<PersonalPhrase>,
     val originalTopics: ByteArray?
+)
+
+/** One undo snapshot per current screen; never persisted or shared. */
+private data class TopicCsvUndo(
+    val before: PrivatePhraseRollback,
+    val after: PrivatePhraseRollback,
+    val previousNotes: List<PersonalPhrase>,
+    val importedNotes: List<PersonalPhrase>
 )
 
 /**
@@ -88,6 +97,8 @@ internal fun PrivatePhraseTopicCsvAction(
     var correctedImportRows by remember { mutableStateOf<Set<String>>(emptySet()) }
     // Explicit theme changes are independent from meaning corrections.
     var reassignedImportRows by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var lastCsvUndo by remember { mutableStateOf<TopicCsvUndo?>(null) }
+    var confirmCsvUndo by remember { mutableStateOf(false) }
 
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
@@ -186,7 +197,70 @@ internal fun PrivatePhraseTopicCsvAction(
                 "geen automatische vertaling, upload of achtergrondopslag.",
             style = MaterialTheme.typography.bodySmall
         )
+        if (lastCsvUndo != null) {
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { confirmCsvUndo = true }
+            ) { Text("↶ Maak de laatste CSV-import ongedaan…") }
+        }
         if (notice.isNotBlank()) Text(notice, style = MaterialTheme.typography.bodySmall)
+    }
+
+    val undo = lastCsvUndo
+    if (confirmCsvUndo && undo != null) {
+        AlertDialog(
+            onDismissRequest = { confirmCsvUndo = false },
+            title = { Text("Laatste privé-CSV-import terugdraaien?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 470.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Text("De laatste import bevatte " + undo.importedNotes.size +
+                        " opgeslagen zinnen. Tuddy herstelt hieronder " +
+                        undo.previousNotes.size + " eerdere zinnen, betekenissen, " +
+                        "favorieten, thema's en leerplanning. Alles blijft lokaal.",
+                        style = MaterialTheme.typography.bodySmall)
+                    undo.previousNotes.forEachIndexed { i, note ->
+                        HorizontalDivider()
+                        Text((i + 1).toString() + ". [" + note.language + "] " +
+                            note.phrase, style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (note.language == "ckb" ||
+                                    note.language == "ps") TextDirection.Rtl else TextDirection.Ltr
+                            ))
+                        Text("Eigen betekenis [" + note.meaningLanguage + "]: " +
+                            note.ownMeaning, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("Dit is géén automatische back-up: ongedaan maken " +
+                        "werkt alleen zolang geen eigen zin, thema, favoriet of " +
+                        "herhaalplanning sinds de import veranderd is. " +
+                        "Bij verschil wordt helemaal niets teruggezet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val restored = deck.undoLastCsvImportIfUnchanged(
+                        undo.before, undo.after
+                    )
+                    if (restored) onChanged()
+                    notice = if (restored)
+                        "Laatste CSV-import teruggedraaid: eerdere zinnen, " +
+                            "thema's, favorieten en leerplanning hersteld."
+                    else "Terugdraaien geweigerd: er zijn sindsdien " +
+                        "lokale wijzigingen. Niets overschreven."
+                    confirmCsvUndo = false
+                    lastCsvUndo = null
+                }) { Text("Herstel eerdere privégegevens") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmCsvUndo = false }) {
+                    Text("Annuleren")
+                }
+            }
+        )
     }
 
     if (pasteOpen) {
@@ -750,6 +824,7 @@ internal fun PrivatePhraseTopicCsvAction(
             },
             confirmButton = {
                 TextButton(enabled = chosenNotes.isNotEmpty(), onClick = {
+                    val before = deck.captureRollback()
                     val saved = if (mergeOnly || scoped) {
                         deck.mergeArchiveIfUnchanged(
                             context, chosenArchive, review.originalNotes, review.originalTopics,
@@ -760,7 +835,15 @@ internal fun PrivatePhraseTopicCsvAction(
                             context, chosenArchive, review.originalNotes, review.originalTopics
                         )
                     }
-                    if (saved) onChanged()
+                    if (saved) {
+                        val after = deck.captureRollback()
+                        val resulting = deck.entries()
+                        lastCsvUndo = if (before != null && after != null &&
+                            before != after && resulting != null) TopicCsvUndo(
+                                before, after, review.originalNotes, resulting
+                            ) else null
+                        onChanged()
+                    }
                     notice = if (saved && (mergeOnly || scoped))
                         "Geselecteerde zinnen verwerkt: " + newCount + " nieuw, " +
                             correctedIds.size + " bestaande betekenissen gecorrigeerd, " +
