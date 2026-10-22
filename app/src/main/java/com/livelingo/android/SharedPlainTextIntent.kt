@@ -21,7 +21,9 @@ internal data class IncomingSharedText(
     // The exact five-column personal phrasebook CSV is handed to its own preview.
     val personalPhraseCsvText: String? = null,
     // A Tuddy private phrase backup is routed to the existing merge/replace preview.
-    val personalPhraseBackupJson: String? = null
+    val personalPhraseBackupJson: String? = null,
+    // The full phrase+topic archive uses its separate atomic restore preview.
+    val personalPhraseArchiveJson: String? = null
 )
 
 internal object SharedPlainTextIntent {
@@ -75,6 +77,13 @@ internal object SharedPlainTextIntent {
                 // and presents a human-confirmed import preview.
                 if (PrivatePhraseTopicCsv.hasPortableHeader(candidate)) {
                     return IncomingSharedText(null, null, personalPhraseCsvText = candidate)
+                }
+                // Tuddy's full phrase+topic archive must never fall through as
+                // a translation prompt. Its separate restore preview performs
+                // the strict version/schema/70 KB validation.
+                if (candidate.trimStart().startsWith("{") &&
+                    candidate.contains("\"tuddy-private-phrase-archive-v1\"")) {
+                    return IncomingSharedText(null, null, personalPhraseArchiveJson = candidate)
                 }
                 // Tuddy's own private phrase backup must never fall through
                 // as a translation prompt. The phrasebook screen performs the
