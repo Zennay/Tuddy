@@ -15,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -218,16 +219,38 @@ internal fun WordPracticePanel(
                         style = MaterialTheme.typography.labelMedium
                     )
                     HorizontalDivider()
-                    Text(
-                        WordPracticeFollowText(
-                            text = current.word,
-                            activeSpeechText = activeSpeechText,
-                            activeSpeechRange = activeSpeechRange,
-                            prefix = "${current.illustration}  "
-                        ),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = if (activeSpeechText != null)
+                            MaterialTheme.colorScheme.secondaryContainer
+                        else MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                WordPracticeFollowText(
+                                    text = current.word,
+                                    activeSpeechText = activeSpeechText,
+                                    activeSpeechRange = activeSpeechRange,
+                                    prefix = "${current.illustration}  "
+                                ),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (activeSpeechText != null) {
+                                Text(
+                                    if (activeSpeechRange != null)
+                                        "Nu voorgelezen · indicatieve tekstmarkering van de stem."
+                                    else "Nu voorgelezen · deze stem geeft geen woordbereik terug.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
                     Text(
                         "Taal: ${current.language} · Bedenk de betekenis voordat je kijkt.",
                         style = MaterialTheme.typography.bodySmall
