@@ -3031,6 +3031,16 @@ private fun TuddyScreen(
                 onDownloadSpeech = { downloadSpeechPackNow() },
                 onCancelSpeech = { cancelSpeechPackFollow() },
                 onOpenSpeechSettings = { openSpeechSettings() },
+                onOpenAirplaneSettings = {
+                    if (!listening) {
+                        runCatching {
+                            context.startActivity(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS))
+                        }.onFailure {
+                            error = "Android-vliegtuigmodusinstellingen konden niet worden geopend. " +
+                                "Open ze handmatig en controleer wifi en bluetooth afzonderlijk."
+                        }
+                    }
+                },
                 onBrowseSpeechPacks = {
                     offlineReadinessOpen = false
                     speechCatalogOpen = true
