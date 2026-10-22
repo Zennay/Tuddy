@@ -86,12 +86,16 @@ internal fun OfflineWordText(
                     },
                     onLongPress = { point ->
                         val offset = layout?.getOffsetForPosition(point)
-                        val word = offset?.let { wordAt(visibleText, it) }
+                        val word = offset?.let {
+                            if (visibleText == text) wordAt(text, it) else wordAt(visibleText, it)
+                        }
                         heldWord = word
                     },
                     onTap = { point ->
                         val offset = layout?.getOffsetForPosition(point)
-                        val word = offset?.let { wordAt(visibleText, it) }
+                        val word = offset?.let {
+                            if (visibleText == text) wordAt(text, it) else wordAt(visibleText, it)
+                        }
                         if (word != null) {
                             heldWord = null
                             selectedWord = word
