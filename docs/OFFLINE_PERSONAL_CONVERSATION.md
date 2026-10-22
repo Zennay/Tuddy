@@ -62,6 +62,20 @@ voorgelezen voordat het bewust is onthuld. Naar een andere beurt gaan,
 de kanten wisselen, de oefenmodus veranderen, de app verlaten of de
 tafelmodus sluiten stopt de lokale stem en ruimt de sessie op.
 
+### Wissel tussen gesprekvolgorde en willekeurige oefenvolgorde
+
+Tik in de tafelmodus op **⇄ Mix beurten** om de bestaande tijdelijke
+gespreksbeurten in een willekeurige volgorde te oefenen. Met
+**✓ Willekeurig** keer je terug naar de oorspronkelijke gespreksvolgorde.
+Bij omschakelen stopt lopende voorlezing en wordt het oefenantwoord
+opnieuw verborgen. Er verandert niets aan de oorspronkelijke
+gespreksbeurten, ook niet wanneer je die later zelf expliciet deelt of
+bewaart. De mix geldt uitsluitend tijdens de huidige tafelweergave.
+
+De mix werkt ook binnen **Herhaal**: alleen de zelf gemarkeerde lastige
+beurten komen langs, in dezelfde tijdelijke willekeurige volgorde.
+De teller toont je positie in de actuele oefenselectie.
+
 ### Alleen lastige gespreksbeurten herhalen
 
 Tijdens de tafelmodus kun je met **↻ Markeer lastig** een zelfgeschreven
