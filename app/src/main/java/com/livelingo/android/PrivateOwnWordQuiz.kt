@@ -38,6 +38,7 @@ internal object PrivateOwnWordQuiz {
             // equally valid answer wrong.
             val meanings = words.groupingBy { normalized(it.ownMeaning) }.eachCount()
             words.filter { meanings[normalized(it.ownMeaning)] == 1 }
+                .takeIf { it.size >= 2 }.orEmpty()
         }
         val allowed = available.values.flatten().toSet()
         return focus.distinct().filter { it in allowed }.shuffled(random)
