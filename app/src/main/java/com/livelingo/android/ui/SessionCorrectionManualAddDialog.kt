@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.SessionTranslationCorrections
 import com.livelingo.android.SessionCorrectionLanguageCatalog
-import com.livelingo.android.TargetCatalog
 
 /**
  * User-authored exact-match source + translation without starting a microphone
