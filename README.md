@@ -1,3 +1,14 @@
+## Nieuw: deel alleen één taal of privéthema als bewerkbare CSV
+
+In het vijfkoloms zinnenboek kun je vooraf exact kiezen welke
+Kurmanji-, Sorani- of Pasjtoe-zinnen en welke persoonlijke themagroep
+in het exportbestand mogen komen. Eerst verschijnt de volledige
+selectie ter controle; pas daarna kun je bewust de Android
+bestandslocatie kiezen. Andere zinnen worden niet meegestuurd.
+[Uitleg](docs/PRIVATE_TOPIC_CSV_ROUNDTRIP.md).
+
+---
+
 ## Nieuw: bewerkbare vijfkoloms-CSV voor eigen zinnen én thema's
 
 Bewaar nu je volledige persoonlijke Kurmanji-, Sorani- en Pasjtoe-zinnenboek

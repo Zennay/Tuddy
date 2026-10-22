@@ -69,3 +69,24 @@ en zelf synchroniseren.
 vrijgelicentieerde/native-speaker-beoordeelde volledige offline
 Kurmanji/Sorani/Pasjtoe ASR+MT (#2). Deze handgeschreven zinnen
 voldoen niet aan die P1-eisen.
+
+## Alleen gekozen zinnen delen: taal- en themafilter
+
+Je hoeft je hele persoonlijke boek niet uit te wisselen. Kies
+**Exporteer gekozen zinnen mét thema's als CSV…** en selecteer eerst
+bewust één van de drie brontalen of alle talen, en één eigen thema,
+alle thema's of uitsluitend de groep **Zonder thema**.
+Daarna toont Tuddy de **volledige daadwerkelijke subset**
+inclusief zelfgeschreven betekenis en optionele themanaam.
+
+Er worden nooit stilzwijgend andere privékaarten toegevoegd.
+Een lege selectie kan niet worden opgeslagen. Bij Androids
+bestandskeuze controleert Tuddy niet alleen de bestaande zinnen
+en hun thema's opnieuw, maar ook dezelfde taal- en themaselectie.
+Bij tussentijdse veranderingen wordt de export geweigerd, zodat
+de gebruiker opnieuw kan controleren. De gekozen CSV blijft
+geschikt voor dezelfde vijfkoloms-import op een ander toestel.
+
+Ook deze export is een **bewuste externe kopie** en kan door
+een door jou gekozen Android-documentprovider online worden
+gesynchroniseerd. De interne persoonlijke lijst verandert niet.
