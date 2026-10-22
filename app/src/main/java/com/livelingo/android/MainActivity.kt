@@ -60,7 +60,7 @@ import com.livelingo.android.ui.DailyStudyHub
 import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
 import com.livelingo.android.ui.ArchivePrivatePhraseCaptureDialog
-import com.livelingo.android.ui.ArchivePrivatePhraseBatchCaptureDialog
+import com.livelingo.android.ui.PrivatePhraseBatchCaptureDialog
 import com.livelingo.android.ui.OfflinePhraseQuickPicker
 import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.SessionMeaningIndexDialog
@@ -294,6 +294,11 @@ private data class Line(
     val userCorrected: Boolean = false,
     // Human-authored session-only meaning: never overwrite model result or exports.
     val personalMeaning: String? = null
+)
+
+private data class PendingLivePhraseBatchCapture(
+    val generation: Int,
+    val lines: List<Line>
 )
 
 class MainActivity : ComponentActivity() {
@@ -744,6 +749,11 @@ private fun TuddyScreen(
     // Captions never become permanent phrasebook entries without the user's
     // own two text fields and a separate explicit save confirmation.
     var pendingLivePhraseCapture by remember { mutableStateOf<PendingLivePhraseCapture?>(null) }
+    var pendingLivePhraseBatchCapture by remember {
+        mutableStateOf<PendingLivePhraseBatchCapture?>(null)
+    }
+    var livePhraseBatchSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var livePhraseBatchSelectionMode by remember { mutableStateOf(false) }
     var capturedPhraseLanguage by remember { mutableStateOf("kmr") }
     var capturedPhraseText by remember { mutableStateOf("") }
     var capturedMeaningLanguage by remember { mutableStateOf("nl") }
@@ -4361,8 +4371,10 @@ private fun TuddyScreen(
             val stillCurrent = !listening && generation == request.generation &&
                 previewArchiveRows === request.archive &&
                 request.rows.size in 1..10 && request.rows.all { it in request.archive }
-            ArchivePrivatePhraseBatchCaptureDialog(
+            PrivatePhraseBatchCaptureDialog(
                 rows = request.rows,
+                referenceLabel = "Archiefreferentie",
+                originLabel = "archiefregel",
                 stillCurrent = stillCurrent,
                 existingPhrases = personalPhrases.entries(),
                 onSave = { batch ->
