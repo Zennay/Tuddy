@@ -16,7 +16,11 @@ tijdelijke spraakregels of ongefundeerde sprekerlabels.
 Een nog niet voltooide vertaling wordt niet als voltooide
 doeltekst gepresenteerd. Het overzicht volgt uitsluitend de
 huidige zoekselectie; een andere zoekterm kan na sluiten
-worden gekozen.
+worden gekozen. De archiefzoekfunctie herkent ook dezelfde beperkte
+Arabisch/Perzische yeh- en kaf-varianten als het persoonlijke
+zinnenboek en de live gesprekszoekfunctie. Optionele klinkertekens,
+tatweel, ZWNJ en Unicode-presentatievormen worden alleen voor de
+zoekvergelijking genormaliseerd; de geïmporteerde tekst wordt niet gewijzigd.
 
 **Privacy:** het archief blijft een leesweergave van de door jou
 uitdrukkelijk geopende lokale JSON. Het wordt niet gemengd met
