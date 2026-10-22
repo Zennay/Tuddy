@@ -313,7 +313,7 @@ internal fun PrivateSubtitleFileDialog(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer); speaker.close() }
     }
-    LaunchedEffect(draft, shownIndex) {
+    LaunchedEffect(draft, shownIndex, current?.text, current?.startMillis, current?.endMillis) {
         speaker.stop()
         sequenceReading = false
         sequenceProgress = 0
