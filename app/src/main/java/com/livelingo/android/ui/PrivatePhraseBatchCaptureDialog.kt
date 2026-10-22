@@ -57,6 +57,7 @@ internal fun PrivatePhraseBatchCaptureDialog(
 
     val labels = listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val meaningLabels = listOf("nl" to "Nederlands", "en" to "Engels")
+    val reviewing = currentIndex == rows.size
     val current = drafts.getOrNull(currentIndex) ?: PrivatePhraseBatchDraft()
     val candidates = drafts.mapNotNull { draft ->
         val language = draft.language ?: return@mapNotNull null
@@ -78,7 +79,7 @@ internal fun PrivatePhraseBatchCaptureDialog(
     val duplicateExisting = allComplete && candidateKeys.any { it in existingKeys }
     val deckFull = existingPhrases?.let { it.size + rows.size > 80 } == true
     val rowCountInvalid = rows.size !in 1..10
-    val canSave = stillCurrent && !rowCountInvalid && existingPhrases != null &&
+    val canSave = reviewing && stillCurrent && !rowCountInvalid && existingPhrases != null &&
         allComplete && !duplicateInBatch && !duplicateExisting && !deckFull
 
     fun updateCurrent(transform: (PrivatePhraseBatchDraft) -> PrivatePhraseBatchDraft) {
@@ -97,10 +98,13 @@ internal fun PrivatePhraseBatchCaptureDialog(
                 verticalArrangement = Arrangement.spacedBy(9.dp)
             ) {
                 Text(
-                    "Kaart ${currentIndex + 1} van ${rows.size}. De geselecteerde ${originLabel} is alleen " +
-                        "een niet-geverifieerde referentie. Tuddy kopieert geen tekst naar de " +
-                        "kaart; schrijf elke zin en betekenis zelf. Er wordt niets opgeslagen " +
-                        "tot je de volledige batch hieronder bevestigt.",
+                    if (reviewing)
+                        "Controleer alle eigen zinnen en betekenissen. Teruggaan laat je iedere kaart aanpassen."
+                    else
+                        "Kaart ${currentIndex + 1} van ${rows.size}. De geselecteerde ${originLabel} is alleen " +
+                            "een niet-geverifieerde referentie. Tuddy kopieert geen tekst naar de " +
+                            "kaart; schrijf elke zin en betekenis zelf. Er wordt niets opgeslagen " +
+                            "tot je de volledige batch hieronder bevestigt.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
@@ -108,93 +112,131 @@ internal fun PrivatePhraseBatchCaptureDialog(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
-                val row = rows.getOrNull(currentIndex)
-                if (row != null) {
-                    Text(
-                        referenceLabel + " · " + row.sourceCode.uppercase(Locale.ROOT) +
-                            " → " + row.targetCode.uppercase(Locale.ROOT),
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                    Text(
-                        row.original,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            textDirection = if (row.sourceCode in setOf("ckb", "ps"))
-                                TextDirection.Rtl else TextDirection.Ltr
+                if (reviewing) {
+                    drafts.forEachIndexed { index, draft ->
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                "Kaart ${index + 1} · " +
+                                    (labels.firstOrNull { it.first == draft.language }?.second
+                                        ?: "Taal niet gekozen"),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            Text(
+                                draft.phrase.trim().ifBlank { "[Nog invullen]" },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (draft.language == "ckb" || draft.language == "ps")
+                                        TextDirection.Rtl else TextDirection.Ltr
+                                )
+                            )
+                            Text(
+                                (meaningLabels.firstOrNull { it.first == draft.meaningLanguage }?.second
+                                    ?: "Betekenistaal niet gekozen") + ": " +
+                                    draft.meaning.trim().ifBlank { "[Nog invullen]" },
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                } else {
+                    val row = rows.getOrNull(currentIndex)
+                    if (row != null) {
+                        Text(
+                            referenceLabel + " · " + row.sourceCode.uppercase(Locale.ROOT) +
+                                " → " + row.targetCode.uppercase(Locale.ROOT),
+                            style = MaterialTheme.typography.labelMedium
                         )
-                    )
-                    Text(
-                        if (row.status == "Lokaal vertaald" && row.translated.isNotBlank())
-                            row.translated else "[Vertaling niet voltooid]",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            textDirection = if (row.targetCode in setOf("ckb", "ps"))
+                        Text(
+                            row.original,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = if (row.sourceCode in setOf("ckb", "ps"))
+                                    TextDirection.Rtl else TextDirection.Ltr
+                            )
+                        )
+                        Text(
+                            if (row.status == "Lokaal vertaald" && row.translated.isNotBlank())
+                                row.translated else "[Vertaling niet voltooid]",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = if (row.targetCode in setOf("ckb", "ps"))
+                                    TextDirection.Rtl else TextDirection.Ltr
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text("1. In welke taal schrijf jij deze eigen zin?",
+                        style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        labels.forEach { (code, label) ->
+                            TextButton(onClick = {
+                                updateCurrent { it.copy(language = code) }
+                            }) {
+                                Text((if (current.language == code) "✓ " else "") + label)
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = current.phrase,
+                        onValueChange = { candidate ->
+                            if (candidate.length <= 120) {
+                                updateCurrent { it.copy(phrase = candidate) }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Mijn eigen zin (max. 120 tekens)") },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            textDirection = if (current.language == "ckb" || current.language == "ps")
                                 TextDirection.Rtl else TextDirection.Ltr
                         ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(autoCorrect = false),
+                        minLines = 2,
+                        maxLines = 4
+                    )
+                    Text("2. Kies de taal van je zelfgeschreven betekenis",
+                        style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        meaningLabels.forEach { (code, label) ->
+                            TextButton(onClick = {
+                                updateCurrent { it.copy(meaningLanguage = code) }
+                            }) {
+                                Text((if (current.meaningLanguage == code) "✓ " else "") + label)
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = current.meaning,
+                        onValueChange = { candidate ->
+                            if (candidate.length <= 180) {
+                                updateCurrent { it.copy(meaning = candidate) }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Mijn eigen betekenis (max. 180 tekens)") },
+                        minLines = 2,
+                        maxLines = 4
                     )
                 }
-                Text("1. In welke taal schrijf jij deze eigen zin?",
-                    style = MaterialTheme.typography.labelMedium)
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    labels.forEach { (code, label) ->
-                        TextButton(onClick = {
-                            updateCurrent { it.copy(language = code) }
-                        }) {
-                            Text((if (current.language == code) "✓ " else "") + label)
-                        }
-                    }
-                }
-                OutlinedTextField(
-                    value = current.phrase,
-                    onValueChange = { candidate ->
-                        if (candidate.length <= 120) {
-                            updateCurrent { it.copy(phrase = candidate) }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Mijn eigen zin (max. 120 tekens)") },
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        textDirection = if (current.language == "ckb" || current.language == "ps")
-                            TextDirection.Rtl else TextDirection.Ltr
-                    ),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(autoCorrect = false),
-                    minLines = 2,
-                    maxLines = 4
-                )
-                Text("2. Kies de taal van je zelfgeschreven betekenis",
-                    style = MaterialTheme.typography.labelMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    meaningLabels.forEach { (code, label) ->
-                        TextButton(onClick = {
-                            updateCurrent { it.copy(meaningLanguage = code) }
-                        }) {
-                            Text((if (current.meaningLanguage == code) "✓ " else "") + label)
-                        }
-                    }
-                }
-                OutlinedTextField(
-                    value = current.meaning,
-                    onValueChange = { candidate ->
-                        if (candidate.length <= 180) {
-                            updateCurrent { it.copy(meaning = candidate) }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Mijn eigen betekenis (max. 180 tekens)") },
-                    minLines = 2,
-                    maxLines = 4
-                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
                         enabled = currentIndex > 0,
                         onClick = { currentIndex--; saveError = "" }
-                    ) { Text("← Vorige kaart") }
-                    TextButton(
-                        enabled = currentIndex < rows.lastIndex,
-                        onClick = { currentIndex++; saveError = "" }
-                    ) { Text("Volgende kaart →") }
+                    ) { Text(if (reviewing) "← Laatste kaart" else "← Vorige kaart") }
+                    if (!reviewing) {
+                        TextButton(
+                            enabled = currentIndex < rows.size,
+                            onClick = {
+                                currentIndex = if (currentIndex == rows.lastIndex) rows.size
+                                    else currentIndex + 1
+                                saveError = ""
+                            }
+                        ) {
+                            Text(if (currentIndex == rows.lastIndex) "Controleer batch →"
+                                else "Volgende kaart →")
+                        }
+                    }
                 }
                 Text(
                     "Alleen jouw eigen tekst en gekozen taalcodes worden lokaal bewaard. " +
