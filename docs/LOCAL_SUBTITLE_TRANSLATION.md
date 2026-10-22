@@ -15,9 +15,11 @@ en behoudt de bestaande tijdcodes.
 3. Kies een expliciete selectie met 1-based regelnummers, bijvoorbeeld
    `1-5,8,11-12`. Een los nummer selecteert één cue; een bereik is inclusief.
    Standaard staat het hele document geselecteerd en **Hele bestand kiezen**
-   herstelt dat. Ongeldige, dubbele of overlappende nummers blokkeren vertalen.
-   De samenvatting toont de genormaliseerde selectie en het exacte aantal cues.
-   Alle cues buiten de selectie blijven onaangeraakt.
+   herstelt dat. Je kunt ook in **Zoek in dit document** zoeken en daarna
+   **Vertaal N gevonden regels lokaal…** kiezen om precies de overeenkomende
+   cues vooraf te selecteren. Ongeldige, dubbele of overlappende nummers blokkeren
+   vertalen. De samenvatting toont de genormaliseerde selectie en het exacte aantal
+   cues. Alle cues buiten de selectie blijven onaangeraakt.
 4. Tik op **Controleer lokale modellen**. Dit leest alleen de actuele lokale
    modelinventaris. Voor een verschillende bron- en doeltaal moeten de benodigde
    modellen al aanwezig zijn; Engels is ingebouwd.
