@@ -3196,12 +3196,14 @@ Open een SRT/VTT-bestand in **Gesprekstools → Open SRT/WebVTT…** en kies
 **Vertaal ondertitelconcept lokaal…**. Je kunt lokaal een brontaalvoorstel laten
 maken op basis van maximaal 12 cues/1.200 tekens; bevestig de taal zelf en kies
 een doeltaal. Kies vervolgens losse regels en/of inclusieve bereiken,
-bijvoorbeeld `1-5,8,11-12` (standaard het hele bestand). Tuddy weigert dubbele
-of overlappende regelnummers en vertaalt alleen de exact getoonde selectie;
-alle andere regels en tijdcodes blijven intact. Controleer daarna of de exacte
-ML Kit-tekstmodellen al lokaal beschikbaar zijn. Tuddy downloadt niets automatisch
-en start geen microfoon. De geselecteerde regels worden serieel vertaald; bij een
-fout of annulering wordt geen gedeeltelijk resultaat toegepast.
+bijvoorbeeld `1-5,8,11-12` (standaard het hele bestand). Je kunt ook zoeken in
+het document en direct **Vertaal N gevonden regels lokaal…** kiezen om alleen de
+zoekresultaten vooraf te selecteren. Tuddy weigert dubbele of overlappende
+regelnummers en vertaalt alleen de exact getoonde selectie; alle andere regels en
+tijdcodes blijven intact. Controleer daarna of de exacte ML Kit-tekstmodellen al
+lokaal beschikbaar zijn. Tuddy downloadt niets automatisch en start geen microfoon.
+De geselecteerde regels worden serieel vertaald; bij een fout of annulering wordt
+geen gedeeltelijk resultaat toegepast.
 Blader door de volledige vertaling (vijf cues per voorbeeldpagina), kies
 **Alleen vertaling** of **Origineel + vertaling** en bevestig expliciet het toepassen
 op het tijdelijke concept. De bronfile blijft intact en je kunt daarna bewust een
