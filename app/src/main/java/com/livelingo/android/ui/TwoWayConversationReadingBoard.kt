@@ -75,6 +75,7 @@ internal fun TwoWayConversationReadingBoard(
         activeSpeechSide = null
         activeSpeechText = null
         activeSpeechRange = null
+        audioNotice = ""
     }
 
     fun pronounceLine(
