@@ -30,8 +30,9 @@ also be saved; the report labels it incomplete rather than inventing a pass.
 Before writing, the full UTF-8 report is previewed. The user must then choose an
 Android Storage Access Framework destination. The device/model/build snapshot is
 re-read after returning from the picker; if it changed, the write is refused.
-No report is uploaded or retained by Tuddy. An external document provider may
-synchronize the chosen file.
+No report is uploaded or retained by Tuddy. The temporary form values are
+cleared after dismissal or after returning from the file picker. An external
+document provider may synchronize the chosen file.
 
 Every exported session explicitly says **self-reported** and **not independently
 verified by Tuddy**. A complete form does not change the status of issue #1,
