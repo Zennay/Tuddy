@@ -30,6 +30,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -38,6 +42,47 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.livelingo.android.OfflineTypedCaptionPolicy
 import com.livelingo.android.TargetCatalog
+
+/**
+ * Highlights only text ranges reported by the installed local Android TTS voice.
+ * The spoken string is shown verbatim after the same whitespace normalization
+ * used for speech, so offsets never target the unnormalized source text.
+ */
+@Composable
+private fun FaceToFaceSpeechText(
+    text: String,
+    sideLabel: String,
+    activeSpeechText: String?,
+    activeSpeechSide: String?,
+    activeSpeechRange: Pair<Int, Int>?
+): AnnotatedString {
+    val displayedText = if (activeSpeechSide == sideLabel && activeSpeechText != null) {
+        activeSpeechText
+    } else text
+    val range = activeSpeechRange.takeIf {
+        activeSpeechSide == sideLabel && activeSpeechText != null
+    }
+    val background = MaterialTheme.colorScheme.primary
+    val foreground = MaterialTheme.colorScheme.onPrimary
+    return remember(displayedText, range, background, foreground) {
+        buildAnnotatedString {
+            append(displayedText)
+            if (range != null && range.first >= 0 &&
+                range.second > range.first && range.second <= displayedText.length
+            ) {
+                addStyle(
+                    SpanStyle(
+                        background = background,
+                        color = foreground,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    range.first,
+                    range.second
+                )
+            }
+        }
+    }
+}
 
 /**
  * One device on the table, with the far-side line rotated for the person
@@ -76,11 +121,18 @@ internal fun FaceToFaceConversationDialog(
     val lifecycleOwner = LocalLifecycleOwner.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     var audioNotice by remember { mutableStateOf("") }
+    var activeSpeechText by remember { mutableStateOf<String?>(null) }
+    var activeSpeechSide by remember { mutableStateOf<String?>(null) }
+    var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var slowVoice by remember { mutableStateOf(false) }
     DisposableEffect(speaker, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE)
+            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE) {
                 speaker.stop()
+                activeSpeechText = null
+                activeSpeechSide = null
+                activeSpeechRange = null
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer); speaker.close() }
@@ -88,16 +140,50 @@ internal fun FaceToFaceConversationDialog(
     LaunchedEffect(selected?.original, selected?.translated, selected?.source,
         selected?.target) {
         speaker.stop()
+        activeSpeechText = null
+        activeSpeechSide = null
+        activeSpeechRange = null
         audioNotice = ""
     }
-    fun pronounce(text: String?, code: String?) {
-        val line = text?.replace('\n', ' ')?.trim().orEmpty()
-        if (line.isBlank() || line.length > 400 || code == null) {
+    fun pronounce(text: String?, code: String?, sideLabel: String) {
+        val line = text?.replace('\n', ' ')?.replace('\r', ' ')?.trim().orEmpty()
+        val languageTag = code?.takeIf { it.isNotBlank() }
+        if (line.isBlank() || line.length > 400 ||
+            line.any { it.isISOControl() } || languageTag == null
+        ) {
+            speaker.stop()
+            activeSpeechText = null
+            activeSpeechSide = null
+            activeSpeechRange = null
             audioNotice = "Deze zin kan niet veilig met een lokale stem worden voorgelezen."
-        } else speaker.speak(line, code,
-            if (slowVoice) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL) {
-            audioNotice = it
+            return
         }
+        activeSpeechText = line
+        activeSpeechSide = sideLabel
+        activeSpeechRange = null
+        audioNotice = "Lokale voorlezing voorbereiden…"
+        speaker.speakSequence(
+            lines = listOf(line),
+            languageTag = languageTag,
+            pace = if (slowVoice) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL,
+            onProgress = { completed, total ->
+                audioNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { audioNotice = it },
+            onFinished = { completed ->
+                activeSpeechText = null
+                activeSpeechSide = null
+                activeSpeechRange = null
+                if (completed) audioNotice = "Voorlezen voltooid."
+            },
+            onLineStarted = {
+                activeSpeechRange = null
+                audioNotice = "Lokaal voorlezen: $sideLabel."
+            },
+            onWordRange = { _, start, endExclusive ->
+                activeSpeechRange = start to endExclusive
+            }
+        )
     }
     val rtlLanguages = setOf("ar", "fa", "ur", "he", "ps", "ckb")
     fun direction(code: String): TextDirection =
@@ -133,7 +219,14 @@ internal fun FaceToFaceConversationDialog(
                             else selected?.original
                         Text("TEGENOVER · ${lang?.uppercase() ?: "—"}",
                             style = MaterialTheme.typography.labelLarge)
-                        Text(value ?: "Nog geen afgeronde lokale vertaling.",
+                        val farValue = FaceToFaceSpeechText(
+                            text = value ?: "Nog geen afgeronde lokale vertaling.",
+                            sideLabel = "Tegenover",
+                            activeSpeechText = activeSpeechText,
+                            activeSpeechSide = activeSpeechSide,
+                            activeSpeechRange = activeSpeechRange
+                        )
+                        Text(farValue,
                             fontSize = if (largeText) 32.sp else 24.sp,
                             lineHeight = if (largeText) 41.sp else 32.sp,
                             textAlign = TextAlign.Center,
@@ -175,6 +268,9 @@ internal fun FaceToFaceConversationDialog(
                     ) {
                         TextButton(onClick = {
                             speaker.stop()
+                            activeSpeechText = null
+                            activeSpeechSide = null
+                            activeSpeechRange = null
                             translatedOnFarSide = !translatedOnFarSide
                         }) { Text("↕ Wissel kanten") }
                         TextButton(onClick = { largeText = !largeText }) {
@@ -189,38 +285,54 @@ internal fun FaceToFaceConversationDialog(
                         Row(modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween) {
                             TextButton(
-                                enabled = selected.original.length <= 400 &&
+                                enabled = activeSpeechText == null &&
+                                    selected.original.length <= 400 &&
                                     selected.translated.length <= 400,
                                 onClick = {
                                     val code = if (translatedOnFarSide) selected.target
                                         else selected.source
                                     val value = if (translatedOnFarSide) selected.translated
                                         else selected.original
-                                    pronounce(value, code)
+                                    pronounce(value, code, "Tegenover")
                                 }
                             ) { Text("🔊 Tegenover") }
                             TextButton(
-                                enabled = selected.original.length <= 400 &&
+                                enabled = activeSpeechText == null &&
+                                    selected.original.length <= 400 &&
                                     selected.translated.length <= 400,
                                 onClick = {
                                     val code = if (translatedOnFarSide) selected.source
                                         else selected.target
                                     val value = if (translatedOnFarSide) selected.original
                                         else selected.translated
-                                    pronounce(value, code)
+                                    pronounce(value, code, "Hier")
                                 }
                             ) { Text("🔊 Hier") }
                             TextButton(onClick = {
                                 speaker.stop()
+                                activeSpeechText = null
+                                activeSpeechSide = null
+                                activeSpeechRange = null
                                 slowVoice = !slowVoice
                             }) { Text(if (slowVoice) "Langzaam ✓" else "Rustig") }
                             TextButton(onClick = {
                                 speaker.stop()
+                                activeSpeechText = null
+                                activeSpeechSide = null
+                                activeSpeechRange = null
                                 audioNotice = "Voorlezen gestopt."
                             }) { Text("■ Stop") }
                         }
                         if (audioNotice.isNotBlank()) {
                             Text(audioNotice, style = MaterialTheme.typography.labelSmall)
+                        }
+                        if (activeSpeechText != null) {
+                            Text(
+                                if (activeSpeechRange != null)
+                                    "Indicatieve tekstmarkering van de geïnstalleerde stem."
+                                else "Tekstmarkering verschijnt als de stem tekstbereiken terugmeldt.",
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     }
                     if (onSubmitTurn != null) {
@@ -257,6 +369,9 @@ internal fun FaceToFaceConversationDialog(
                                 if (normalized != null &&
                                     onSubmitTurn(normalized, turnFrom, turnTo)) {
                                     speaker.stop()
+                                    activeSpeechText = null
+                                    activeSpeechSide = null
+                                    activeSpeechRange = null
                                     input = ""
                                     val previous = turnFrom
                                     turnFrom = turnTo
@@ -295,8 +410,15 @@ internal fun FaceToFaceConversationDialog(
                             else selected?.translated
                         Text("HIER · ${lang?.uppercase() ?: "—"}",
                             style = MaterialTheme.typography.labelLarge)
-                        Text(value ?: "Kies in de typmodus twee talen en vertaal een zin " +
-                            "met reeds aanwezige lokale modellen.",
+                        val nearValue = FaceToFaceSpeechText(
+                            text = value ?: "Kies in de typmodus twee talen en vertaal een zin " +
+                                "met reeds aanwezige lokale modellen.",
+                            sideLabel = "Hier",
+                            activeSpeechText = activeSpeechText,
+                            activeSpeechSide = activeSpeechSide,
+                            activeSpeechRange = activeSpeechRange
+                        )
+                        Text(nearValue,
                             fontSize = if (largeText) 32.sp else 24.sp,
                             lineHeight = if (largeText) 41.sp else 32.sp,
                             textAlign = TextAlign.Center,

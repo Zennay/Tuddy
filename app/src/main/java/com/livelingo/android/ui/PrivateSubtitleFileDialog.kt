@@ -35,6 +35,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -303,6 +306,9 @@ internal fun PrivateSubtitleFileDialog(
     var sequenceReading by remember { mutableStateOf(false) }
     var sequenceProgress by remember { mutableIntStateOf(0) }
     var sequenceTotal by remember { mutableIntStateOf(0) }
+    var sequenceStartIndex by remember { mutableIntStateOf(-1) }
+    var sequenceLineIndex by remember { mutableIntStateOf(-1) }
+    var sequenceWordRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var sequenceSlow by remember { mutableStateOf(false) }
     DisposableEffect(speaker, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -312,6 +318,9 @@ internal fun PrivateSubtitleFileDialog(
                 sequenceReading = false
                 sequenceProgress = 0
                 sequenceTotal = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
                 if (wasReadingSequence) {
                     spokenNotice = "Voorlezen gestopt toen Tuddy naar de achtergrond ging."
                 }
@@ -325,6 +334,9 @@ internal fun PrivateSubtitleFileDialog(
         sequenceReading = false
         sequenceProgress = 0
         sequenceTotal = 0
+        sequenceStartIndex = -1
+        sequenceLineIndex = -1
+        sequenceWordRange = null
         spokenNotice = ""
     }
     LaunchedEffect(translationOpen, requestSave, voicePickerOpen) {
@@ -334,22 +346,68 @@ internal fun PrivateSubtitleFileDialog(
             sequenceReading = false
             sequenceProgress = 0
             sequenceTotal = 0
+            sequenceStartIndex = -1
+            sequenceLineIndex = -1
+            sequenceWordRange = null
             if (wasReadingSequence) {
                 spokenNotice = "Voorlezen gestopt omdat een dialoog is geopend."
             }
         }
     }
+    fun beginSequence(
+        safeLines: List<String>,
+        startIndex: Int,
+        languageTag: String,
+        pace: LocalSpeechPace
+    ) {
+        sequenceStartIndex = startIndex
+        sequenceLineIndex = 0
+        sequenceWordRange = null
+        sequenceReading = true
+        sequenceProgress = 0
+        sequenceTotal = safeLines.size
+        spokenNotice = "Lokale spraak voorbereiden…"
+        speaker.speakSequence(
+            lines = safeLines,
+            languageTag = languageTag,
+            pace = pace,
+            onProgress = { completed, total ->
+                sequenceProgress = completed
+                sequenceTotal = total
+                spokenNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { spokenNotice = it },
+            onFinished = { completed ->
+                sequenceReading = false
+                if (completed) sequenceProgress = sequenceTotal else sequenceProgress = 0
+                sequenceStartIndex = -1
+                sequenceLineIndex = -1
+                sequenceWordRange = null
+            },
+            onLineStarted = { index ->
+                sequenceLineIndex = index
+                sequenceWordRange = null
+            },
+            onWordRange = { index, start, endExclusive ->
+                sequenceLineIndex = index
+                sequenceWordRange = start to endExclusive
+            }
+        )
+    }
+
     fun pronounceCue(slow: Boolean) {
         val lang = chosenVoiceLanguage ?: return
-        sequenceReading = false
-        sequenceProgress = 0
-        sequenceTotal = 0
-        val safe = current?.text?.replace('\n', ' ')?.trim().orEmpty()
-        if (safe.isBlank() || safe.length > 400) {
-            spokenNotice = "Alleen geselecteerde tekst tot 400 tekens kan lokaal worden voorgelezen."
-        } else speaker.speak(safe, lang,
-            if (slow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL) {
-            spokenNotice = it
+        val sourceIndex = found.getOrNull(shownIndex)?.first ?: return
+        val safe = current?.text?.replace('\n', ' ')?.replace('\r', ' ')?.trim().orEmpty()
+        if (safe.isBlank() || safe.length > 400 || safe.any { it.isISOControl() }) {
+            spokenNotice = "Alleen geselecteerde tekst tot 400 tekens zonder controletekens kan lokaal worden voorgelezen."
+        } else {
+            beginSequence(
+                safeLines = listOf(safe),
+                startIndex = sourceIndex,
+                languageTag = lang,
+                pace = if (slow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL
+            )
         }
     }
 
@@ -375,24 +433,11 @@ internal fun PrivateSubtitleFileDialog(
                 "Verkort of splits die regel voordat je de reeks voorleest."
             return
         }
-        sequenceReading = true
-        sequenceProgress = 0
-        sequenceTotal = safeLines.size
-        spokenNotice = "Lokale spraak voorbereiden…"
-        speaker.speakSequence(
-            lines = safeLines,
+        beginSequence(
+            safeLines = safeLines,
+            startIndex = startIndex,
             languageTag = lang,
-            pace = if (sequenceSlow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL,
-            onProgress = { completed, total ->
-                sequenceProgress = completed
-                sequenceTotal = total
-                spokenNotice = "Lokaal voorlezen: $completed/$total regels."
-            },
-            feedback = { spokenNotice = it },
-            onFinished = { completed ->
-                sequenceReading = false
-                if (completed) sequenceProgress = sequenceTotal else sequenceProgress = 0
-            }
+            pace = if (sequenceSlow) LocalSpeechPace.SLOW else LocalSpeechPace.NORMAL
         )
     }
 
@@ -721,6 +766,82 @@ internal fun PrivateSubtitleFileDialog(
                         }
                     }
                 } else {
+                    if (sequenceReading && sequenceStartIndex >= 0 && sequenceLineIndex >= 0) {
+                        val activeIndex = sequenceStartIndex + sequenceLineIndex
+                        val activeCue = draft.getOrNull(activeIndex)
+                        if (activeCue != null) {
+                            // Match the exact whitespace normalization sent to Android TTS;
+                            // callback offsets are relative to this displayed string.
+                            val spokenText = activeCue.text.replace('\n', ' ')
+                                .replace('\r', ' ').trim()
+                            val range = sequenceWordRange
+                            val highlightBackground = MaterialTheme.colorScheme.primary
+                            val highlightForeground = MaterialTheme.colorScheme.onPrimary
+                            val activeText = remember(
+                                spokenText, range, highlightBackground, highlightForeground
+                            ) {
+                                buildAnnotatedString {
+                                    append(spokenText)
+                                    if (range != null && range.first >= 0 &&
+                                        range.second > range.first &&
+                                        range.second <= spokenText.length
+                                    ) {
+                                        addStyle(
+                                            SpanStyle(
+                                                background = highlightBackground,
+                                                color = highlightForeground,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            range.first,
+                                            range.second
+                                        )
+                                    }
+                                }
+                            }
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        "Nu voorgelezen · regel ${activeIndex + 1} · " +
+                                            "${activeCue.startLabel} → ${activeCue.endLabel}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    Text(
+                                        activeText,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            textDirection = TextDirection.ContentOrRtl
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    Text(
+                                        if (range != null)
+                                            "Indicatieve tekstmarkering van de geïnstalleerde stem."
+                                        else "Regelvolging actief; deze stem geeft nog geen woordbereik door.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    TextButton(onClick = {
+                                        speaker.stop()
+                                        sequenceReading = false
+                                        sequenceProgress = 0
+                                        sequenceTotal = 0
+                                        sequenceStartIndex = -1
+                                        sequenceLineIndex = -1
+                                        sequenceWordRange = null
+                                        query = ""
+                                        shownIndex = activeIndex
+                                    }) { Text("Open deze regel") }
+                                }
+                            }
+                        }
+                    }
                     Text("${current.startLabel} → ${current.endLabel}",
                         style = MaterialTheme.typography.labelLarge)
                     Box(modifier = Modifier.fillMaxWidth().weight(1f)
@@ -760,6 +881,9 @@ internal fun PrivateSubtitleFileDialog(
                                         sequenceReading = false
                                         sequenceProgress = 0
                                         sequenceTotal = 0
+                                        sequenceStartIndex = -1
+                                        sequenceLineIndex = -1
+                                        sequenceWordRange = null
                                         chosenVoiceLanguage = language.code
                                         spokenNotice = ""
                                         voicePickerOpen = false
@@ -770,10 +894,10 @@ internal fun PrivateSubtitleFileDialog(
                     }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(enabled = chosenVoiceLanguage != null &&
+                        TextButton(enabled = chosenVoiceLanguage != null && !sequenceReading &&
                             current.text.length <= 400,
                             onClick = { pronounceCue(false) }) { Text("🔊 Hoor lokaal") }
-                        TextButton(enabled = chosenVoiceLanguage != null &&
+                        TextButton(enabled = chosenVoiceLanguage != null && !sequenceReading &&
                             current.text.length <= 400,
                             onClick = { pronounceCue(true) }) { Text("Rustig") }
                         TextButton(onClick = {
@@ -781,6 +905,9 @@ internal fun PrivateSubtitleFileDialog(
                             sequenceReading = false
                             sequenceProgress = 0
                             sequenceTotal = 0
+                            sequenceStartIndex = -1
+                            sequenceLineIndex = -1
+                            sequenceWordRange = null
                             spokenNotice = "Uitspraak gestopt."
                         }) { Text("■ Stop") }
                     }

@@ -49,7 +49,9 @@ internal class LocalCaptionSpeaker(context: Context) {
         pace: LocalSpeechPace,
         onProgress: (completed: Int, total: Int) -> Unit,
         feedback: (String) -> Unit,
-        onFinished: (completed: Boolean) -> Unit
+        onFinished: (completed: Boolean) -> Unit,
+        onLineStarted: (index: Int) -> Unit = {},
+        onWordRange: (index: Int, start: Int, endExclusive: Int) -> Unit = { _, _, _ -> }
     ) {
         stop()
         val safeLines = lines.map { it.replace('\n', ' ').replace('\r', ' ').trim() }
@@ -89,6 +91,7 @@ internal class LocalCaptionSpeaker(context: Context) {
         fun speakAt(tts: TextToSpeech, index: Int) {
             if (generation != version) return
             sequenceIndex = index
+            onLineStarted(index)
             val result = runCatching {
                 tts.speak(
                     safeLines[index],
@@ -135,6 +138,26 @@ internal class LocalCaptionSpeaker(context: Context) {
                         }
                         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                             override fun onStart(utteranceId: String?) = Unit
+
+                            override fun onRangeStart(
+                                utteranceId: String?,
+                                start: Int,
+                                end: Int,
+                                frame: Int
+                            ) {
+                                val spokenIndex = utteranceId
+                                    ?.substringAfterLast('-')
+                                    ?.toIntOrNull() ?: return
+                                main.post {
+                                    if (generation != version || spokenIndex != sequenceIndex) {
+                                        return@post
+                                    }
+                                    val line = safeLines.getOrNull(spokenIndex) ?: return@post
+                                    if (start >= 0 && end > start && end <= line.length) {
+                                        onWordRange(spokenIndex, start, end)
+                                    }
+                                }
+                            }
 
                             override fun onDone(utteranceId: String?) {
                                 val finishedIndex = utteranceId
