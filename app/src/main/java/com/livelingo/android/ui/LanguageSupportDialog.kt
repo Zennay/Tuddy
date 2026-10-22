@@ -49,6 +49,13 @@ internal fun LanguageSupportDialog(
         if (normalizedQuery.isEmpty()) UnavailableTextLanguageCatalog.entries
         else UnavailableTextLanguageCatalog.search(query)
     }
+    val modelOnlyQuery = normalizedQuery.isNotEmpty() &&
+        textTargets.isEmpty() &&
+        speechCandidates.isEmpty() &&
+        unavailable.isNotEmpty() &&
+        unavailable.none { item ->
+            LanguageSearch.matches(query, listOf(item.code, item.title, item.aliases, item.reason))
+        }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -64,13 +71,7 @@ internal fun LanguageSupportDialog(
                         "Een taalnaam of geïnstalleerd tekstmodel bewijst niet dat spraak offline werkt.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it.take(60) },
-                    label = { Text("Zoek taal, code, alias, model of licentie") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                O                if (!modelOnlyQuery) {
                 HorizontalDivider()
                 Text(
                     "Tekstvertaling · " + TargetCatalog.targets.size + " talen",
@@ -101,6 +102,13 @@ internal fun LanguageSupportDialog(
                 )
                 if (speechCandidates.isEmpty()) {
                     Text("Geen spraakkandidaat gevonden.", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    speechCandidates.forEach { candidate ->
+                        Text(candidate, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                }
+                Text("Geen spraakkandidaat gevonden.", style = MaterialTheme.typography.bodySmall)
                 } else {
                     speechCandidates.forEach { candidate ->
                         Text(candidate, style = MaterialTheme.typography.bodyMedium)
