@@ -1,3 +1,13 @@
+## Nieuw: importeer slechts één taal of thema uit een eigen CSV
+
+Bij het openen of handmatig plakken van een vijfkoloms-CSV kun je
+in de complete controlepreview kiezen om **alleen één taal en/of
+persoonlijk thema** over te nemen. Een deelimport is altijd veilig
+samenvoegen: de knop om het hele persoonlijke zinnenboek te vervangen
+wordt dan uitgeschakeld. [Uitleg](docs/PRIVATE_TOPIC_CSV_ROUNDTRIP.md).
+
+---
+
 ## Nieuw: thema-CSV bewust plakken zonder bestandsprovider
 
 Je kunt een eigen vijfkoloms-CSV nu ook zelf in het invoerveld van
