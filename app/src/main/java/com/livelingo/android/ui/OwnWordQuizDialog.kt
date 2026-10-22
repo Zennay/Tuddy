@@ -33,6 +33,7 @@ import com.livelingo.android.PrivateOwnWordQuiz
 internal fun OwnWordQuizDialog(
     notes: List<OwnWord>,
     curated: Boolean = false,
+    phraseMode: Boolean = false,
     onDismiss: () -> Unit
 ) {
     var reverse by remember { mutableStateOf(false) }
@@ -56,7 +57,11 @@ internal fun OwnWordQuizDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (curated) "Quiz · bewaarde basiswoorden" else "Kies de betekenis · privéquiz") },
+        title = { Text(when {
+            curated -> "Quiz · bewaarde basiswoorden"
+            phraseMode -> "Quiz · mijn eigen offline zinnen"
+            else -> "Kies de betekenis · privéquiz"
+        }) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 510.dp)
@@ -68,6 +73,11 @@ internal fun OwnWordQuizDialog(
                         "ingebouwde woordenboekbetekenis. Dit is geen vrije vertaling " +
                         "en bewijst geen dialectkwaliteit. Geen microfoon, internet " +
                         "of opgeslagen score."
+                    else if (phraseMode) "Oefen uitsluitend door jezelf ingevoerde zinnen " +
+                        "binnen één gekozen bron- en doeltaal. De betekenissen zijn " +
+                        "niet automatisch vertaald en niet door een native speaker " +
+                        "geverifieerd. Geen microfoon, cloud, opgeslagen score " +
+                        "of wijziging aan je privézinnen."
                     else "Oefen alleen woorden die jij zelf hebt opgeslagen. De quiz " +
                         "controleert uitsluitend of je jouw eigen betekenis terugvindt: " +
                         "die is niet door Tuddy of een native speaker geverifieerd. " +
@@ -79,8 +89,13 @@ internal fun OwnWordQuizDialog(
                     focus = null
                     round++
                 }) {
-                    Text(if (reverse) "Betekenis → woord ⇄ (wissel)"
-                        else "Woord → betekenis ⇄ (wissel)")
+                    Text(if (reverse) {
+                        if (phraseMode) "Eigen betekenis → zin ⇄ (wissel)"
+                        else "Betekenis → woord ⇄ (wissel)"
+                    } else {
+                        if (phraseMode) "Zin → eigen betekenis ⇄ (wissel)"
+                        else "Woord → betekenis ⇄ (wissel)"
+                    })
                 }
                 if (focus != null) {
                     Text("Herhaalronde: alleen eerder verkeerd gekozen woorden.",
@@ -89,10 +104,16 @@ internal fun OwnWordQuizDialog(
                 HorizontalDivider()
                 if (card == null) {
                     if (cards.isEmpty()) {
-                        Text("Deze selectie heeft minimaal twee woorden met " +
-                            "verschillende betekenissen in dezelfde taal nodig. " +
-                            "Woorden met een identieke betekenis worden bewust " +
-                            "overgeslagen, zodat er geen dubbel juist antwoord ontstaat.")
+                        Text(if (phraseMode) {
+                            "Deze selectie heeft minimaal twee eigen zinnen met " +
+                                "verschillende betekenissen in exact hetzelfde taalpaar " +
+                                "nodig. Dubbelzinnige kaarten worden overgeslagen."
+                        } else {
+                            "Deze selectie heeft minimaal twee woorden met " +
+                                "verschillende betekenissen in dezelfde taal nodig. " +
+                                "Woorden met een identieke betekenis worden bewust " +
+                                "overgeslagen, zodat er geen dubbel juist antwoord ontstaat."
+                        })
                     } else {
                         Text("Ronde afgerond · $correct / ${cards.size} gekozen zoals opgeslagen.",
                             style = MaterialTheme.typography.titleMedium)
@@ -127,6 +148,9 @@ internal fun OwnWordQuizDialog(
                     Text(if (curated) {
                         "Welke ${if (reverse) "woordvorm" else "ingebouwde basisbetekenis"} " +
                             "hoort volgens Tuddy's kleine woordenlijst bij deze kaart?"
+                    } else if (phraseMode) {
+                        "Welke ${if (reverse) "eigen zin" else "eigen vertaalnotitie"} " +
+                            "heb je zelf bij deze kaart opgeslagen?"
                     } else {
                         "Welke ${if (reverse) "woordvorm" else "eigen betekenis"} " +
                             "heb je zelf bij deze kaart opgeslagen?"
