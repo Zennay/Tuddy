@@ -29,12 +29,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OwnWord
+import com.livelingo.android.IncomingPersonalCsvDocument
 import com.livelingo.android.PrivateOwnWordDeck
 import com.livelingo.android.PrivateOwnWordCsv
 import com.livelingo.android.PrivatePrintableOwnWordbook
 import com.livelingo.android.TargetCatalog
 import java.io.ByteArrayOutputStream
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Human-authored offline word notes, strictly separated from vetted glossary
@@ -49,6 +52,8 @@ internal fun MyOwnWordsPanel(
     onIncomingBackupJsonConsumed: (String) -> Unit = {},
     incomingCsvText: String? = null,
     onIncomingCsvConsumed: (String) -> Unit = {},
+    incomingCsvDocument: IncomingPersonalCsvDocument? = null,
+    onIncomingCsvDocumentConsumed: (Long) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val defaultLanguage = initialLanguage.replace('_', '-').substringBefore('-')
@@ -275,6 +280,57 @@ internal fun MyOwnWordsPanel(
             }
         }
         onIncomingCsvConsumed(shared)
+    }
+
+    LaunchedEffect(incomingCsvDocument?.requestId) {
+        val request = incomingCsvDocument ?: return@LaunchedEffect
+        if (request.uri == null) {
+            notice = request.notice ?: "Er is geen geldig Android CSV-bestand gedeeld."
+            onIncomingCsvDocumentConsumed(request.requestId)
+            return@LaunchedEffect
+        }
+        if (pendingRestore != null || pasteWordsOpen || pasteBackupOpen ||
+            pendingBackup != null || pendingTsvExport != null ||
+            pendingCsvExport != null || selectedTsvPreview != null ||
+            pendingPrintable != null || printableConsent ||
+            editing != null || pendingDelete != null || quizOpen || practiceOpen) {
+            notice = "Er staat al een eigen-woordenbewerking of export open. " +
+                "Sluit die eerst en open het CSV-bestand opnieuw."
+            onIncomingCsvDocumentConsumed(request.requestId)
+            return@LaunchedEffect
+        }
+        val bytes = withContext(Dispatchers.IO) {
+            runCatching {
+                val input = context.contentResolver.openInputStream(request.uri)
+                    ?: throw IllegalArgumentException("onleesbaar contentbestand")
+                val output = ByteArrayOutputStream()
+                input.use { stream ->
+                    val buffer = ByteArray(4096)
+                    while (true) {
+                        val count = stream.read(buffer)
+                        if (count < 0) break
+                        if (count == 0 ||
+                            output.size() + count > PrivateOwnWordDeck.MAX_BACKUP_BYTES)
+                            throw IllegalArgumentException("bestand onjuist of >50 KB")
+                        output.write(buffer, 0, count)
+                    }
+                }
+                output.toByteArray()
+            }.getOrNull()
+        }
+        val baseline = deck.entries()
+        val imported = bytes?.let { PrivateOwnWordCsv.previewImport(it, deck) }
+        if (imported == null || baseline == null) {
+            notice = "Gedeeld CSV-bestand geweigerd: ongeldig formaat, " +
+                "gegevens of groter dan 50 KB. Bestaande notities behouden."
+        } else {
+            pendingRestore = imported
+            pendingRestoreBase = baseline.toList()
+            restoreOrigin = "csv"
+            notice = "CSV via Android geopend. Bekijk alle eigen woorden " +
+                "en bevestig bewust samenvoegen of vervangen."
+        }
+        onIncomingCsvDocumentConsumed(request.requestId)
     }
 
     val tsvPicker = rememberLauncherForActivityResult(
