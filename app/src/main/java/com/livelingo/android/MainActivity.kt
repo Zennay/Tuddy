@@ -98,6 +98,7 @@ import java.util.Date
 private sealed class SharedDocumentImportResult {
     data class Subtitle(val cues: List<PrivateSubtitleCue>) : SharedDocumentImportResult()
     data class CorrectionJson(val json: String) : SharedDocumentImportResult()
+    data class PersonalPhraseBackup(val json: String) : SharedDocumentImportResult()
     data class Rejected(val reason: String) : SharedDocumentImportResult()
 }
 
@@ -544,8 +545,9 @@ private fun TuddyScreen(
     var previewTarget by remember { mutableStateOf("kmr") }
     val personalPhrases = remember(context) { PrivatePhraseDeck(context) }
     var personalPhrasesOpen by remember { mutableStateOf(false) }
-    // Sharesheet CSV stays in RAM until the private phrasebook preview consumes it.
+    // External phrasebook text/backup remains in RAM until its explicit import preview consumes it.
     var pendingSharedPersonalPhraseCsv by remember { mutableStateOf<String?>(null) }
+    var pendingSharedPersonalPhraseBackupJson by remember { mutableStateOf<String?>(null) }
     // A user explicitly opened one private CSV: expose its preview-only
     // phrasebook screen. Do not read, translate, or save the external bytes here.
     LaunchedEffect(incomingPersonalCsv?.requestId) {
@@ -2577,9 +2579,9 @@ private fun TuddyScreen(
         }
     }
 
-    // A single explicitly shared content:// file can be either a subtitle or
-    // Tuddy's own bounded correction JSON. Inspect the exact selected bytes once;
-    // correction files go to the existing human-confirmed import preview.
+    // A single explicitly shared content:// file can be a subtitle, correction
+    // JSON, or private phrasebook backup. Inspect selected bytes once; Tuddy
+    // exports go to their existing human-confirmed import previews.
     suspend fun readSelectedSharedDocument(uri: Uri): SharedDocumentImportResult {
         if (uri.scheme != "content") return SharedDocumentImportResult.Rejected(
             "Geen geldige Android-documentprovider; bestaande inhoud blijft behouden."
@@ -2607,6 +2609,18 @@ private fun TuddyScreen(
                             SharedDocumentImportResult.Rejected(
                                 "Gedeeld Tuddy-correctiebestand is ongeldig of groter dan 48 KB. " +
                                     "Niets geïmporteerd."
+                            )
+                        }
+                    } else if (selected.text.trimStart().startsWith("{") &&
+                        selected.text.contains("\"tuddy-private-phrases-v1\"")) {
+                        val decoded = if (selected.sizeBytes <= 50_000 && bytes.size <= 50_000)
+                            personalPhrases.previewImport(bytes) else null
+                        if (decoded != null) {
+                            SharedDocumentImportResult.PersonalPhraseBackup(selected.text)
+                        } else {
+                            SharedDocumentImportResult.Rejected(
+                                "Gedeelde Tuddy-zinnenback-up geweigerd: ongeldige versie, " +
+                                    "ongeldige zinnen of groter dan 50 KB. Niets gewijzigd."
                             )
                         }
                     } else {
@@ -3001,6 +3015,22 @@ private fun TuddyScreen(
                         translationMemoryOpen = true
                         error = ""
                     }
+                    is SharedDocumentImportResult.PersonalPhraseBackup -> {
+                        stop()
+                        quickTypedOpen = false
+                        twoWayTypedOpen = false
+                        sharedTextToTwoWay = null
+                        draftFromExternalShare = false
+                        manualText = ""
+                        pendingCorrectionTransferText = null
+                        pendingSharedPersonalPhraseCsv = null
+                        translationMemoryOpen = false
+                        starterPhraseboardOpen = false
+                        offlinePersonalTurnsOpen = false
+                        pendingSharedPersonalPhraseBackupJson = loaded.json
+                        personalPhrasesOpen = true
+                        error = ""
+                    }
                 }
             }
         }
@@ -3022,8 +3052,22 @@ private fun TuddyScreen(
                 draftFromExternalShare = false
                 manualText = ""
                 pendingCorrectionTransferText = null
+                pendingSharedPersonalPhraseBackupJson = null
                 translationMemoryOpen = false
                 pendingSharedPersonalPhraseCsv = shared.personalPhraseCsvText
+                personalPhrasesOpen = true
+                error = ""
+            } else if (shared.personalPhraseBackupJson != null) {
+                stop()
+                quickTypedOpen = false
+                twoWayTypedOpen = false
+                sharedTextToTwoWay = null
+                draftFromExternalShare = false
+                manualText = ""
+                pendingCorrectionTransferText = null
+                pendingSharedPersonalPhraseCsv = null
+                translationMemoryOpen = false
+                pendingSharedPersonalPhraseBackupJson = shared.personalPhraseBackupJson
                 personalPhrasesOpen = true
                 error = ""
             } else if (shared.correctionTransferText != null) {
@@ -6331,8 +6375,15 @@ private fun TuddyScreen(
                     if (pendingSharedPersonalPhraseCsv == received)
                         pendingSharedPersonalPhraseCsv = null
                 },
+                incomingBackupJsonText = pendingSharedPersonalPhraseBackupJson,
+                onIncomingBackupJsonConsumed = { received ->
+                    if (pendingSharedPersonalPhraseBackupJson == received)
+                        pendingSharedPersonalPhraseBackupJson = null
+                },
                 onDismiss = {
                     personalPhrasesOpen = false
+                    pendingSharedPersonalPhraseCsv = null
+                    pendingSharedPersonalPhraseBackupJson = null
                     incomingPersonalCsv?.let { onPersonalCsvConsumed(it.requestId) }
                 }
             )
