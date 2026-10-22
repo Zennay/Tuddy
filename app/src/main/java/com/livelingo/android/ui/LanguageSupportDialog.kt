@@ -108,8 +108,13 @@ internal fun LanguageSupportDialog(
                 }
                 HorizontalDivider()
                 Text(
-                    "Niet beschikbaar als vrije offlinevertaling · " +
-                        UnavailableTextLanguageCatalog.entries.size + " taalverzoeken",
+                    if (normalizedQuery.isEmpty()) {
+                        "Niet beschikbaar als vrije offlinevertaling · " +
+                            UnavailableTextLanguageCatalog.entries.size + " taalverzoeken"
+                    } else {
+                        "Niet beschikbaar als vrije offlinevertaling · " +
+                            unavailable.size + " passende resultaten"
+                    },
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
@@ -117,7 +122,7 @@ internal fun LanguageSupportDialog(
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (unavailable.isEmpty()) {
-                    Text("Geen niet-beschikbare taal gevonden.", style = MaterialTheme.typography.bodySmall)
+                    Text("Geen niet-beschikbare taal of modelkandidaat gevonden.", style = MaterialTheme.typography.bodySmall)
                 } else {
                     Text("Modelkaarten hieronder zijn alleen onderzoekskandidaten. " +
                         "Openen gaat naar een externe website; Tuddy downloadt of activeert niets.",
