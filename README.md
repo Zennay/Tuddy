@@ -2322,11 +2322,15 @@ geen account, pushmelding, cloud of taalvaardigheidsclaim.
 
 Open bewust een eerder opgeslagen privé-JSON-archief, zoek in
 de regels en tik **▣ Lees gevonden archiefregels groot**.
-De bestaande tweetalige leesmodus toont uitsluitend deze
+Bij een regel kun je ook **＋ Maak eigen privékaart…** kiezen:
+de archieftekst is alleen referentie, beide velden blijven leeg en
+alleen jouw eigen invoer wordt na bevestiging aan het privézinnenboek
+toegevoegd. De bestaande tweetalige leesmodus toont uitsluitend deze
 zoekresultaten groter, bij voldoende schermbreedte naast elkaar.
 Sluiten brengt je terug naar hetzelfde archief, zonder iets
 in het live gesprek te importeren of automatisch op te slaan.
-[Bediening en privacy](docs/PRIVATE_ARCHIVE_FULLSCREEN_READER.md).
+[Bediening en privacy](docs/PRIVATE_ARCHIVE_FULLSCREEN_READER.md) ·
+[Eigen privékaart schrijven](docs/ARCHIVE_TO_PRIVATE_PHRASE_CARD.md).
 
 ## Nieuw: woord bekijken zolang je het indrukt
 
