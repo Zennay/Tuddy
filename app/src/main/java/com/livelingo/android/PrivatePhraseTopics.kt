@@ -129,7 +129,8 @@ internal class PrivatePhraseTopics(context: Context) {
     fun previewImport(bytes: ByteArray): PrivatePhraseTopicBackup? {
         if (bytes.isEmpty() || bytes.size > MAX_BACKUP_BYTES) return null
         val source = bytes.toString(Charsets.UTF_8)
-        if (!source.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        if (!source.toByteArray(Charsets.UTF_8).contentEquals(bytes) ||
+            !StrictJsonKeyGuard.accepts(source)) return null
         val notes = deck.entries() ?: return null
         val live = notes.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
         return try {

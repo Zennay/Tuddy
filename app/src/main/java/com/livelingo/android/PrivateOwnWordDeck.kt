@@ -323,7 +323,8 @@ internal class PrivateOwnWordDeck(context: Context) {
     fun previewImport(bytes: ByteArray): List<OwnWord>? {
         if (bytes.isEmpty() || bytes.size > MAX_BACKUP_BYTES) return null
         val source = bytes.toString(Charsets.UTF_8)
-        if (!source.toByteArray(Charsets.UTF_8).contentEquals(bytes)) return null
+        if (!source.toByteArray(Charsets.UTF_8).contentEquals(bytes) ||
+            !StrictJsonKeyGuard.accepts(source)) return null
         return try {
             val root = JSONObject(source)
             if (root.length() != 2 ||
