@@ -9,6 +9,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import com.livelingo.android.PrivateOfflineSearch
 
 /**
  * Local-only lookup in finished caption text. No microphone, translation,
@@ -20,16 +21,20 @@ internal object SessionCaptionSearch {
         query: String,
         manualSpeaker: String?
     ): List<FocusCaptionLine> {
-        val term = query.trim().take(120)
+        // Keep user-authored script unchanged. Fold only the transient search
+        // probe, as the live-conversation/archive searches already do.
+        val term = PrivateOfflineSearch.fold(
+            query.trim().take(120).filterNot { it.isISOControl() }
+        )
         return captions.filter { caption ->
             (manualSpeaker == null ||
                 (manualSpeaker == "?" && caption.speaker == null) ||
                 caption.speaker == manualSpeaker) &&
                 (term.isEmpty() ||
-                    caption.original.contains(term, ignoreCase = true) ||
+                    PrivateOfflineSearch.contains(caption.original, term) ||
                     ((caption.status == "Lokaal vertaald" || caption.status == "Lokaal") &&
-                        caption.translated.contains(term, ignoreCase = true)) ||
-                    caption.personalMeaning?.contains(term, ignoreCase = true) == true)
+                        PrivateOfflineSearch.contains(caption.translated, term)) ||
+                    caption.personalMeaning?.let { PrivateOfflineSearch.contains(it, term) } == true)
         }
     }
 }
