@@ -3145,9 +3145,10 @@ Herstel controleert eerst bestandsversie, bekende woorden, dubbelen en
 UTF-8-inhoud, toont hoeveel woorden geladen worden en vraagt vervolgens
 apart om de bestaande lijst werkelijk te vervangen. Annuleren raakt de
 woorden niet. Definities komen altijd uit de lokaal geïnstalleerde
-woordenlijst, niet uit het gekozen bestand. Een JSON-back-up kan ook via
-Android Delen naar Tuddy worden gestuurd: de ontvanger valideert het bestand
-en toont dezelfde importpreview in plaats van het als vertaaltekst te openen.
+woordenlijst, niet uit het gekozen bestand. Een `tuddy-curated-word-keys-v1`
+JSON-back-up kan ook via Android Delen naar Tuddy worden gestuurd: de ontvanger
+valideert alle sleutels en toont de volledige woordenlijst vóór de afzonderlijke
+vervangbevestiging, in plaats van het bestand als vertaaltekst te openen.
 Geen gesprekken, audio of persoonlijke zinnen worden geëxporteerd of geïmporteerd.
 Android vraagt zelf om een opslaglocatie; een externe bestandsprovider kan
 wel synchroniseren. Zie [woordback-uphandleiding](docs/PRIVATE_WORD_BACKUP.md).
