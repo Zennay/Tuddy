@@ -246,7 +246,42 @@ speech or full transcripts** with reports.
     and the translated provisional subtitle. The source-only and hosted
     synthetic gates cannot replace this actual handset trial.
 
-## 3. Evidence / release record (fill only after running the test)
+## 3. Capture the in-app offline observation report
+
+After installing the exact APK listed in section 1 on an authorized physical
+Android 12+ handset, run the real offline session described in section 2.
+Keep airplane mode enabled and independently ensure Wi-Fi/mobile data remain
+disabled before opening the report form; the form binds its snapshot to the
+current device state.
+
+1. Open **Offline startcheck** and choose **Leg fysieke offline-waarnemingen
+   vast…**.
+2. Copy the **APK SHA-256** from section 1 into the expected APK checksum field.
+   Use the digest of `app-debug.apk`, never the enclosing artifact ZIP digest.
+   The form compares this value with the installed base APK digest. A mismatch
+   means the wrong APK or checksum is being used; do not mark it accepted.
+3. Record only observations made on this device: APK identity, disconnected
+   state, microphone/Stop lifecycle, absence of cloud fallback, and transcript
+   clearing after relaunch.
+4. Make ten attempts in each direction for offline speech and local translation
+   (NL→EN and EN→NL). Enter how many succeeded (0–10) and the highest observed
+   end-to-end latency in milliseconds. Do not enter sample phrases, transcripts,
+   audio, names, or free-form notes.
+5. Review the full report and choose an Android Storage Access Framework
+   destination. Check whether that provider synchronizes files externally.
+   The form clears its temporary values after dismissal or returning from the
+   file picker. If device/model state changed during the picker, it refuses the
+   stale report; reopen the form after restoring the intended offline state.
+6. Attach the resulting report only after reviewing it for device identifiers
+   and sharing consent. Keep this issue open until a human reviews the evidence.
+
+The report is explicitly **self-reported** and **not independently verified by
+Tuddy**. A complete form is not proof of zero network traffic, an independent
+speech-quality assessment, a signed release, or production authorization. It
+does not close issue #1 automatically. Do not attach raw speech/audio or full
+private transcripts.
+
+## 4. Evidence / release record (fill only after running the test)
 
 - Candidate source / APK digest: **NOT YET OBSERVED ON DEVICE**
 - Historical v0.4 source archive: original ZIP SHA-256 `e7721d41d4f7baf31850e3836d5655cfd3b20c2197752cc4a3ff1078fc57992c`; all 23 extracted entries have matching Git blob hashes in `archive/v0.4/LiveLingo-Android/` on branch `docs/archive-v04-source-completeness-20261022` (manifest: [`archive/v0.4/IMPORT_MANIFEST.md`](../archive/v0.4/IMPORT_MANIFEST.md)). This archive-integrity record is not evidence of a physical install; historical sources are preserved separately from the active app module.
