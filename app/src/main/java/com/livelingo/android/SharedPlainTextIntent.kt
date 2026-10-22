@@ -5,8 +5,9 @@ import android.content.Intent
 /**
  * Opt-in Android Sharesheet and text-selection ingress. Accept literal
  * text/plain ACTION_SEND or ACTION_PROCESS_TEXT only; never follow URLs,
- * attachments or HTML providers.
- * Importing prepares an editable draft, not an automatic translation/export.
+ * attachments or HTML providers. Known Tuddy phrasebook/correction formats
+ * route to their existing explicit import previews; other text remains a draft.
+ * Nothing is automatically translated, imported or exported.
  */
 internal data class IncomingSharedText(
     val draft: String?,
