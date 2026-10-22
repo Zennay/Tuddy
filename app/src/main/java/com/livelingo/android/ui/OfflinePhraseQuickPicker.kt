@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.PrivatePhraseScriptSearch
 import com.livelingo.android.PrivatePhraseShortcuts
 import com.livelingo.android.PrivatePhraseTopics
 import java.util.Locale
@@ -63,7 +64,8 @@ internal fun OfflinePhraseQuickPicker(
     }
     // Terms can match either field, independently, without a server search.
     // Keep the presentation deck EXACTLY equal to the user's visible filter.
-    val terms = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    val terms = query.trim().split(Regex("\\s+")).map(PrivatePhraseScriptSearch::fold)
+        .filter { it.isNotBlank() }
     val filtered = availableNotes.filter { note ->
         val assigned = topicStore.topicFor(note)
         val matchesTopic = when (filteredTopic) {
@@ -75,8 +77,8 @@ internal fun OfflinePhraseQuickPicker(
             (!favoritesOnly || note in pinnedNotes) &&
             (code == "all" || note.language == code) &&
             terms.all { term ->
-                note.phrase.contains(term, ignoreCase = true) ||
-                    note.ownMeaning.contains(term, ignoreCase = true)
+                PrivatePhraseScriptSearch.contains(note.phrase, term) ||
+                    PrivatePhraseScriptSearch.contains(note.ownMeaning, term)
             }
     }.sortedWith(compareByDescending<PersonalPhrase> { it in pinnedNotes }
         .thenBy { it.language }.thenBy { it.phrase.lowercase(Locale.ROOT) })
