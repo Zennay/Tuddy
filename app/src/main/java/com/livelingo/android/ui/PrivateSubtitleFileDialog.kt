@@ -733,6 +733,11 @@ internal fun PrivateSubtitleFileDialog(
                     ) {
                         Text(if (sequenceSlow) "🐢 Rustig tempo aan" else "Normaal tempo · tik voor rustig")
                     }
+                    Text(
+                        "Leest deze cue en de volgende regels serieel. Alleen geïnstalleerde lokale stemmen; " +
+                            "maximaal 100 cues en 400 tekens per cue. Er wordt geen audio opgeslagen.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     OutlinedButton(
                         enabled = chosenVoiceLanguage != null && !sequenceReading,
                         modifier = Modifier.fillMaxWidth(),
