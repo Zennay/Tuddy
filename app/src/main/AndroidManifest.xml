@@ -60,6 +60,21 @@
                 <data android:mimeType="application/xml"/>
                 <data android:mimeType="text/xml"/>
             </intent-filter>
+            <!-- A single user-selected, content:// personal CSV goes to the
+                 bounded phrasebook preview, never directly to storage. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="content"/>
+                <data android:mimeType="text/csv"/>
+                <data android:mimeType="application/csv"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/csv"/>
+                <data android:mimeType="application/csv"/>
+            </intent-filter>
             <!-- User-highlighted text from Android's selection toolbar. -->
             <intent-filter>
                 <action android:name="android.intent.action.PROCESS_TEXT"/>
