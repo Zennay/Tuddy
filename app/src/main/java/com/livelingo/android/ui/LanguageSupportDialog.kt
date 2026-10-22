@@ -298,6 +298,12 @@ internal fun LanguageSupportDialog(
                                     Text("Licentie volgens modelkaart: " + candidate.declaredLicense +
                                         ". Omvang: " + candidate.footprint + ".",
                                         style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        "Classificatie: " + candidateAccessClass(
+                                            candidate.declaredLicense, candidate.limitation
+                                        ) + " · alleen op catalogustekst gebaseerd; geen vrijgave.",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
                                     if (candidate.directionEvidence.isNotBlank()) {
                                         Text("Taalrichtingen/codes (onbevestigd): " + candidate.directionEvidence,
                                             style = MaterialTheme.typography.bodySmall,
