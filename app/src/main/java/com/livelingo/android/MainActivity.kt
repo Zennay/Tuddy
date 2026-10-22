@@ -6829,9 +6829,9 @@ private fun TuddyScreen(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(0.dp)
                                 ) {
                                     val speaker = manuallyAssignedSpeakers[line.id]
                                     Text(
@@ -6839,13 +6839,16 @@ private fun TuddyScreen(
                                         else "Spreker $speaker (handmatig)",
                                         style = MaterialTheme.typography.labelSmall
                                     )
-                                    TextButton(onClick = {
-                                        when (speaker) {
-                                            null -> manuallyAssignedSpeakers[line.id] = "A"
-                                            "A" -> manuallyAssignedSpeakers[line.id] = "B"
-                                            else -> manuallyAssignedSpeakers.remove(line.id)
+                                    TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            when (speaker) {
+                                                null -> manuallyAssignedSpeakers[line.id] = "A"
+                                                "A" -> manuallyAssignedSpeakers[line.id] = "B"
+                                                else -> manuallyAssignedSpeakers.remove(line.id)
+                                            }
                                         }
-                                    }) { Text("Wijzig spreker") }
+                                    ) { Text("Wijzig spreker (A / B / onbekend)") }
                                 }
                                 if (line.userCorrected) {
                                     Text("✎ Zelf gecorrigeerd · niet door Android gecontroleerd",
@@ -6888,7 +6891,7 @@ private fun TuddyScreen(
                                         Text("Alle acties gelden uitsluitend voor deze gespreksregel.",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    TextButton(
+                                        TextButton(
                                         modifier = Modifier.fillMaxWidth(),
                                         enabled = !listening,
                                         onClick = {
