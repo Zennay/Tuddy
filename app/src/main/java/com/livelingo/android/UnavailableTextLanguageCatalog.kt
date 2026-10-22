@@ -90,6 +90,30 @@ internal object UnavailableTextLanguageCatalog {
             "Niet onafhankelijk herhaald, niet op Android getest en niet geïntegreerd."
     )
 
+    private val soraniOnnxResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Spraakherkenning (ASR)",
+        title = "asounimelb/whisper-small-ckb-onnx",
+        url = "https://huggingface.co/asounimelb/whisper-small-ckb-onnx",
+        declaredLicense = "Apache-2.0 volgens modelkaart",
+        footprint = "244M parameters; encoder alleen circa 353 MB FP32; volledig pakket groter",
+        limitation = "Publieke ONNX-export kan verder onderzoek naar ONNX Runtime op Android vereenvoudigen, " +
+            "maar de encoder alleen is al groot. De modelkaart gebruikt een Engelse decoder-token als Sorani-workaround; " +
+            "datarechten, volledige modelomvang, kwaliteit en Android-prestaties zijn niet onafhankelijk geverifieerd. " +
+            "Niet geïntegreerd of geactiveerd."
+    )
+
+    private val badiniTranslationResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Tekstvertaling",
+        title = "arkanit/badini-nllb-translator",
+        url = "https://huggingface.co/arkanit/badini-nllb-translator",
+        declaredLicense = "MIT volgens afgeleide modelkaart; upstream NLLB CC-BY-NC-4.0 — onopgelost",
+        footprint = "circa 0,6B parameters; exacte pakketgrootte niet geverifieerd",
+        limitation = "Modelkaart beschrijft Badini, maar adverteert de taalcode ckb_Arab; dit bewijst geen standaard " +
+            "Kurmanji (kmr_Latn) of Sorani-dekking. Het noemt NLLB-200 distilled 600M als basis, waarvan de upstream " +
+            "gewichten CC-BY-NC-4.0 zijn. Een MIT-label op de afgeleide repository lost die rechtenvraag niet op. " +
+            "Niet bundelen of activeren zonder herkomst-/licentiebeoordeling; niet geïntegreerd."
+    )
+
     private val soraniApacheResearchCandidate = OfflineLanguageModelCandidate(
         category = "Spraakherkenning (ASR)",
         title = "SECT19N/whisper-small-ckb-merged",
@@ -145,7 +169,10 @@ internal object UnavailableTextLanguageCatalog {
                 kurmanjiCompactResearchCandidate,
                 kurmanjiWav2VecResearchCandidate
             ),
-            translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
+            translationCandidates = listOf(
+                nllbResearchCandidate, madladResearchCandidate,
+                badiniTranslationResearchCandidate
+            )
         ),
         UnavailableTextLanguage(
             "ckb", "سۆرانی · Sorani (Centraal-Koerdisch)",
@@ -168,7 +195,8 @@ internal object UnavailableTextLanguageCatalog {
                 soraniTinyResearchCandidate,
                 soraniBaseResearchCandidate,
                 soraniSmallResearchCandidate,
-                soraniApacheResearchCandidate
+                soraniApacheResearchCandidate,
+                soraniOnnxResearchCandidate
             ),
             translationCandidates = listOf(nllbResearchCandidate, madladResearchCandidate)
         ),
