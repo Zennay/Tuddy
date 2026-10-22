@@ -101,6 +101,33 @@ bash scripts/verify-tuddy-apk-artifact.sh \
   39791430220
 ```
 
+## Install the exact debug APK on an authorized handset
+
+1. Open the workflow and download the `Tuddy-debug-apk` artifact ZIP from the
+   exact run in the table. Do not use a similarly named APK from an older run.
+2. Verify the **artifact ZIP** SHA-256 listed above before extracting it. On
+   macOS use `shasum -a 256 artifact.zip`; on Linux use
+   `sha256sum artifact.zip`. These hashes are for different files: never
+   compare the ZIP digest with the APK digest.
+3. Extract `app-debug.apk`, `app-debug.apk.sha256`,
+   `source-commit.txt` and `build-manifest.txt`. Run the repository
+   verifier shown above when a source checkout is available. Confirm the
+   manifest/source commit equals the exact source SHA in the table and the
+   APK checksum matches the sidecar.
+4. Transfer that exact APK to the **authorized physical Android 12+ device**
+   using a trusted local transfer route. Open it from the device's file
+   manager and follow Android's package-installer prompt. If Android asks
+   permission for that file manager to install APKs, grant it only if you
+   trust the source and revoke it afterwards if no longer needed.
+5. This is a **debug-signed** APK, not a production release. If Android reports
+   an update-signature conflict with an existing Tuddy install, do not
+   uninstall the existing app unless you have knowingly accepted possible
+   local-data loss. Stop and record the conflict instead.
+6. After installation, open **Offline startcheck**, read the sidecar through
+   the in-app document picker, and continue with the actual airplane-mode
+   and speech/translation observations below. Installing the APK or matching
+   its hash is not acceptance evidence by itself.
+
 The verifier checks artifact integrity and provenance only. The user-controlled
 in-app observation form still requires a human to verify airplane mode,
 independently disabled remaining connections, NL↔EN speech/translation outcomes,
