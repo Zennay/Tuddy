@@ -251,3 +251,33 @@ mogelijk. De bestaande volledige, afzonderlijk gewaarschuwde
 vervangoptie is niet beschikbaar zolang er correcties zijn aangevinkt.
 Dit zijn uitsluitend door de gebruiker zelfgeschreven betekenissen,
 geen geverifieerde automatische vertaling of spraakherkenning.
+
+
+## Bestaande eigen thema's alleen na een tweede afzonderlijke keuze aanpassen
+
+Bij de vijfkoloms-CSV-import zie je bij elke bestaande bronzin nu
+ook **Lokaal thema** naast **CSV-thema**. Standaard wint altijd je eigen
+huidige themakoppeling: de import mag niet stilzwijgend zinnen in
+andere groepen zetten. Ook een correctie van de eigen betekenis
+verandert het thema niet automatisch.
+
+Als het thema daadwerkelijk afwijkt, kun je per exact overeenkomende
+bronzin bewust kiezen voor **Verander alleen dit bestaande thema
+(apart akkoord)**. Een blanco themacel betekent in dit geval expliciet
+**zonder thema**. Dit is onafhankelijk van de aparte toestemming om
+een bestaande betekenis te corrigeren. Je kunt dus alleen het thema,
+alleen de betekenis, beide of geen van beide wijzigen.
+
+Alleen de door jou geselecteerde themakoppelingen en nieuwe zinnen
+worden in dezelfde atomaire lokale transactie verwerkt. Reeds
+bestaande thema's houden hun lokale spelling. Nieuwe thema's ontstaan
+uitsluitend als ze bij een nieuwe zin of een apart goedgekeurde
+themawijziging horen, en nooit door een overgeslagen CSV-regel.
+
+Een themawijziging verandert geen persoonlijke betekenis, favoriet of
+herhaaldatum; uitsluitend een expliciete betekeniscorrectie reset
+de leerplanning van die bronzin. Is het privéboek of de thema-indeling
+tussen preview en bevestiging veranderd, dan wordt de volledige
+bewerking geweigerd. Een gedeeltelijke import kan niet de hele
+privélijst vervangen. Alle wijzigingen zijn handmatig, lokaal en
+zonder automatische cloudvertaling.
