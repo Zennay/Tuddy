@@ -3,6 +3,7 @@ package com.livelingo.android.ui
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,7 @@ import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.SessionTranslationCorrectionTransfer
 import com.livelingo.android.SessionTranslationCorrectionCsv
 import com.livelingo.android.SessionCorrectionPrintableWorksheet
+import com.livelingo.android.PrivateOfflineSearch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,6 +62,7 @@ internal fun SessionCorrectionTransferDialog(
     var pastedCsv by remember { mutableStateOf("") }
     var preview by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
     var selectedRows by remember { mutableStateOf(emptySet<Int>()) }
+    var importSearch by remember { mutableStateOf("") }
     var pairPickerOpen by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -148,6 +151,7 @@ internal fun SessionCorrectionTransferDialog(
         if (uri != null) {
             preview = null
             selectedRows = emptySet()
+            importSearch = ""
             busy = true
             scope.launch {
                 val decoded = withContext(Dispatchers.IO) {
@@ -183,6 +187,7 @@ internal fun SessionCorrectionTransferDialog(
                 } else {
                     preview = decoded
                     selectedRows = decoded.indices.toSet()
+                    importSearch = ""
                     notice = "Controleer alle zinnen. Kies bewust hoe je deze " +
                         "samenvoegt of als vervanging in RAM laadt."
                 }
@@ -339,7 +344,33 @@ internal fun SessionCorrectionTransferDialog(
                             " eigen correcties gekozen. Alleen deze worden overgenomen.",
                         style = MaterialTheme.typography.labelMedium
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = importSearch,
+                        onValueChange = { importSearch = it.take(80) },
+                        label = { Text("Zoek eigen correctie voor selectie") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    val foldedImportSearch = PrivateOfflineSearch.fold(importSearch.trim())
+                    val visibleIndexes = imported.indices.filter { index ->
+                        val item = imported[index]
+                        foldedImportSearch.isEmpty() ||
+                            PrivateOfflineSearch.contains(item.original, foldedImportSearch) ||
+                            PrivateOfflineSearch.contains(item.translation, foldedImportSearch) ||
+                            PrivateOfflineSearch.contains(
+                                item.sourceCode + " → " + item.targetCode, foldedImportSearch
+                            )
+                    }
+                    Text(
+                        "Zichtbaar bij zoekopdracht: " + visibleIndexes.size +
+                            " van " + imported.size + ". Totaal aangevinkt: " +
+                            selectedRows.size + ". Verborgen aangevinkte rijen blijven gekozen.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         TextButton(
                             onClick = { selectedRows = imported.indices.toSet() },
                             enabled = !busy
@@ -348,6 +379,14 @@ internal fun SessionCorrectionTransferDialog(
                             onClick = { selectedRows = emptySet() },
                             enabled = !busy
                         ) { Text("Kies niets") }
+                        TextButton(
+                            onClick = { selectedRows = selectedRows + visibleIndexes },
+                            enabled = !busy && visibleIndexes.isNotEmpty()
+                        ) { Text("Kies zichtbare") }
+                        TextButton(
+                            onClick = { selectedRows = selectedRows - visibleIndexes.toSet() },
+                            enabled = !busy && visibleIndexes.isNotEmpty()
+                        ) { Text("Haal zichtbare weg") }
                     }
                     val languagePairs = imported.map {
                         it.sourceCode to it.targetCode
@@ -378,7 +417,8 @@ internal fun SessionCorrectionTransferDialog(
                             }
                         }
                     }
-                    imported.forEachIndexed { index, row ->
+                    visibleIndexes.forEach { index ->
+                        val row = imported[index]
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)

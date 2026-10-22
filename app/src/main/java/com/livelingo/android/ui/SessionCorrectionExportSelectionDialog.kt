@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.SessionTranslationCorrection
+import com.livelingo.android.PrivateOfflineSearch
 
 /**
  * Explicitly choose a subset of the user's own correction proposals for one
@@ -41,9 +44,18 @@ internal fun SessionCorrectionExportSelectionDialog(
     val snapshot = remember { entries.toList() }
     var selected by remember { mutableStateOf(snapshot.indices.toSet()) }
     var pairMenuOpen by remember { mutableStateOf(false) }
+    var selectionQuery by remember { mutableStateOf("") }
     var showAnswers by remember { mutableStateOf(false) }
     val languagePairs = snapshot.map { it.sourceCode to it.targetCode }.distinct()
     val chosen = snapshot.filterIndexed { index, _ -> index in selected }
+    val folded = PrivateOfflineSearch.fold(selectionQuery.trim())
+    val visibleIndexes = snapshot.indices.filter { index ->
+        val row = snapshot[index]
+        folded.isEmpty() ||
+            PrivateOfflineSearch.contains(row.original, folded) ||
+            PrivateOfflineSearch.contains(row.translation, folded) ||
+            PrivateOfflineSearch.contains(row.sourceCode + " → " + row.targetCode, folded)
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Eigen correcties voor export kiezen") },
@@ -64,13 +76,36 @@ internal fun SessionCorrectionExportSelectionDialog(
                         " eigen correcties voor export gekozen.",
                     style = MaterialTheme.typography.labelMedium
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = selectionQuery,
+                    onValueChange = { selectionQuery = it.take(80) },
+                    label = { Text("Zoek eigen correcties voor export") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Text(
+                    "Zichtbaar: " + visibleIndexes.size + " van " + snapshot.size +
+                        ". Verborgen aangevinkte correcties blijven geselecteerd.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     TextButton(onClick = { selected = snapshot.indices.toSet() }) {
                         Text("Kies alles")
                     }
                     TextButton(onClick = { selected = emptySet() }) {
                         Text("Kies niets")
                     }
+                    TextButton(
+                        enabled = visibleIndexes.isNotEmpty(),
+                        onClick = { selected = selected + visibleIndexes }
+                    ) { Text("Kies zichtbare") }
+                    TextButton(
+                        enabled = visibleIndexes.isNotEmpty(),
+                        onClick = { selected = selected - visibleIndexes.toSet() }
+                    ) { Text("Haal zichtbare weg") }
                 }
                 if (languagePairs.size > 1) {
                     Box {
@@ -97,7 +132,8 @@ internal fun SessionCorrectionExportSelectionDialog(
                         }
                     }
                 }
-                snapshot.forEachIndexed { index, entry ->
+                visibleIndexes.forEach { index ->
+                    val entry = snapshot[index]
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)

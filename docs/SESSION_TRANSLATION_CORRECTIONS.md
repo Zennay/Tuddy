@@ -118,3 +118,28 @@ niet automatisch en accepteert maximaal 48 KB tekst. Een geldige invoer
 toont dezelfde selecteerbare importvoorvertoning als de bestandsroute;
 pas een volgende bewuste keuze mag de RAM-correcties wijzigen.
 Het sluiten van het plakveld gooit de ingevoerde tekst weg.
+
+
+## Grote importvoorvertoningen gericht bekijken
+
+Bij het bewust openen of plakken van een eigen correctie-JSON/CSV kun je
+in de bestaande controlevoorvertoning nu ook zoeken op oorspronkelijke
+zin, zelfgeschreven vertaling of exact taalpaar. De zoekfunctie
+normaliseert veel voorkomende Arabisch/Perzische toetsvarianten alleen
+voor weergave en selectie; de echte invoer wordt niet aangepast.
+
+**Kies zichtbare** en **Haal zichtbare weg** werken uitsluitend op de
+actuele zoekresultaten. Eerder aangevinkte, door het filter verborgen
+regels blijven bewust geselecteerd en tellen mee in het zichtbare
+totaal. **Kies alles** en **Kies niets** blijven beschikbaar voor het
+volledige importbestand. Voor een merge/vervanging gebruikt Tuddy alleen
+het uiteindelijke selectie-overzicht en blijven de bestaande
+expliciete conflictkeuzes, maximale 40 zinnen en tijdelijke Undo geldig.
+Geen automatische of gedeeltelijke import.
+
+
+Dezelfde zoek- en selectiemogelijkheden bestaan ook in **Kies zinnen
+voor export…**: filter op tekst of taalpaar, vink een eigen zin aan,
+kies alleen de zichtbare regels of haal ze uit de selectie. Ook daar
+blijven verborgen aangevinkte correcties geselecteerd en zie je het
+totaal vóór je bewust een JSON-, CSV- of afdrukbaar HTML-document maakt.
