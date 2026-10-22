@@ -60,6 +60,8 @@ internal fun MyOwnWordsPanel(
     var practiceScope by remember { mutableStateOf<List<OwnWord>?>(null) }
     var practiceLanguage by remember { mutableStateOf(initialLanguage) }
     var practiceOpen by remember { mutableStateOf(false) }
+    var quizScope by remember { mutableStateOf<List<OwnWord>?>(null) }
+    var quizOpen by remember { mutableStateOf(false) }
     var plannedReviewOpen by remember { mutableStateOf(false) }
     var consentStartReview by remember { mutableStateOf(false) }
     var consentEraseReview by remember { mutableStateOf(false) }
@@ -314,6 +316,17 @@ internal fun MyOwnWordsPanel(
             onDismiss = {
                 practiceOpen = false
                 practiceScope = null
+            }
+        )
+        return
+    }
+
+    if (quizOpen) {
+        OwnWordQuizDialog(
+            notes = quizScope ?: items.orEmpty(),
+            onDismiss = {
+                quizOpen = false
+                quizScope = null
             }
         )
         return
@@ -830,6 +843,14 @@ internal fun MyOwnWordsPanel(
                         practiceOpen = true
                     }
                 ) { Text("🧠 Oefen alle eigen woorden · zonder opslag") }
+                OutlinedButton(
+                    enabled = items?.isNotEmpty() == true,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        quizScope = items?.toList()
+                        quizOpen = true
+                    }
+                ) { Text("🎯 Meerkeuzequiz · mijn eigen betekenissen") }
                 Text(
                     "Alleen je eigen, ongeverifieerde betekenissen. Je ziet het " +
                         "antwoord pas na een tik; resultaten verdwijnen bij sluiten.",
@@ -986,6 +1007,14 @@ internal fun MyOwnWordsPanel(
                         practiceOpen = true
                     }
                 ) { Text("Oefen uitsluitend deze ${filtered.size} gevonden woorden") }
+                OutlinedButton(
+                    enabled = items != null && filtered.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        quizScope = filtered.toList()
+                        quizOpen = true
+                    }
+                ) { Text("Quiz met deze ${filtered.size} gevonden woorden") }
                 Text("Alleen de bovenstaande taal- en zoekfilters bepalen deze " +
                     "oefenronde. Niets wordt automatisch opgeslagen of gedeeld.",
                     style = MaterialTheme.typography.bodySmall)
