@@ -277,7 +277,7 @@ internal fun SavedWordsPanel(
         audioNotice = if (allowSpeech) "" else "Voorlezen uit terwijl de microfoon luistert."
     }
 
-    fun pronounceSavedWord(word: OwnWord, pace: LocalSpeechPace) {
+    fun pronounceSavedWord(word: SavedWord, pace: LocalSpeechPace) {
         val safe = word.word.replace('\n', ' ').replace('\r', ' ').trim()
         if (!allowSpeech || safe.isBlank() || safe.length > 400 ||
             safe.any { it.isISOControl() } || word.language.isBlank()
