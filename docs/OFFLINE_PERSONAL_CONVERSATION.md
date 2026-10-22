@@ -48,6 +48,23 @@ voorgelezen voordat het bewust is onthuld. Naar een andere beurt gaan,
 de kanten wisselen, de oefenmodus veranderen, de app verlaten of de
 tafelmodus sluiten stopt de lokale stem en ruimt de sessie op.
 
+### Alleen lastige gespreksbeurten herhalen
+
+Tijdens de tafelmodus kun je met **↻ Markeer lastig** een zelfgeschreven
+beurt aan een **tijdelijke herhaalselectie** toevoegen. De teller toont
+hoeveel beurten nog op je lijst staan. Kies **Herhaal (aantal)** om met
+Vorige/Volgende alleen de gemarkeerde beurten te doorlopen, in hun
+oorspronkelijke volgorde. Met **✓ Nog lastig** haal je een bekende
+beurt van de selectie; als de laatste verdwijnt, keer je terug naar
+alle beurten. **Alle beurten** verlaat de gerichte herhaling zonder
+markeringen te verliezen.
+
+De selectie is alleen zolang dit tafeldialoogvenster open is beschikbaar:
+er wordt **geen** voortgang, cijfer of persoonlijke woordenlijstdata
+opgeslagen. In Oefenmodus blijft de antwoordkant ook tijdens herhalen
+verborgen totdat je hem zelf onthult. Alle uitspraak volgt dezelfde
+lokale, expliciet gestarte Android-stemrestricties.
+
 Niet elke taal heeft op het toestel een geschikte lokale stem: bij gebrek
 daaraan meldt Tuddy dit zonder cloudfallback of automatische downloads.
 Uitspraak en je eigen betekenissen zijn niet onafhankelijk gecontroleerd.
