@@ -114,8 +114,8 @@ internal fun SessionCorrectionTransferDialog(
                         "maximaal 40 exacte eigen correcties. Er is niets gewijzigd."
                 } else {
                     preview = decoded
-                    notice = "Controleer alle zinnen voordat je huidige tijdelijke " +
-                        "correcties bewust vervangt."
+                    notice = "Controleer alle zinnen. Kies bewust hoe je deze " +
+                        "samenvoegt of als vervanging in RAM laadt."
                 }
             }
         }
@@ -186,8 +186,8 @@ internal fun SessionCorrectionTransferDialog(
                 if (imported != null) {
                     Text(
                         "Importvoorbeeld: " + imported.size + " correcties. " +
-                            "Dit vervangt de huidige " + entries.size +
-                            " tijdelijke correcties volledig. Niet samenvoegen.",
+                            "Huidige lijst: " + entries.size + ". " +
+                            "Kies bewust tussen samenvoegen en volledig vervangen.",
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -199,6 +199,23 @@ internal fun SessionCorrectionTransferDialog(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
+                    SessionCorrectionMergeOptions(
+                        current = entries,
+                        imported = imported,
+                        enabled = !busy,
+                        onCommit = { merged, summary ->
+                            val before = entries.toList()
+                            if (onReplace(merged)) {
+                                undoBefore = before
+                                undoAfter = merged.toList()
+                                preview = null
+                                notice = "Bewust samengevoegd: " + summary +
+                                    " Alleen in tijdelijk geheugen. Ongedaan maken is beschikbaar."
+                            } else {
+                                notice = "Samenvoegen geweigerd. Er is niets gewijzigd."
+                            }
+                        }
+                    )
                     Button(
                         onClick = {
                             if (onReplace(imported)) {
