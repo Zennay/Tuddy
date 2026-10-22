@@ -122,8 +122,12 @@ internal fun PrivateSubtitleTranslationDialog(
 
     fun detectSourceLanguage() {
         if (detectingSource || checking || translating || translatedCues != null) return
-        val sample = cues.asSequence()
-            .map { it.text.replace('\n', ' ').trim() }
+        if (validSelectedIndices.isEmpty()) {
+            detectionMessage = "Kies eerst een geldige ondertitelregelselectie."
+            return
+        }
+        val sample = validSelectedIndices.asSequence()
+            .map { cues[it].text.replace('\n', ' ').trim() }
             .filter { it.isNotBlank() }
             .take(12)
             .joinToString(" ")
@@ -340,10 +344,10 @@ internal fun PrivateSubtitleTranslationDialog(
                     onClick = { detectSourceLanguage() }
                 ) {
                     Text(if (detectingSource) "Brontaal lokaal herkennen…"
-                        else "Stel brontaal voor op basis van dit bestand")
+                        else "Stel brontaal voor op basis van geselecteerde regels")
                 }
                 Text(
-                    "De suggestie gebruikt maximaal de eerste 12 niet-lege regels (tot 1.200 tekens), " +
+                    "De suggestie gebruikt maximaal 12 niet-lege geselecteerde regels (tot 1.200 tekens), " +
                         "lokaal op dit toestel. Het is een voorstel, geen automatische taalkeuze.",
                     style = MaterialTheme.typography.bodySmall
                 )
