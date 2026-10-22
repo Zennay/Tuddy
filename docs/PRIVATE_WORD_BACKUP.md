@@ -9,6 +9,20 @@ The existing **Mijn woorden** list now offers two explicit actions:
   admitted words. **Vervang woorden** must then be selected separately.
   Cancel, invalid data or a failed write leaves the existing list unchanged.
 
+## Importeren vanuit geplakte tekst
+
+Als je een back-up als tekst hebt ontvangen, kun je **Plak JSON-back-up…**
+kiezen en de volledige JSON zelf in het veld plakken. Tuddy leest het
+klembord niet automatisch. De invoer blijft lokaal en is begrensd op 50.000
+UTF-8-bytes; versie, schema, UTF-8, taalcodes, dubbele identiteiten en
+capaciteit worden opnieuw door dezelfde strikte parser gecontroleerd.
+
+Een geldige back-up opent eerst de volledige woord-preview. Je kiest daarna
+afzonderlijk **Voeg alleen nieuwe woorden toe** of **Vervang volledige eigen
+lijst**. Ongeldige, te grote of geannuleerde invoer wijzigt geen bestaande
+woorden. Dit is een handmatige invoerroute, geen automatisch importeren of
+delen en geen cloudfunctie.
+
 ## Data contract
 
 ```json
