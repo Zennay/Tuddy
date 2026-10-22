@@ -23,8 +23,10 @@ privékaarten.
 - Kies voor elke kaart expliciet Kurmanji, Sorani of Pasjtoe en schrijf zelf
   de zin (maximaal 120 tekens). Kies ook Nederlands of Engels en schrijf zelf
   de betekenis (maximaal 180 tekens).
-- **Vorige kaart** en **Volgende kaart** bewaren nog niets. Pas na **Bewaar alle
-  N kaarten** wordt de volledige batch in één transactie opgeslagen.
+- **Vorige kaart** en **Volgende kaart** bewaren nog niets. Na de laatste kaart
+  kies je **Controleer batch** om alle zelfgeschreven zinnen, betekenissen en
+  taallabels in één overzicht na te lezen. Pas op dat overzicht wordt **Bewaar
+  alle N kaarten** actief en wordt de volledige batch in één transactie opgeslagen.
 - Alle velden en taalkeuzes moeten geldig zijn; duplicaten binnen de batch of
   ten opzichte van het bestaande zinnenboek en onvoldoende ruimte blokkeren
   de volledige batch. Het privézinnenboek houdt zijn limiet van 80 kaarten.
