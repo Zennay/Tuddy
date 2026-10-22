@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -14,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,6 +41,9 @@ import com.livelingo.android.OfflineTypedCaptionPolicy
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.TypedConversationModelController
 import com.livelingo.android.UnavailableTextLanguageCatalog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 /** A temporary UI-only view of the last conversation lines, not an archive. */
 internal data class TypedConversationLine(
@@ -94,17 +99,85 @@ internal fun TwoWayTypedConversationDialog(
     val pinnedPairs = remember(favoritesRevision) { favorites.entries() }
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     var speechNotice by remember { mutableStateOf("") }
+    var activeSpeechLineIndex by remember { mutableStateOf<Int?>(null) }
+    var activeSpeechSide by remember { mutableStateOf<String?>(null) }
+    var activeSpeechText by remember { mutableStateOf<String?>(null) }
+    var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var readerOpen by remember { mutableStateOf(false) }
     var studyOpen by remember { mutableStateOf(false) }
     val models = remember { TypedConversationModelController() }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    DisposableEffect(models, speaker) {
+    fun clearSpeech() {
+        speaker.stop()
+        activeSpeechLineIndex = null
+        activeSpeechSide = null
+        activeSpeechText = null
+        activeSpeechRange = null
+    }
+
+    fun pronounceLine(
+        lineIndex: Int,
+        text: String,
+        language: String,
+        side: String,
+        pace: LocalSpeechPace
+    ) {
+        val safe = text.replace('\n', ' ').replace('\r', ' ').trim()
+        if (safe.isBlank() || safe.length > 400 ||
+            safe.any { it.isISOControl() } || language.isBlank()
+        ) {
+            clearSpeech()
+            speechNotice = "Deze gespreksregel kan niet veilig met een lokale stem worden voorgelezen."
+            return
+        }
+        activeSpeechLineIndex = lineIndex
+        activeSpeechSide = side
+        activeSpeechText = safe
+        activeSpeechRange = null
+        speechNotice = "Lokale voorlezing voorbereiden…"
+        speaker.speakSequence(
+            lines = listOf(safe),
+            languageTag = language,
+            pace = pace,
+            onProgress = { completed, total ->
+                speechNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { speechNotice = it },
+            onFinished = { completed ->
+                activeSpeechLineIndex = null
+                activeSpeechSide = null
+                activeSpeechText = null
+                activeSpeechRange = null
+                if (completed) speechNotice = "Voorlezen voltooid."
+            },
+            onLineStarted = {
+                activeSpeechRange = null
+                speechNotice = if (side == "original")
+                    "Nu voorgelezen: origineel." else "Nu voorgelezen: vertaling."
+            },
+            onWordRange = { _, start, endExclusive ->
+                activeSpeechRange = start to endExclusive
+            }
+        )
+    }
+
+    DisposableEffect(models, speaker, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                clearSpeech()
+                speechNotice = "Voorlezen gestopt bij verlaten van het scherm."
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             models.invalidate()
             speaker.close()
         }
     }
-    LaunchedEffect(from, to) {
+    LaunchedEffect(from, to, recentLines.size) {
+        clearSpeech()
         models.invalidate()
         modelStatus = OfflineTextReceipt(from, to, OfflineTextStage.UNCHECKED,
             "Controleer de lokale tekstmodellen voor deze richting.")
@@ -121,7 +194,7 @@ internal fun TwoWayTypedConversationDialog(
         chooser = null
         search = ""
         info = ""
-        speaker.stop()
+        clearSpeech()
         speechNotice = ""
     }
     fun usePinnedPair(pair: TypedLanguagePair) {
@@ -135,7 +208,7 @@ internal fun TwoWayTypedConversationDialog(
         chooser = null
         search = ""
         favoritesOpen = false
-        speaker.stop()
+        clearSpeech()
         speechNotice = ""
         info = if (externalShareReview)
             "Gedeelde tekst blijft als concept staan. Controleer de echte brontaal " +
