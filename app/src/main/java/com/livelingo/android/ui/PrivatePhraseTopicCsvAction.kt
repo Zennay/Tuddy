@@ -1,6 +1,8 @@
 package com.livelingo.android.ui
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +19,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.IncomingPersonalCsvDocument
 import com.livelingo.android.PrivatePhraseArchive
 import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivatePhraseShortcuts
@@ -33,6 +37,8 @@ import com.livelingo.android.PrivatePhraseTopicCsv
 import com.livelingo.android.PrivatePhraseTopics
 import com.livelingo.android.PrivatePhraseRollback
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private data class TopicCsvExport(
     val bytes: ByteArray,
@@ -47,6 +53,31 @@ private data class TopicCsvImport(
     val originalNotes: List<PersonalPhrase>,
     val originalTopics: ByteArray?
 )
+
+/** Same bounded strict parser for the document picker and explicit Open with. */
+private fun readPersonalCsvContent(
+    context: Context,
+    uri: Uri,
+    deck: PrivatePhraseDeck
+): PrivatePhraseArchive? {
+    if (uri.scheme != "content" || uri.authority.isNullOrBlank()) return null
+    return runCatching {
+        val stream = context.contentResolver.openInputStream(uri)
+            ?: throw IllegalArgumentException("CSV onleesbaar")
+        val bytes = ByteArrayOutputStream()
+        stream.use { input ->
+            val buffer = ByteArray(4096)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                if (count == 0 || count + bytes.size() > 50_000)
+                    throw IllegalArgumentException("CSV te groot")
+                bytes.write(buffer, 0, count)
+            }
+        }
+        PrivatePhraseTopicCsv.preview(bytes.toByteArray(), deck)
+    }.getOrNull()
+}
 
 /** One undo snapshot per current screen; never persisted or shared. */
 private data class TopicCsvUndo(
@@ -74,7 +105,9 @@ private data class TopicCsvChange(
 @Composable
 internal fun PrivatePhraseTopicCsvAction(
     deck: PrivatePhraseDeck,
-    onChanged: () -> Unit
+    onChanged: () -> Unit,
+    incomingDocument: IncomingPersonalCsvDocument? = null,
+    onIncomingDocumentConsumed: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
     val topics = remember(context) { PrivatePhraseTopics(context) }
@@ -112,6 +145,37 @@ internal fun PrivatePhraseTopicCsvAction(
     var lastCsvChanges by remember { mutableStateOf<List<TopicCsvChange>>(emptyList()) }
     var showCsvChanges by remember { mutableStateOf(false) }
 
+    // Only an explicit Android Open-with / one-file Share request can enter
+    // here. Read bounded bytes on IO, preview only; do not write until the
+    // user makes a separate, visible import choice in the existing dialog.
+    LaunchedEffect(incomingDocument?.requestId) {
+        val incomingRequest = incomingDocument ?: return@LaunchedEffect
+        importReview = null
+        val candidate = incomingRequest.uri?.let { fileUri ->
+            withContext(Dispatchers.IO) {
+                readPersonalCsvContent(context, fileUri, deck)
+            }
+        }
+        val baseline = deck.entries()
+        if (candidate == null || baseline == null) {
+            notice = incomingRequest.notice ?: "Dit CSV-document is geen geldige " +
+                "vijfkoloms privézinnenlijst of overschrijdt 50 KiB. " +
+                "Er is niets geïmporteerd."
+        } else {
+            importReview = TopicCsvImport(
+                candidate, baseline.toList(), topics.exportSnapshot()
+            )
+            mergeOnly = true
+            importLanguage = null
+            importTopic = null
+            excludedImportRows = emptySet()
+            correctedImportRows = emptySet()
+            reassignedImportRows = emptySet()
+            notice = ""
+        }
+        onIncomingDocumentConsumed(incomingRequest.requestId)
+    }
+
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
     ) { uri ->
@@ -143,23 +207,7 @@ internal fun PrivatePhraseTopicCsvAction(
     ) { uri ->
         importReview = null
         if (uri != null) {
-            val incoming = runCatching {
-                val stream = context.contentResolver.openInputStream(uri)
-                    ?: throw IllegalArgumentException("CSV onleesbaar")
-                val bytes = ByteArrayOutputStream()
-                stream.use { input ->
-                    val buffer = ByteArray(4096)
-                    while (true) {
-                        val size = input.read(buffer)
-                        if (size < 0) break
-                        if (size == 0 || size + bytes.size() > 50_000) {
-                            throw IllegalArgumentException("CSV te groot")
-                        }
-                        bytes.write(buffer, 0, size)
-                    }
-                }
-                PrivatePhraseTopicCsv.preview(bytes.toByteArray(), deck)
-            }.getOrNull()
+            val incoming = readPersonalCsvContent(context, uri, deck)
             val baseline = deck.entries()
             if (incoming == null || baseline == null) {
                 notice = "CSV geweigerd: ongeldige zinnen, thema's of bestandsgrootte. Niets gewijzigd."
