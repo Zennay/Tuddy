@@ -77,6 +77,9 @@ internal fun MyOwnWordsPanel(
     var pasteWordsOpen by remember { mutableStateOf(false) }
     var pasteLines by remember { mutableStateOf("") }
     var pasteError by remember { mutableStateOf("") }
+    var pasteBackupOpen by remember { mutableStateOf(false) }
+    var pasteBackupText by remember { mutableStateOf("") }
+    var pasteBackupError by remember { mutableStateOf("") }
     val context = LocalContext.current
     val backupPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -331,6 +334,90 @@ internal fun MyOwnWordsPanel(
                 TextButton(onClick = { selectedTsvPreview = null }) {
                     Text("Behoud mijn eigen woorden privé")
                 }
+            }
+        )
+        return
+    }
+
+    if (pasteBackupOpen) {
+        AlertDialog(
+            onDismissRequest = {
+                pasteBackupOpen = false
+                pasteBackupText = ""
+                pasteBackupError = ""
+            },
+            title = { Text("Plak JSON-back-up · offline") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "Plak hier zelf de volledige tuddy-own-words-v1 JSON-back-up. " +
+                            "Tuddy leest het klembord niet automatisch; alleen deze invoer " +
+                            "wordt verwerkt. Maximaal 50.000 UTF-8-bytes.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedTextField(
+                        value = pasteBackupText,
+                        onValueChange = { incoming ->
+                            if (incoming.toByteArray(Charsets.UTF_8).size <=
+                                PrivateOwnWordDeck.MAX_BACKUP_BYTES) {
+                                pasteBackupText = incoming
+                                pasteBackupError = ""
+                            } else {
+                                pasteBackupError =
+                                    "Back-up te groot; maximaal 50.000 UTF-8-bytes."
+                            }
+                        },
+                        label = { Text("JSON-back-up") },
+                        supportingText = {
+                            Text("Geen automatische import: eerst volgt de volledige preview.")
+                        },
+                        minLines = 5,
+                        maxLines = 12,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (pasteBackupError.isNotBlank()) Text(
+                        pasteBackupError,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        "De versie, UTF-8, structuur, talen, dubbele woorden en limieten " +
+                            "worden strikt gecontroleerd. Daarna kies je apart samenvoegen " +
+                            "of vervangen; ongeldige invoer verandert niets.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val bytes = pasteBackupText.toByteArray(Charsets.UTF_8)
+                    val imported = if (bytes.size <= PrivateOwnWordDeck.MAX_BACKUP_BYTES)
+                        deck.previewImport(bytes) else null
+                    if (imported == null) {
+                        pasteBackupError =
+                            "JSON-back-up geweigerd: onbekende versie, ongeldige inhoud " +
+                                "of groter dan 50.000 UTF-8-bytes. Je woorden zijn behouden."
+                    } else {
+                        pendingRestore = imported
+                        pendingRestoreBase = deck.entries()?.toList()
+                        restoreOrigin = "json"
+                        pasteBackupOpen = false
+                        pasteBackupText = ""
+                        pasteBackupError = ""
+                        notice = "JSON-back-up ingelezen. Controleer de volledige preview " +
+                            "en kies daarna bewust samenvoegen of vervangen."
+                    }
+                }) { Text("Bekijk importvoorbeeld") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pasteBackupOpen = false
+                    pasteBackupText = ""
+                    pasteBackupError = ""
+                }) { Text("Annuleren") }
             }
         )
         return
@@ -764,6 +851,13 @@ internal fun MyOwnWordsPanel(
                         restoreOrigin = "json"
                         restorePicker.launch(arrayOf("application/json", "text/plain"))
                     }) { Text("Herstel back-up…") }
+                    OutlinedButton(onClick = {
+                        pendingRestore = null
+                        pendingRestoreBase = null
+                        pasteBackupText = ""
+                        pasteBackupError = ""
+                        pasteBackupOpen = true
+                    }) { Text("Plak JSON-back-up…") }
                 }
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
