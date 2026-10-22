@@ -25,7 +25,9 @@ internal data class IncomingSharedText(
     // A Tuddy curated glossary-key backup is routed to its replacement preview.
     val curatedWordBackupJson: String? = null,
     // A Tuddy private-word backup is routed to its existing import preview.
-    val ownWordBackupJson: String? = null
+    val ownWordBackupJson: String? = null,
+    // Explicitly shared own-word CSV text goes only to the word import preview.
+    val ownWordCsvText: String? = null
 )
 
 internal object SharedPlainTextIntent {
@@ -73,6 +75,22 @@ internal object SharedPlainTextIntent {
         if (candidate != null) {
             val bytes = candidate.toByteArray(Charsets.UTF_8)
             if (bytes.isNotEmpty() && bytes.size <= PrivateSubtitleFileReader.MAX_BYTES) {
+                // A complete three-column, user-shared word CSV belongs in
+                // the private word preview, never the translation field.
+                // The panel will perform full strict UTF-8, 50KB, column and
+                // word validation; even malformed rows never auto-import.
+                val csv = candidate.removePrefix("\uFEFF")
+                if (csv.startsWith("language,word,meaning\r\n") ||
+                    csv.startsWith("language,word,meaning\n") ||
+                    csv.startsWith("language,word,meaning\r")) {
+                    return if (bytes.size <= PrivateOwnWordDeck.MAX_BACKUP_BYTES) {
+                        IncomingSharedText(null, null, ownWordCsvText = candidate)
+                    } else {
+                        IncomingSharedText(null,
+                            "Gedeelde woorden-CSV groter dan 50 KB. " +
+                                "Deel een kleinere lijst of kies Importeren via Bestanden.")
+                    }
+                }
                 // Tuddy's own portable phrasebook CSV must never fall through
                 // as a translation prompt. Recognize only its exact exported
                 // header; the phrasebook screen performs full bounded parsing

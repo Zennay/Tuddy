@@ -47,6 +47,8 @@ internal fun MyOwnWordsPanel(
     onChanged: () -> Unit,
     incomingBackupJsonText: String? = null,
     onIncomingBackupJsonConsumed: (String) -> Unit = {},
+    incomingCsvText: String? = null,
+    onIncomingCsvConsumed: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val defaultLanguage = initialLanguage.replace('_', '-').substringBefore('-')
@@ -242,6 +244,37 @@ internal fun MyOwnWordsPanel(
             }
         }
         onIncomingBackupJsonConsumed(shared)
+    }
+
+    LaunchedEffect(incomingCsvText) {
+        val shared = incomingCsvText ?: return@LaunchedEffect
+        val bytes = shared.toByteArray(Charsets.UTF_8)
+        val baseline = deck.entries()
+        if (pendingRestore != null || pasteWordsOpen || pasteBackupOpen ||
+            pendingBackup != null || pendingTsvExport != null ||
+            pendingCsvExport != null || selectedTsvPreview != null ||
+            pendingPrintable != null || printableConsent ||
+            editing != null || pendingDelete != null || quizOpen || practiceOpen) {
+            notice = "Er staat al een eigen-woordenbewerking of export open. " +
+                "Deel de CSV opnieuw na het afsluiten; niets is gewijzigd."
+        } else {
+            val imported = if (bytes.isNotEmpty() &&
+                bytes.size <= PrivateOwnWordDeck.MAX_BACKUP_BYTES) {
+                PrivateOwnWordCsv.previewImport(bytes, deck)
+            } else null
+            if (imported == null || baseline == null) {
+                notice = "Gedeelde woorden-CSV geweigerd: kolommen, UTF-8, " +
+                    "inhoud of bestandsgrootte onjuist, of eigen lijst onleesbaar. " +
+                    "Je eerdere betekenissen zijn behouden."
+            } else {
+                pendingRestore = imported
+                pendingRestoreBase = baseline.toList()
+                restoreOrigin = "csv"
+                notice = "Eigen woorden-CSV gedeeld. Controleer alle regels " +
+                    "en kies daarna bewust samenvoegen of vervangen."
+            }
+        }
+        onIncomingCsvConsumed(shared)
     }
 
     val tsvPicker = rememberLauncherForActivityResult(

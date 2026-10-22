@@ -493,6 +493,7 @@ private fun TuddyScreen(
     var ownWordRevision by remember { mutableIntStateOf(0) }
     var ownWordsOpen by remember { mutableStateOf(false) }
     var pendingSharedOwnWordBackupJson by remember { mutableStateOf<String?>(null) }
+    var pendingSharedOwnWordCsv by remember { mutableStateOf<String?>(null) }
     var savedWordNotice by remember { mutableStateOf("") }
     fun saveOwnWordMeaning(language: String, word: String, meaning: String): Boolean {
         val saved = ownWordDeck.save(language, word, meaning)
@@ -3129,6 +3130,26 @@ private fun TuddyScreen(
                 offlinePersonalTurnsOpen = false
                 pendingSharedCuratedWordBackupJson = shared.curatedWordBackupJson
                 savedWordsOpen = true
+                error = ""
+            } else if (shared.ownWordCsvText != null) {
+                // Explicit text/plain CSV from Android Sharesheet: own-word
+                // preview only, never a translation or implicit persistence.
+                stop()
+                quickTypedOpen = false
+                twoWayTypedOpen = false
+                sharedTextToTwoWay = null
+                draftFromExternalShare = false
+                manualText = ""
+                pendingCorrectionTransferText = null
+                pendingSharedPersonalPhraseCsv = null
+                pendingSharedPersonalPhraseBackupJson = null
+                pendingSharedOwnWordBackupJson = null
+                translationMemoryOpen = false
+                personalPhrasesOpen = false
+                starterPhraseboardOpen = false
+                offlinePersonalTurnsOpen = false
+                pendingSharedOwnWordCsv = shared.ownWordCsvText
+                ownWordsOpen = true
                 error = ""
             } else if (shared.ownWordBackupJson != null) {
                 stop()
@@ -6456,6 +6477,11 @@ private fun TuddyScreen(
                 initialLanguage = source.translateCode,
                 onChanged = { ownWordRevision++ },
                 incomingBackupJsonText = pendingSharedOwnWordBackupJson,
+                incomingCsvText = pendingSharedOwnWordCsv,
+                onIncomingCsvConsumed = { received ->
+                    if (pendingSharedOwnWordCsv == received)
+                        pendingSharedOwnWordCsv = null
+                },
                 onIncomingBackupJsonConsumed = { received ->
                     if (pendingSharedOwnWordBackupJson == received)
                         pendingSharedOwnWordBackupJson = null
@@ -6463,6 +6489,7 @@ private fun TuddyScreen(
                 onDismiss = {
                     ownWordsOpen = false
                     pendingSharedOwnWordBackupJson = null
+                    pendingSharedOwnWordCsv = null
                 }
             )
         }
