@@ -27,6 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -37,6 +41,50 @@ import com.livelingo.android.PrivateVocabularyStudySheet
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 import java.io.ByteArrayOutputStream
+
+/**
+ * Follow only the active saved word and only when Android's installed local
+ * TTS voice reports a text range. No range is inferred from timing.
+ */
+@Composable
+private fun SavedWordFollowText(
+    word: OwnWord,
+    activeSpeechKey: String?,
+    activeSpeechText: String?,
+    activeSpeechRange: Pair<Int, Int>?
+): AnnotatedString {
+    val key = "${word.language}|${word.word}"
+    val normalized = word.word.replace('\n', ' ').replace('\r', ' ').trim()
+    val followsSpeech = activeSpeechKey == key &&
+        activeSpeechText != null && normalized == activeSpeechText
+    val displayedWord = if (followsSpeech) activeSpeechText.orEmpty() else word.word
+    val range = activeSpeechRange.takeIf { followsSpeech }
+    val prefix = "${word.entry.illustration} "
+    val suffix = " · ${word.language}"
+    val background = MaterialTheme.colorScheme.primary
+    val foreground = MaterialTheme.colorScheme.onPrimary
+    return remember(prefix, displayedWord, suffix, range, background, foreground) {
+        buildAnnotatedString {
+            append(prefix)
+            val offset = length
+            append(displayedWord)
+            append(suffix)
+            if (range != null && range.first >= 0 &&
+                range.second > range.first && range.second <= displayedWord.length
+            ) {
+                addStyle(
+                    SpanStyle(
+                        background = background,
+                        color = foreground,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    offset + range.first,
+                    offset + range.second
+                )
+            }
+        }
+    }
+}
 
 /**
  * Offline review/delete screen. Optional date and interval metadata persist only
@@ -200,10 +248,17 @@ internal fun SavedWordsPanel(
     val owner = LocalLifecycleOwner.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     var audioNotice by remember { mutableStateOf("") }
+    var activeSpeechKey by remember { mutableStateOf<String?>(null) }
+    var activeSpeechText by remember { mutableStateOf<String?>(null) }
+    var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     DisposableEffect(owner, speaker) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
                 speaker.stop()
+                activeSpeechKey = null
+                activeSpeechText = null
+                activeSpeechRange = null
+                audioNotice = "Voorlezen gestopt bij verlaten van het scherm."
             }
         }
         owner.lifecycle.addObserver(observer)
@@ -214,7 +269,49 @@ internal fun SavedWordsPanel(
     }
     LaunchedEffect(search, revision, allowSpeech) {
         speaker.stop()
+        activeSpeechKey = null
+        activeSpeechText = null
+        activeSpeechRange = null
         audioNotice = if (allowSpeech) "" else "Voorlezen uit terwijl de microfoon luistert."
+    }
+
+    fun pronounceSavedWord(word: OwnWord, pace: LocalSpeechPace) {
+        val safe = word.word.replace('\n', ' ').replace('\r', ' ').trim()
+        if (!allowSpeech || safe.isBlank() || safe.length > 400 ||
+            safe.any { it.isISOControl() } || word.language.isBlank()
+        ) {
+            speaker.stop()
+            activeSpeechKey = null
+            activeSpeechText = null
+            activeSpeechRange = null
+            audioNotice = if (!allowSpeech)
+                "Voorlezen uit terwijl de microfoon luistert."
+            else "Dit woord kan niet veilig met een lokale stem worden voorgelezen."
+            return
+        }
+        activeSpeechKey = "${word.language}|${word.word}"
+        activeSpeechText = safe
+        activeSpeechRange = null
+        audioNotice = "Lokale voorlezing voorbereiden…"
+        speaker.speakSequence(
+            lines = listOf(safe),
+            languageTag = word.language,
+            pace = pace,
+            onProgress = { completed, total ->
+                audioNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { audioNotice = it },
+            onFinished = { completed ->
+                activeSpeechKey = null
+                activeSpeechText = null
+                activeSpeechRange = null
+                if (completed) audioNotice = "Voorlezen voltooid."
+            },
+            onLineStarted = { activeSpeechRange = null },
+            onWordRange = { _, start, endExclusive ->
+                activeSpeechRange = start to endExclusive
+            }
+        )
     }
 
     AlertDialog(
@@ -232,7 +329,13 @@ internal fun SavedWordsPanel(
                 )
                 OutlinedButton(
                     enabled = allWords.isNotEmpty(),
-                    onClick = { speaker.stop(); practiceOpen = true },
+                    onClick = {
+                        speaker.stop()
+                        activeSpeechKey = null
+                        activeSpeechText = null
+                        activeSpeechRange = null
+                        practiceOpen = true
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Oefen opgeslagen woorden") }
                 OutlinedButton(
@@ -369,8 +472,15 @@ internal fun SavedWordsPanel(
                     HorizontalDivider()
                     val key = "${word.language}|${word.word}"
                     Column {
-                        Text("${word.entry.illustration} ${word.word} · ${word.language}",
-                            style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            SavedWordFollowText(
+                                word = word,
+                                activeSpeechKey = activeSpeechKey,
+                                activeSpeechText = activeSpeechText,
+                                activeSpeechRange = activeSpeechRange
+                            ),
+                            style = MaterialTheme.typography.titleSmall
+                        )
                         reviewDates[key]?.let { scheduled ->
                             val dueLabel = if (scheduled.dueDay <= localToday)
                                 "Vandaag herhalen"
@@ -389,6 +499,11 @@ internal fun SavedWordsPanel(
                             }) { Text(if (key in revealed) "Verberg betekenis" else "Toon betekenis") }
                             TextButton(onClick = {
                                 speaker.stop()
+                                if (activeSpeechKey == key) {
+                                    activeSpeechKey = null
+                                    activeSpeechText = null
+                                    activeSpeechRange = null
+                                }
                                 if (deck.remove(word.language, word.word)) {
                                     revealed = revealed - key
                                     onChanged()
@@ -396,16 +511,17 @@ internal fun SavedWordsPanel(
                             }) { Text("Verwijder") }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TextButton(enabled = allowSpeech, onClick = {
-                                speaker.speak(word.word, word.language,
-                                    LocalSpeechPace.NORMAL) { audioNotice = it }
+                            TextButton(enabled = allowSpeech && activeSpeechText == null, onClick = {
+                                pronounceSavedWord(word, LocalSpeechPace.NORMAL)
                             }) { Text("🔊 Hoor woord") }
-                            TextButton(enabled = allowSpeech, onClick = {
-                                speaker.speak(word.word, word.language,
-                                    LocalSpeechPace.SLOW) { audioNotice = it }
+                            TextButton(enabled = allowSpeech && activeSpeechText == null, onClick = {
+                                pronounceSavedWord(word, LocalSpeechPace.SLOW)
                             }) { Text("Rustig") }
                             TextButton(onClick = {
                                 speaker.stop()
+                                activeSpeechKey = null
+                                activeSpeechText = null
+                                activeSpeechRange = null
                                 audioNotice = "Lokale voorlezing gestopt."
                             }) { Text("■ Stop") }
                         }
@@ -414,7 +530,13 @@ internal fun SavedWordsPanel(
             }
         },
         confirmButton = {
-            TextButton(onClick = { speaker.stop(); onDismiss() }) { Text("Sluiten") }
+            TextButton(onClick = {
+                speaker.stop()
+                activeSpeechKey = null
+                activeSpeechText = null
+                activeSpeechRange = null
+                onDismiss()
+            }) { Text("Sluiten") }
         },
         dismissButton = {
             if (allWords.isNotEmpty()) {
