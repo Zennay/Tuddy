@@ -343,7 +343,7 @@ internal fun FocusTranscriptDialog(
                                     TextButton(onClick = {
                                         onRequestOriginalCorrection(line.id)
                                     }) {
-                                        Text("✎ Corrigeer herkende zin…")
+                                        Text("✎ Corrigeer oorspronkelijke zin…")
                                     }
                                 }
                                 if (!archiveMode && !listening &&
