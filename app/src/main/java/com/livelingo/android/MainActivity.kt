@@ -6959,6 +6959,56 @@ private fun TuddyScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                if (!listening && lines.isNotEmpty()) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            val next = !livePhraseBatchSelectionMode
+                            livePhraseBatchSelectionMode = next
+                            if (!next) livePhraseBatchSelection = emptySet()
+                        }
+                    ) {
+                        Text(if (livePhraseBatchSelectionMode)
+                            "Sluit selectie eigen privékaarten"
+                        else "＋ Selecteer meerdere gespreksregels voor eigen privékaarten")
+                    }
+                }
+                if (livePhraseBatchSelectionMode) {
+                    Text(
+                        "Kies maximaal 10 regels uit dit tijdelijke gesprek. De bron is alleen referentie; " +
+                            "iedere kaart begint leeg en vraagt jouw eigen zin en betekenis.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${livePhraseBatchSelection.size} van maximaal 10 geselecteerd",
+                            style = MaterialTheme.typography.labelSmall)
+                        TextButton(
+                            enabled = livePhraseBatchSelection.isNotEmpty(),
+                            onClick = { livePhraseBatchSelection = emptySet() }
+                        ) { Text("Wis selectie") }
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !listening && livePhraseBatchSelection.isNotEmpty() &&
+                            livePhraseBatchSelection.size <= 10 &&
+                            lines.count { it.id in livePhraseBatchSelection } ==
+                                livePhraseBatchSelection.size,
+                        onClick = {
+                            val selectedLines = lines.filter { it.id in livePhraseBatchSelection }
+                            if (selectedLines.size in 1..10 &&
+                                selectedLines.size == livePhraseBatchSelection.size) {
+                                pendingLivePhraseBatchCapture = PendingLivePhraseBatchCapture(
+                                    generation, selectedLines
+                                )
+                                capturedPhraseNotice = ""
+                            }
+                        }
+                    ) { Text("Schrijf ${livePhraseBatchSelection.size} eigen privékaarten…") }
+                }
                 if (captionDeleteNotice.isNotBlank()) {
                     Text(captionDeleteNotice, style = MaterialTheme.typography.bodySmall)
                 }
@@ -7029,6 +7079,23 @@ private fun TuddyScreen(
                             )
                         ) {
                             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (livePhraseBatchSelectionMode) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = line.id in livePhraseBatchSelection,
+                                            enabled = !listening &&
+                                                (line.id in livePhraseBatchSelection ||
+                                                    livePhraseBatchSelection.size < 10),
+                                            onCheckedChange = { checked ->
+                                                livePhraseBatchSelection =
+                                                    if (checked) livePhraseBatchSelection + line.id
+                                                    else livePhraseBatchSelection - line.id
+                                            }
+                                        )
+                                        Text("Selecteer voor eigen privékaart",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
                                 Text(
                                     DateFormat.getTimeInstance(DateFormat.SHORT)
                                         .format(Date(line.recordedAtMillis)),
