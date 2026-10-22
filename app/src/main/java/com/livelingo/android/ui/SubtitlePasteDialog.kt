@@ -36,6 +36,7 @@ import com.livelingo.android.PrivateAssSubtitleReader
 import com.livelingo.android.PrivateSbvSubtitleReader
 import com.livelingo.android.PrivateYoutubeJson3SubtitleReader
 import com.livelingo.android.PrivateSubtitleRowSelection
+import com.livelingo.android.PrivateOfflineSearch
 import com.livelingo.android.PrivateSubtitleTimelineNavigation
 
 /**
@@ -229,10 +230,12 @@ internal fun SubtitlePasteDialog(
     }
     val filtered = remember(parsed, chosenIndices, search) {
         val scope = chosenIndices?.toSet()
+        val foldedQuery = PrivateOfflineSearch.fold(search.trim().take(120))
         if (scope == null) emptyList()
         else parsed.orEmpty().withIndex().filter { row ->
             row.index in scope &&
-                row.value.text.contains(search.trim().take(120), ignoreCase = true)
+                (foldedQuery.isBlank() ||
+                    PrivateOfflineSearch.contains(row.value.text, foldedQuery))
         }
     }
     val foundRowsExpression = remember(parsed, filtered, search) {
@@ -1521,6 +1524,14 @@ internal fun SubtitlePasteDialog(
                         label = { Text("Zoek in volledige preview") },
                         singleLine = true
                     )
+                    if (search.isNotBlank()) {
+                        Text(
+                            "Arabische/Perzische toetsenbordvarianten tellen bij " +
+                                "zoeken mee. De voorgestelde originele bronregels, " +
+                                "hun spelling en tijdcodes veranderen niet.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Text(
                         "${filtered.size} zoekresultaten · pagina ${safePage + 1} van ${countPages}",
                         style = MaterialTheme.typography.bodySmall
