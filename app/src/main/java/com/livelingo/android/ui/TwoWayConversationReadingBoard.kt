@@ -26,7 +26,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -57,10 +61,80 @@ internal fun TwoWayConversationReadingBoard(
     var faceToFace by remember { mutableStateOf(false) }
     var followNewest by remember { mutableStateOf(true) }
     var audioNotice by remember { mutableStateOf("") }
+    var activeSpeechLineIndex by remember { mutableStateOf<Int?>(null) }
+    var activeSpeechSide by remember { mutableStateOf<String?>(null) }
+    var activeSpeechText by remember { mutableStateOf<String?>(null) }
+    var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val context = LocalContext.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
-    DisposableEffect(speaker) {
-        onDispose { speaker.close() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    fun clearSpeech() {
+        speaker.stop()
+        activeSpeechLineIndex = null
+        activeSpeechSide = null
+        activeSpeechText = null
+        activeSpeechRange = null
+    }
+
+    fun pronounceLine(
+        lineIndex: Int,
+        text: String,
+        language: String,
+        side: String,
+        pace: LocalSpeechPace
+    ) {
+        val safe = text.replace('\n', ' ').replace('\r', ' ').trim()
+        if (safe.isBlank() || safe.length > 400 ||
+            safe.any { it.isISOControl() } || language.isBlank()
+        ) {
+            clearSpeech()
+            audioNotice = "Deze gespreksregel kan niet veilig met een lokale stem worden voorgelezen."
+            return
+        }
+        activeSpeechLineIndex = lineIndex
+        activeSpeechSide = side
+        activeSpeechText = safe
+        activeSpeechRange = null
+        audioNotice = "Lokale voorlezing voorbereiden…"
+        speaker.speakSequence(
+            lines = listOf(safe),
+            languageTag = language,
+            pace = pace,
+            onProgress = { completed, total ->
+                audioNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { audioNotice = it },
+            onFinished = { completed ->
+                activeSpeechLineIndex = null
+                activeSpeechSide = null
+                activeSpeechText = null
+                activeSpeechRange = null
+                if (completed) audioNotice = "Voorlezen voltooid."
+            },
+            onLineStarted = {
+                activeSpeechRange = null
+                audioNotice = if (side == "original")
+                    "Nu voorgelezen: origineel." else "Nu voorgelezen: vertaling."
+            },
+            onWordRange = { _, start, endExclusive ->
+                activeSpeechRange = start to endExclusive
+            }
+        )
+    }
+
+    DisposableEffect(speaker, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                clearSpeech()
+                audioNotice = "Voorlezen gestopt bij verlaten van het scherm."
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            speaker.close()
+        }
     }
     val scroll = rememberLazyListState()
     val admitted = lines.takeLast(80)
@@ -74,6 +148,9 @@ internal fun TwoWayConversationReadingBoard(
         )
     }
     val lastRow = selected.lastOrNull()
+    LaunchedEffect(query, finishedOnly, lines) {
+        clearSpeech()
+    }
     LaunchedEffect(followNewest, selected.size, lastRow?.translated, query) {
         if (followNewest && query.isBlank() && selected.isNotEmpty()) {
             scroll.scrollToItem(selected.lastIndex)
@@ -93,7 +170,7 @@ internal fun TwoWayConversationReadingBoard(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { clearSpeech(); onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false,
             dismissOnClickOutside = false)
     ) {
@@ -104,7 +181,7 @@ internal fun TwoWayConversationReadingBoard(
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Tuddy · Gesprek groot lezen",
                         style = MaterialTheme.typography.titleLarge)
-                    TextButton(onClick = onDismiss) { Text("Sluiten") }
+                    TextButton(onClick = { clearSpeech(); onDismiss() }) { Text("Sluiten") }
                 }
                 Text("Tik op een woord voor de kleine ingebouwde offline woordkaart. " +
                     "Een eigen betekenis wordt pas na jouw invoer en bewaarknop " +
@@ -115,7 +192,7 @@ internal fun TwoWayConversationReadingBoard(
                     style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(
                     onClick = {
-                        speaker.stop()
+                        clearSpeech()
                         faceToFace = true
                     },
                     modifier = Modifier.fillMaxWidth()
