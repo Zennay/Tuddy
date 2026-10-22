@@ -24,7 +24,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivatePhraseDeck
-import com.livelingo.android.PrivatePhraseScriptSearch
+import com.livelingo.android.PrivateOfflineSearch
 import java.util.Locale
 
 /** Exact user-authored offline notes only: not a generated or reviewed translation. */
@@ -44,19 +44,19 @@ internal fun OfflinePersonalPhraseLookupDialog(
     var query by remember { mutableStateOf("") }
     var selected by remember { mutableStateOf<PersonalPhrase?>(null) }
     val labels = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
-    val search = PrivatePhraseScriptSearch.fold(query.trim())
+    val search = PrivateOfflineSearch.fold(query.trim())
     val matches = notes.orEmpty().filter { note ->
         (language == null || note.language == language) &&
             (meaningLanguage == null || note.meaningLanguage == meaningLanguage) &&
-            (search.isEmpty() || PrivatePhraseScriptSearch.contains(note.phrase, search) ||
-                PrivatePhraseScriptSearch.contains(note.ownMeaning, search))
+            (search.isEmpty() || PrivateOfflineSearch.contains(note.phrase, search) ||
+                PrivateOfflineSearch.contains(note.ownMeaning, search))
     }.sortedWith(compareBy<PersonalPhrase>(
         { if (search.isNotEmpty() &&
-            (PrivatePhraseScriptSearch.equalsTo(it.phrase, search) ||
-                PrivatePhraseScriptSearch.equalsTo(it.ownMeaning, search))) 0 else 1 },
+            (PrivateOfflineSearch.equalsTo(it.phrase, search) ||
+                PrivateOfflineSearch.equalsTo(it.ownMeaning, search))) 0 else 1 },
         { if (search.isNotEmpty() &&
-            (PrivatePhraseScriptSearch.beginsWith(it.phrase, search) ||
-                PrivatePhraseScriptSearch.beginsWith(it.ownMeaning, search))) 0 else 1 },
+            (PrivateOfflineSearch.beginsWith(it.phrase, search) ||
+                PrivateOfflineSearch.beginsWith(it.ownMeaning, search))) 0 else 1 },
         { it.language }, { it.phrase.lowercase(Locale.ROOT) }
     ))
     selected?.let { note ->

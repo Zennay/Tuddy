@@ -1,3 +1,16 @@
+## Nieuw: ook in livegesprekken en privéarchieven vind je schrijfvarianten
+
+De zoekbalk voor live ondertitels, de sterretjeslijst en een bewust
+geopend privétranscript kunnen dezelfde Arabisch/Perzische
+toetsenbordvarianten herkennen als het eigen zinnenboek. Treffer,
+Vorige/Volgende en de gemarkeerde regels blijven consistent.
+Tuddy verandert nooit de echte transcripttekst of opgeslagen
+betekenis; alles gebeurt alleen lokaal tijdens het zoeken.
+[Uitleg](docs/PRIVATE_CONVERSATION_SCRIPT_SEARCH.md).
+
+
+---
+
 ## Nieuw: compacte ondertitelkaarten met alle acties binnen bereik
 
 Een gespreksregel toont nu één uitklapbare knop voor correctie,

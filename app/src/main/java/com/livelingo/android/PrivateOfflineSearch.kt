@@ -4,8 +4,8 @@ import java.text.Normalizer
 import java.util.Locale
 
 /**
- * Display-only search tolerance for user-authored Kurmanji, Sorani and Pashto
- * cards. Never call this when saving, deduplicating, exporting or translating:
+ * Display-only search tolerance for RAM-only conversations, private transcripts,
+ * and user-authored Kurmanji, Sorani and Pashto cards. Never call this when saving, deduplicating, exporting or translating:
  * the user's exact original script and distinctions must remain intact.
  *
  * NFKC handles presentation-form keyboards; the tiny explicit table handles
@@ -13,7 +13,7 @@ import java.util.Locale
  * ZWNJ can be omitted while *searching*. Letters such as ه/ە and hamza forms
  * deliberately remain distinct rather than inventing a translation.
  */
-internal object PrivatePhraseScriptSearch {
+internal object PrivateOfflineSearch {
     fun fold(value: String): String {
         val normalized = Normalizer.normalize(value, Normalizer.Form.NFKC)
             .lowercase(Locale.ROOT)

@@ -32,7 +32,7 @@ import java.io.ByteArrayOutputStream
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivatePhraseDeck
-import com.livelingo.android.PrivatePhraseScriptSearch
+import com.livelingo.android.PrivateOfflineSearch
 import com.livelingo.android.PrivatePhraseTextPolicy
 import com.livelingo.android.PrivatePhraseTopics
 import com.livelingo.android.PrivatePrintablePhrasebook
@@ -963,12 +963,12 @@ internal fun MyOfflinePhrasesPanel(
                         "Je kunt de lokale lijst hieronder zelf wissen.",
                         color = MaterialTheme.colorScheme.error)
                 } else {
-                    val query = PrivatePhraseScriptSearch.fold(search.trim())
+                    val query = PrivateOfflineSearch.fold(search.trim())
                     val shown = phrases.filter {
                         val searchMatches = query.isEmpty() ||
-                            PrivatePhraseScriptSearch.contains(it.phrase, query) ||
-                            PrivatePhraseScriptSearch.contains(it.ownMeaning, query) ||
-                            PrivatePhraseScriptSearch.contains(labels[it.language].orEmpty(), query)
+                            PrivateOfflineSearch.contains(it.phrase, query) ||
+                            PrivateOfflineSearch.contains(it.ownMeaning, query) ||
+                            PrivateOfflineSearch.contains(labels[it.language].orEmpty(), query)
                         val assigned = phraseTopics.topicFor(it)
                         val topicMatches = when (selectedTopic) {
                             null -> true

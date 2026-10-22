@@ -752,13 +752,13 @@ private fun TuddyScreen(
     )
     // Apply the same search-only script folding as the private phrasebook.
     // Stored captions and translations are never normalized or rewritten.
-    val normalizedHistoryQuery = PrivatePhraseScriptSearch.fold(historySearchQuery.trim())
+    val normalizedHistoryQuery = PrivateOfflineSearch.fold(historySearchQuery.trim())
     fun historySearchMatches(line: Line): Boolean =
         normalizedHistoryQuery.isNotBlank() && (
-            PrivatePhraseScriptSearch.contains(line.original, normalizedHistoryQuery) ||
-                PrivatePhraseScriptSearch.contains(line.translated, normalizedHistoryQuery) ||
+            PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
+                PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery) ||
                 line.personalMeaning?.let {
-                    PrivatePhraseScriptSearch.contains(it, normalizedHistoryQuery)
+                    PrivateOfflineSearch.contains(it, normalizedHistoryQuery)
                 } == true
         )
     val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
@@ -4331,7 +4331,7 @@ private fun TuddyScreen(
             val chosenPins = pinnedLines.filter {
                 pinnedChosenIds == null || it.id in pinnedChosenIds.orEmpty()
             }
-            val term = pinnedSearchTerm.trim()
+            val term = PrivateOfflineSearch.fold(pinnedSearchTerm.trim())
             val pinnedPairs = pinnedLines.map { it.sourceCode to it.targetCode }.distinct()
             val filteredPins = pinnedLines.filter { line ->
                 val pairMatches = pinnedManagePair == null ||
@@ -4344,10 +4344,10 @@ private fun TuddyScreen(
                         line.status == "Lokaal vertaald" && line.translated.isNotBlank()
                 }
                 pairMatches && scopeMatches && (term.isBlank() ||
-                    line.original.contains(term, ignoreCase = true) ||
-                    line.translated.contains(term, ignoreCase = true) ||
-                    line.sourceCode.contains(term, ignoreCase = true) ||
-                    line.targetCode.contains(term, ignoreCase = true))
+                    PrivateOfflineSearch.contains(line.original, term) ||
+                    PrivateOfflineSearch.contains(line.translated, term) ||
+                    PrivateOfflineSearch.contains(line.sourceCode, term) ||
+                    PrivateOfflineSearch.contains(line.targetCode, term))
             }.let { if (pinnedNewestFirst) it.reversed() else it }
             val visiblePinIds = filteredPins.map { it.id }.toSet()
             val studyReadyPins = chosenPins.count {
