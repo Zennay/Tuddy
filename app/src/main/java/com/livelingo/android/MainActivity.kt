@@ -3002,7 +3002,7 @@ private fun TuddyScreen(
                                 "Sluit en open de actuele regel opnieuw.",
                             color = MaterialTheme.colorScheme.error
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             listOf("kmr" to "Kurmanji", "ckb" to "Sorani",
                                 "ps" to "Pasjtoe").forEach { (code, label) ->
                                 TextButton(onClick = { capturedPhraseLanguage = code }) {
@@ -3035,6 +3035,9 @@ private fun TuddyScreen(
                             "Deze zin bestaat al voor de gekozen taal. " +
                                 "Open Mijn eigen offline zinnen om die kaart bewust te wijzigen.",
                             color = MaterialTheme.colorScheme.error
+                        )
+                        if (capturedPhraseNotice.isNotBlank()) Text(
+                            capturedPhraseNotice, color = MaterialTheme.colorScheme.error
                         )
                         Text(
                             "Bewaart alleen deze twee door jou geschreven velden op je apparaat. " +
