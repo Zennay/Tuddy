@@ -115,7 +115,7 @@ internal fun SessionCorrectionManualAddDialog(
                         expanded = targetMenuOpen,
                         onDismissRequest = { targetMenuOpen = false }
                     ) {
-                        TargetCatalog.targets.forEach { target ->
+                        SessionCorrectionLanguageCatalog.targets.forEach { target ->
                             DropdownMenuItem(
                                 text = { Text(target.title + " (" + target.code + ")") },
                                 onClick = {
