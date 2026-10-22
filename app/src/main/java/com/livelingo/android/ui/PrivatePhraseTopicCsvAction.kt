@@ -706,9 +706,10 @@ internal fun PrivatePhraseTopicCsvAction(
                                     else "☐ Corrigeer deze bestaande betekenis (apart akkoord)")
                                 }
                             }
-                            Text("Het lokale thema en de favoriet van deze zin blijven " +
-                                "onaangeroerd. Bij betekeniswijziging vervalt uitsluitend " +
-                                "de herhaalvoortgang van deze zin.",
+                            Text("Je favoriet blijft behouden. Het lokale thema blijft " +
+                                "behouden tenzij je hieronder apart een ander thema kiest. " +
+                                "Alleen een betekeniscorrectie wist de herhaalvoortgang " +
+                                "van deze zin.",
                                 style = MaterialTheme.typography.labelSmall)
                         } else Text(
                             "Nieuwe zin: deze eigen zin wordt inclusief het gekozen " +
