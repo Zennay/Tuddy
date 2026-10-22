@@ -105,7 +105,7 @@ internal fun PrivateSubtitleTranslationDialog(
     fun detectSourceLanguage() {
         if (detectingSource || checking || translating || translatedCues != null) return
         val sample = cues.asSequence()
-            .map { it.text.replace('\\n', ' ').trim() }
+            .map { it.text.replace('\n', ' ').trim() }
             .filter { it.isNotBlank() }
             .take(12)
             .joinToString(" ")
