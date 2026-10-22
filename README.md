@@ -6,6 +6,12 @@ correcties aanvinken. Via **Bekijk geselecteerde JSON en deel bewust…**
 krijg je eerst de **complete JSON-tekst** en het aantal gekozen zinnen
 te zien. Pas na een tweede expliciete bevestiging opent Android Delen.
 
+De ontvanger kan de JSON-tekst in Tuddy via **Mijn eigen correcties
+meenemen → Plak eigen JSON of CSV…** handmatig plakken. De bestaande
+strikte parser toont eerst een selectief importvoorbeeld voordat de
+ontvanger bewust samenvoegt of vervangt. Het klembord wordt niet
+automatisch gelezen.
+
 Als correcties intussen zijn veranderd, wordt de deelactie geweigerd:
 controleer de selectie opnieuw. Niets wordt automatisch opgeslagen,
 gedeeld of naar de cloud gestuurd door Tuddy. De zelfgekozen ontvangende
