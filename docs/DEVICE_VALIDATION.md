@@ -6,36 +6,36 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest app-code candidate (22 October 2026, after PR #355; built from its exact proposed-merge checkout and now merged to main):
+Pinned APK acceptance candidate (22 October 2026, built after PR #361). **This is a historical, reproducible handoff, not the latest app build:** PR #363 subsequently merged on main at `1034ddb0fb1d24882e4e3527ccb360249cfae459`, adding original-caption correction from the fullscreen reader. Do not attribute PR #363 behavior to this APK; obtain a new exact-source artifact before accepting the latest app version on a device:
 
 | Field | Immutable evidence |
 |---|---|
-| Latest app-code merge (PR #355) | `9a9bad73ec6ac4eaca54690ac10f1aa5fb4eb2e2` |
-| Tree identity | Proposed-merge checkout `f725446996dc4a2b6e75b48aa61de31758b951aa` and merged main have identical GitHub file blobs for all four PR #355 changed files; unchanged files derive from base `4bc5561cd8803c2be80bd446459e5aaad1e48acf` |
-| Hosted Android run | [#39745867690](https://github.com/Zennay/Tuddy/actions/runs/39745867690) — COMPLETED SUCCESS; source-head, build, APK manifest and checksum steps succeeded |
-| Build checkout commit | `f725446996dc4a2b6e75b48aa61de31758b951aa` (proposed-merge checkout; matches the artifact's `source-commit.txt`) |
-| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39745867690/artifacts/12411163275) (ID `12411163275`, expires 5 November 2026 08:13:52 UTC) |
+| Latest app-code merge (PR #361) | `10a213a518405ebbd95f1c5ce04aa1e31787b739` |
+| Tree identity | Proposed-merge checkout `4bf1fad19047649c9d9c311c84de395726c08609` and merged main have identical GitHub file blobs for all four PR #361 changed files; unchanged files derive from base `1dd3a6b62d4712bc294df8bdaacf3216905d4468` |
+| Hosted Android run | [#39750154761](https://github.com/Zennay/Tuddy/actions/runs/39750154761) — COMPLETED SUCCESS; source-head, build, APK manifest and checksum steps succeeded |
+| Build checkout commit | `4bf1fad19047649c9d9c311c84de395726c08609` (proposed-merge checkout; matches the artifact's `source-commit.txt`) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39750154761/artifacts/12412728475) (ID `12412728475`, expires 5 November 2026 08:49:34 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `10292346fc16d07ab0beb758d26bde480ca6b68cff9fe9bf8e55049d69a374ef` |
+| **APK SHA-256** | `0b4ecdd21135febb123bf733ed72258dc7ec307f23988c4efccea73fdb663d76` |
 | APK size | See `build-manifest.txt` inside the artifact |
-| Artifact ZIP SHA-256 (not APK) | `ae58991de2e456f48cfaf5e123e2d04a236a6611d9de43f4e2a6079c9f291a67` |
+| Artifact ZIP SHA-256 (not APK) | `482fe89d05799205d3aae574f6ebc4f762519b1da75000edaf70ed45f5b01f09` |
 | Package | `com.livelingo.android` |
 | Version | `0.4.0` |
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-This artifact includes PR #355's direct translation of searched subtitle matches and source-language detection based on the selected cues, alongside PR #352's non-contiguous cue selection, PR #351's paginated translation preview, and the existing on-device speech and fail-closed speech-pack checks. The checksum sidecar was verified by the hosted build (`app-debug.apk: OK`). This is build provenance only: it does not prove physical installation, actual offline speech quality, zero network traffic or device acceptance.
+This artifact includes PR #361's direct fullscreen-reader entry to the revision-fenced live translation correction, alongside PR #360's consistent Arabic/Persian search folding across private subtitle workflows, PR #359 fullscreen search, PR #358 offline tappable word cards, PR #357 source-row-aware translation errors, PR #355 translation from search matches, and the earlier offline subtitle features. The checksum sidecar was verified by the hosted build (`app-debug.apk: OK`). This is build provenance only: it does not prove physical installation, actual offline speech quality, zero network traffic or device acceptance.
 
 From a Tuddy source checkout, after downloading the artifact ZIP as
 `artifact.zip`, run the reusable integrity verifier:
 
 ```sh
-bash scripts/verify-tuddy-apk-artifact.sh \
-  artifact.zip \
-  ae58991de2e456f48cfaf5e123e2d04a236a6611d9de43f4e2a6079c9f291a67 \
-  10292346fc16d07ab0beb758d26bde480ca6b68cff9fe9bf8e55049d69a374ef \
-  f725446996dc4a2b6e75b48aa61de31758b951aa \
-  39745867690
+bash scripts/verify-tuddy-apk-artifact.sh \\
+  artifact.zip \\
+  482fe89d05799205d3aae574f6ebc4f762519b1da75000edaf70ed45f5b01f09 \\
+  0b4ecdd21135febb123bf733ed72258dc7ec307f23988c4efccea73fdb663d76 \\
+  4bf1fad19047649c9d9c311c84de395726c08609 \\
+  39750154761
 ```
 
 The helper checks the ZIP digest before extraction, rejects archive path-traversal
