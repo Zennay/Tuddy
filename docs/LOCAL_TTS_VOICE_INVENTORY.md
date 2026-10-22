@@ -4,7 +4,7 @@ Open **Taalondersteuning → Controleer lokale stemmen** om de stemmen te bekijk
 
 ## Stem bekijken en kiezen
 
-- Tuddy toont maximaal 30 geïnstalleerde lokale stemvarianten met locale-tag en engine-ID. Netwerkafhankelijke en nog niet geïnstalleerde stemmen worden uitgesloten.
+- Tuddy toont alle gevonden geïnstalleerde lokale stemvarianten met locale-tag en engine-ID. Gebruik het zoekveld om te filteren op stemnaam, taal/regio of engine-ID; het aantal treffers en het totaal blijven zichtbaar. Netwerkafhankelijke en nog niet geïnstalleerde stemmen worden uitgesloten.
 - Tik bij een stem op **Gebruik deze stem** om die als lokale voorkeur voor de betreffende taal in te stellen. De voorkeur geldt voor alle Tuddy-voorleesfuncties die die taal gebruiken.
 - **Automatische stemkeuze herstellen** wist de expliciet gekozen stemvoorkeuren en laat Tuddy weer automatisch een passende lokale stem kiezen.
 - De voorkeursstem wordt alleen in de private app-instellingen op dit toestel opgeslagen. Er wordt geen tekst, audio, transcript of gebruiksgeschiedenis bewaard.
