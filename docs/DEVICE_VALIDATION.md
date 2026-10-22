@@ -414,3 +414,14 @@ and [#2](https://github.com/Zennay/Tuddy/issues/2) remain open. Full
 historical v0.4 architecture and licensed, fully on-device Kurdish/Pashto
 ASR/MT engines are not completed. Keep all production/release/worker
 capabilities disabled until owner-reviewed evidence meets the gates.
+
+## Live Android-verbindingsstatus in Tuddy
+
+De startcheck toont nu expliciet de **vliegtuigmodus**, **wifi-radio** en door
+Android zichtbare **netwerktransporten**, met handmatige vernieuwknop en
+automatische verversing na terugkomst uit Instellingen. De opzettelijke
+apparaatrapport-export bevat dezelfde signalen zonder SSID, IP-adres of
+spraak. Zie [lokale verbindingsstatus](OFFLINE_RADIO_STATUS.md). Deze
+momentopname is **geen onafhankelijk bewijs** dat alle radios uit zijn of
+dat geen enkele Android-dienst netwerkverkeer uitvoert: volg onverkort
+het handmatige toestel- en isolatieprotocol hierboven.

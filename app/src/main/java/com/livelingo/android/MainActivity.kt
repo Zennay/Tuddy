@@ -1096,6 +1096,9 @@ private fun TuddyScreen(
             appendLine("GitHub workflow run ID: ${BuildConfig.TUDDY_BUILD_RUN_ID}")
             appendLine("Android API: ${Build.VERSION.SDK_INT}")
             appendLine("Airplane mode: $airplaneMode")
+            OfflineRadioSnapshot.capture(context).reportLines().forEach {
+                appendLine(it)
+            }
             appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
             appendLine("Source speech tag: ${source.speechCode}")
             appendLine("Target text code: ${target.translateCode}")
