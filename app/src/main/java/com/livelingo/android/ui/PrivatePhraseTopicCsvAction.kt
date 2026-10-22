@@ -208,6 +208,13 @@ internal fun PrivatePhraseTopicCsvAction(
 
     val undo = lastCsvUndo
     if (confirmCsvUndo && undo != null) {
+        val formerThemes = (undo.before.entries[
+            PrivatePhraseTopics.ASSIGNMENTS_KEY
+        ] as? Set<*>)?.mapNotNull { row ->
+            val value = row as? String ?: return@mapNotNull null
+            if (value.length < 66 || value[64] != '|') return@mapNotNull null
+            value.substring(0, 64) to value.substring(65)
+        }?.toMap().orEmpty()
         AlertDialog(
             onDismissRequest = { confirmCsvUndo = false },
             title = { Text("Laatste privé-CSV-import terugdraaien?") },
@@ -231,6 +238,10 @@ internal fun PrivatePhraseTopicCsvAction(
                             ))
                         Text("Eigen betekenis [" + note.meaningLanguage + "]: " +
                             note.ownMeaning, style = MaterialTheme.typography.bodySmall)
+                        Text("Oorspronkelijk thema: " + (
+                            formerThemes[PrivatePhraseShortcuts.fingerprint(note)]
+                                ?: "zonder thema"
+                        ), style = MaterialTheme.typography.labelSmall)
                     }
                     Text("Dit is géén automatische back-up: ongedaan maken " +
                         "werkt alleen zolang geen eigen zin, thema, favoriet of " +
