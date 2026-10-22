@@ -177,7 +177,7 @@ speech or full transcripts** with reports.
 ## 3. Evidence / release record (fill only after running the test)
 
 - Candidate source / APK digest: **NOT YET OBSERVED ON DEVICE**
-- Historical v0.4 source archive: original ZIP SHA-256 `e7721d41d4f7baf31850e3836d5655cfd3b20c2197752cc4a3ff1078fc57992c`; all 23 extracted entries have matching Git blob hashes in `archive/v0.4/LiveLingo-Android/` on branch `docs/archive-v04-source-completeness-20261022` (manifest: [`archive/v0.4/IMPORT_MANIFEST.md`](../archive/v0.4/IMPORT_MANIFEST.md)). This archive-integrity record is not evidence of a physical install, and the archive-completion branch is not yet merged.
+- Historical v0.4 source archive: original ZIP SHA-256 `e7721d41d4f7baf31850e3836d5655cfd3b20c2197752cc4a3ff1078fc57992c`; all 23 extracted entries have matching Git blob hashes in `archive/v0.4/LiveLingo-Android/` on branch `docs/archive-v04-source-completeness-20261022` (manifest: [`archive/v0.4/IMPORT_MANIFEST.md`](../archive/v0.4/IMPORT_MANIFEST.md)). This archive-integrity record is not evidence of a physical install; historical sources are preserved separately from the active app module.
 - Device / Android API / downloaded language packs: **NOT PROVIDED**
 - Airplane-mode 10-utterance report, latencies and 500-line test: **NOT RUN**
 - Permission/lifecycle/stop + delayed-retry proofs: **NOT RUN**
