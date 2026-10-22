@@ -40,6 +40,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.PersonalPhrase
 
 @Composable
@@ -59,7 +60,7 @@ private fun PhraseSide(
         activeSpeechText != null && normalized == activeSpeechText
     val displayedText = if (followsSpeech) activeSpeechText.orEmpty() else text
     val range = activeSpeechRange.takeIf { followsSpeech }
-    val active = activeSpeechSide == contentKind && activeSpeechText != null
+    val active = followsSpeech
     val background = MaterialTheme.colorScheme.primary
     val foreground = MaterialTheme.colorScheme.onPrimary
     val annotatedText = remember(displayedText, range, background, foreground) {
@@ -115,8 +116,8 @@ private fun PhraseSide(
 }
 
 /**
- * Deliberately visible, all-local presentation of the user's OWN notes.
- * No ASR, ML Kit, TTS or cloud service. Android sharing is opt-in twice.
+ * Deliberately visible presentation of the user's OWN notes.
+ * Optional speech is user-triggered local TTS only; no ASR/MT. Android sharing is opt-in twice.
  */
 @Composable
 internal fun OfflinePhrasePresenter(
@@ -283,7 +284,7 @@ internal fun OfflinePhrasePresenter(
     }
 
     Dialog(
-        onDismissRequest = { speaker.stop(); onDismiss() },
+        onDismissRequest = { clearSpeech(); onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
