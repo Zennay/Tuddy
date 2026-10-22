@@ -65,3 +65,10 @@ en start geen achtergronddienst.
 Het blijft een **best effort** Android-momentopname, geen firewall.
 Tussen twee controles kan de systeemtoestand veranderen. Het afsluiten
 van de app stopt ook de bewaking; de strikte keuze wordt niet opgeslagen.
+
+## Status op het hoofdscherm
+
+Het beginscherm vermeldt duidelijk of de strikte sessieregel aan of uit
+staat, zodat een gebruiker na herstart niet stilzwijgend aanneemt dat de
+vorige, vluchtige keuze nog geldt. Wijzigen gaat nog steeds alleen via
+de Offline startcheck wanneer de microfoon uit staat.

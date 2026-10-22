@@ -6394,6 +6394,17 @@ private fun TuddyScreen(
                         "Offline startcheck · beide modellen aanwezig"
                     else "Offline startcheck · controleer spraak én tekst")
                 }
+                Text(
+                    if (requireOfflineRadioBeforeListening)
+                        "Strikte vliegtuigmodus is aan voor deze sessie. " +
+                            "Luisteren stopt bij nieuwe of onduidelijke verbindingen."
+                    else "Strikte vliegtuigmodus staat uit. Schakel hem " +
+                        "desgewenst in via Offline startcheck.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (requireOfflineRadioBeforeListening)
+                        MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val canStart = offlineAvailable && !listening
                     Button(
