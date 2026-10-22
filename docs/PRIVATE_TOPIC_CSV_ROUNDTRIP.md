@@ -140,3 +140,23 @@ Dit helpt de gebruiker vooraf verschil te zien tussen een nieuwe
 taalgroep importeren en een bestaande lokale betekenis onbedoeld
 proberen bijwerken. De preview is geen automatische vertaling
 en voert zelf geen opslagactie uit.
+
+## Bewust delen via Android, zonder eerst een bestand te bewaren
+
+Na het kiezen van een eigen taal/thema-subset en de volledige
+controlepreview kan de gebruiker **Bekijk volledige CSV en deel
+bewust…** kiezen. Een tweede, aparte privacypreview toont de
+**exacte vijfkoloms UTF-8 CSV als ruwe tekst**, inclusief ieder
+zelfgeschreven zinnenpaar en de eventuele themanamen.
+Pas na **Ik begrijp dit, open Android Delen…** wordt het
+Android-deelvenster geopend met die exacte tekst.
+
+Vóór het deelvenster wordt de actuele lokale selectie opnieuw
+vergeleken met de hele preview: een gewijzigde zin of
+thema-indeling weigert het delen. Er wordt geen ander
+woordboek, transcript of audio toegevoegd en Tuddy kiest
+zelf geen ontvanger. Een door de gebruiker gekozen externe
+app kan de data wel uploaden, synchroniseren of doorsturen;
+Tuddy kan die externe kopie niet verwijderen. De functie
+is standaard uit totdat de gebruiker bewust beide stappen
+doorloopt en is geen automatische cloudbackup.

@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +60,7 @@ internal fun PrivatePhraseTopicCsvAction(
     var notice by remember { mutableStateOf("") }
     var exportReview by remember { mutableStateOf<TopicCsvExport?>(null) }
     var pendingWrite by remember { mutableStateOf<TopicCsvExport?>(null) }
+    var sharePreview by remember { mutableStateOf<TopicCsvExport?>(null) }
     var choosingScope by remember { mutableStateOf(false) }
     var selectedLanguage by remember { mutableStateOf<String?>(null) }
     var selectedTopic by remember { mutableStateOf<String?>(null) }
@@ -349,14 +351,82 @@ internal fun PrivatePhraseTopicCsvAction(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    pendingWrite = export
-                    exportReview = null
-                    saveFile.launch("Tuddy-geselecteerde-zinnen-met-themas.csv")
-                }) { Text("Ik begrijp dit, kies opslag…") }
+                Column {
+                    TextButton(onClick = {
+                        pendingWrite = export
+                        exportReview = null
+                        saveFile.launch("Tuddy-geselecteerde-zinnen-met-themas.csv")
+                    }) { Text("Ik begrijp dit, kies opslag…") }
+                    TextButton(onClick = {
+                        exportReview = null
+                        sharePreview = export
+                    }) { Text("Bekijk volledige CSV en deel bewust…") }
+                }
             },
             dismissButton = {
                 TextButton(onClick = { exportReview = null }) { Text("Annuleren") }
+            }
+        )
+    }
+
+    val sharing = sharePreview
+    if (sharing != null) {
+        AlertDialog(
+            onDismissRequest = { sharePreview = null },
+            title = { Text("Mijn privé-CSV echt met een andere app delen?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Text("Hieronder staat de volledige UTF-8 CSV die je gaat delen, " +
+                        "inclusief jouw eigen zinnen, betekenissen en thema's. " +
+                        "Lees alles nogmaals voordat je Android Delen opent.")
+                    Text(
+                        sharing.bytes.toString(Charsets.UTF_8),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text("Een door jou geselecteerde externe app kan de CSV " +
+                        "opslaan, uploaden of doorsturen. Tuddy kan die externe " +
+                        "kopie niet verwijderen. Geen automatische vertaling.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val selected = selection(sharing.language, sharing.topic)
+                    val fresh = selected?.let {
+                        PrivatePhraseTopicCsv.snapshot(context, deck, it)?.first
+                    }
+                    if (fresh == null || !fresh.contentEquals(sharing.bytes)) {
+                        notice = "De selectie of eigen thema's zijn gewijzigd; " +
+                            "controleer vóór delen opnieuw."
+                    } else {
+                        val sent = runCatching {
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    sharing.bytes.toString(Charsets.UTF_8)
+                                )
+                            }
+                            val chooser = Intent.createChooser(
+                                send, "Deel uitsluitend deze eigen Tuddy-CSV"
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(chooser)
+                            true
+                        }.getOrDefault(false)
+                        notice = if (sent)
+                            "Android Delen geopend voor exact jouw geselecteerde CSV."
+                        else "Geen externe deelapp beschikbaar; niets gedeeld."
+                    }
+                    sharePreview = null
+                }) { Text("Ik begrijp dit, open Android Delen…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { sharePreview = null }) { Text("Annuleren") }
             }
         )
     }
