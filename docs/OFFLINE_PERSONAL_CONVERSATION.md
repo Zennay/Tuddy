@@ -68,6 +68,17 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    toestemmingsactie. De import bewaart nooit automatisch in de woordenlijst
    of op schijf.
 
+### Plak een bewust gedeeld tekstscript zonder bestand
+
+Ontvang je het eerdere gesprekscript als platte tekst, kies in dezelfde
+offline gespreksmodus **Plak een zelf gedeeld Tuddy-gesprekscript…**.
+Plak zelf de **volledige** Tuddy-tekst, tik op **Lees volledige
+controlepreview…** en controleer alle maximaal twaalf zinnenparen.
+Tuddy valideert dezelfde strikte UTF-8- en 8 KiB-structuur als bij
+bestandsimport en vraagt opnieuw of je tijdelijk wilt **vervangen** of
+**toevoegen**. Bij afwijzing wordt niets gewijzigd of opgeslagen.
+De app verzamelt nooit automatisch inhoud van klembord of andere apps.
+
 De Android Documenten-app kan externe cloudbestandsproviders aanbieden,
 maar Tuddy uploadt of vertaalt het geselecteerde bestand niet. Dit is
 geen compatibiliteit met willekeurige ondertitels of vertaalbestanden:
