@@ -251,6 +251,39 @@ internal class PrivatePhraseTopics(context: Context) {
             .commit()
     }
 
+    /**
+     * Deliberate consolidation of two locally authored topic groups.
+     * Every source assignment moves to the existing destination in one
+     * preferences transaction. No phrase text, favorites or due dates change.
+     * Refuse a stale dialog preview rather than merging a newer edit.
+     */
+    @Synchronized
+    fun mergeIfUnchanged(
+        source: String,
+        destination: String,
+        expectedTopics: ByteArray,
+        expectedNotes: List<PersonalPhrase>
+    ): Boolean {
+        if (source == destination) return false
+        val before = exportSnapshot() ?: return false
+        if (!before.contentEquals(expectedTopics) || deck.entries() != expectedNotes) {
+            return false
+        }
+        val names = readTopics() ?: return false
+        val assignments = readAssignments() ?: return false
+        if (source !in names || destination !in names ||
+            assignments.values.any { it !in names }) return false
+        val reassigned = assignments.mapValues { (_, topic) ->
+            if (topic == source) destination else topic
+        }
+        return try {
+            prefs.edit()
+                .putStringSet(TOPICS_KEY, names - source)
+                .putStringSet(ASSIGNMENTS_KEY, rows(reassigned))
+                .commit()
+        } catch (_: RuntimeException) { false }
+    }
+
     @Synchronized
     fun delete(name: String): Boolean {
         val existing = readTopics() ?: return false

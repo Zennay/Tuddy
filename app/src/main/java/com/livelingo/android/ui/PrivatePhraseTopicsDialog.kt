@@ -33,6 +33,14 @@ private data class PendingTopicRestore(
     val previousNotes: List<PersonalPhrase>
 )
 
+/** Frozen, private preview: no note may be reassigned behind the user's back. */
+private data class PendingTopicMerge(
+    val source: String,
+    val originalTopics: ByteArray,
+    val originalNotes: List<PersonalPhrase>,
+    val affected: List<PersonalPhrase>
+)
+
 /** Theme management for human-authored notes, never model-derived categories. */
 @Composable
 internal fun PrivatePhraseTopicsDialog(
@@ -45,6 +53,8 @@ internal fun PrivatePhraseTopicsDialog(
     var editTarget by remember { mutableStateOf<String?>(null) }
     var proposed by remember { mutableStateOf("") }
     var pendingDelete by remember { mutableStateOf<String?>(null) }
+    var pendingMerge by remember { mutableStateOf<PendingTopicMerge?>(null) }
+    var mergeDestination by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
     var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
     var pendingRestore by remember { mutableStateOf<PendingTopicRestore?>(null) }
@@ -179,6 +189,79 @@ internal fun PrivatePhraseTopicsDialog(
         return
     }
 
+    val merging = pendingMerge
+    if (merging != null) {
+        val destinations = topics.filter { it != merging.source }
+        AlertDialog(
+            onDismissRequest = { pendingMerge = null; mergeDestination = null },
+            title = { Text("Twee privéthema's veilig samenvoegen?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 470.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Text("Bron: " + merging.source + ". Kies één bestaand doelthema. " +
+                        "Na jouw bevestiging worden " + merging.affected.size +
+                        " eigen zinnen naar het gekozen thema verplaatst en " +
+                        "verdwijnt uitsluitend de bron-thema-naam. Alle betekenissen, " +
+                        "favorieten en herhaaldatums blijven behouden.",
+                        style = MaterialTheme.typography.bodySmall)
+                    destinations.forEach { destination ->
+                        TextButton(onClick = { mergeDestination = destination }) {
+                            Text((if (mergeDestination == destination) "✓ " else "") +
+                                "Voeg samen met: " + destination)
+                        }
+                    }
+                    Text("Dit zijn precies de zinnen die van themagroep veranderen:",
+                        style = MaterialTheme.typography.titleSmall)
+                    if (merging.affected.isEmpty()) {
+                        Text("Dit thema heeft momenteel geen toegewezen zinnen.")
+                    }
+                    merging.affected.forEachIndexed { index, note ->
+                        Text((index + 1).toString() + ". [" + note.language + "] " +
+                            note.phrase, style = MaterialTheme.typography.bodyMedium)
+                        Text("Eigen betekenis: " + note.ownMeaning,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("Dit is een handmatige indeling, geen automatische " +
+                        "taalherkenning of gecontroleerde vertaling. Is iets gewijzigd " +
+                        "sinds deze preview, dan gebeurt er niets.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = destinations.any { it == mergeDestination },
+                    onClick = {
+                        val target = mergeDestination
+                        if (target != null) {
+                            val merged = storage.mergeIfUnchanged(
+                                merging.source, target,
+                                merging.originalTopics, merging.originalNotes
+                            )
+                            if (merged) onChanged()
+                            notice = if (merged)
+                                "Thema's samengevoegd; eigen zinnen en leerdata behouden."
+                            else "Samenvoegen geweigerd: zinnen of thema's zijn gewijzigd. " +
+                                "Controleer de indeling opnieuw."
+                        }
+                        pendingMerge = null
+                        mergeDestination = null
+                    }
+                ) { Text("Bevestig samenvoegen") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pendingMerge = null
+                    mergeDestination = null
+                }) { Text("Annuleren") }
+            }
+        )
+        return
+    }
+
     if (editTarget != null) {
         val creating = editTarget == "__new__"
         AlertDialog(
@@ -269,6 +352,22 @@ internal fun PrivatePhraseTopicsDialog(
                             editTarget = name
                         }) { Text("Hernoem") }
                         TextButton(onClick = { pendingDelete = name }) { Text("Wis") }
+                    }
+                    if (topics.size > 1) {
+                        TextButton(onClick = {
+                            val baseline = storage.notesSnapshot()
+                            val currentTopics = storage.exportSnapshot()
+                            if (baseline == null || currentTopics == null) {
+                                notice = "Thema's kunnen nu niet worden samengevoegd."
+                            } else {
+                                pendingMerge = PendingTopicMerge(
+                                    name, currentTopics, baseline,
+                                    baseline.filter { storage.topicFor(it) == name }
+                                )
+                                mergeDestination = null
+                                notice = ""
+                            }
+                        }) { Text("⇢ Voeg dit thema samen met een ander thema…") }
                     }
                 }
                 if (topics.isEmpty()) Text("Je hebt nog geen thema’s.")
