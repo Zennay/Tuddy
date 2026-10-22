@@ -6,31 +6,31 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest app-code candidate (22 October 2026, after PR #344; built from the docs-only follow-up commit for PR #345):
+Latest app-code candidate (22 October 2026, after PR #346):
 
 | Field | Immutable evidence |
 |---|---|
-| Latest app-code merge (PR #344) | `093638d677e53b778f856fc53dfa93341dffa47f` |
-| Git tree SHA for build checkout | `fdd14b145ecf6840b70d9a1ff8908118b45aa429` |
-| Hosted Android run | [#39740034759](https://github.com/Zennay/Tuddy/actions/runs/39740034759) — COMPLETED SUCCESS; `build` succeeded |
-| Build checkout commit | `3e92a9ba6a7a2fd39239bf166e773dfb6f2fac84` (includes the latest app code plus PR #345's docs-only changes; matches the build manifest) |
-| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39740034759/artifacts/12408374317) (ID `12408374317`, expires 5 November 2026 07:26:04 UTC) |
+| Latest app-code merge (PR #346) | `004a092a8ddce02d7df1a2a3fdc5db6dfa79cfcb` |
+| Git tree SHA | `6677421b192064ef8594f4c4c98f62b440addd95` |
+| Hosted Android run | [#39741240456](https://github.com/Zennay/Tuddy/actions/runs/39741240456) — COMPLETED SUCCESS; `build` succeeded |
+| Build checkout commit | `004a092a8ddce02d7df1a2a3fdc5db6dfa79cfcb` (matches the exact source SHA in the build manifest) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39741240456/artifacts/12409317354) (ID `12409317354`, expires 5 November 2026 07:36:20 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `db5f7f5405d1e42604822ceee0bd3e0dbd80bc0050054dc821c5c4c98721004e` |
+| **APK SHA-256** | `86459a11fdba72dcee379e9842def20e569cced21dac6d3aa0aaa4e03d3667be` |
 | APK size | See `build-manifest.txt` inside the artifact |
-| Artifact ZIP SHA-256 (not APK) | `c125527743b9891eae01bf6345e5f0cffdd02131f4ef2d5dfd155c83c2408502` |
+| Artifact ZIP SHA-256 (not APK) | `d9c02dd049a6138580e449b212f012d5f4e50eb54380d689ef0a197c2f32dce4` |
 | Package | `com.livelingo.android` |
 | Version | `0.4.0` |
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
 This artifact includes PR #341's privacy-safe manual offline acceptance report, PR #342's
-bounded offline subtitle read-aloud, and PR #344's fail-closed requirement for an
-active Wi-Fi connection with Android-reported internet capability and validation
-before a speech-pack request. The checksum sidecar was verified by the hosted
-build (`app-debug.apk: OK`). This is build provenance only: it does not prove
-physical installation, actual offline speech quality, zero network traffic or
-device acceptance.
+bounded offline subtitle read-aloud, PR #344's fail-closed requirement for an
+active Wi-Fi connection with Android-reported internet capability and validation,
+and PR #346's research-catalog filters/candidate cards. The checksum sidecar was
+verified by the hosted build (`app-debug.apk: OK`). This is build provenance
+only: it does not prove physical installation, actual offline speech quality,
+zero network traffic or device acceptance.
 
 From a Tuddy source checkout, after downloading the artifact ZIP as
 `artifact.zip`, run the reusable integrity verifier:
@@ -38,10 +38,10 @@ From a Tuddy source checkout, after downloading the artifact ZIP as
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  c125527743b9891eae01bf6345e5f0cffdd02131f4ef2d5dfd155c83c2408502 \
-  db5f7f5405d1e42604822ceee0bd3e0dbd80bc0050054dc821c5c4c98721004e \
-  3e92a9ba6a7a2fd39239bf166e773dfb6f2fac84 \
-  39740034759
+  d9c02dd049a6138580e449b212f012d5f4e50eb54380d689ef0a197c2f32dce4 \
+  86459a11fdba72dcee379e9842def20e569cced21dac6d3aa0aaa4e03d3667be \
+  004a092a8ddce02d7df1a2a3fdc5db6dfa79cfcb \
+  39741240456
 ```
 
 The helper checks the ZIP digest before extraction, rejects archive path-traversal
@@ -63,7 +63,7 @@ Previous app-code candidate (22 October 2026, after PR #333 and before PR #335):
 | Artifact ZIP SHA-256 | `2275f56609a701409d94abb3a32f95caf20cae608f2697871b913b29204e369a` |
 | Physical installation / airplane-mode proof | **NOT PROVIDED** |
 
-The PR #333/#335/#342 artifacts are historical; PR #344 is the latest app-code change in the current candidate. The APK and artifact ZIP digests are distinct, and neither this artifact nor any hosted build proves physical acceptance.
+Earlier PR #333/#335/#342/#344 APKs are historical; PR #346 is the latest app-code candidate. The APK and artifact ZIP digests are distinct, and neither this artifact nor any hosted build proves physical acceptance.
 
 Previous app-code candidate (22 October 2026, after PR #318 and before PR #320):
 
