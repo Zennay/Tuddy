@@ -218,8 +218,9 @@ internal object UnavailableTextLanguageCatalog {
                     url = "https://huggingface.co/amedcj/whisper-kurmanji",
                     directionEvidence = "Spraak → tekst (ASR), Kurmanji volgens modelkaart en Common Voice; geen vertaling of Android-geschiktheid aangetoond.",
                     declaredLicense = "Apache-2.0 volgens modelkaart",
-                    footprint = "modelbestand circa 967 MB",
+                    footprint = "966.995.080 bytes; SHA-256 7411638aad942d5d1038e0ff3b79f5632ad479c60ce98e2739f08c6cbdae5ada; snapshot d7a083101e13012e3748f4c7d77234fa7d195441",
                     limitation = "Modelkaart noemt Common Voice Kurmanji, maar geen datasetversie of evaluatiescore. " +
+                        "Deze immutable revision maakt alleen de checkpointbytes reproduceerbaar; zij bewijst niet dat de trainingsdata Common Voice 26.0 is. " +
                         "Mozilla Data Collective publiceert Common Voice Kurmanji 26.0 onder CC0-1.0, maar zonder release-ID " +
                         "is niet bewezen dat deze gewichten precies die versie gebruiken. Trainingsdatarechten, dialectnauwkeurigheid, " +
                         "latency en geheugenbeslag zijn niet onafhankelijk geverifieerd. Niet geïntegreerd of op Android getest."
