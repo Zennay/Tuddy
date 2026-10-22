@@ -175,7 +175,7 @@ internal fun OfflinePersonalTurnTableDialog(
         contentKind: String
     ) {
         val displayedText = if (activeSpeechKind == contentKind && activeSpeechText != null) {
-            activeSpeechText
+            activeSpeechText.orEmpty()
         } else text
         val range = activeSpeechRange.takeIf {
             activeSpeechKind == contentKind && activeSpeechText != null &&
