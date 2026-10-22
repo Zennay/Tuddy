@@ -1,3 +1,17 @@
+## Nieuw: importeer eigen Kurmanji-, Sorani- en Pasjtoe-zinnen als CSV
+
+Tuddy accepteert nu naast TSV en JSON ook zelfgemaakte **UTF-8 CSV**
+met vier kolommen voor je eigen bronzin en Nederlandse of Engelse betekenis.
+Kies het bestand via Android Documenten, controleer de **volledige
+voorafgaande preview** en beslis apart tussen veilig samenvoegen of
+bewust de gehele lijst vervangen. Dubbele aanhalingstekens en komma's
+binnen eigen zinnen worden ondersteund; onveilige, dubbele of te grote
+lijsten worden geweigerd. Geen automatisch vertaalmodel, cloudspraak
+of opslag zonder jouw bevestiging.
+[CSV-formaat en importhandleiding](docs/PERSONAL_PHRASE_CSV_IMPORT.md).
+
+---
+
 ## Nieuw: één tik om beide oefenhelften te verbergen
 
 Met **Verberg direct beide zijden** maak je persoonlijke zinnen of

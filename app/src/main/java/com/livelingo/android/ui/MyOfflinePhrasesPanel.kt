@@ -242,6 +242,40 @@ internal fun MyOfflinePhrasesPanel(
             }
         }
     }
+    val openCsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        pendingImport = null
+        if (uri != null) {
+            val candidate = runCatching {
+                val output = ByteArrayOutputStream()
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: throw IllegalArgumentException("onleesbaar bestand")
+                input.use { stream ->
+                    val buffer = ByteArray(4096)
+                    while (true) {
+                        val count = stream.read(buffer)
+                        if (count < 0) break
+                        if (count == 0 || output.size() + count > 50000)
+                            throw IllegalArgumentException("ongeldige of te grote lijst")
+                        output.write(buffer, 0, count)
+                    }
+                }
+                deck.previewCsvImport(output.toByteArray())
+            }.getOrNull()
+            if (candidate == null) {
+                info = "CSV-lijst geweigerd. Controleer de exacte kopregel, vier " +
+                    "kommakolommen met dubbele aanhalingstekens voor komma’s " +
+                    "en de limiet van 80 zelfgeschreven zinnen. Niets overschreven."
+            } else {
+                importSource = "csv"
+                pendingImport = candidate
+                pendingImportBase = deck.entries()?.toList()
+                info = "CSV met jouw eigen zinparen ingelezen. " +
+                    "Kies bewust samenvoegen of vervangen."
+            }
+        }
+    }
     val phrases = remember(revision) { deck.entries() }
     val topics = remember(revision) { phraseTopics.topics() }
     val topicCounts = remember(revision) { phraseTopics.counts(phrases.orEmpty()) }
@@ -732,6 +766,16 @@ internal fun MyOfflinePhrasesPanel(
                     }
                 ) { Text("Importeer eigen zinnenlijst (TSV)…") }
                 OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        pendingImport = null
+                        importSource = "csv"
+                        openCsv.launch(arrayOf(
+                            "text/csv", "text/plain", "application/octet-stream"
+                        ))
+                    }
+                ) { Text("Importeer eigen zinnen uit CSV…") }
+                OutlinedButton(
                     enabled = phrases?.isNotEmpty() == true,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
@@ -745,10 +789,12 @@ internal fun MyOfflinePhrasesPanel(
                     "Het bestand is bewerkbaar en later opnieuw te importeren; " +
                     "geen van de betekenissen is onafhankelijk gecontroleerd.",
                     style = MaterialTheme.typography.bodySmall)
-                Text("Gebruik zelfgeschreven UTF-8-zinnen met vier tabkolommen: " +
+                Text("Importeer jouw eigen UTF-8-zinnen met vier kolommen: " +
                     "language, phrase, meaningLanguage, ownMeaning. " +
-                    "Kies na het inlezen bewust samenvoegen of vervangen. " +
-                    "Tuddy controleert de vertalingen niet.",
+                    "TSV gebruikt tabs, CSV komma’s en dubbele aanhalingstekens " +
+                    "voor velden met een komma. Geen regeleinden in velden. " +
+                    "Controleer daarna alle regels en kies bewust samenvoegen " +
+                    "of vervangen. Tuddy controleert geen betekenissen.",
                     style = MaterialTheme.typography.bodySmall)
                 Text("Back-up is optioneel. De gekozen bestandsprovider kan online synchroniseren; " +
                     "Tuddy uploadt zelf niets. Import overschrijft pas na jouw bevestiging.",
@@ -1091,7 +1137,7 @@ internal fun MyOfflinePhrasesPanel(
                 pendingImportBase = null
             },
             title = { Text(if (importSource == "paste")
-                "Geplakte eigen zinnen bekijken" else if (importSource == "tsv")
+                "Geplakte eigen zinnen bekijken" else if (importSource == "tsv" || importSource == "csv")
                 "Eigen zinnenlijst importeren?" else "Eigen zinnen vervangen?") },
             text = {
                 Column(
