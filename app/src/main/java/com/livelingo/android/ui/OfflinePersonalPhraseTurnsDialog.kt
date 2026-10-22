@@ -283,17 +283,23 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                     Text(result, style = MaterialTheme.typography.bodyLarge.copy(
                         textDirection = if (turn.fromMeaning && note.language in setOf("ckb", "ps"))
                             TextDirection.Rtl else TextDirection.Ltr))
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(onClick = { tableTurn = index }) {
-                            Text("↕ Toon aan beide kanten")
-                        }
+                    OutlinedButton(
+                        onClick = { tableTurn = index },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("↕ Toon deze beurt aan beide kanten")
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         TextButton(enabled = index > 0, onClick = {
                             val reordered = turns.toMutableList()
                             val moved = reordered.removeAt(index)
                             reordered.add(index - 1, moved)
                             turns = reordered
                         }) {
-                            Text("↑")
+                            Text("↑ Eerder")
                         }
                         TextButton(enabled = index < turns.lastIndex, onClick = {
                             val reordered = turns.toMutableList()
@@ -301,7 +307,7 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                             reordered.add(index + 1, moved)
                             turns = reordered
                         }) {
-                            Text("↓")
+                            Text("↓ Later")
                         }
                         TextButton(onClick = {
                             turns = turns.filterIndexed { i, _ -> i != index }
