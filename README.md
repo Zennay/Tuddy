@@ -3197,10 +3197,10 @@ cues; alle andere regels en tijdcodes blijven intact. Controleer daarna of de
 exacte ML Kit-tekstmodellen al lokaal beschikbaar zijn. Tuddy downloadt niets
 automatisch en start geen microfoon. De geselecteerde regels worden serieel
 vertaald; bij een fout of annulering wordt geen gedeeltelijk resultaat toegepast.
-Na het bekijken van een voorbeeld kies je **Alleen vertaling** of
-**Origineel + vertaling** en bevestig je expliciet het toepassen op het tijdelijke
-concept. De bronfile blijft intact en je kunt daarna bewust een nieuwe SRT/VTT-kopie
-bewaren.
+Blader door de volledige vertaling (vijf cues per voorbeeldpagina), kies
+**Alleen vertaling** of **Origineel + vertaling** en bevestig expliciet het toepassen
+op het tijdelijke concept. De bronfile blijft intact en je kunt daarna bewust een
+nieuwe SRT/VTT-kopie bewaren.
 [Bediening en grenzen](docs/LOCAL_SUBTITLE_TRANSLATION.md).
 
 ---
