@@ -34,3 +34,13 @@ woordgrenzen. De bronondertitels en tijdcodes worden niet gewijzigd.
 
 De bestaande bronfile en het livegesprek blijven ongewijzigd. Voor export moet
 je nog steeds afzonderlijk een nieuwe SRT/VTT-kopie bevestigen.
+
+## Dezelfde volgmarkering in de fullscreen-gesprekszin
+
+In **Tuddy · Toon gesprekszin** gebruiken de knoppen voor de originele zin en
+de lokale vertaling dezelfde tijdelijke volgmarkering. De actieve tekst blijft
+zichtbaar tijdens het spreken; een door de geïnstalleerde stem gemeld
+tekstbereik wordt indicatief gemarkeerd wanneer beschikbaar. Stoppen,
+naar een andere zin gaan, de weergave wisselen of de app verlaten stopt de
+spraak en wist de tijdelijke markering. Ook hier wordt geen audio opgeslagen
+en wordt geen netwerkstem of stemdownload gebruikt.
