@@ -33,6 +33,7 @@ import com.livelingo.android.OfflineTextReceipt
 import com.livelingo.android.OfflineTextStage
 import com.livelingo.android.LocalLanguageDetector
 import com.livelingo.android.PrivateSubtitleCue
+import com.livelingo.android.PrivateSubtitleRowSelection
 import com.livelingo.android.PrivateSubtitleDraftEditor
 import com.livelingo.android.PrivateSubtitleTranslationController
 import com.livelingo.android.TargetCatalog
@@ -55,22 +56,15 @@ internal fun PrivateSubtitleTranslationDialog(
     var progress by remember { mutableIntStateOf(0) }
     var translatedCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var translatedIndices by remember(cues) { mutableStateOf<List<Int>>(emptyList()) }
-    var firstCueNumber by remember(cues) { mutableStateOf("1") }
-    var lastCueNumber by remember(cues) { mutableStateOf(cues.size.toString()) }
+    var cueSelectionExpression by remember(cues) { mutableStateOf("1-${cues.size}") }
     var bilingualOutput by remember(cues) { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var detectingSource by remember { mutableStateOf(false) }
     var detectionMessage by remember { mutableStateOf("") }
-    val selectedIndices = remember(firstCueNumber, lastCueNumber, cues.size) {
-        val first = firstCueNumber.toIntOrNull()
-        val last = lastCueNumber.toIntOrNull()
-        if (first != null && last != null && first >= 1 &&
-            last >= first && last <= cues.size) {
-            (first - 1 until last).toList()
-        } else {
-            emptyList()
-        }
+    val selectedIndices = remember(cueSelectionExpression, cues.size) {
+        PrivateSubtitleRowSelection.parse(cueSelectionExpression, cues.size)
     }
+    val validSelectedIndices = selectedIndices.orEmpty()
 
     fun resetForLanguageChange() {
         controller.cancel()
@@ -160,7 +154,7 @@ internal fun PrivateSubtitleTranslationDialog(
     }
 
     fun startTranslation() {
-        val indices = selectedIndices
+        val indices = validSelectedIndices
         if (sourceCode.isBlank() || targetCode.isBlank() ||
             sourceCode == targetCode || receipt?.stage != OfflineTextStage.READY ||
             translating || translatedCues != null || indices.isEmpty()
@@ -270,47 +264,34 @@ internal fun PrivateSubtitleTranslationDialog(
                         "De originele bronfile wordt niet overschreven.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = firstCueNumber,
-                        onValueChange = { input ->
-                            firstCueNumber = input.filter { it.isDigit() }.take(3)
-                            message = ""
-                        },
-                        label = { Text("Eerste regel") },
-                        enabled = !checking && !translating && preview == null,
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = lastCueNumber,
-                        onValueChange = { input ->
-                            lastCueNumber = input.filter { it.isDigit() }.take(3)
-                            message = ""
-                        },
-                        label = { Text("Laatste regel") },
-                        enabled = !checking && !translating && preview == null,
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
+                OutlinedTextField(
+                    value = cueSelectionExpression,
+                    onValueChange = { input ->
+                        cueSelectionExpression = input.take(2_000)
+                        message = ""
+                    },
+                    label = { Text("Regels (bijv. 1-5,8,11-12)") },
+                    placeholder = { Text("1-${cues.size}") },
+                    enabled = !checking && !translating && preview == null,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
                 Text(
-                    if (selectedIndices.isEmpty()) {
-                        "Ongeldig bereik. Kies regels van 1 tot ${cues.size}, met de eerste regel vóór of gelijk aan de laatste."
+                    if (selectedIndices == null) {
+                        "Ongeldige selectie. Gebruik regelnummers van 1 tot ${cues.size}, bijvoorbeeld 1-5,8,11-12. Overlappende of dubbele regels zijn niet toegestaan."
                     } else {
-                        "Bereik: regels ${selectedIndices.first() + 1}–${selectedIndices.last() + 1} " +
-                            "(${selectedIndices.size} cues). Alle andere regels blijven ongewijzigd."
+                        "Geselecteerd: ${PrivateSubtitleRowSelection.formatSourceRows(validSelectedIndices.map { it + 1 }, cues.size) ?: "—"} " +
+                            "· ${validSelectedIndices.size} cues. Alle andere regels blijven ongewijzigd."
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (selectedIndices.isEmpty()) MaterialTheme.colorScheme.error
+                    color = if (selectedIndices == null) MaterialTheme.colorScheme.error
                         else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
                         enabled = !checking && !translating && preview == null,
                         onClick = {
-                            firstCueNumber = "1"
-                            lastCueNumber = cues.size.toString()
+                            cueSelectionExpression = "1-${cues.size}"
                             message = ""
                         }
                     ) { Text("Hele bestand kiezen") }
