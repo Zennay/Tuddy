@@ -5,9 +5,11 @@ import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import java.util.Locale
 
 /**
- * Speaks one fixed, user-requested preview through an exact installed local voice.
+ * Speaks a small built-in, locale-aware preview through one exact installed local voice.
+ * For unlisted languages it uses numeric syllables, never an invented translation.
  * It never accepts user text, requests voice downloads, or falls back to another voice.
  */
 internal class LocalSpeechVoicePreview(context: Context) {
@@ -15,6 +17,7 @@ internal class LocalSpeechVoicePreview(context: Context) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var engine: TextToSpeech? = null
     private var generation = 0L
+    private var timeoutRunnable: Runnable? = null
 
     fun preview(entry: LocalSpeechVoiceEntry, callback: (Result<Unit>) -> Unit) {
         close()
@@ -61,7 +64,10 @@ internal class LocalSpeechVoicePreview(context: Context) {
                             return@post
                         }
 
-                        if (candidate.setVoice(voice) != TextToSpeech.SUCCESS) {
+                        if (candidate.setVoice(voice) != TextToSpeech.SUCCESS ||
+                            candidate.voice?.name != entry.voiceName ||
+                            candidate.voice?.locale?.toLanguageTag() != entry.languageTag
+                        ) {
                             finish(
                                 candidate,
                                 requestGeneration,
@@ -122,7 +128,7 @@ internal class LocalSpeechVoicePreview(context: Context) {
                         candidate.setOnUtteranceProgressListener(listener)
 
                         val speakStatus = candidate.speak(
-                            PREVIEW_TEXT,
+                            sampleFor(entry.languageTag),
                             TextToSpeech.QUEUE_FLUSH,
                             null,
                             "tuddy-local-voice-preview-$requestGeneration"
@@ -154,6 +160,20 @@ internal class LocalSpeechVoicePreview(context: Context) {
                 }
             })
             engine = candidate
+            val timeout = Runnable {
+                if (generation == requestGeneration && engine === candidate) {
+                    finish(
+                        candidate,
+                        requestGeneration,
+                        callback,
+                        Result.failure(IllegalStateException(
+                            "De stemproef duurde te lang en is veilig gestopt."
+                        ))
+                    )
+                }
+            }
+            timeoutRunnable = timeout
+            mainHandler.postDelayed(timeout, PREVIEW_TIMEOUT_MS)
         } catch (_: RuntimeException) {
             if (generation == requestGeneration) {
                 close()
@@ -167,6 +187,8 @@ internal class LocalSpeechVoicePreview(context: Context) {
     }
 
     fun close() {
+        timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        timeoutRunnable = null
         generation++
         val old = engine
         engine = null
@@ -186,6 +208,8 @@ internal class LocalSpeechVoicePreview(context: Context) {
             runCatching { candidate.shutdown() }
             return
         }
+        timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        timeoutRunnable = null
         engine = null
         generation++
         runCatching { candidate.stop() }
@@ -193,7 +217,36 @@ internal class LocalSpeechVoicePreview(context: Context) {
         callback(result)
     }
 
-    private companion object {
-        const val PREVIEW_TEXT = "Tuddy voice preview."
+    companion object {
+        private const val PREVIEW_TIMEOUT_MS = 20_000L
+
+        /** Built-in study-neutral phrase only; no live speech or private notes. */
+        internal fun sampleFor(languageTag: String): String = when (
+            Locale.forLanguageTag(languageTag).language.lowercase(Locale.ROOT)
+        ) {
+            "nl" -> "Hallo, dit is een voorbeeld van mijn stem."
+            "en" -> "Hello, this is a sample of my voice."
+            "de" -> "Hallo, dies ist eine Hörprobe meiner Stimme."
+            "fr" -> "Bonjour, voici un exemple de ma voix."
+            "es" -> "Hola, esta es una muestra de mi voz."
+            "it" -> "Ciao, questo è un esempio della mia voce."
+            "pt" -> "Olá, esta é uma amostra da minha voz."
+            "sv" -> "Hej, det här är ett röstprov."
+            "da" -> "Hej, dette er en stemmeprøve."
+            "nb", "no", "nn" -> "Hei, dette er en stemmeprøve."
+            "fi" -> "Hei, tämä on ääninäyte."
+            "pl" -> "Cześć, to jest próbka mojego głosu."
+            "tr" -> "Merhaba, bu benim sesimden bir örnek."
+            "ru" -> "Здравствуйте, это образец моего голоса."
+            "uk" -> "Вітаю, це зразок мого голосу."
+            "ar" -> "مرحبًا، هذا مثال على صوتي."
+            "hi" -> "नमस्ते, यह मेरी आवाज़ का नमूना है।"
+            "ja" -> "こんにちは、これは音声のサンプルです。"
+            "ko" -> "안녕하세요. 이것은 음성 샘플입니다."
+            "zh" -> "你好，这是语音示例。"
+            "id" -> "Halo, ini contoh suara saya."
+            "vi" -> "Xin chào, đây là mẫu giọng nói."
+            else -> "1, 2, 3."
+        }
     }
 }
