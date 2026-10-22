@@ -99,6 +99,7 @@ private sealed class SharedDocumentImportResult {
     data class Subtitle(val cues: List<PrivateSubtitleCue>) : SharedDocumentImportResult()
     data class CorrectionJson(val json: String) : SharedDocumentImportResult()
     data class PersonalPhraseBackup(val json: String) : SharedDocumentImportResult()
+    data class OwnWordBackup(val json: String) : SharedDocumentImportResult()
     data class Rejected(val reason: String) : SharedDocumentImportResult()
 }
 
@@ -489,6 +490,7 @@ private fun TuddyScreen(
     val ownWordDeck = remember(context) { PrivateOwnWordDeck(context) }
     var ownWordRevision by remember { mutableIntStateOf(0) }
     var ownWordsOpen by remember { mutableStateOf(false) }
+    var pendingSharedOwnWordBackupJson by remember { mutableStateOf<String?>(null) }
     var savedWordNotice by remember { mutableStateOf("") }
     fun saveOwnWordMeaning(language: String, word: String, meaning: String): Boolean {
         val saved = ownWordDeck.save(language, word, meaning)
@@ -2612,6 +2614,19 @@ private fun TuddyScreen(
                             )
                         }
                     } else if (selected.text.trimStart().startsWith("{") &&
+                        selected.text.contains("\"tuddy-own-words-v1\"")) {
+                        val decoded = if (selected.sizeBytes <= PrivateOwnWordDeck.MAX_BACKUP_BYTES &&
+                            bytes.size <= PrivateOwnWordDeck.MAX_BACKUP_BYTES)
+                            ownWordDeck.previewImport(bytes) else null
+                        if (decoded != null) {
+                            SharedDocumentImportResult.OwnWordBackup(selected.text)
+                        } else {
+                            SharedDocumentImportResult.Rejected(
+                                "Gedeelde Tuddy-woordenback-up geweigerd: ongeldige versie, " +
+                                    "ongeldige woorden of groter dan 50 KB. Niets gewijzigd."
+                            )
+                        }
+                    } else if (selected.text.trimStart().startsWith("{") &&
                         selected.text.contains("\"tuddy-private-phrases-v1\"")) {
                         val decoded = if (selected.sizeBytes <= 50_000 && bytes.size <= 50_000)
                             personalPhrases.previewImport(bytes) else null
@@ -3031,6 +3046,25 @@ private fun TuddyScreen(
                         personalPhrasesOpen = true
                         error = ""
                     }
+                    is SharedDocumentImportResult.OwnWordBackup -> {
+                        stop()
+                        quickTypedOpen = false
+                        twoWayTypedOpen = false
+                        sharedTextToTwoWay = null
+                        draftFromExternalShare = false
+                        manualText = ""
+                        pendingCorrectionTransferText = null
+                        pendingSharedPersonalPhraseCsv = null
+                        pendingSharedPersonalPhraseBackupJson = null
+                        translationMemoryOpen = false
+                        personalPhrasesOpen = false
+                        starterPhraseboardOpen = false
+                        offlinePersonalTurnsOpen = false
+                        pendingSharedOwnWordBackupJson = loaded.json
+                        ownWordsOpen = true
+                        error = ""
+                    }
+
                 }
             }
         }
@@ -3042,7 +3076,24 @@ private fun TuddyScreen(
     LaunchedEffect(incomingExternalText) {
         val shared = incomingExternalText
         if (shared != null) {
-            if (shared.personalPhraseCsvText != null) {
+            if (shared.ownWordBackupJson != null) {
+                stop()
+                quickTypedOpen = false
+                twoWayTypedOpen = false
+                sharedTextToTwoWay = null
+                draftFromExternalShare = false
+                manualText = ""
+                pendingCorrectionTransferText = null
+                pendingSharedPersonalPhraseCsv = null
+                pendingSharedPersonalPhraseBackupJson = null
+                translationMemoryOpen = false
+                personalPhrasesOpen = false
+                starterPhraseboardOpen = false
+                offlinePersonalTurnsOpen = false
+                pendingSharedOwnWordBackupJson = shared.ownWordBackupJson
+                ownWordsOpen = true
+                error = ""
+            } else if (shared.personalPhraseCsvText != null) {
                 // Tuddy's selected private phrasebook CSV must open its own
                 // explicit row-by-row import preview, never the translation box.
                 stop()
@@ -6350,7 +6401,15 @@ private fun TuddyScreen(
                 deck = ownWordDeck,
                 initialLanguage = source.translateCode,
                 onChanged = { ownWordRevision++ },
-                onDismiss = { ownWordsOpen = false }
+                incomingBackupJsonText = pendingSharedOwnWordBackupJson,
+                onIncomingBackupJsonConsumed = { received ->
+                    if (pendingSharedOwnWordBackupJson == received)
+                        pendingSharedOwnWordBackupJson = null
+                },
+                onDismiss = {
+                    ownWordsOpen = false
+                    pendingSharedOwnWordBackupJson = null
+                }
             )
         }
         if (quickPhrasePickerOpen) {
