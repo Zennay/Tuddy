@@ -9,6 +9,17 @@ The existing **Mijn woorden** list now offers two explicit actions:
   admitted words. **Vervang woorden** must then be selected separately.
   Cancel, invalid data or a failed write leaves the existing list unchanged.
 
+## Ontvangen via Android Delen
+
+Een gebruiker kan de JSON-back-up ook vanuit Android Bestanden of een andere
+bestandsapp met **Delen → Tuddy** openen. Tuddy herkent uitsluitend het eigen
+formaat `tuddy-own-words-v1`, begrenst het document op 50.000 bytes en voert
+dezelfde strikte parser uit als bij **Herstel back-up…**. Geldige invoer opent
+de bestaande volledige preview met de afzonderlijke keuzes om nieuwe woorden
+samen te voegen of de lijst te vervangen. Ongeldige inhoud wordt geweigerd
+en nooit als gewone vertaaltekst geopend. Er worden geen bestanden automatisch
+gelezen, geüpload of geïmporteerd.
+
 ## Importeren vanuit geplakte tekst
 
 Als je een back-up als tekst hebt ontvangen, kun je **Plak JSON-back-up…**
