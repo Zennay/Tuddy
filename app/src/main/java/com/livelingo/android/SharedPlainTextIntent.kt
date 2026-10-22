@@ -14,7 +14,9 @@ internal data class IncomingSharedText(
     // Validated SRT/VTT/ASS/SSA/LRC/timed CSV/TSV from user-shared text; preview only.
     val subtitleDraft: String? = null,
     val subtitleIsLrc: Boolean = false,
-    val subtitleTimedSheetMode: PlainSubtitleSplitMode? = null
+    val subtitleTimedSheetMode: PlainSubtitleSplitMode? = null,
+    // A valid, explicitly shared Tuddy phrasebook is handed to its import preview.
+    val correctionTransferText: String? = null
 )
 
 internal object SharedPlainTextIntent {
@@ -62,6 +64,21 @@ internal object SharedPlainTextIntent {
         if (candidate != null) {
             val bytes = candidate.toByteArray(Charsets.UTF_8)
             if (bytes.isNotEmpty() && bytes.size <= PrivateSubtitleFileReader.MAX_BYTES) {
+                // Tuddy's own portable phrasebook must never fall through as a
+                // translation prompt. Accept only its bounded, strictly decoded
+                // format and send it to the explicit correction-import preview.
+                if (candidate.trimStart().startsWith("{") &&
+                    candidate.contains("\"tuddy-human-corrections\"")) {
+                    val decoded = if (bytes.size <= SessionTranslationCorrectionTransfer.MAX_BYTES)
+                        SessionTranslationCorrectionTransfer.decode(bytes) else null
+                    return if (decoded != null) {
+                        IncomingSharedText(null, null, correctionTransferText = candidate)
+                    } else {
+                        IncomingSharedText(null,
+                            "Gedeelde Tuddy-correcties geweigerd: ongeldige JSON of groter dan 48 KB. " +
+                                "De inhoud is niet als vertaaltekst geopend.")
+                    }
+                }
                 if (candidate.contains("[Events]", ignoreCase = true) &&
                     PrivateAssSubtitleReader.read(candidate) != null)
                     return IncomingSharedText(null, null, candidate)
