@@ -396,6 +396,10 @@ private fun TuddyScreen(
         surface = androidx.compose.ui.graphics.Color(0xFF202238)
     )
     val lines = remember { mutableStateListOf<Line>() }
+    // Only human-opted-in correction suggestions, ephemeral until conversation clear.
+    val translationMemory = remember { SessionTranslationCorrections() }
+    var translationMemoryRevision by remember { mutableIntStateOf(0) }
+    var translationMemoryOpen by remember { mutableStateOf(false) }
     // Only on-device recognizer suggestions for manual correction, never
     // persisted or included in any archive, subtitle or diagnostic export.
     val offlineSpeechChoices = remember { mutableStateMapOf<Long, List<String>>() }
@@ -2829,6 +2833,7 @@ private fun TuddyScreen(
             pendingCaptionLanguageChange = null
             meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
+            translationMemory.clear() // Never save human corrections through recreation.
             previewArchiveRows = null
             pendingArchivePhraseCapture = null
             pendingArchivePhraseBatchCapture = null
@@ -3057,6 +3062,20 @@ private fun TuddyScreen(
                 onCopyCatalog = { copySpeechCatalogReport() },
                 onSelect = { tag -> selectBrowserSpeechSource(tag) },
                 onDismiss = { closeSpeechCatalog() }
+            )
+        }
+        if (translationMemoryOpen && !listening) {
+            translationMemoryRevision
+            com.livelingo.android.ui.SessionTranslationCorrectionsDialog(
+                entries = translationMemory.entries(),
+                onRemove = { entry ->
+                    if (translationMemory.forget(entry)) translationMemoryRevision++
+                },
+                onClear = {
+                    translationMemory.clear()
+                    translationMemoryRevision++
+                },
+                onDismiss = { translationMemoryOpen = false }
             )
         }
         if (offlineReadinessOpen) {
@@ -4343,6 +4362,15 @@ private fun TuddyScreen(
         val translationCorrectionId = editingTranslationId
         val translationCorrectionLine = lines.firstOrNull { it.id == translationCorrectionId }
         if (translationCorrectionId != null && translationCorrectionLine != null) {
+            translationMemoryRevision // Observe deliberate changes from the manager.
+            val matchingCorrection = translationMemory.suggest(
+                translationCorrectionLine.original,
+                translationCorrectionLine.sourceCode,
+                translationCorrectionLine.targetCode
+            )?.takeIf { it != translationCorrectionLine.translated }
+            var rememberForThisConversation by remember(
+                translationCorrectionId, translationCorrectionRevision
+            ) { mutableStateOf(false) }
             val translationStillCurrent = !listening &&
                 generation == translationCorrectionGeneration &&
                 translationCorrectionLine.translationRevision == translationCorrectionRevision &&
@@ -4369,6 +4397,17 @@ private fun TuddyScreen(
                             "Origineel: ${translationCorrectionLine.original}",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        if (matchingCorrection != null) {
+                            Text(
+                                "Eerder door jou gecorrigeerd voor precies deze zin en taalrichting:",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(matchingCorrection, style = MaterialTheme.typography.bodyMedium)
+                            OutlinedButton(
+                                enabled = translationStillCurrent,
+                                onClick = { translationCorrectionDraft = matchingCorrection }
+                            ) { Text("Vul eigen voorstel in") }
+                        }
                         OutlinedTextField(
                             value = translationCorrectionDraft,
                             onValueChange = { candidate ->
@@ -4381,9 +4420,21 @@ private fun TuddyScreen(
                             minLines = 2,
                             maxLines = 5
                         )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = rememberForThisConversation,
+                                onCheckedChange = { rememberForThisConversation = it },
+                                enabled = translationStillCurrent
+                            )
+                            Text(
+                                "Onthoud deze exacte correctie alleen voor dit gesprek",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                         Text(
                             "Alleen deze tijdelijke gespreksregel wordt aangepast. " +
-                                "De wijziging wordt niet in het privéwoordenboek opgeslagen.",
+                                "Een onthouden correctie is een handmatig voorstel, " +
+                                "geen automatisch vertaalmodel of privéwoordenboek.",
                             style = MaterialTheme.typography.bodySmall
                         )
                         if (!translationStillCurrent) {
@@ -4423,8 +4474,21 @@ private fun TuddyScreen(
                                     translationRevision = previous.translationRevision + 1,
                                     userCorrected = true
                                 )
-                                correctionNotice =
-                                    "Vertaling handmatig gecorrigeerd in dit tijdelijke gesprek; niet automatisch gecontroleerd."
+                                val savedForSession = rememberForThisConversation &&
+                                    translationMemory.remember(
+                                        previous.original, corrected,
+                                        previous.sourceCode, previous.targetCode
+                                    )
+                                if (savedForSession) translationMemoryRevision++
+                                correctionNotice = when {
+                                    savedForSession ->
+                                        "Vertaling gecorrigeerd en als exact voorstel in dit gesprek onthouden."
+                                    rememberForThisConversation ->
+                                        "Vertaling gecorrigeerd, maar niet onthouden: " +
+                                            "dit taalpaar of deze lange zin past niet binnen het tijdelijke geheugen."
+                                    else ->
+                                        "Vertaling handmatig gecorrigeerd in dit tijdelijke gesprek; niet automatisch gecontroleerd."
+                                }
                             } else {
                                 correctionNotice = "De regel is gewijzigd; de vertaling is niet aangepast."
                             }
@@ -6470,6 +6534,9 @@ private fun TuddyScreen(
                         stop()
                         offlineModelStatus = ""
                         lines.clear()
+                        translationMemory.clear()
+                        translationMemoryRevision++
+                        translationMemoryOpen = false
         speechTranslationStarted.clear()
         offlineSpeechChoices.clear()
                         manuallyAssignedSpeakers.clear()
@@ -6703,6 +6770,14 @@ private fun TuddyScreen(
                         else "Gesprekstools · export, sprekers en archief")
                 }
                 if (conversationToolsOpen) {
+                    translationMemoryRevision // Reflect the count after opt-in or deletion.
+                    OutlinedButton(
+                        onClick = { translationMemoryOpen = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Tijdelijke vertaalcorrecties · " +
+                            translationMemory.entries().size + " onthouden")
+                    }
                     Column(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 256.dp)
                             .verticalScroll(rememberScrollState()),
