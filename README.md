@@ -1,3 +1,15 @@
+## Nieuw: compacte ondertitelkaarten met alle acties binnen bereik
+
+Een gespreksregel toont nu één uitklapbare knop voor correctie,
+zelfgeschreven privékaart, taalrichting, presentatie en wissen in plaats
+van meerdere te brede knoppen naast elkaar. Alle bewerkacties staan
+bij uitklappen verticaal en passen op smalle Android-schermen.
+De oorspronkelijke ondertitels, lokale spraakvoorwaarden en bewuste
+opslagtoestemmingen veranderen niet.
+[Uitleg](docs/COMPACT_CAPTION_ACTIONS.md).
+
+---
+
 ## Nieuw: maak van een gespreksregel een eigen Kurmanji-, Sorani- of Pasjtoe-kaart
 
 Bij iedere tijdelijke gespreksregel kun je na het stoppen van de microfoon
