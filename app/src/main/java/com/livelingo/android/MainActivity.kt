@@ -3821,6 +3821,20 @@ private fun TuddyScreen(
                         translationCorrectionGeneration = generation
                         correctionNotice = ""
                     }
+                },
+                onRequestOriginalCorrection = { id ->
+                    // A separate deliberate user action. Keep the private
+                    // archive reader immutable and reuse the existing in-RAM
+                    // source correction flow rather than inventing another.
+                    val current = lines.firstOrNull { it.id == id }
+                    if (!listening && current != null &&
+                        current.original.isNotBlank()
+                    ) {
+                        focusMode = false
+                        editingCaptionId = id
+                        captionCorrectionDraft = current.original
+                        correctionNotice = ""
+                    }
                 }
             )
         }
