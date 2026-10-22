@@ -15,8 +15,8 @@ import java.util.Locale
  * permits the Android engine to fall back to a network-required voice.
  *
  * The engine is destroyed on Stop/background, with stale init callbacks
- * fenced by a monotonic generation. No text, utterance or voice choice is
- * retained by this app between calls.
+ * fenced by a monotonic generation. No text or utterance is retained. An
+ * explicitly selected voice preference is stored locally per language only.
  */
 internal enum class LocalSpeechPace(val rate: Float) {
     NORMAL(1.0f), SLOW(0.72f)
@@ -36,6 +36,30 @@ internal class LocalCaptionSpeaker(context: Context) {
             runCatching { old.stop() }
             runCatching { old.shutdown() }
         }
+    }
+
+    private fun chooseInstalledVoice(
+        tts: TextToSpeech,
+        locale: Locale,
+        languageTag: String
+    ): android.speech.tts.Voice? {
+        val available = tts.voices.orEmpty()
+            .filter { voice ->
+                !voice.isNetworkConnectionRequired &&
+                    voice.locale.language == locale.language &&
+                    voice.features?.contains(
+                        TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED
+                    ) != true
+            }
+        val preferredName = LocalSpeechVoicePreferences.selectedVoiceName(
+            appContext, languageTag
+        )
+        return available.firstOrNull { it.name == preferredName }
+            ?: available.sortedWith(
+                compareByDescending<android.speech.tts.Voice> {
+                    it.locale.country.equals(locale.country, ignoreCase = true)
+                }.thenByDescending { it.quality }
+            ).firstOrNull()
     }
 
     /**
@@ -115,20 +139,7 @@ internal class LocalCaptionSpeaker(context: Context) {
                         return@post
                     }
                     try {
-                        val chosen = tts.voices.orEmpty()
-                            .filter { voice ->
-                                !voice.isNetworkConnectionRequired &&
-                                    voice.locale.language == locale.language &&
-                                    voice.features?.contains(
-                                        TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED
-                                    ) != true
-                            }
-                            .sortedWith(
-                                compareByDescending<android.speech.tts.Voice> {
-                                    it.locale.country.equals(locale.country, ignoreCase = true)
-                                }.thenByDescending { it.quality }
-                            )
-                            .firstOrNull()
+                        val chosen = chooseInstalledVoice(tts, locale, languageTag)
                         if (chosen == null ||
                             tts.setVoice(chosen) != TextToSpeech.SUCCESS ||
                             tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS
@@ -238,18 +249,7 @@ internal class LocalCaptionSpeaker(context: Context) {
                         return@post
                     }
                     try {
-                        val available = tts.voices.orEmpty()
-                            .filter { voice ->
-                                !voice.isNetworkConnectionRequired &&
-                                voice.locale.language == locale.language &&
-                                voice.features?.contains(
-                                    TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) != true
-                            }
-                        val chosen = available.sortedWith(
-                            compareByDescending<android.speech.tts.Voice> {
-                                it.locale.country.equals(locale.country, ignoreCase = true)
-                            }.thenByDescending { it.quality }
-                        ).firstOrNull()
+                        val chosen = chooseInstalledVoice(tts, locale, languageTag)
                         if (chosen == null ||
                             tts.setVoice(chosen) != TextToSpeech.SUCCESS ||
                             tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS ||
