@@ -1,3 +1,21 @@
+## Nieuw: offline spraak- en vertaaltellers per taalrichting
+
+Open **Offline startcheck** na een eigen luistersessie. Tuddy toont nu
+afzonderlijke **NL → EN**- en **EN → NL**-aantallen voor definitieve lokale
+spraakresultaten en afgeronde lokale tekstvertalingen. Dat helpt je tijdens
+een bewuste toestelproef de twee richtingen uit elkaar te houden. De
+algemene fouttellers en maximaal tien gemeten lokale vertaaltijden blijven
+ook beschikbaar. Ze worden op verzoek zonder gesproken woorden of audio
+opgenomen in het diagnoserapport; met **Wis sessietellers** verwijder je
+alle tellingen uit het tijdelijke appgeheugen.
+
+De aantallen zeggen **niets** over de herkennings- of vertaalkwaliteit,
+het aantal mislukte *pogingen*, internetverbindingen of fysieke acceptatie.
+Een zelfgerapporteerd Android 12+-vliegtuigmodusverslag blijft afzonderlijk
+nodig en er wordt geen Kurmanji-, Sorani- of Pasjtoe-model geactiveerd.
+
+---
+
 ## Nieuw: ook in livegesprekken en privéarchieven vind je schrijfvarianten
 
 De zoekbalk voor live ondertitels, de sterretjeslijst en een bewust
