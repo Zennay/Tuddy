@@ -51,6 +51,8 @@ internal fun FocusTranscriptDialog(
     onTogglePin: ((Long) -> String)? = null,
     onCycleManualSpeaker: ((Long) -> Unit)? = null,
     onRequestTranslationCorrection: ((Long) -> Unit)? = null,
+    rememberedCorrectionIds: Set<Long> = emptySet(),
+    onRequestRememberedCorrection: ((Long) -> Unit)? = null,
     onRequestOriginalCorrection: ((Long) -> Unit)? = null
 ) {
     val listState = rememberLazyListState()
@@ -355,6 +357,14 @@ internal fun FocusTranscriptDialog(
                                         onRequestTranslationCorrection(line.id)
                                     }) {
                                         Text("✎ Corrigeer deze vertaling…")
+                                    }
+                                    if (line.id in rememberedCorrectionIds &&
+                                        onRequestRememberedCorrection != null) {
+                                        TextButton(onClick = {
+                                            onRequestRememberedCorrection(line.id)
+                                        }) {
+                                            Text("↳ Bekijk mijn eerdere vertaalcorrectie…")
+                                        }
                                     }
                                 }
                                 line.personalMeaning?.let { own ->

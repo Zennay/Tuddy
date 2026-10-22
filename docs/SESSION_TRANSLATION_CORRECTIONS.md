@@ -53,3 +53,13 @@ Deze snelkoppeling zet het exacte voorstel als bewerkbare tekst in het
 bestaande correctievenster, maar slaat het **niet** direct op: controleer
 de vertaling en tik vervolgens zelf op **Bewaar correctie**. Dezelfde
 oude-revisiecontrole geldt als bij elke andere handmatige correctie.
+
+## Eerdere correctie in de fullscreen-leesmodus
+
+In **Groot lezen** verschijnt bij een afgesloten live-ondertitel met
+precies dezelfde eerder onthouden zin en taalrichting de knop
+**Bekijk mijn eerdere vertaalcorrectie…**. Deze opent het bestaande
+revisie-beveiligde correctievenster met het eigen voorstel in het
+invoerveld. Pas een tweede, expliciete tik op **Bewaar correctie**
+wijzigt de betreffende regel. In een alleen-lezen privéarchief bestaat
+deze actie niet en blijft iedere eerdere archiefregel onaangeraakt.

@@ -3947,6 +3947,31 @@ private fun TuddyScreen(
                     }
                     pinsNotice
                 },
+                rememberedCorrectionIds = lines.filter { row ->
+                    translationMemoryRevision // Observe edits to the in-memory catalogue.
+                    row.status in setOf("Lokaal", "Lokaal vertaald") &&
+                        translationMemory.suggest(
+                            row.original, row.sourceCode, row.targetCode
+                        )?.let { it != row.translated } == true
+                }.map { it.id }.toSet(),
+                onRequestRememberedCorrection = { id ->
+                    val current = lines.firstOrNull { it.id == id }
+                    if (!listening && current != null &&
+                        current.status in setOf("Lokaal", "Lokaal vertaald")) {
+                        val suggestion = translationMemory.suggest(
+                            current.original, current.sourceCode, current.targetCode
+                        )?.takeIf { it != current.translated }
+                        if (suggestion != null) {
+                            focusMode = false
+                            editingTranslationId = current.id
+                            translationCorrectionBaseline = current.translated
+                            translationCorrectionRevision = current.translationRevision
+                            translationCorrectionGeneration = generation
+                            translationCorrectionDraft = suggestion
+                            correctionNotice = ""
+                        }
+                    }
+                },
                 onRequestTranslationCorrection = { id ->
                     // The fullscreen reader only routes a deliberate action
                     // to the existing revision-fenced manual-correction dialog.
