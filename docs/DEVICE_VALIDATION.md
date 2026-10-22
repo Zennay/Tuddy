@@ -138,11 +138,15 @@ bash scripts/verify-tuddy-apk-artifact.sh \
    and speech/translation observations below. Installing the APK or matching
    its hash is not acceptance evidence by itself.
 
-The verifier checks artifact integrity and provenance only. The user-controlled
-in-app observation form still requires a human to verify airplane mode,
-independently disabled remaining connections, NL↔EN speech/translation outcomes,
-Stop/lifecycle behavior and privacy after installation. Do not mark accepted
-without signed-off human device evidence.
+The verifier checks artifact integrity and provenance only. The current in-app
+report also fails closed for a complete record unless the captured Android
+snapshot reports airplane mode on, the Wi-Fi radio off, readable network status,
+and no reported active network transports. A contradictory snapshot can still
+be exported as incomplete, never as acceptance. The user-controlled in-app
+observation form still requires a human to verify airplane mode, independently
+disabled remaining connections, NL↔EN speech/translation outcomes, Stop/lifecycle
+behavior and privacy after installation. Do not mark accepted without signed-off
+human device evidence.
 
 ---
 
