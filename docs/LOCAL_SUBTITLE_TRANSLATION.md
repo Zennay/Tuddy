@@ -7,9 +7,10 @@ en behoudt de bestaande tijdcodes.
 
 ## Werkwijze
 
-1. Optioneel kun je **Stel brontaal voor op basis van dit bestand** kiezen.
-   De on-device taalherkenner gebruikt maximaal de eerste 12 niet-lege cues
-   (tot 1.200 tekens). De uitkomst is een voorstel; controleer de brontaal zelf.
+1. Optioneel kun je **Stel brontaal voor op basis van geselecteerde regels**
+   kiezen. De on-device taalherkenner gebruikt maximaal 12 niet-lege cues uit
+   de actuele selectie (tot 1.200 tekens). De uitkomst is een voorstel; controleer
+   de brontaal zelf.
 2. Kies of bevestig de bron- en doeltaal uit de ondersteunde ML Kit-teksttalen.
    Tuddy start geen vertaling zonder deze expliciete taalkeuze.
 3. Kies een expliciete selectie met 1-based regelnummers, bijvoorbeeld
