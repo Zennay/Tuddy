@@ -313,6 +313,10 @@ internal fun FullscreenCaptionCard(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 speaker.stop()
+                                activeSpeechText = null
+                                activeSpeechLabel = ""
+                                activeSpeechLanguage = ""
+                                activeSpeechRange = null
                                 onStudyCaption(card.id)
                             }
                         ) { Text("🧠 Oefen vanaf deze zin · alleen tijdelijk") }
