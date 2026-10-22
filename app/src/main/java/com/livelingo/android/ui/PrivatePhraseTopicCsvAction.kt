@@ -78,6 +78,8 @@ internal fun PrivatePhraseTopicCsvAction(
     var mergeOnly by remember { mutableStateOf(true) }
     var importLanguage by remember { mutableStateOf<String?>(null) }
     var importTopic by remember { mutableStateOf<String?>(null) }
+    // Row exclusions belong to the transient preview, never to storage.
+    var excludedImportRows by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
@@ -135,6 +137,7 @@ internal fun PrivatePhraseTopicCsvAction(
                 mergeOnly = true
                 importLanguage = null
                 importTopic = null
+                excludedImportRows = emptySet()
                 notice = ""
             }
         }
@@ -232,6 +235,7 @@ internal fun PrivatePhraseTopicCsvAction(
                         mergeOnly = true
                         importLanguage = null
                         importTopic = null
+                        excludedImportRows = emptySet()
                         pasteOpen = false
                         pasteText = ""
                         pasteError = ""
@@ -433,8 +437,9 @@ internal fun PrivatePhraseTopicCsvAction(
 
     val review = importReview
     if (review != null) {
-        val scoped = importLanguage != null || importTopic != null
-        val chosenNotes = review.archive.notes.filter { note ->
+        val scoped = importLanguage != null || importTopic != null ||
+            excludedImportRows.isNotEmpty()
+        val filteredNotes = review.archive.notes.filter { note ->
             (importLanguage == null || note.language == importLanguage) &&
                 (importTopic == null ||
                     if (importTopic == "__without__")
@@ -442,6 +447,11 @@ internal fun PrivatePhraseTopicCsvAction(
                     else review.archive.assignments[
                         PrivatePhraseShortcuts.fingerprint(note)
                     ] == importTopic)
+        }
+        // Excluded rows stay visible, so each opt-out can be undone. Only
+        // explicitly included rows reach either atomic persistence operation.
+        val chosenNotes = filteredNotes.filter { note ->
+            PrivatePhraseShortcuts.fingerprint(note) !in excludedImportRows
         }
         val identities = chosenNotes.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
         val chosenLinks = review.archive.assignments.filterKeys { it in identities }
@@ -463,9 +473,10 @@ internal fun PrivatePhraseTopicCsvAction(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
-                    Text("Kies welke zinnen je écht wilt overnemen. " +
-                        "Standaard worden alle geldige regels getoond. " +
-                        "Een gedeeltelijke selectie kan uitsluitend veilig samenvoegen.")
+                    Text("Kies de zinnen die je écht wilt overnemen. " +
+                        "Taal- en themafilters beperken de lijst. Tik bij iedere regel " +
+                        "op meenemen of overslaan; overgeslagen regels blijven zichtbaar. " +
+                        "Alleen een volledige CSV-selectie kan de privé-lijst vervangen.")
                     TextButton(onClick = {
                         importLanguage = null
                         mergeOnly = true
@@ -494,6 +505,35 @@ internal fun PrivatePhraseTopicCsvAction(
                             mergeOnly = true
                         }) { Text(if (importTopic == name) "✓ " + name else name) }
                     }
+                    TextButton(onClick = {
+                        importLanguage = null
+                        importTopic = null
+                        excludedImportRows = emptySet()
+                        mergeOnly = true
+                    }) { Text("↺ Herstel volledige CSV-selectie") }
+                    TextButton(
+                        enabled = filteredNotes.any {
+                            PrivatePhraseShortcuts.fingerprint(it) in excludedImportRows
+                        },
+                        onClick = {
+                            val visible = filteredNotes.map {
+                                PrivatePhraseShortcuts.fingerprint(it)
+                            }.toSet()
+                            excludedImportRows = excludedImportRows - visible
+                            mergeOnly = true
+                        }
+                    ) { Text("✓ Neem alle zichtbare zinnen mee") }
+                    TextButton(
+                        enabled = filteredNotes.any {
+                            PrivatePhraseShortcuts.fingerprint(it) !in excludedImportRows
+                        },
+                        onClick = {
+                            excludedImportRows = excludedImportRows + filteredNotes.map {
+                                PrivatePhraseShortcuts.fingerprint(it)
+                            }
+                            mergeOnly = true
+                        }
+                    ) { Text("☐ Sla alle zichtbare zinnen over") }
                     Text("Geselecteerd: " + chosenNotes.size +
                         " van " + review.archive.notes.size + " eigen zinnen. " +
                         newCount + " nieuw, " + existingCount + " bestaan lokaal al. " +
@@ -524,9 +564,19 @@ internal fun PrivatePhraseTopicCsvAction(
                             else MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    chosenNotes.forEachIndexed { i, note ->
+                    filteredNotes.forEachIndexed { i, note ->
+                        val identity = PrivatePhraseShortcuts.fingerprint(note)
+                        val included = identity !in excludedImportRows
                         HorizontalDivider()
-                        Text((i + 1).toString() + ". " + note.language.uppercase() +
+                        TextButton(onClick = {
+                            excludedImportRows = if (included)
+                                excludedImportRows + identity else excludedImportRows - identity
+                            mergeOnly = true
+                        }) {
+                            Text((if (included) "☑ Meenemen" else "☐ Overgeslagen") +
+                                " · regel " + (i + 1))
+                        }
+                        Text(note.language.uppercase() +
                             " → " + note.meaningLanguage.uppercase())
                         Text(note.phrase, style = MaterialTheme.typography.bodyLarge.copy(
                             textDirection = if (note.language == "ckb" || note.language == "ps")
@@ -542,9 +592,8 @@ internal fun PrivatePhraseTopicCsvAction(
                                 "zin inclusief gekozen thema toegevoegd.",
                             style = MaterialTheme.typography.labelSmall
                         )
-                        Text("Thema: " + (chosenLinks[
-                            PrivatePhraseShortcuts.fingerprint(note)
-                        ] ?: "zonder thema"), style = MaterialTheme.typography.labelMedium)
+                        Text("Thema: " + (review.archive.assignments[identity]
+                            ?: "zonder thema"), style = MaterialTheme.typography.labelMedium)
                     }
                     Text("Dit zijn zelfgeschreven, niet beoordeelde betekenissen. " +
                         "De bestanden zijn nooit automatisch uit een gesprek gekopieerd.",
@@ -563,8 +612,9 @@ internal fun PrivatePhraseTopicCsvAction(
                         )
                     }
                     if (saved) onChanged()
-                    notice = if (saved && mergeOnly)
-                        "Nieuwe eigen zinnen en thema's toegevoegd; bestaande informatie behouden."
+                    notice = if (saved && (mergeOnly || scoped))
+                        "Geselecteerde nieuwe eigen zinnen en thema's toegevoegd; " +
+                            "bestaande informatie behouden."
                     else if (saved)
                         "Eigen zinnen en thema's bewust vervangen; oude planning gewist."
                     else "Import geweigerd: gegevens zijn gewijzigd of de " +
