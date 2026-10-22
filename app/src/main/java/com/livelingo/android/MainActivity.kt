@@ -2579,9 +2579,9 @@ private fun TuddyScreen(
         }
     }
 
-    // A single explicitly shared content:// file can be either a subtitle or
-    // Tuddy's own bounded correction JSON. Inspect the exact selected bytes once;
-    // correction files go to the existing human-confirmed import preview.
+    // A single explicitly shared content:// file can be a subtitle, correction
+    // JSON, or private phrasebook backup. Inspect selected bytes once; Tuddy
+    // exports go to their existing human-confirmed import previews.
     suspend fun readSelectedSharedDocument(uri: Uri): SharedDocumentImportResult {
         if (uri.scheme != "content") return SharedDocumentImportResult.Rejected(
             "Geen geldige Android-documentprovider; bestaande inhoud blijft behouden."
