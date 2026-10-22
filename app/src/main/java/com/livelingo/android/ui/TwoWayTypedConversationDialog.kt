@@ -114,6 +114,7 @@ internal fun TwoWayTypedConversationDialog(
         activeSpeechSide = null
         activeSpeechText = null
         activeSpeechRange = null
+        speechNotice = ""
     }
 
     fun pronounceLine(
