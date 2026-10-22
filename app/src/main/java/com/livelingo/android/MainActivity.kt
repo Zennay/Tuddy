@@ -553,10 +553,25 @@ private fun TuddyScreen(
     // External phrasebook text/backup remains in RAM until its explicit import preview consumes it.
     var pendingSharedPersonalPhraseCsv by remember { mutableStateOf<String?>(null) }
     var pendingSharedPersonalPhraseBackupJson by remember { mutableStateOf<String?>(null) }
-    // A user explicitly opened one private CSV: expose its preview-only
-    // phrasebook screen. Do not read, translate, or save the external bytes here.
+    // One user-chosen CSV content URI can be either their own words or
+    // their own sentences. Inspect only its bounded header on an IO thread;
+    // the receiving panel still performs full strict parsing and asks the
+    // user before any merge or replacement. No implicit cloud translation.
     LaunchedEffect(incomingPersonalCsv?.requestId) {
-        if (incomingPersonalCsv != null) personalPhrasesOpen = true
+        val request = incomingPersonalCsv ?: return@LaunchedEffect
+        val isOwnWords = request.uri?.let {
+            PrivateOwnWordCsvUriRoute.matchesOwnWordHeader(
+                context.contentResolver, it
+            )
+        } ?: false
+        if (incomingPersonalCsv?.requestId != request.requestId) return@LaunchedEffect
+        if (isOwnWords) {
+            stop()
+            personalPhrasesOpen = false
+            ownWordsOpen = true
+        } else {
+            personalPhrasesOpen = true
+        }
     }
     var quickPhrasePickerOpen by remember { mutableStateOf(false) }
     var starterPhraseboardOpen by remember { mutableStateOf(false) }
@@ -6478,6 +6493,8 @@ private fun TuddyScreen(
                 onChanged = { ownWordRevision++ },
                 incomingBackupJsonText = pendingSharedOwnWordBackupJson,
                 incomingCsvText = pendingSharedOwnWordCsv,
+                incomingCsvDocument = incomingPersonalCsv,
+                onIncomingCsvDocumentConsumed = onPersonalCsvConsumed,
                 onIncomingCsvConsumed = { received ->
                     if (pendingSharedOwnWordCsv == received)
                         pendingSharedOwnWordCsv = null
@@ -6490,6 +6507,7 @@ private fun TuddyScreen(
                     ownWordsOpen = false
                     pendingSharedOwnWordBackupJson = null
                     pendingSharedOwnWordCsv = null
+                    incomingPersonalCsv?.let { onPersonalCsvConsumed(it.requestId) }
                 }
             )
         }
