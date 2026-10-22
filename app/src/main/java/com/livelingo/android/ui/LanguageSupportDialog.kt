@@ -174,7 +174,7 @@ internal fun LanguageSupportDialog(
                                     }) { Text("Open externe modelkaart ↗") }
                                 }
                             }
-                            if (item.hasFivePhrasePreview) {
+                            if (item.hasFivePhrasePreview && (normalizedQuery.isEmpty() || languageMatchesQuery)) {
                                 Text(
                                     "Alleen vijf vaste basiswoorden; geen vrije zinsvertaling of bewezen ASR.",
                                     style = MaterialTheme.typography.bodySmall
