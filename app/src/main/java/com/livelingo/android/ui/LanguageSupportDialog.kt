@@ -72,6 +72,10 @@ internal fun LanguageSupportDialog(
                 .any { phrase -> evidence.contains(phrase) } -> "Niet-commercieel"
             listOf("gated", "contactinformatie", "contact information", "share contact")
                 .any { phrase -> evidence.contains(phrase) } -> "Toegang beperkt"
+            listOf(
+                "conflict onopgelost", "licentieconflict", "licentiecompatibiliteit",
+                "provenance onopgelost", "licentieherkomst onopgelost", "onopgelost"
+            ).any { phrase -> declared.contains(phrase) } -> "Licentieconflict/onopgelost"
             listOf("apache-2.0", "apache 2.0", "mit", "bsd-2-clause", "bsd-3-clause", "cc0-1.0", "isc")
                 .any { phrase -> declared.contains(phrase) } -> "Permissief volgens modelkaart"
             else -> "Overig/onbekend"
@@ -404,7 +408,10 @@ internal fun LanguageSupportDialog(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            listOf("Alle", "Niet-commercieel", "Toegang beperkt", "Permissief volgens modelkaart", "Overig/onbekend").forEach { filter ->
+                            listOf(
+                                "Alle", "Niet-commercieel", "Toegang beperkt",
+                                "Licentieconflict/onopgelost", "Permissief volgens modelkaart", "Overig/onbekend"
+                            ).forEach { filter ->
                                 FilterChip(
                                     selected = modelAccessFilter == filter,
                                     onClick = {
@@ -417,6 +424,7 @@ internal fun LanguageSupportDialog(
                                                 "Niet-commercieel" -> "Niet-commercieel"
                                                 "Toegang beperkt" -> "Toegang gated"
                                                 "Permissief volgens modelkaart" -> "Permissief vermeld"
+                                                "Licentieconflict/onopgelost" -> "Licentieconflict / open"
                                                 "Overig/onbekend" -> "Overig / onbekend"
                                                 else -> "Alle statussen"
                                             }
@@ -426,7 +434,7 @@ internal fun LanguageSupportDialog(
                             }
                         }
                         Text(
-                            "Dit filter classificeert alleen tekst uit de modelkaart/catalogus. Ook Apache- of MIT-labels zijn geen automatische vrijgave.",
+                            "Dit filter classificeert alleen tekst uit de modelkaart/catalogus. Expliciet vermelde licentieconflicten vallen niet onder ‘Permissief vermeld’, ook als één bron Apache of MIT noemt. Geen enkel label is een automatische vrijgave.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
