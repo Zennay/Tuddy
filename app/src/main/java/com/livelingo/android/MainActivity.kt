@@ -753,14 +753,16 @@ private fun TuddyScreen(
     // Apply the same search-only script folding as the private phrasebook.
     // Stored captions and translations are never normalized or rewritten.
     val normalizedHistoryQuery = PrivatePhraseScriptSearch.fold(historySearchQuery.trim())
-    val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
-        else lines.indices.filter { index ->
-            PrivatePhraseScriptSearch.contains(lines[index].original, normalizedHistoryQuery) ||
-                PrivatePhraseScriptSearch.contains(lines[index].translated, normalizedHistoryQuery) ||
-                lines[index].personalMeaning?.let {
+    fun historySearchMatches(line: Line): Boolean =
+        normalizedHistoryQuery.isNotBlank() && (
+            PrivatePhraseScriptSearch.contains(line.original, normalizedHistoryQuery) ||
+                PrivatePhraseScriptSearch.contains(line.translated, normalizedHistoryQuery) ||
+                line.personalMeaning?.let {
                     PrivatePhraseScriptSearch.contains(it, normalizedHistoryQuery)
                 } == true
-        }
+        )
+    val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
+        else lines.indices.filter { historySearchMatches(lines[it]) }
 
     fun captureCombinedStudyBook(): ByteArray? =
         PrivateCombinedStudyBook.snapshot(
@@ -6810,18 +6812,13 @@ private fun TuddyScreen(
                         }
                     }
                     items(lines, key = { it.id }) { line ->
+                        val isHistorySearchMatch = historySearchMatches(line)
                         Card(
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth(),
                             border = BorderStroke(
-                                if (normalizedHistoryQuery.isNotBlank() && (
-                                        line.original.contains(normalizedHistoryQuery, ignoreCase = true) ||
-                                            line.translated.contains(normalizedHistoryQuery, ignoreCase = true)
-                                    )) 2.dp else 1.dp,
-                                if (normalizedHistoryQuery.isNotBlank() && (
-                                        line.original.contains(normalizedHistoryQuery, ignoreCase = true) ||
-                                            line.translated.contains(normalizedHistoryQuery, ignoreCase = true)
-                                    )) MaterialTheme.colorScheme.primary
+                                if (isHistorySearchMatch) 2.dp else 1.dp,
+                                if (isHistorySearchMatch) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.outlineVariant
                             )
                         ) {
