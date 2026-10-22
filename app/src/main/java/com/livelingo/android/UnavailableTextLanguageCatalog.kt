@@ -126,14 +126,14 @@ internal object UnavailableTextLanguageCatalog {
 
     private val soraniApacheResearchCandidate = OfflineLanguageModelCandidate(
         category = "Spraakherkenning (ASR)",
-        title = "SECT19N/whisper-small-ckb-merged",
+        title = "SECT19N/whisper-small-ckb-merged · ZarosASR",
         url = "https://huggingface.co/SECT19N/whisper-small-ckb-merged",
-        directionEvidence = "Spraak → tekst (ASR), Sorani/ckb volgens modelkaart; gated toegang en Persian-token workaround blijven beperkingen.",
-        declaredLicense = "Apache-2.0 volgens modelkaart; toegang gated",
-        footprint = "0,2B parameters; exacte bestandsgrootte niet geverifieerd",
-        limitation = "Modeltoegang vereist eerst akkoord met het delen van contactgegevens. " +
-            "Modelkaart rapporteert zelf WER 7,96% op Common Voice 24.0; dit is niet onafhankelijk herhaald of op Android gevalideerd. " +
-            "Gebruikt de Perzische decoder-token als Sorani-workaround; niet geïntegreerd of geactiveerd."
+        directionEvidence = "Spraak → tekst (ASR), Sorani/ckb volgens modelkaart; WER 7,96% op Common Voice 24.0-test is door de auteur gerapporteerd, niet onafhankelijk herhaald.",
+        declaredLicense = "Apache-2.0 volgens modelkaart; gewichten gated achter contactinformatievoorwaarden; Common Voice 24.0 is CC0-1.0; upstream-weightketen nog te beoordelen",
+        footprint = "circa 0,2B parameters; exacte kandidaatbestandsgrootte niet geverifieerd (Whisper-small upstream circa 967 MB)",
+        limitation = "De modelkaart is publiek leesbaar, maar toegang tot modelbestanden vereist akkoord met voorwaarden voor het delen van contactinformatie. WER 7,96% is zelfgerapporteerd en niet onafhankelijk herhaald. " +
+            "Gebruikt de Perzische decoder-token als Sorani-workaround; geen bewijs voor spontane conversatie, Android-latency, geheugen of een gequantiseerde runtime. " +
+            "Geen immutable modelrevisie of bestands-SHA vastgelegd omdat de gewichten gated zijn. Controleer exacte gewichten, herkomst en licentiecompatibiliteit vóór distributie. Niet geïntegreerd of geactiveerd."
     )
 
     private val pashtoGhagResearchCandidate = OfflineLanguageModelCandidate(
