@@ -7,17 +7,20 @@ en behoudt de bestaande tijdcodes.
 
 ## Werkwijze
 
-1. Optioneel kun je **Stel brontaal voor op basis van dit bestand** kiezen.
-   De on-device taalherkenner gebruikt maximaal de eerste 12 niet-lege cues
-   (tot 1.200 tekens). De uitkomst is een voorstel; controleer de brontaal zelf.
+1. Optioneel kun je **Stel brontaal voor op basis van geselecteerde regels**
+   kiezen. De on-device taalherkenner gebruikt maximaal 12 niet-lege cues uit
+   de actuele selectie (tot 1.200 tekens). De uitkomst is een voorstel; controleer
+   de brontaal zelf.
 2. Kies of bevestig de bron- en doeltaal uit de ondersteunde ML Kit-teksttalen.
    Tuddy start geen vertaling zonder deze expliciete taalkeuze.
 3. Kies een expliciete selectie met 1-based regelnummers, bijvoorbeeld
    `1-5,8,11-12`. Een los nummer selecteert één cue; een bereik is inclusief.
    Standaard staat het hele document geselecteerd en **Hele bestand kiezen**
-   herstelt dat. Ongeldige, dubbele of overlappende nummers blokkeren vertalen.
-   De samenvatting toont de genormaliseerde selectie en het exacte aantal cues.
-   Alle cues buiten de selectie blijven onaangeraakt.
+   herstelt dat. Je kunt ook in **Zoek in dit document** zoeken en daarna
+   **Vertaal N gevonden regels lokaal…** kiezen om precies de overeenkomende
+   cues vooraf te selecteren. Ongeldige, dubbele of overlappende nummers blokkeren
+   vertalen. De samenvatting toont de genormaliseerde selectie en het exacte aantal
+   cues. Alle cues buiten de selectie blijven onaangeraakt.
 4. Tik op **Controleer lokale modellen**. Dit leest alleen de actuele lokale
    modelinventaris. Voor een verschillende bron- en doeltaal moeten de benodigde
    modellen al aanwezig zijn; Engels is ingebouwd.

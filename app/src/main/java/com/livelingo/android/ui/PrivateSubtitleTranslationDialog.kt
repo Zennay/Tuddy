@@ -43,7 +43,8 @@ import com.livelingo.android.TargetCatalog
 internal fun PrivateSubtitleTranslationDialog(
     cues: List<PrivateSubtitleCue>,
     onApply: (List<PrivateSubtitleCue>) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    initialSelectionExpression: String? = null
 ) {
     val controller = remember { PrivateSubtitleTranslationController() }
     val detector = remember { LocalLanguageDetector() }
@@ -57,7 +58,13 @@ internal fun PrivateSubtitleTranslationDialog(
     var translatedCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var translatedIndices by remember(cues) { mutableStateOf<List<Int>>(emptyList()) }
     var previewPage by remember(cues) { mutableIntStateOf(0) }
-    var cueSelectionExpression by remember(cues) { mutableStateOf("1-${cues.size}") }
+    var cueSelectionExpression by remember(cues, initialSelectionExpression) {
+        mutableStateOf(
+            initialSelectionExpression?.takeIf {
+                PrivateSubtitleRowSelection.parse(it, cues.size) != null
+            } ?: "1-${cues.size}"
+        )
+    }
     var bilingualOutput by remember(cues) { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var detectingSource by remember { mutableStateOf(false) }
@@ -115,8 +122,12 @@ internal fun PrivateSubtitleTranslationDialog(
 
     fun detectSourceLanguage() {
         if (detectingSource || checking || translating || translatedCues != null) return
-        val sample = cues.asSequence()
-            .map { it.text.replace('\n', ' ').trim() }
+        if (validSelectedIndices.isEmpty()) {
+            detectionMessage = "Kies eerst een geldige ondertitelregelselectie."
+            return
+        }
+        val sample = validSelectedIndices.asSequence()
+            .map { cues[it].text.replace('\n', ' ').trim() }
             .filter { it.isNotBlank() }
             .take(12)
             .joinToString(" ")
@@ -328,15 +339,16 @@ internal fun PrivateSubtitleTranslationDialog(
                     )
                 }
                 OutlinedButton(
-                    enabled = !detectingSource && !checking && !translating && preview == null,
+                    enabled = validSelectedIndices.isNotEmpty() &&
+                        !detectingSource && !checking && !translating && preview == null,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { detectSourceLanguage() }
                 ) {
                     Text(if (detectingSource) "Brontaal lokaal herkennen…"
-                        else "Stel brontaal voor op basis van dit bestand")
+                        else "Stel brontaal voor op basis van geselecteerde regels")
                 }
                 Text(
-                    "De suggestie gebruikt maximaal de eerste 12 niet-lege regels (tot 1.200 tekens), " +
+                    "De suggestie gebruikt maximaal 12 niet-lege geselecteerde regels (tot 1.200 tekens), " +
                         "lokaal op dit toestel. Het is een voorstel, geen automatische taalkeuze.",
                     style = MaterialTheme.typography.bodySmall
                 )

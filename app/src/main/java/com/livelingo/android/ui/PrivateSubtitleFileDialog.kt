@@ -144,6 +144,7 @@ internal fun PrivateSubtitleFileDialog(
     var batchPhraseOpen by remember(cues) { mutableStateOf(false) }
     var translationOpen by remember(cues) { mutableStateOf(false) }
     var translationBase by remember(cues) { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    var translationSelectionExpression by remember(cues) { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
     var batchOpen by remember { mutableStateOf(false) }
     var removeOpen by remember { mutableStateOf(false) }
@@ -451,6 +452,7 @@ internal fun PrivateSubtitleFileDialog(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         translationBase = draft.toList()
+                        translationSelectionExpression = null
                         translationOpen = true
                     }
                 ) { Text("🌐 Vertaal ondertitelconcept lokaal…") }
@@ -459,6 +461,35 @@ internal fun PrivateSubtitleFileDialog(
                     shownIndex = -1
                 }, label = { Text("Zoek in dit document") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
+                val translationMatchesExpression =
+                    if (query.isNotBlank() && found.isNotEmpty()) {
+                        PrivateSubtitleRowSelection.formatSourceRows(
+                            found.map { it.first + 1 }, draft.size
+                        )
+                    } else null
+                if (translationMatchesExpression != null) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            val currentExpression =
+                                if (query.isNotBlank() && found.isNotEmpty()) {
+                                    PrivateSubtitleRowSelection.formatSourceRows(
+                                        found.map { it.first + 1 }, draft.size
+                                    )
+                                } else null
+                            if (currentExpression != null &&
+                                currentExpression == translationMatchesExpression &&
+                                draft.isNotEmpty()
+                            ) {
+                                translationBase = draft.toList()
+                                translationSelectionExpression = currentExpression
+                                translationOpen = true
+                            } else {
+                                notice = "De zoekresultaten zijn gewijzigd; zoek opnieuw en probeer het nogmaals."
+                            }
+                        }
+                    ) { Text("🌐 Vertaal ${found.size} gevonden regels lokaal…") }
+                }
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = jumpToTime,
@@ -3317,6 +3348,7 @@ internal fun PrivateSubtitleFileDialog(
         if (base != null) {
             PrivateSubtitleTranslationDialog(
                 cues = base,
+                initialSelectionExpression = translationSelectionExpression,
                 onApply = { translated ->
                     if (draft == base) {
                         applyChange(translated)
@@ -3328,14 +3360,17 @@ internal fun PrivateSubtitleFileDialog(
                     }
                     translationOpen = false
                     translationBase = null
+                    translationSelectionExpression = null
                 },
                 onDismiss = {
                     translationOpen = false
                     translationBase = null
+                    translationSelectionExpression = null
                 }
             )
         } else {
             translationOpen = false
+            translationSelectionExpression = null
         }
     }
 }
