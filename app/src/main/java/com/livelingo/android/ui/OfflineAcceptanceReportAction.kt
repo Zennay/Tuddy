@@ -45,7 +45,7 @@ internal fun OfflineAcceptanceReportAction(
     var recordedAt by remember { mutableStateOf(0L) }
     var opened by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
-    var apkIdentityConfirmed by remember { mutableStateOf(false) }
+    var expectedApkSha256 by remember { mutableStateOf("") }
     var disconnectedConfirmed by remember { mutableStateOf(false) }
     var permissionAndStopConfirmed by remember { mutableStateOf(false) }
     var noCloudFallbackConfirmed by remember { mutableStateOf(false) }
@@ -60,23 +60,31 @@ internal fun OfflineAcceptanceReportAction(
 
     fun count(value: String): Int? = value.toIntOrNull()?.takeIf { it in 0..10 }
     fun latency(value: String): Long? = value.toLongOrNull()?.takeIf { it in 1..600000 }
-    fun hasExactApkDigest(bytes: ByteArray?): Boolean {
+    fun installedApkDigest(bytes: ByteArray?): String? {
         val line = bytes?.toString(Charsets.UTF_8)?.lineSequence()
-            ?.firstOrNull { it.startsWith("Installed base APK SHA-256:") } ?: return false
-        return line.substringAfter(':').trim().matches(Regex("(?i)[0-9a-f]{64}"))
+            ?.firstOrNull { it.startsWith("Installed base APK SHA-256:") } ?: return null
+        return line.substringAfter(':').trim().lowercase()
+            .takeIf { it.matches(Regex("[0-9a-f]{64}")) }
+    }
+    fun expectedDigestMatches(bytes: ByteArray?): Boolean {
+        val expected = expectedApkSha256.trim().lowercase()
+        val installed = installedApkDigest(bytes) ?: return false
+        return expected.matches(Regex("[0-9a-f]{64}")) && expected == installed
     }
     fun reportsAirplaneModeOn(bytes: ByteArray?): Boolean =
         bytes?.toString(Charsets.UTF_8)?.lineSequence()
             ?.any { it.trim() == "Airplane mode: true" } == true
     fun reportBytes(): ByteArray? {
         val identity = baseline ?: return null
-        val exactApkDigestAvailable = hasExactApkDigest(identity)
+        val installedDigest = installedApkDigest(identity)
+        val expectedDigest = expectedApkSha256.trim().lowercase()
+        val digestMatches = expectedDigestMatches(identity)
         val airplaneModeReportedOn = reportsAirplaneModeOn(identity)
         val speechCounts = listOf(nlEnSpeech, enNlSpeech).map(::count)
         val translationCounts = listOf(nlEnTranslation, enNlTranslation).map(::count)
         val worstLatency = latency(maxLatencyMs)
-        val complete = exactApkDigestAvailable && airplaneModeReportedOn &&
-            apkIdentityConfirmed && disconnectedConfirmed &&
+        val complete = digestMatches && airplaneModeReportedOn &&
+            disconnectedConfirmed &&
             permissionAndStopConfirmed && noCloudFallbackConfirmed &&
             privacyClearingConfirmed && speechCounts.all { it == 10 } &&
             translationCounts.all { it == 10 } && worstLatency != null
@@ -88,7 +96,9 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Independently verified by Tuddy: no")
             appendLine("Session recorded at epoch milliseconds UTC: $recordedAt")
             appendLine("Observation completeness: ${if (complete) "all required observations marked complete" else "incomplete or one or more observations failed"}")
-            appendLine("APK identity and SHA-256 matched the selected release candidate: $apkIdentityConfirmed")
+            appendLine("Expected APK SHA-256 supplied by operator (APK file, not artifact ZIP): ${expectedDigest.ifBlank { "not supplied" }}")
+            appendLine("Installed base APK SHA-256: ${installedDigest ?: "unavailable"}")
+            appendLine("Installed APK digest matches supplied expected APK digest: $digestMatches")
             appendLine("Airplane mode enabled and Wi-Fi/mobile connectivity independently disabled: $disconnectedConfirmed")
             appendLine("Microphone permission and explicit Stop/lifecycle behavior observed: $permissionAndStopConfirmed")
             appendLine("No cloud/network speech or translation fallback observed: $noCloudFallbackConfirmed")
@@ -186,19 +196,36 @@ internal fun OfflineAcceptanceReportAction(
                             "Een vinkje of dit rapport verandert geen releasegate en wordt niet automatisch geverifieerd.",
                         style = MaterialTheme.typography.bodySmall
                     )
-                    if (!hasExactApkDigest(baseline)) {
-                        Text(
-                            "De geïnstalleerde APK-hash is niet als 64-tekens SHA-256 beschikbaar. " +
-                                "Dit rapport kan worden opgeslagen, maar nooit als compleet worden aangeduid.",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    AcceptanceObservationCheck(
-                        "Geïnstalleerde APK en SHA-256 komen exact overeen met de gekozen build.",
-                        apkIdentityConfirmed,
-                        enabled = hasExactApkDigest(baseline)
-                    ) { apkIdentityConfirmed = it }
+                    Text(
+                        "Geïnstalleerde APK SHA-256: ${installedApkDigest(baseline) ?: "onbeschikbaar"}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedTextField(
+                        value = expectedApkSha256,
+                        onValueChange = {
+                            expectedApkSha256 = it.filter { ch ->
+                                ch in '0'..'9' || ch.lowercaseChar() in 'a'..'f'
+                            }.take(64).lowercase()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Verwachte APK-SHA-256 (64 hex; niet ZIP)") },
+                        singleLine = true
+                    )
+                    Text(
+                        when {
+                            installedApkDigest(baseline) == null ->
+                                "APK-identiteit niet controleerbaar: geïnstalleerde digest ontbreekt."
+                            expectedApkSha256.isBlank() ->
+                                "Vul de APK-bestandschecksum in uit de builddocumentatie; gebruik niet de ZIP-checksum."
+                            expectedDigestMatches(baseline) ->
+                                "APK-checksum komt exact overeen met de opgegeven build."
+                            else ->
+                                "APK-checksum komt niet overeen. Controleer de juiste APK-build en checksum."
+                        },
+                        color = if (expectedDigestMatches(baseline))
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     if (!reportsAirplaneModeOn(baseline)) {
                         Text(
                             "Android rapporteert momenteel geen vliegtuigmodus aan. " +
