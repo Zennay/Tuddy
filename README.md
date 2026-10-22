@@ -2946,7 +2946,9 @@ blijft gemarkeerd; tekstbereiken worden alleen gemarkeerd als de geïnstalleerde
 Android-stem ze terugmeldt. Bij ontbrekende bereiken toont Tuddy alleen de
 actieve regel, zonder exacte woordtiming te claimen. De zes zichtbare regels
 blijven in RAM; stoppen, een nieuwe beurt, taalwissel, schermwissel of
-achtergrond stopt de spraak en wist de tijdelijke markering.
+achtergrond stopt de spraak en wist de tijdelijke markering. De grote
+leesweergave volgt op dezelfde manier maximaal 80 tijdelijke regels; zoeken
+of filteren stopt de actieve spraak en wist de markering.
 
 ## Nieuw: één regel uit een privé-archief kopiëren of delen
 
