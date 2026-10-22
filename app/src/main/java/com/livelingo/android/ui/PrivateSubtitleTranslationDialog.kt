@@ -13,6 +13,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -53,10 +54,23 @@ internal fun PrivateSubtitleTranslationDialog(
     var translating by remember { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(0) }
     var translatedCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    var translatedIndices by remember(cues) { mutableStateOf<List<Int>>(emptyList()) }
+    var firstCueNumber by remember(cues) { mutableStateOf("1") }
+    var lastCueNumber by remember(cues) { mutableStateOf(cues.size.toString()) }
     var bilingualOutput by remember(cues) { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var detectingSource by remember { mutableStateOf(false) }
     var detectionMessage by remember { mutableStateOf("") }
+    val selectedIndices = remember(firstCueNumber, lastCueNumber, cues.size) {
+        val first = firstCueNumber.toIntOrNull()
+        val last = lastCueNumber.toIntOrNull()
+        if (first != null && last != null && first >= 1 &&
+            last >= first && last <= cues.size) {
+            (first - 1 until last).toList()
+        } else {
+            emptyList()
+        }
+    }
 
     fun resetForLanguageChange() {
         controller.cancel()
@@ -68,6 +82,7 @@ internal fun PrivateSubtitleTranslationDialog(
         translating = false
         progress = 0
         translatedCues = null
+        translatedIndices = emptyList()
         bilingualOutput = false
         message = ""
     }
@@ -92,6 +107,7 @@ internal fun PrivateSubtitleTranslationDialog(
         checking = true
         translating = false
         translatedCues = null
+        translatedIndices = emptyList()
         progress = 0
         receipt = null
         message = ""
@@ -133,6 +149,7 @@ internal fun PrivateSubtitleTranslationDialog(
                 translating = false
                 progress = 0
                 translatedCues = null
+                translatedIndices = emptyList()
                 bilingualOutput = false
                 message = ""
                 sourceCode = supported
@@ -143,26 +160,34 @@ internal fun PrivateSubtitleTranslationDialog(
     }
 
     fun startTranslation() {
+        val indices = selectedIndices
         if (sourceCode.isBlank() || targetCode.isBlank() ||
             sourceCode == targetCode || receipt?.stage != OfflineTextStage.READY ||
-            translating || translatedCues != null
-        ) return
+            translating || translatedCues != null || indices.isEmpty()
+        ) {
+            if (indices.isEmpty()) {
+                message = "Kies een geldig bereik binnen de tijdgecodeerde regels."
+            }
+            return
+        }
+        val selectedCues = indices.map { cues[it] }
         translating = true
         checking = false
         progress = 0
         message = "Lokale modelstatus wordt opnieuw gecontroleerd…"
         controller.translate(
-            cues = cues,
+            cues = selectedCues,
             source = sourceCode,
             target = targetCode,
             onProgress = { completed, _ -> progress = completed },
             onComplete = { texts, error ->
                 translating = false
-                if (texts == null || texts.size != cues.size) {
+                if (texts == null || texts.size != selectedCues.size) {
                     receipt = null
+                    translatedIndices = emptyList()
                     message = error ?: "Vertaling niet voltooid. Het concept is ongewijzigd."
                 } else {
-                    var updated: List<PrivateSubtitleCue>? = cues.toList()
+                    var updated: List<PrivateSubtitleCue>? = selectedCues.toList()
                     texts.forEachIndexed { index, text ->
                         val current = updated
                         if (current != null) {
@@ -171,9 +196,11 @@ internal fun PrivateSubtitleTranslationDialog(
                     }
                     if (updated == null) {
                         receipt = null
+                        translatedIndices = emptyList()
                         message = "Een vertaalde regel past niet binnen de veilige ondertitelgrenzen. " +
                             "Het concept is ongewijzigd."
                     } else {
+                        translatedIndices = indices
                         translatedCues = updated
                         message = ""
                     }
@@ -193,6 +220,7 @@ internal fun PrivateSubtitleTranslationDialog(
                 translating = false
                 receipt = null
                 translatedCues = null
+                translatedIndices = emptyList()
                 if (wasBusy) {
                     message = "Vertaling gestopt omdat Tuddy naar de achtergrond ging. " +
                         "Het ondertitelconcept is ongewijzigd."
@@ -208,15 +236,22 @@ internal fun PrivateSubtitleTranslationDialog(
     }
 
     val preview = translatedCues
-    val outputCues = if (preview == null) null else if (!bilingualOutput) {
-        preview
+    val outputCues = if (preview == null || preview.size != translatedIndices.size) {
+        null
     } else {
         var updated: List<PrivateSubtitleCue>? = cues.toList()
         preview.forEachIndexed { index, translated ->
+            val originalIndex = translatedIndices.getOrNull(index)
             val current = updated
-            if (current != null) {
-                val combined = cues[index].text.trim() + "\n" + translated.text
-                updated = PrivateSubtitleDraftEditor.revise(current, index, combined)
+            if (current != null && originalIndex != null && originalIndex in cues.indices) {
+                val outputText = if (bilingualOutput) {
+                    cues[originalIndex].text.trim() + "\n" + translated.text
+                } else {
+                    translated.text
+                }
+                updated = PrivateSubtitleDraftEditor.revise(current, originalIndex, outputText)
+            } else {
+                updated = null
             }
         }
         updated
@@ -235,6 +270,51 @@ internal fun PrivateSubtitleTranslationDialog(
                         "De originele bronfile wordt niet overschreven.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = firstCueNumber,
+                        onValueChange = { input ->
+                            firstCueNumber = input.filter { it.isDigit() }.take(3)
+                            message = ""
+                        },
+                        label = { Text("Eerste regel") },
+                        enabled = !checking && !translating && preview == null,
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = lastCueNumber,
+                        onValueChange = { input ->
+                            lastCueNumber = input.filter { it.isDigit() }.take(3)
+                            message = ""
+                        },
+                        label = { Text("Laatste regel") },
+                        enabled = !checking && !translating && preview == null,
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
+                Text(
+                    if (selectedIndices.isEmpty()) {
+                        "Ongeldig bereik. Kies regels van 1 tot ${cues.size}, met de eerste regel vóór of gelijk aan de laatste."
+                    } else {
+                        "Bereik: regels ${selectedIndices.first() + 1}–${selectedIndices.last() + 1} " +
+                            "(${selectedIndices.size} cues). Alle andere regels blijven ongewijzigd."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (selectedIndices.isEmpty()) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        enabled = !checking && !translating && preview == null,
+                        onClick = {
+                            firstCueNumber = "1"
+                            lastCueNumber = cues.size.toString()
+                            message = ""
+                        }
+                    ) { Text("Hele bestand kiezen") }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TargetLanguageMenu(
                         label = "Brontaal",
@@ -311,18 +391,29 @@ internal fun PrivateSubtitleTranslationDialog(
                 }
                 if (translating) {
                     Text(
-                        "Lokaal vertalen: $progress / ${cues.size} regels. " +
-                            "Er wordt pas iets toegepast als alle regels slagen.",
+                        "Lokaal vertalen: $progress / ${selectedIndices.size} geselecteerde regels. " +
+                            "Er wordt pas iets toegepast als alle geselecteerde regels slagen.",
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
                 if (preview != null) {
                     Text(
                         "Controleer de vertaling voordat je de tijdelijke tekst vervangt. " +
-                            "Hieronder staan de eerste ${minOf(5, preview.size)} regels; " +
-                            "na toepassen kun je het volledige concept doorzoeken en ongedaan maken.",
+                            "Hieronder staan de eerste ${minOf(5, preview.size)} vertaalde regels " +
+                            "uit bereik ${translatedIndices.firstOrNull()?.plus(1) ?: "?"}–" +
+                            "${translatedIndices.lastOrNull()?.plus(1) ?: "?"}. " +
+                            "Andere regels blijven ongewijzigd.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    TextButton(
+                        onClick = {
+                            translatedCues = null
+                            translatedIndices = emptyList()
+                            progress = 0
+                            bilingualOutput = false
+                            message = ""
+                        }
+                    ) { Text("Ander bereik kiezen") }
                     Text(
                         "Kies hoe de nieuwe tekst in iedere tijdgecodeerde regel wordt opgebouwd:",
                         style = MaterialTheme.typography.bodySmall
@@ -351,11 +442,12 @@ internal fun PrivateSubtitleTranslationDialog(
                         )
                     }
                     preview.take(5).forEachIndexed { index, cue ->
+                        val originalIndex = translatedIndices[index]
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Regel ${index + 1} · origineel",
+                            Text("Regel ${originalIndex + 1} · origineel",
                                 style = MaterialTheme.typography.labelSmall)
                             Text(
-                                cues[index].text.take(260),
+                                cues[originalIndex].text.take(260),
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     textDirection = if (isRtl(sourceCode)) TextDirection.Rtl
                                     else TextDirection.Ltr
@@ -401,9 +493,16 @@ internal fun PrivateSubtitleTranslationDialog(
                 TextButton(
                     enabled = receipt?.stage == OfflineTextStage.READY &&
                         sourceCode.isNotBlank() && targetCode.isNotBlank() &&
-                        sourceCode != targetCode && !checking && !translating,
+                        sourceCode != targetCode && selectedIndices.isNotEmpty() &&
+                        !detectingSource && !checking && !translating,
                     onClick = { startTranslation() }
-                ) { Text(if (translating) "Vertalen…" else "Vertaal ${cues.size} regels") }
+                ) {
+                    Text(when {
+                        translating -> "Vertalen…"
+                        selectedIndices.isEmpty() -> "Kies geldig bereik"
+                        else -> "Vertaal ${selectedIndices.size} regels"
+                    })
+                }
             }
         },
         dismissButton = {
@@ -414,6 +513,7 @@ internal fun PrivateSubtitleTranslationDialog(
                     checking = false
                     receipt = null
                     translatedCues = null
+                    translatedIndices = emptyList()
                     message = "Geannuleerd. Het tijdelijke ondertitelconcept is ongewijzigd."
                 } else {
                     closeDialog()
