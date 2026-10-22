@@ -3016,6 +3016,49 @@ private fun TuddyScreen(
                 }
             )
         }
+        val livePhraseBatchRequest = pendingLivePhraseBatchCapture
+        if (livePhraseBatchRequest != null) {
+            val request = livePhraseBatchRequest
+            val rows = request.lines.map { line ->
+                TranscriptExportRow(
+                    line.original, line.translated, line.status,
+                    line.sourceCode, line.targetCode, line.recordedAtMillis
+                )
+            }
+            val stillCurrent = !listening && generation == request.generation &&
+                request.lines.size in 1..10 &&
+                request.lines.all { snapshot -> lines.any { it == snapshot } }
+            PrivatePhraseBatchCaptureDialog(
+                rows = rows,
+                referenceLabel = "Gespreksreferentie",
+                originLabel = "gespreksregel",
+                stillCurrent = stillCurrent,
+                existingPhrases = personalPhrases.entries(),
+                onSave = { batch ->
+                    val current = pendingLivePhraseBatchCapture
+                    if (current != null && !listening &&
+                        generation == current.generation &&
+                        current.lines == request.lines &&
+                        current.lines.size in 1..10 &&
+                        current.lines.all { snapshot -> lines.any { it == snapshot } } &&
+                        batch.size == current.lines.size &&
+                        personalPhrases.saveNewBatch(batch)) {
+                        capturedPhraseNotice =
+                            "${batch.size} eigen privékaarten bewust opgeslagen vanuit dit gesprek. Open Mijn eigen offline zinnen om ze te bekijken."
+                        pendingLivePhraseBatchCapture = null
+                        livePhraseBatchSelection = emptySet()
+                        livePhraseBatchSelectionMode = false
+                        true
+                    } else false
+                },
+                onDismiss = {
+                    pendingLivePhraseBatchCapture = null
+                    livePhraseBatchSelection = emptySet()
+                    livePhraseBatchSelectionMode = false
+                }
+            )
+        }
+
         val phraseCapture = pendingLivePhraseCapture
         if (phraseCapture != null) {
             val sourceRow = lines.firstOrNull { it.id == phraseCapture.captionId }
