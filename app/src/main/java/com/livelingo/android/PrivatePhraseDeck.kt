@@ -639,6 +639,7 @@ internal class PrivatePhraseDeck(context: Context) {
                 result.add(cell.toString())
                 if (offset == line.length) break
                 offset++ // Consume exactly one comma.
+                if (offset == line.length) return null // No silently ignored fifth empty column.
             }
             return result
         }
