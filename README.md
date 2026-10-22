@@ -3332,3 +3332,8 @@ de gebruiker de zin gewoon zelf typen. Deze functie voegt geen
 Kurmanji/Sorani/Pasjtoe modelondersteuning toe.
 
 ---
+
+
+### Eigen phrasebook voor Kurmanji, Sorani en Pasjtoe
+
+In **Taal- en modelinstellingen → Bekijk alle taalondersteuning** kun je bij Kurmanji (`kmr`), Sorani (`ckb`) of Pasjtoe (`ps`) nu **Schrijf eigen zinnen zonder model…** kiezen. Daarmee open je de tijdelijke correctiebeheerfunctie met die taal voorgeselecteerd en kun je zelf zinnen of een batch van maximaal tien regels toevoegen, of eigen correcties importeren. De codes zijn alleen voor menselijk geschreven tekstparen: ze worden niet toegevoegd aan de ML Kit-tekstvertaling of Android-spraakcatalogus. Voor deze talen schakelt oefenen automatisch over op tekst wanneer geen lokale spraakstem bevestigd is. Dit biedt een eigen phrasebook voorbij de vijf vaste voorbeelden, maar blijft **geen automatische vrije ASR/MT**; zie [de taalondersteuningsgids](docs/LANGUAGE_SUPPORT_GUIDE.md#eigen-zinnen-voor-kurmanji-sorani-en-pasjtoe-zonder-model).
