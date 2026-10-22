@@ -1,6 +1,6 @@
 # Taalondersteuning in Tuddy
 
-Open in de app **Taal- en modelinstellingen → Bekijk alle taalondersteuning**. Het overzicht is doorzoekbaar op taalcode, Engelse of eigen naam, Nederlandse naam en veelgebruikte aliassen; accenten zijn niet vereist.
+Open in de app **Taal- en modelinstellingen → Bekijk alle taalondersteuning**. Het overzicht is doorzoekbaar op taalcode, Engelse of eigen naam, Nederlandse naam, aliassen, modelkaartnaam, modelcategorie, gedeclareerde licentie en modelomvang; accenten zijn niet vereist. Zoeken naar een model toont de talen waarvoor die onderzoekskandidaat relevant is, maar maakt het model niet beschikbaar of gedownload.
 
 ## Drie aparte categorieën
 
