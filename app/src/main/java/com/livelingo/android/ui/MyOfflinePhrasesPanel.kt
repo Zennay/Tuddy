@@ -69,6 +69,8 @@ internal fun MyOfflinePhrasesPanel(
     onIncomingSharedCsvConsumed: (String) -> Unit = {},
     incomingBackupJsonText: String? = null,
     onIncomingBackupJsonConsumed: (String) -> Unit = {},
+    incomingArchiveJsonText: String? = null,
+    onIncomingArchiveJsonConsumed: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     var language by remember { mutableStateOf(initialLanguage.takeIf {
@@ -834,7 +836,12 @@ internal fun MyOfflinePhrasesPanel(
                             "application/octet-stream"))
                     }) { Text("Herstel back-up…") }
                 }
-                PrivatePhraseArchiveAction(deck = deck, onChanged = { revision++ })
+                PrivatePhraseArchiveAction(
+                    deck = deck,
+                    onChanged = { revision++ },
+                    incomingArchiveJsonText = incomingArchiveJsonText,
+                    onIncomingArchiveJsonConsumed = onIncomingArchiveJsonConsumed
+                )
                 PrivatePhraseTopicCsvAction(
                     deck = deck,
                     onChanged = { revision++ },
