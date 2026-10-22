@@ -91,3 +91,20 @@ Dit is een expliciete licentie-/dialectwaarschuwing, geen juridische conclusie o
 [SashaSobchuk/opus-mt-onnx-int8](https://huggingface.co/SashaSobchuk/opus-mt-onnx-int8) publishes quantized ONNX model folders for local/on-device translation and lists an `opus-mt-ine-ine` folder. Its card says each language direction was checked only on sample words and points to a `pairs_map.json` for directions that produced output. This may reduce Android runtime/conversion work compared with converting the original 536 MB repository from scratch.
 
 **Still not ready to ship:** the conversion repository declares CC-BY-4.0 and says the source models are CC-BY-4.0, while the official [Helsinki-NLP/opus-mt-ine-ine](https://huggingface.co/Helsinki-NLP/opus-mt-ine-ine) card declares Apache-2.0. That metadata/provenance mismatch is unresolved. The exact `kur_Arab`, `kur_Latn`, `pus`, `nld` and `eng` direction entries in `pairs_map.json`, model hashes and actual sentence quality have not been confirmed. Do not bundle, download or activate this converted pack until source/license provenance and exact direction coverage are clear, then native-speaker and real Android offline behavior are reviewed.
+
+
+## Reproduceerbare bronidentiteit van modelonderzoek
+
+Onderzoekskandidaten kunnen een vastgezette upstream-revisie en SHA-256 van het
+gewichtbestand tonen. Voor [amedcj/whisper-kurmanji op revisie
+`d7a083101e13012e3748f4c7d77234fa7d195441`](https://huggingface.co/amedcj/whisper-kurmanji/tree/d7a083101e13012e3748f4c7d77234fa7d195441)
+registreert Tuddy het bestand `model.safetensors` van 966.995.080 bytes en
+SHA-256 `7411638aad942d5d1038e0ff3b79f5632ad479c60ce98e2739f08c6cbdae5ada`.
+De kaart linkt naar die revisie in plaats van naar een veranderende `main`-pagina.
+
+Dit maakt de **bestandsidentiteit reproduceerbaar**, niet de trainingsdatarechten,
+dialectkwaliteit, Android-prestaties of geschiktheid voor distributie. De modelkaart
+noemt Common Voice Kurmanji maar geen exacte dataset-release; die rechtenketen blijft
+onopgelost. Andere kandidaten tonen expliciet wanneer hun revisie of bestandshash
+nog niet is vastgelegd. Geen modelgewichten worden door deze wijziging gedownload,
+gebundeld of geactiveerd.
