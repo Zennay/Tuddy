@@ -70,6 +70,70 @@ private fun CaptionSide(text: String, code: String, large: Boolean,
 }
 
 /**
+ * Shows a live, explicitly user-triggered TTS cue. Text ranges are indicative
+ * callbacks from the installed Android voice, never claimed as exact timing.
+ */
+@Composable
+private fun CaptionAudioFollowCard(
+    text: String,
+    label: String,
+    range: Pair<Int, Int>?
+) {
+    val background = MaterialTheme.colorScheme.primary
+    val foreground = MaterialTheme.colorScheme.onPrimary
+    val displayed = remember(text, range, background, foreground) {
+        buildAnnotatedString {
+            append(text)
+            if (range != null && range.first >= 0 &&
+                range.second > range.first && range.second <= text.length
+            ) {
+                addStyle(
+                    SpanStyle(
+                        color = foreground,
+                        background = background,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    range.first,
+                    range.second
+                )
+            }
+        }
+    }
+    val fallbackRtl = text.firstOrNull()?.let { it.code in 0x0600..0x08FF } ?: false
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                "Nu voorgelezen · $label",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Text(
+                displayed,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    textDirection = PrivateTextDirection.forContent(text, fallbackRtl)
+                ),
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Text(
+                if (range != null)
+                    "Indicatieve tekstmarkering van de geïnstalleerde stem."
+                else "Tekstmarkering verschijnt als de stem tekstbereiken terugmeldt.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
+    }
+}
+
+/**
  * Shows only captions with locally finished text, as supplied by the caller.
  * A sentence can be shown across a table without Android share/copy or
  * persistence. Translation quality is not verified or implied.
@@ -91,6 +155,9 @@ internal fun FullscreenCaptionCard(
     var side by remember { mutableStateOf(CaptionCardSide.BOTH) }
     var large by remember { mutableStateOf(true) }
     var audioNotice by remember { mutableStateOf("") }
+    var activeSpeechText by remember { mutableStateOf<String?>(null) }
+    var activeSpeechLabel by remember { mutableStateOf("") }
+    var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val context = LocalContext.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -98,6 +165,9 @@ internal fun FullscreenCaptionCard(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
                 speaker.stop()
+                activeSpeechText = null
+                activeSpeechLabel = ""
+                activeSpeechRange = null
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -120,10 +190,52 @@ internal fun FullscreenCaptionCard(
     val selectedTextWord = remember(studyText, safeWordIndex) {
         Regex("\\S+").findAll(studyText).elementAtOrNull(safeWordIndex)?.value ?: ""
     }
+
+    fun pronounceCaption(text: String, languageTag: String, label: String) {
+        val safe = text.replace('\n', ' ').replace('\r', ' ').trim()
+        if (safe.isBlank() || safe.length > 400 || safe.any { it.isISOControl() }) {
+            speaker.stop()
+            activeSpeechText = null
+            activeSpeechLabel = ""
+            activeSpeechRange = null
+            audioNotice = "Alleen geselecteerde tekst tot 400 tekens zonder controletekens kan lokaal worden voorgelezen."
+            return
+        }
+        activeSpeechText = safe
+        activeSpeechLabel = label
+        activeSpeechRange = null
+        audioNotice = "Lokale voorlezing voorbereiden…"
+        speaker.speakSequence(
+            lines = listOf(safe),
+            languageTag = languageTag,
+            pace = LocalSpeechPace.NORMAL,
+            onProgress = { completed, total ->
+                audioNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { audioNotice = it },
+            onFinished = { completed ->
+                activeSpeechText = null
+                activeSpeechLabel = ""
+                activeSpeechRange = null
+                if (completed) audioNotice = "Lokaal voorlezen voltooid."
+            },
+            onLineStarted = {
+                activeSpeechRange = null
+                audioNotice = "Lokaal voorlezen: $label."
+            },
+            onWordRange = { _, start, endExclusive ->
+                activeSpeechRange = start to endExclusive
+            }
+        )
+    }
+
     // Manual position and voice controls are independent of the microphone:
     // changing the caption, text side, or selected word cancels old speech.
     LaunchedEffect(card?.id, side, wordStepper, stepTranslation, safeWordIndex) {
         speaker.stop()
+        activeSpeechText = null
+        activeSpeechLabel = ""
+        activeSpeechRange = null
         audioNotice = ""
     }
 
@@ -196,23 +308,29 @@ internal fun FullscreenCaptionCard(
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         TextButton(
-                            enabled = card.original.isNotBlank() &&
-                                card.original.length <= 400,
+                            enabled = activeSpeechText == null &&
+                                card.original.isNotBlank() && card.original.length <= 400,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                speaker.speak(card.original, card.sourceCode,
-                                    LocalSpeechPace.NORMAL) { audioNotice = it }
+                                pronounceCaption(card.original, card.sourceCode, "Origineel")
                             }
                         ) { Text("🔊 Originele zin") }
                         TextButton(
-                            enabled = card.status == "Lokaal vertaald" &&
+                            enabled = activeSpeechText == null &&
+                                card.status == "Lokaal vertaald" &&
                                 translation != null && translation.length <= 400,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                speaker.speak(translation.orEmpty(), card.targetCode,
-                                    LocalSpeechPace.NORMAL) { audioNotice = it }
+                                pronounceCaption(translation.orEmpty(), card.targetCode, "Vertaling")
                             }
                         ) { Text("🔊 Vertaling") }
+                    }
+                    activeSpeechText?.let { text ->
+                        CaptionAudioFollowCard(
+                            text = text,
+                            label = activeSpeechLabel,
+                            range = activeSpeechRange
+                        )
                     }
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -263,7 +381,7 @@ internal fun FullscreenCaptionCard(
                             Row(modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 TextButton(
-                                    enabled = selectedTextWord.isNotBlank() &&
+                                    enabled = activeSpeechText == null && selectedTextWord.isNotBlank() &&
                                         (!stepTranslation ||
                                             card.status == "Lokaal vertaald"),
                                     modifier = Modifier.weight(1f),
@@ -275,7 +393,7 @@ internal fun FullscreenCaptionCard(
                                     }
                                 ) { Text("🔊 Dit woord") }
                                 TextButton(
-                                    enabled = selectedTextWord.isNotBlank() &&
+                                    enabled = activeSpeechText == null && selectedTextWord.isNotBlank() &&
                                         (!stepTranslation ||
                                             card.status == "Lokaal vertaald"),
                                     modifier = Modifier.weight(1f),
@@ -309,6 +427,9 @@ internal fun FullscreenCaptionCard(
                     }
                     TextButton(onClick = {
                         speaker.stop()
+                        activeSpeechText = null
+                        activeSpeechLabel = ""
+                        activeSpeechRange = null
                         audioNotice = "Lokale voorlezing gestopt."
                     }) { Text("■ Stop voorlezen") }
                     if (audioNotice.isNotBlank()) {
