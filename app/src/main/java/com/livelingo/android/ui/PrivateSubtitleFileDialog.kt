@@ -47,6 +47,7 @@ import com.livelingo.android.PrivateSubtitleBatchReplace
 import com.livelingo.android.PrivateSubtitleCorrectionScript
 import com.livelingo.android.PrivateSubtitleBulkRemoval
 import com.livelingo.android.PrivateSubtitleRowSelection
+import com.livelingo.android.PrivateOfflineSearch
 import com.livelingo.android.PrivateSubtitleTimeWindowRows
 import com.livelingo.android.SubtitleReplaceField
 import com.livelingo.android.PrivateSubtitleLineWrap
@@ -223,8 +224,13 @@ internal fun PrivateSubtitleFileDialog(
         mutableStateOf<List<PrivateSubtitleMultiAnchor>?>(null)
     }
     var offsetChoicesOpen by remember { mutableStateOf(false) }
+    // Only fold the ephemeral query/matching view; never alter subtitle payloads.
+    val foldedSubtitleQuery = PrivateOfflineSearch.fold(query.trim())
     val found = draft.mapIndexed { idx, row -> idx to row }
-        .filter { (_, row) -> row.text.contains(query.trim(), ignoreCase = true) }
+        .filter { (_, row) ->
+            foldedSubtitleQuery.isBlank() ||
+                PrivateOfflineSearch.contains(row.text, foldedSubtitleQuery)
+        }
     val current = found.getOrNull(shownIndex)?.second
     val context = LocalContext.current
     // MainActivity survives Android's external document picker; this editor
@@ -461,6 +467,14 @@ internal fun PrivateSubtitleFileDialog(
                     shownIndex = -1
                 }, label = { Text("Zoek in dit document") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
+                if (query.isNotBlank()) {
+                    Text(
+                        "Zoek-only Arabisch/Perzische toetsenbordvarianten zijn inbegrepen. " +
+                            "Originele tekst en tijdcodes blijven exact intact; controleer de " +
+                            "gevonden bronregels voor vertalen of exporteren.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 val translationMatchesExpression =
                     if (query.isNotBlank() && found.isNotEmpty()) {
                         PrivateSubtitleRowSelection.formatSourceRows(
@@ -1810,12 +1824,16 @@ internal fun PrivateSubtitleFileDialog(
                             // A text or exact source-row filter is display-only.
                             // Selection/exclusion still uses the original secondary row.
                             val sourceRow = pairReviewSecondaryRow.toIntOrNull()
+                            val foldedPairReviewQuery =
+                                PrivateOfflineSearch.fold(pairReviewQuery.trim())
                             val filteredLinks = proposed.pairedLinks.filter { link ->
-                                (pairReviewQuery.isBlank() ||
-                                    link.primaryText.contains(pairReviewQuery.trim(),
-                                        ignoreCase = true) ||
-                                    link.secondaryText.contains(pairReviewQuery.trim(),
-                                        ignoreCase = true)) &&
+                                (foldedPairReviewQuery.isBlank() ||
+                                    PrivateOfflineSearch.contains(
+                                        link.primaryText, foldedPairReviewQuery
+                                    ) ||
+                                    PrivateOfflineSearch.contains(
+                                        link.secondaryText, foldedPairReviewQuery
+                                    )) &&
                                     (pairReviewSecondaryRow.isBlank() ||
                                         sourceRow == link.secondarySourceRow)
                             }
@@ -1831,6 +1849,14 @@ internal fun PrivateSubtitleFileDialog(
                                 label = { Text("Zoek in beide eigen bronzinnen") },
                                 singleLine = true
                             )
+                            if (pairReviewQuery.isNotBlank()) {
+                                Text(
+                                    "Arabische/Perzische toetsenbordvarianten tellen mee " +
+                                        "voor deze leesfilter. Originele koppeling en " +
+                                        "bronregelnummers veranderen nooit.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                             OutlinedTextField(
                                 modifier = Modifier.fillMaxWidth(),
                                 value = pairReviewSecondaryRow,

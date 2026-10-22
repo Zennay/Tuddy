@@ -51,6 +51,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.PrivatePhraseTextPolicy
 import com.livelingo.android.PrivateSubtitleCue
+import com.livelingo.android.PrivateOfflineSearch
 import com.livelingo.android.PrivateSubtitleAudioAlignment
 import com.livelingo.android.PrivateSubtitleClip
 import com.livelingo.android.PrivateCueWordProgress
@@ -2480,9 +2481,10 @@ internal fun LocalSubtitleAudioPreviewDialog(
     if (cuePickerOpen && prepared) {
         val matchingCues = remember(cues, cueQuery) {
             val term = cueQuery.trim()
+            val foldedTerm = PrivateOfflineSearch.fold(term)
             cues.mapIndexed { index, cue -> index to cue }
-                .filter { term.isBlank() ||
-                    it.second.text.contains(term, ignoreCase = true) ||
+                .filter { foldedTerm.isBlank() ||
+                    PrivateOfflineSearch.contains(it.second.text, foldedTerm) ||
                     it.second.startLabel.contains(term, ignoreCase = true) }
         }
         AlertDialog(
@@ -2494,7 +2496,9 @@ internal fun LocalSubtitleAudioPreviewDialog(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        "Zoek alleen in het zelf geopende SRT/VTT-bestand. " +
+                        "Zoek alleen in het zelf geopende SRT/VTT-bestand, inclusief " +
+                            "Arabisch/Perzische toetsenbordvarianten. De echte " +
+                            "brontekst en tijdcodes worden niet herschreven. " +
                             "Spring naar een regel óf kies één regel als tijdanker: " +
                             "de geselecteerde cue begint dan op je huidige audiopositie " +
                             "(maximaal ±30 seconden verschil). Dit is handmatige correctie.",

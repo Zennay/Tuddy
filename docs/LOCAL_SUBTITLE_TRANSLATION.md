@@ -18,7 +18,9 @@ en behoudt de bestaande tijdcodes.
    Standaard staat het hele document geselecteerd en **Hele bestand kiezen**
    herstelt dat. Je kunt ook in **Zoek in dit document** zoeken en daarna
    **Vertaal N gevonden regels lokaal…** kiezen om precies de overeenkomende
-   cues vooraf te selecteren. Ongeldige, dubbele of overlappende nummers blokkeren
+   cues vooraf te selecteren. De zoekfilter herkent ook Arabische/Perzische
+   toetsenbordvarianten, zonder de getoonde geselecteerde cues te herschrijven.
+   Ongeldige, dubbele of overlappende nummers blokkeren
    vertalen. De samenvatting toont de genormaliseerde selectie en het exacte aantal
    cues. Alle cues buiten de selectie blijven onaangeraakt.
 4. Tik op **Controleer lokale modellen**. Dit leest alleen de actuele lokale
