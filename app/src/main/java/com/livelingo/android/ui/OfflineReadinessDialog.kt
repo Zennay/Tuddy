@@ -16,6 +16,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.livelingo.android.OfflineRadioSnapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OfflineTextReceipt
@@ -62,6 +70,19 @@ internal fun OfflineReadinessDialog(
     onDismiss: () -> Unit
 ) {
     val diagnosticsMessage = remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var radioStatus by remember { mutableStateOf(OfflineRadioSnapshot.capture(context)) }
+    // Android settings is outside Tuddy. Refresh when the user returns.
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                radioStatus = OfflineRadioSnapshot.capture(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val speechCurrent = speech.tag == speechTag
     val textCurrent = textModel.source == sourceTextCode &&
         textModel.target == targetTextCode
@@ -194,6 +215,11 @@ internal fun OfflineReadinessDialog(
                         "Dit opent alleen instellingen en schakelt niets zelf uit.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                Text(radioStatus.display(), style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    onClick = { radioStatus = OfflineRadioSnapshot.capture(context) },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Ververs verbindingsstatus") }
                 OutlinedButton(
                     onClick = onOpenAirplaneSettings,
                     enabled = !isListening,
