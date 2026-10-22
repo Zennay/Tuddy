@@ -1,3 +1,38 @@
+## Fysieke observaties vastleggen — ook wanneer een poging mislukt
+
+De Android-app bevat via **Offline startcheck → Leg fysieke offline-waarnemingen
+vast** een tijdelijke, handmatige observatielijst. **Gebruik deze alleen na
+waarneming op een fysiek, bevoegd Android 12+-toestel**. De gebruiker kiest
+NL→EN of EN→NL en registreert **precies tien werkelijk uitgevoerde pogingen
+per richting**, ieder met apart de uitkomst van lokale spraakherkenning en
+lokale tekstvertaling. Na een geslaagde vertaling kan de zelf gemeten totale
+vertraging in milliseconden worden genoteerd. De laatst ingevoerde poging
+kan per richting worden teruggedraaid; geen fictieve of automatisch
+afgeleide slagingspercentages worden ingevuld.
+
+Het geëxporteerde rapport vermeldt pogingen, succesvolle herkenningen,
+mislukte herkenningen, succesvolle lokale vertalingen en fouten na een
+geslaagde herkenning. **Tien pogingen betekent niet tien successen.**
+Ook een proef waarin een herkenner faalt is nuttige, eerlijke informatie:
+de observatielijst kan volledig zijn zonder dat de app of de fysieke
+acceptatie geslaagd is. Voor iedere werkelijk geslaagde lokale vertaling
+is apart een handmatig gemeten latency nodig om het registratieformulier
+compleet te noemen. Een onvolledig rapport blijft exporteerbaar, met
+zichtbare ontbrekende waarnemingen. Het resultaat bewijst niet dat de
+operator de stappen correct uitvoerde, noch dat het toestel onafhankelijk
+was afgeschermd van alle netwerken.
+
+**Privacy:** alleen tellingen, boolean-uitkomsten en door de gebruiker
+ingevoerde numerieke latenties blijven tijdelijk in RAM. Geen audio,
+herkende zinnen, persoonlijke teksten, opnamebestanden of automatische
+upload. De Android-opslagprovider die de gebruiker daarna zelf kiest
+kan synchroniseren; kies voor gevoelige gegevens een vertrouwde lokale
+locatie. Het rapport is geen productie-admission of automatische
+human sign-off. Blijf de aparte wettelijke, licentie-, toestel- en
+native-speakervereisten volgen.
+
+---
+
 # Tuddy Android 12+ physical-device acceptance — NOT YET VERIFIED
 
 **State:** `HOLD` until the exact APK is installed and tested by an authorized

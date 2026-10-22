@@ -1,3 +1,27 @@
+## Nieuw: twintig eerlijke offline toestel-waarnemingen vastleggen
+
+Via **Offline startcheck → Leg fysieke offline-waarnemingen vast** registreert
+een bevoegde gebruiker na een echte Android 12+-sessie tien NL→EN- en tien
+EN→NL-pogingen afzonderlijk. Voor elke poging noteer je of lokale
+spraakherkenning en vervolgens lokale vertaling lukten, plus desgewenst de
+zelf gemeten totale vertraging. Ook mislukte pogingen tellen mee.
+Een verkeerde invoer kun je per richting terugdraaien. Het resultaat
+vermeldt per richting **pogingen, geslaagde spraak, spraakfouten, geslaagde
+lokale vertalingen, vertaalfouten en gemeten latenties**. Er worden geen
+opnamen, gesproken zinnen, namen of volledige transcripties opgeslagen.
+
+Een ingevuld rapport is **niet hetzelfde als geslaagde acceptatie**.
+De gebruiker moet zelf exact de APK- en ZIP-herkomst controleren,
+vliegtuigmodus en overige verbindingen onafhankelijk afsluiten en
+permissies, Stop, achtergrond en privacy beoordelen. Het rapport blijft
+zelfgerapporteerd en mag bewust ook als **onvolledig** worden opgeslagen,
+bijvoorbeeld om ontbrekende modellen of fouten zichtbaar te houden.
+De aparte fysieke acceptatie en alle Kurmanji/Sorani/Pasjtoe
+model-/licentiegates blijven vereist.
+[Android-toestelhandleiding](docs/DEVICE_VALIDATION.md).
+
+---
+
 ## Nieuw: offline spraak- en vertaaltellers per taalrichting
 
 Open **Offline startcheck** na een eigen luistersessie. Tuddy toont nu
