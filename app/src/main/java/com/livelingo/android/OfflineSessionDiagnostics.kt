@@ -16,7 +16,7 @@ internal data class OfflineSessionDiagnostics(
     val localTranslations: Int = 0,
     val missingTextModels: Int = 0,
     val translationFailures: Int = 0,
-    val lastTranslationLatencyMs: Long? = null
+    val translationLatenciesMs: List<Long> = emptyList()
 ) {
     fun asReportLines(): List<String> = listOf(
         "Listening starts (user taps): $listeningStarts",
@@ -27,7 +27,7 @@ internal data class OfflineSessionDiagnostics(
         "Completed local text translations of recognized speech: $localTranslations",
         "Recognized speech with missing text model: $missingTextModels",
         "Recognized speech translation failures: $translationFailures",
-        "Last completed translation latency (ms since final ASR result): " +
-            (lastTranslationLatencyMs?.toString() ?: "not observed")
+        "Last 10 local translation latencies (ms since each final ASR result): " +
+            (translationLatenciesMs.joinToString(", ").ifBlank { "not observed" })
     )
 }
