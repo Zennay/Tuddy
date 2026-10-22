@@ -2535,8 +2535,8 @@ private fun TuddyScreen(
                 manualText = ""
                 previewArchiveRows = null
                 pendingArchivePhraseCapture = null
-                    pendingArchivePhraseBatchCapture = null
-                    archivePhraseBatchSelection = emptySet()
+                pendingArchivePhraseBatchCapture = null
+                archivePhraseBatchSelection = emptySet()
                 archivePhraseCaptureNotice = ""
                 subtitleFileCues = null
                 viewedSubtitlePreview = null
@@ -2588,8 +2588,8 @@ private fun TuddyScreen(
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
             pendingArchivePhraseCapture = null
-                    pendingArchivePhraseBatchCapture = null
-                    archivePhraseBatchSelection = emptySet()
+            pendingArchivePhraseBatchCapture = null
+            archivePhraseBatchSelection = emptySet()
             archivePhraseCaptureNotice = ""
             subtitleFileCues = null
             viewedSubtitlePreview = null
@@ -4327,8 +4327,8 @@ private fun TuddyScreen(
                     TextButton(onClick = {
                         pendingArchiveExcerpt = null
                         pendingArchivePhraseCapture = null
-                    pendingArchivePhraseBatchCapture = null
-                    archivePhraseBatchSelection = emptySet()
+                        pendingArchivePhraseBatchCapture = null
+                        archivePhraseBatchSelection = emptySet()
                         archivePhraseCaptureNotice = ""
                         archiveExcerptNotice = ""
                         previewArchiveRows = null
@@ -4391,8 +4391,8 @@ private fun TuddyScreen(
                         archivePhraseCaptureNotice =
                             "Eigen privékaart bewust opgeslagen. Open Mijn eigen offline zinnen om die te bekijken."
                         pendingArchivePhraseCapture = null
-                    pendingArchivePhraseBatchCapture = null
-                    archivePhraseBatchSelection = emptySet()
+                        pendingArchivePhraseBatchCapture = null
+                        archivePhraseBatchSelection = emptySet()
                         true
                     } else false
                 },
@@ -5845,8 +5845,8 @@ private fun TuddyScreen(
                         exportStatus = ""
                         previewArchiveRows = null
                         pendingArchivePhraseCapture = null
-                    pendingArchivePhraseBatchCapture = null
-                    archivePhraseBatchSelection = emptySet()
+                        pendingArchivePhraseBatchCapture = null
+                        archivePhraseBatchSelection = emptySet()
                         archivePhraseCaptureNotice = ""
                         archiveSearchQuery = ""
                         pendingArchiveGeneration = null
