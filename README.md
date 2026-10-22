@@ -2589,7 +2589,12 @@ lokale vertaling op brede schermen (vanaf 600 dp) in twee kolommen
 weergave onder elkaar wisselen. Spraak-/vertalingsstatus, eigen
 sprekerlabels en de live-woordfocus blijven zichtbaar; onvoltooide
 vertalingen worden niet ingevuld met verzonnen tekst. Op smalle
-schermen blijft de vertrouwde verticale layout.
+schermen blijft de vertrouwde verticale layout. Tik op een woord in een afgeronde
+originele zin of lokaal afgeronde vertaling om in de grote leesmodus ook een
+**volledig offline woordkaart** te openen, inclusief bij lokaal gemarkeerde
+zoekresultaten. Dit werkt zowel naast als onder elkaar, ook in de read-only
+privéarchiefweergave, zonder automatische opslag of verzonnen betekenissen.
+[Leesmodus-woordkaarten](docs/FOCUS_OFFLINE_WORD_CARDS.md).
 [Uitleg en privacygrenzen](docs/BILINGUAL_PARALLEL_READING.md).
 
 ## Nieuw: privé-oefenkaarten zonder internet
