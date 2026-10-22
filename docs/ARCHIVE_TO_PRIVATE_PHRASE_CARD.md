@@ -21,6 +21,12 @@ Wijzig die bestaande kaart bewust via het privézinnenboek. De bestaande
 veiligheidsregels, invoerlimieten en maximale grootte van het zinnenboek
 blijven gelden.
 
+Wil je meerdere regels tegelijk omzetten naar eigen, handgeschreven kaarten,
+gebruik dan de selectie-wizard **Schrijf N eigen privékaarten…**. Iedere kaart
+blijft leeg totdat je zelf beide velden en talen invult; alle kaarten worden
+samen opgeslagen of helemaal niet. Zie
+[Meerdere kaarten schrijven](ARCHIVE_BATCH_TO_PRIVATE_PHRASE_CARDS.md).
+
 ## Privacy en betrouwbaarheid
 
 - Het geïmporteerde archief is alleen referentie en wordt niet naar het
