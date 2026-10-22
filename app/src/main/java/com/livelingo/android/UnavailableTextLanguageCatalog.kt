@@ -31,6 +31,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Tekstvertaling",
         title = "Meta NLLB-200 distilled 600M",
         url = "https://huggingface.co/facebook/nllb-200-distilled-600M",
+        directionEvidence = "Tekst → tekst (MT); exacte kmr/ckb/ps↔nld/eng-dekking en distributierechten zijn niet bevestigd."
         declaredLicense = "CC-BY-NC-4.0 (niet-commercieel)",
         footprint = "modelgewichten circa 2,46 GB",
         limitation = "Niet geïntegreerd of op Android gevalideerd. De licentie sluit " +
@@ -41,6 +42,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Spraakherkenning (ASR)",
         title = "amedcj/kurmanji-asr-model",
         url = "https://huggingface.co/amedcj/kurmanji-asr-model",
+        directionEvidence = "Spraak → tekst (ASR); de modelkaart is placeholder en bevestigt geen dataset- of dialectkwaliteit."
         declaredLicense = "MIT volgens modelkaart",
         footprint = "94,4M parameters; bestandsgrootte niet gepubliceerd",
         limitation = "Modelkaart bevat nog placeholderbeschrijving en geen bruikbare dataset- of evaluatiegegevens. " +
@@ -52,6 +54,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Spraakherkenning (ASR)",
         title = "RevgeAI/vekol-stt-ckb-tiny",
         url = "https://huggingface.co/RevgeAI/vekol-stt-ckb-tiny",
+        directionEvidence = "Spraak → tekst (ASR), Sorani/ckb volgens modelkaart; metrics en niet-commerciële rechten zijn niet onafhankelijk gevalideerd."
         declaredLicense = "CC-BY-NC-4.0 (niet-commercieel)",
         footprint = "18 MB int4 / 37 MB int8 volgens modelkaart",
         limitation = "Modelkaart meldt zelfgerapporteerd WER 35,0% en CER 9,85% op Common Voice 25. " +
@@ -63,6 +66,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Spraakherkenning (ASR)",
         title = "RevgeAI/vekol-stt-ckb-base",
         url = "https://huggingface.co/RevgeAI/vekol-stt-ckb-base",
+        directionEvidence = "Spraak → tekst (ASR), Sorani/ckb volgens modelkaart; metrics en niet-commerciële rechten zijn niet onafhankelijk gevalideerd."
         declaredLicense = "CC-BY-NC-4.0 (niet-commercieel)",
         footprint = "36 MB int4 / 72 MB int8; 74M parameters volgens modelkaart",
         limitation = "Modelkaart rapporteert WER 29,0% en CER 7,95% op de speaker-disjoint Common Voice 25-test. " +
@@ -74,6 +78,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Spraakherkenning (ASR)",
         title = "RevgeAI/vekol-stt-ckb-small",
         url = "https://huggingface.co/RevgeAI/vekol-stt-ckb-small",
+        directionEvidence = "Spraak → tekst (ASR), Sorani/ckb volgens modelkaart; metrics en niet-commerciële rechten zijn niet onafhankelijk gevalideerd."
         declaredLicense = "CC-BY-NC-4.0 (niet-commercieel)",
         footprint = "121 MB int4 / 241 MB int8; 244M parameters volgens modelkaart",
         limitation = "Modelkaart rapporteert WER 15,5% en circa 3% CER op de speaker-disjoint Common Voice 25-test. " +
@@ -85,6 +90,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Spraakherkenning (ASR)",
         title = "salamhasan/wav2vec2-large-xlsr-kurmanji",
         url = "https://huggingface.co/salamhasan/wav2vec2-large-xlsr-kurmanji",
+        directionEvidence = "Spraak → tekst (ASR), Kurmanji/Latin-script Common Voice volgens modelkaart; toegang is gated en spontane gesprekstaal is niet bewezen."
         declaredLicense = "Apache-2.0 volgens modelkaart; toegang gated",
         footprint = "0,3B parameters; exacte bestandsgrootte niet geverifieerd",
         limitation = "Modeltoegang vereist eerst akkoord met het delen van contactgegevens. " +
@@ -96,6 +102,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Spraakherkenning (ASR)",
         title = "asounimelb/whisper-small-ckb-onnx",
         url = "https://huggingface.co/asounimelb/whisper-small-ckb-onnx",
+        directionEvidence = "Spraak → tekst (ASR), Sorani/ckb; de encoder is niet de volledige pack en de decoder-token workaround vereist extra beoordeling."
         declaredLicense = "Apache-2.0 volgens modelkaart",
         footprint = "244M parameters; encoder alleen circa 353 MB FP32; volledig pakket groter",
         limitation = "Publieke ONNX-export kan verder onderzoek naar ONNX Runtime op Android vereenvoudigen, " +
@@ -108,6 +115,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Tekstvertaling",
         title = "arkanit/badini-nllb-translator",
         url = "https://huggingface.co/arkanit/badini-nllb-translator",
+        directionEvidence = "Tekst → tekst (MT), Badini-variant; geen bewijs voor standaard Kurmanji/Sorani-dekking en afgeleide licentie blijft onopgelost."
         declaredLicense = "MIT volgens afgeleide modelkaart; upstream NLLB CC-BY-NC-4.0 — onopgelost",
         footprint = "circa 0,6B parameters; exacte pakketgrootte niet geverifieerd",
         limitation = "Modelkaart beschrijft Badini, maar adverteert de taalcode ckb_Arab; dit bewijst geen standaard " +
@@ -120,6 +128,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Spraakherkenning (ASR)",
         title = "SECT19N/whisper-small-ckb-merged",
         url = "https://huggingface.co/SECT19N/whisper-small-ckb-merged",
+        directionEvidence = "Spraak → tekst (ASR), Sorani/ckb volgens modelkaart; gated toegang en Persian-token workaround blijven beperkingen."
         declaredLicense = "Apache-2.0 volgens modelkaart; toegang gated",
         footprint = "0,2B parameters; exacte bestandsgrootte niet geverifieerd",
         limitation = "Modeltoegang vereist eerst akkoord met het delen van contactgegevens. " +
@@ -131,6 +140,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Spraakherkenning (ASR)",
         title = "Nasimbahar/pashto-ghag-whisper-medium-asr",
         url = "https://huggingface.co/Nasimbahar/pashto-ghag-whisper-medium-asr",
+        directionEvidence = "Spraak → tekst (ASR), Pashto volgens modelkaart; modelbestand circa 3,06 GB en Android-prestaties niet aangetoond."
         declaredLicense = "Apache-2.0 volgens modelkaart",
         footprint = "3,06 GB; 0,8B parameters (FP32 volgens modelkaart)",
         limitation = "Modelkaart rapporteert gebalanceerde gemiddelde WER 14,63% / CER 4,66% over drie held-out splits " +
@@ -170,6 +180,7 @@ internal object UnavailableTextLanguageCatalog {
         category = "Tekstvertaling",
         title = "Google MADLAD-400-3B-MT",
         url = "https://huggingface.co/google/madlad400-3b-mt",
+        directionEvidence = "Tekst → tekst (MT); zeer groot multilingual model zonder bewezen pair-specifieke kwaliteit op Android."
         declaredLicense = "Apache-2.0 volgens modelkaart",
         footprint = "3B-parameter model; genoemde gequantiseerde GGUF is circa 1,65 GB",
         limitation = "Modelkaart noemt ckb, ps, ku, nl en en, maar niet dialectspecifiek kmr. " +
@@ -191,6 +202,7 @@ internal object UnavailableTextLanguageCatalog {
                     category = "Spraakherkenning (ASR)",
                     title = "amedcj/whisper-kurmanji",
                     url = "https://huggingface.co/amedcj/whisper-kurmanji",
+                    directionEvidence = "Spraak → tekst (ASR), Kurmanji volgens modelkaart en Common Voice; geen vertaling of Android-geschiktheid aangetoond."
                     declaredLicense = "Apache-2.0 volgens modelkaart",
                     footprint = "modelbestand circa 967 MB",
                     limitation = "Niet geïntegreerd of op Android getest. Trainingsdatarechten, " +
