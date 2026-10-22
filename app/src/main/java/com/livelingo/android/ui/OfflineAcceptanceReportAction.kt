@@ -49,6 +49,7 @@ internal fun OfflineAcceptanceReportAction(
     var baseline by remember { mutableStateOf<ByteArray?>(null) }
     var recordedAt by remember { mutableStateOf(0L) }
     var opened by remember { mutableStateOf(false) }
+    var confirmDiscard by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var expectedApkSha256 by remember { mutableStateOf("") }
     var sidecarNotice by remember { mutableStateOf("") }
@@ -173,6 +174,7 @@ internal fun OfflineAcceptanceReportAction(
     }
 
     fun resetDraft() {
+        confirmDiscard = false
         baseline = null
         recordedAt = 0L
         opened = false
@@ -190,6 +192,22 @@ internal fun OfflineAcceptanceReportAction(
         attemptMessage = ""
         pendingReport = null
         pendingBaseline = null
+    }
+
+    // Twenty operator-observed attempts take time to enter. A stray Back press
+    // or outside tap must never silently erase this session-only evidence.
+    fun requestClose() {
+        val hasUnsavedInput = attempts.isNotEmpty() ||
+            expectedApkSha256.isNotBlank() ||
+            disconnectedConfirmed || permissionAndStopConfirmed ||
+            noCloudFallbackConfirmed || privacyClearingConfirmed ||
+            observedSpeech || observedTranslation || attemptLatency.isNotBlank()
+        if (hasUnsavedInput) {
+            confirmDiscard = true
+        } else {
+            resetDraft()
+            message = ""
+        }
     }
 
     // Explicit user action: read only 257 bytes from the selected document.
@@ -240,15 +258,20 @@ internal fun OfflineAcceptanceReportAction(
         val expectedBaseline = pendingBaseline
         pendingReport = null
         pendingBaseline = null
+        // Never erase twenty real observations because a document chooser was
+        // cancelled, a provider failed, or device identity changed mid-save.
+        var saved = false
         if (uri == null || selected == null || expectedBaseline == null) {
-            message = "Rapportopslag geannuleerd; er is geen bestand geschreven."
+            message = "Opslaan geannuleerd. Je ingevoerde waarnemingen blijven in " +
+                "deze app-sessie bewaard; kies opnieuw Bewaar rapport."
         } else {
             val current = deviceSnapshot()
             if (current == null || !current.contentEquals(expectedBaseline)) {
-                message = "Apparaat- of modelstatus veranderde tijdens de bestandskeuze. " +
-                    "Open het rapport opnieuw om een verouderd verslag te voorkomen."
+                message = "Apparaat- of modelstatus is veranderd tijdens het kiezen. " +
+                    "Niets opgeslagen of gewist. Het oorspronkelijke momentopnameverslag " +
+                    "kan niet veilig worden geëxporteerd; begin zo nodig een nieuwe sessie."
             } else {
-                val written = runCatching {
+                saved = runCatching {
                     val output = context.contentResolver.openOutputStream(uri, "w")
                         ?: return@runCatching false
                     output.use {
@@ -257,12 +280,13 @@ internal fun OfflineAcceptanceReportAction(
                     }
                     true
                 }.getOrDefault(false)
-                message = if (written)
+                message = if (saved)
                     "Handmatig waarnemingsrapport opgeslagen. Controleer de gekozen provider op externe synchronisatie."
-                else "Opslaan mislukt; het rapport is niet bewaard."
+                else "Bestandsprovider kon niet opslaan. Je concept blijft in het " +
+                    "appgeheugen zodat je een andere opslaglocatie kunt kiezen."
             }
         }
-        resetDraft()
+        if (saved) resetDraft() else opened = true
     }
 
     Column(
@@ -298,7 +322,7 @@ internal fun OfflineAcceptanceReportAction(
     if (opened) {
         val readyReport = reportBytes()
         AlertDialog(
-            onDismissRequest = { resetDraft(); message = "" },
+            onDismissRequest = { requestClose() },
             title = { Text("Offline sessie vastleggen") },
             text = {
                 Column(
@@ -311,6 +335,10 @@ internal fun OfflineAcceptanceReportAction(
                             "Een vinkje of dit rapport verandert geen releasegate en wordt niet automatisch geverifieerd.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (message.isNotBlank()) {
+                        Text(message, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error)
+                    }
                     Text(
                         "Geïnstalleerde APK SHA-256: ${installedApkDigest(baseline) ?: "onbeschikbaar"}",
                         style = MaterialTheme.typography.bodySmall
@@ -493,8 +521,10 @@ internal fun OfflineAcceptanceReportAction(
                         val bytes = reportBytes()
                         if (capturedBaseline == null || fresh == null ||
                             !fresh.contentEquals(capturedBaseline) || bytes == null) {
-                            message = "Apparaatstatus is veranderd of onvolledig. Open het rapport opnieuw."
-                            resetDraft()
+                            message = "Apparaatstatus is veranderd of onvolledig. " +
+                                "Het huidige concept blijft bewaard, maar kan niet met " +
+                                "een verouderde apparaatmomentopname worden geëxporteerd."
+                            attemptMessage = message
                         } else {
                             pendingReport = bytes
                             pendingBaseline = capturedBaseline
@@ -506,8 +536,34 @@ internal fun OfflineAcceptanceReportAction(
                 ) { Text("Bewaar rapport…") }
             },
             dismissButton = {
-                TextButton(onClick = { resetDraft(); message = "" }) {
+                TextButton(onClick = { requestClose() }) {
                     Text("Annuleren")
+                }
+            }
+        )
+    }
+    if (opened && confirmDiscard) {
+        AlertDialog(
+            onDismissRequest = { confirmDiscard = false },
+            title = { Text("Ingevoerde waarnemingen wissen?") },
+            text = {
+                Text(
+                    "Je hebt ${attempts.size} van de 20 fysieke pogingen vastgelegd " +
+                        "en mogelijk ook andere apparaatwaarnemingen ingevuld. " +
+                        "Dit concept staat alleen in het tijdelijke appgeheugen. " +
+                        "Als je nu wist, kun je deze gegevens niet herstellen. " +
+                        "Kies 'Verder invullen' om ze te behouden of bewaar eerst " +
+                        "een onvolledig rapport."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmDiscard = false }) {
+                    Text("Verder invullen")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { resetDraft(); message = "" }) {
+                    Text("Wis concept")
                 }
             }
         )

@@ -379,15 +379,25 @@ current device state.
 3. Record only observations made on this device: APK identity, disconnected
    state, microphone/Stop lifecycle, absence of cloud fallback, and transcript
    clearing after relaunch.
-4. Make ten attempts in each direction for offline speech and local translation
-   (NL→EN and EN→NL). Enter how many succeeded (0–10) and the highest observed
-   end-to-end latency in milliseconds. Do not enter sample phrases, transcripts,
-   audio, names, or free-form notes.
+4. Make ten **individual** attempts in each direction (NL→EN and EN→NL).
+   For each real attempt, mark whether on-device speech was recognized, whether
+   local translation succeeded, and optionally its measured end-to-end latency.
+   Count failures too; use **Herstel laatste poging** if you entered an
+   observation incorrectly. The form shows aggregate results and also allows
+   explicitly saving an incomplete report. Never enter phrases, transcript
+   contents, audio, names or free-form notes.
 5. Review the full report and choose an Android Storage Access Framework
    destination. Check whether that provider synchronizes files externally.
-   The form clears its temporary values after dismissal or returning from the
-   file picker. If device/model state changed during the picker, it refuses the
-   stale report; reopen the form after restoring the intended offline state.
+   **Annuleren** or accidentally leaving a partly completed form first asks
+   whether to keep editing or deliberately erase the draft. Cancelling the
+   Android save picker or encountering a failed write **retains the draft in
+   the current app session** so you can choose another destination; it is not
+   saved persistently. Values are cleared after a successful write or an
+   explicit confirmed discard.
+   If device/model state changes during the picker, Tuddy refuses to export
+   the stale device snapshot without silently deleting the attempt ledger.
+   Start a new real offline session with a fresh baseline if necessary; do
+   not attribute old observations to a newly changed state.
 6. Attach the resulting report only after reviewing it for device identifiers
    and sharing consent. Keep this issue open until a human reviews the evidence.
 
