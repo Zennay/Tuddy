@@ -2,8 +2,8 @@
 
 Open **Taalondersteuning → Controleer lokale stemmen** om de reeds
 geïnstalleerde Android-stemmen te bekijken die als niet-netwerkafhankelijk
-worden gemeld. Via **Android-steminstellingen** kun je zelf naar het
-systeemscherm gaan en daarna opnieuw controleren. Tuddy spreekt niets uit,
+worden gemeld. Via **Android-toegankelijkheidsinstellingen** kun je zelf naar het
+systeemscherm gaan; open daar Tekst-naar-spraakuitvoer en controleer daarna opnieuw. Tuddy spreekt niets uit,
 downloadt geen stem en bewaart de lijst niet tijdens deze inventarisatie.
 
 Dit gaat uitsluitend over lokale tekst-naar-spraak (voorlezen). Het bewijst
