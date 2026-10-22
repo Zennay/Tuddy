@@ -90,6 +90,7 @@ internal fun MyOfflinePhrasesPanel(
     var pendingImportBase by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var importSource by remember { mutableStateOf("json") }
     var pasteOpen by remember { mutableStateOf(false) }
+    var pasteCsv by remember { mutableStateOf(false) }
     var pasteLines by remember { mutableStateOf("") }
     var pasteError by remember { mutableStateOf("") }
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
@@ -333,7 +334,10 @@ internal fun MyOfflinePhrasesPanel(
     if (pasteOpen) {
         AlertDialog(
             onDismissRequest = { pasteOpen = false; pasteLines = ""; pasteError = "" },
-            title = { Text("Plak mijn eigen zinnen · offline") },
+            title = {
+                Text(if (pasteCsv) "Plak mijn CSV met eigen zinnen · offline"
+                    else "Plak mijn eigen zinnen · offline")
+            },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
@@ -341,17 +345,26 @@ internal fun MyOfflinePhrasesPanel(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        "Kopieer uit jouw eigen notities maximaal 40 regels. Gebruik per regel " +
-                            "TWEE tabgescheiden kolommen: eigen zin ↹ eigen betekenis. " +
-                            "De taalkeuzes uit dit scherm bepalen het taallabel, niet een " +
-                            "spraak- of vertaalmodel. Er wordt niets automatisch opgeslagen " +
-                            "of gedeeld.",
+                        if (pasteCsv)
+                            "Plak je volledige UTF-8 CSV met eerste regel " +
+                                "language,phrase,meaningLanguage,ownMeaning. " +
+                                "Vier kolommen, komma’s en dubbel-gequote velden; " +
+                                "maximaal 12.000 tekens. Alleen eigen zinnen, " +
+                                "geen automatische vertaling of opslag."
+                        else
+                            "Kopieer uit jouw eigen notities maximaal 40 regels. " +
+                                "Gebruik per regel TWEE tabgescheiden kolommen: " +
+                                "eigen zin ↹ eigen betekenis. De taalkeuzes uit " +
+                                "dit scherm bepalen de labels, niet een model. " +
+                                "Er wordt niets automatisch opgeslagen.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        "Huidige invoertalen: ${language.uppercase()} → " +
-                            "${meaningLanguage.uppercase()}. Wijzig deze eerst in het " +
-                            "hoofdscherm als dat niet klopt.",
+                        if (pasteCsv) "CSV gebruikt de taalcode per eigen regel " +
+                            "(kmr/ckb/ps → nl/en), niet de knoppen in dit scherm."
+                        else "Huidige invoertalen: ${language.uppercase()} → " +
+                            "${meaningLanguage.uppercase()}. Wijzig deze eerst " +
+                            "in het hoofdscherm als dat niet klopt.",
                         style = MaterialTheme.typography.labelMedium
                     )
                     OutlinedTextField(
@@ -362,8 +375,13 @@ internal fun MyOfflinePhrasesPanel(
                                 pasteError = ""
                             } else pasteError = "Maximaal 12.000 tekens; geen tekst is overgenomen."
                         },
-                        label = { Text("Mijn zelfgeschreven zin [tab] eigen betekenis") },
-                        supportingText = { Text("Geen kopregel nodig. Max. 40 regels, per regel precies één tab.") },
+                        label = { Text(if (pasteCsv) "Volledige CSV met kopregel"
+                            else "Mijn zelfgeschreven zin [tab] eigen betekenis") },
+                        supportingText = {
+                            Text(if (pasteCsv)
+                                "Kopregel verplicht; 1–80 unieke CSV-zinnen met vier velden."
+                            else "Geen kopregel nodig; max. 40 regels, één tab per regel.")
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 4,
                         maxLines = 10
@@ -380,6 +398,26 @@ internal fun MyOfflinePhrasesPanel(
             },
             confirmButton = {
                 TextButton(onClick = {
+                    if (pasteCsv) {
+                        val parsed = deck.previewCsvImport(
+                            pasteLines.toByteArray(Charsets.UTF_8)
+                        )
+                        if (parsed == null) {
+                            pasteError = "Ongeldige CSV: controleer vier kolommen, " +
+                                "UTF-8, unieke bronzinnen en correcte dubbele quotes. " +
+                                "Niets is gewijzigd."
+                        } else {
+                            pendingImport = parsed
+                            pendingImportBase = deck.entries()?.toList()
+                            importSource = "csv-paste"
+                            pasteOpen = false
+                            pasteLines = ""
+                            pasteError = ""
+                            info = "CSV alleen als preview ingelezen. Controleer iedere " +
+                                "eigen zin vóór de aparte keuze om samen te voegen " +
+                                "of je volledige lijst te vervangen."
+                        }
+                    } else {
                     val lines = pasteLines.split('\n').map { it.removeSuffix("\r") }
                         .dropLastWhile { it.isEmpty() }
                     if (lines.size !in 1..40 || lines.any { it.isBlank() }) {
@@ -413,6 +451,7 @@ internal fun MyOfflinePhrasesPanel(
                                     "zin vóór je zelf samenvoegen of vervangen kiest."
                             }
                         }
+                    }
                     }
                 }) { Text("Controleer alle geplakte zinnen") }
             },
@@ -780,11 +819,22 @@ internal fun MyOfflinePhrasesPanel(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         pendingImport = null
+                        pasteCsv = false
                         pasteLines = ""
                         pasteError = ""
                         pasteOpen = true
                     }
                 ) { Text("Plak meerdere eigen zinnen uit notities…") }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        pendingImport = null
+                        pasteCsv = true
+                        pasteLines = ""
+                        pasteError = ""
+                        pasteOpen = true
+                    }
+                ) { Text("Plak een volledige eigen CSV-zinnenlijst…") }
                 Text(
                     "Snel toevoegen zonder bestand: één zelfgeschreven zin en betekenis " +
                         "per tabgescheiden regel. Je kiest beide talen hierboven. " +
@@ -1266,7 +1316,8 @@ internal fun MyOfflinePhrasesPanel(
                 pendingImportBase = null
             },
             title = { Text(if (importSource == "paste")
-                "Geplakte eigen zinnen bekijken" else if (importSource == "tsv" || importSource == "csv")
+                "Geplakte eigen zinnen bekijken" else if (importSource == "csv-paste")
+                "Geplakte CSV-zinnen bekijken" else if (importSource == "tsv" || importSource == "csv")
                 "Eigen zinnenlijst importeren?" else "Eigen zinnen vervangen?") },
             text = {
                 Column(

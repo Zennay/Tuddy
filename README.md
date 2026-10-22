@@ -1,3 +1,16 @@
+## Nieuw: plak een complete CSV-zinnenlijst zonder bestand
+
+Kopieer jouw eigen CSV-tekst inclusief kolomnamen en open
+**Mijn eigen offline zinnen → Plak een volledige eigen CSV-zinnenlijst…**.
+De app leest nooit zelf je klembord: alleen de tekst die je bewust
+in het invoerveld plakt wordt lokaal gecontroleerd. Bij geldige invoer
+volgt de bestaande volledige preview en afzonderlijke keuze om veilig
+samen te voegen of alles bewust te vervangen. Geen bestandsprovider,
+cloudspraak of automatische vertaling nodig.
+[Formaat en limieten](docs/PERSONAL_PHRASE_CSV_IMPORT.md).
+
+---
+
 ## Nieuw: eigen CSV-zinnenboek exporteren en terug importeren
 
 Kies bij **Mijn eigen offline zinnen** bewust een taal of themagroep
