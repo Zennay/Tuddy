@@ -49,6 +49,7 @@ internal fun OfflineAcceptanceReportAction(
     var baseline by remember { mutableStateOf<ByteArray?>(null) }
     var recordedAt by remember { mutableStateOf(0L) }
     var opened by remember { mutableStateOf(false) }
+    var confirmDiscard by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var expectedApkSha256 by remember { mutableStateOf("") }
     var sidecarNotice by remember { mutableStateOf("") }
@@ -173,6 +174,7 @@ internal fun OfflineAcceptanceReportAction(
     }
 
     fun resetDraft() {
+        confirmDiscard = false
         baseline = null
         recordedAt = 0L
         opened = false
@@ -190,6 +192,22 @@ internal fun OfflineAcceptanceReportAction(
         attemptMessage = ""
         pendingReport = null
         pendingBaseline = null
+    }
+
+    // Twenty operator-observed attempts take time to enter. A stray Back press
+    // or outside tap must never silently erase this session-only evidence.
+    fun requestClose() {
+        val hasUnsavedInput = attempts.isNotEmpty() ||
+            expectedApkSha256.isNotBlank() ||
+            disconnectedConfirmed || permissionAndStopConfirmed ||
+            noCloudFallbackConfirmed || privacyClearingConfirmed ||
+            observedSpeech || observedTranslation || attemptLatency.isNotBlank()
+        if (hasUnsavedInput) {
+            confirmDiscard = true
+        } else {
+            resetDraft()
+            message = ""
+        }
     }
 
     // Explicit user action: read only 257 bytes from the selected document.
@@ -298,7 +316,7 @@ internal fun OfflineAcceptanceReportAction(
     if (opened) {
         val readyReport = reportBytes()
         AlertDialog(
-            onDismissRequest = { resetDraft(); message = "" },
+            onDismissRequest = { requestClose() },
             title = { Text("Offline sessie vastleggen") },
             text = {
                 Column(
@@ -506,8 +524,34 @@ internal fun OfflineAcceptanceReportAction(
                 ) { Text("Bewaar rapport…") }
             },
             dismissButton = {
-                TextButton(onClick = { resetDraft(); message = "" }) {
+                TextButton(onClick = { requestClose() }) {
                     Text("Annuleren")
+                }
+            }
+        )
+    }
+    if (opened && confirmDiscard) {
+        AlertDialog(
+            onDismissRequest = { confirmDiscard = false },
+            title = { Text("Ingevoerde waarnemingen wissen?") },
+            text = {
+                Text(
+                    "Je hebt ${attempts.size} van de 20 fysieke pogingen vastgelegd " +
+                        "en mogelijk ook andere apparaatwaarnemingen ingevuld. " +
+                        "Dit concept staat alleen in het tijdelijke appgeheugen. " +
+                        "Als je nu wist, kun je deze gegevens niet herstellen. " +
+                        "Kies 'Verder invullen' om ze te behouden of bewaar eerst " +
+                        "een onvolledig rapport."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmDiscard = false }) {
+                    Text("Verder invullen")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { resetDraft(); message = "" }) {
+                    Text("Wis concept")
                 }
             }
         )
