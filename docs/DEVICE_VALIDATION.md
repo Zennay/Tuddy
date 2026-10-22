@@ -6,7 +6,49 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest app-code candidate (22 October 2026, after PR #316):
+Latest app-code candidate (22 October 2026, after PR #320):
+
+| Field | Immutable evidence |
+|---|---|
+| Current default-branch SHA | `4ea59e7c6ea53f873334322e3a8aabc3c627dcb7` |
+| Default-branch app-code SHA at build | `4ea59e7c6ea53f873334322e3a8aabc3c627dcb7` |
+| Hosted Android run | [#39721897504](https://github.com/Zennay/Tuddy/actions/runs/39721897504) — COMPLETED SUCCESS |
+| Build checkout commit (PR merge candidate) | `c043cb9b97636399725a134710a3a70ccdfdd29f` |
+| Git tree SHA for checkout and merged PR #320 main | `772777784346ee9f37687fa3189b27599055e8f2` (identical) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39721897504/artifacts/12401243613) (ID `12401243613`, expires 5 November 2026 04:23:49 UTC) |
+| APK filename | `app-debug.apk` |
+| **APK SHA-256** | `693b5b9c371cdfd52cf6b9708cedf17af6479e06e02bf4cfd239cb67a6e24c8e` |
+| Artifact ZIP SHA-256 (not APK) | `7d5f5800a1693c407bfa17c93b39791e50826bc6e178429572c152867d1ef50a` |
+| Package | `com.livelingo.android` (legacy ID retained until deliberate migration) |
+| Version | `0.4.0` |
+| Proof of physical installation | **NOT PROVIDED** |
+| Proof of airplane-mode session | **NOT PROVIDED** |
+
+The hosted workflow built proposed-merge checkout `c043cb9…`; its complete Git tree SHA `7727777…` is identical to merged PR #320 main commit `4ea59e7…`. The workflow verified the APK SHA-256 before upload. The artifact ZIP digest is recorded separately and must never be substituted for the APK digest. **This proves build provenance only, not physical installation or device acceptance.**
+
+Previous app-code candidate (22 October 2026, after PR #318 and before PR #320):
+
+
+
+| Field | Immutable evidence |
+|---|---|
+| Current default-branch SHA | `af3d796e3b8d2d85348d0de69aa8502c86d3a0ef` |
+| Default-branch app-code SHA at build | `1d79ca4091386caaff678414808c8f79b87c5924` |
+| Hosted Android run | [#39720729363](https://github.com/Zennay/Tuddy/actions/runs/39720729363) — COMPLETED SUCCESS |
+| Build checkout commit (PR merge candidate) | `78b28f429cb0c411ff36231461e98951e5cca54b` |
+| Git tree SHA for checkout and merged PR #318 main | `36a50c1327cdb813a358f36bde19cba41a1a347a` (identical) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39720729363/artifacts/12400957098) (ID `12400957098`, expires 5 November 2026 04:12:43 UTC) |
+| APK filename | `app-debug.apk` |
+| **APK SHA-256** | `b56ba5eb8344b17599759916713bc30f922ba66e76ac46c1342cee16541cd928` |
+| Artifact ZIP SHA-256 (not APK) | `5b20b00bcfc796bfb741cb66c5532754535b108e89f361e97b12e9384a3cf8fc` |
+| Package | `com.livelingo.android` (legacy ID retained until deliberate migration) |
+| Version | `0.4.0` |
+| Proof of physical installation | **NOT PROVIDED** |
+| Proof of airplane-mode session | **NOT PROVIDED** |
+
+The PR #318 workflow built proposed-merge checkout `78b28f4…`; its tree SHA `36a50c1…` matched merged main `1d79ca4…` at that time. This is now a historical candidate, superseded by the post-#320 build above. The APK and artifact ZIP have separate digests; neither build provenance nor checksum matching proves physical installation or device acceptance.
+
+Previous app-code candidate (22 October 2026, after PR #316 and before PR #318):
 
 | Field | Immutable evidence |
 |---|---|
@@ -23,7 +65,7 @@ Latest app-code candidate (22 October 2026, after PR #316):
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-The PR workflow built the proposed-merge checkout (`8978be2…`), not the final squash commit identifier. GitHub commit metadata confirms that this checkout and default main (`d0abed…`) had the same exact tree SHA `9e0eb4d…`; the hosted artifact therefore contains the then-current main app/source tree. The workflow computed and verified the APK SHA-256 before upload. The artifact ZIP digest is recorded separately and must never be substituted for the APK digest. **This proves build provenance only, not physical installation or device acceptance.**
+The PR #316 workflow built proposed-merge checkout (`8978be2…`), whose tree SHA `9e0eb4d…` matched default main at that time. This artifact is historical and is superseded by the post-#318 app-code candidate above. The workflow verified the APK SHA-256 before upload; the artifact ZIP digest is a different digest and must not be substituted for the APK digest.
 
 Previous app-code candidate (22 October 2026, before PR #316):
 
@@ -39,7 +81,7 @@ Previous app-code candidate (22 October 2026, before PR #316):
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-The 8f2122 table is historical evidence only; the current app-code candidate is artifact `12399873450` from run `39718812370`. Independently verify the bundled `source-commit.txt` plus APK SHA-256 before installing. If app code changes, derive a new exact source/APK pair. Neither successful CI nor a matching checksum substitutes for a physical Android 12+ airplane-mode acceptance record.
+The 8f2122 table is historical evidence only; the current app-code candidate is artifact `12401243613` from run `39721897504`. Independently verify the bundled `source-commit.txt` plus APK SHA-256 before installing. If app code changes, derive a new exact source/APK pair. Neither successful CI nor a matching checksum substitutes for a physical Android 12+ airplane-mode acceptance record.
 
 Previous candidate (21 October 2026; superseded by the 22 October main candidate):
 
@@ -56,7 +98,7 @@ Previous candidate (21 October 2026; superseded by the 22 October main candidate
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-The 21 October table is historical evidence only; do not use that APK as the current main candidate. For the current candidate, download artifact `12399837589` from run `39717339120` and independently verify `source-commit.txt` plus the APK SHA-256 before installation. If main changes, derive a new exact source/APK pair. Neither successful CI nor a matching checksum substitutes for a physical Android 12+ airplane-mode acceptance record.
+The 21 October table is historical evidence only; do not use that APK as the current main candidate. For the current candidate, download artifact `12401243613` from run `39721897504` and independently verify `source-commit.txt` plus the APK SHA-256 before installation. If main changes, derive a new exact source/APK pair. Neither successful CI nor a matching checksum substitutes for a physical Android 12+ airplane-mode acceptance record.
 
 Previous candidate (17 October 2026; superseded by the latest main candidate):
 
