@@ -49,6 +49,7 @@ internal fun SessionTranslationCorrectionsDialog(
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
     var practiceOpen by remember { mutableStateOf(false) }
     var transferOpen by remember { mutableStateOf(false) }
+    var manualAddOpen by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
     var batchMode by remember { mutableStateOf(false) }
     var chosenCorrections by remember { mutableStateOf(emptySet<SessionTranslationCorrection>()) }
@@ -114,6 +115,15 @@ internal fun SessionTranslationCorrectionsDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Oefen mijn correcties · tijdelijk") }
                 }
+                OutlinedButton(
+                    onClick = {
+                        speaker.stop()
+                        editing = null
+                        confirmClear = false
+                        manualAddOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Schrijf eigen correctie zonder microfoon…") }
                 OutlinedButton(
                     onClick = {
                         speaker.stop()
@@ -405,6 +415,27 @@ internal fun SessionTranslationCorrectionsDialog(
                 }
             },
             onDismiss = { transferOpen = false }
+        )
+    }
+    if (manualAddOpen) {
+        SessionCorrectionManualAddDialog(
+            entries = entries,
+            onAdd = { snapshot, candidate ->
+                if (entries != snapshot ||
+                    !SessionTranslationCorrections.validEntries(snapshot + candidate)) {
+                    false
+                } else {
+                    speaker.stop()
+                    onReplace(snapshot + candidate).also { changed ->
+                        if (changed) {
+                            editing = null
+                            editError = ""
+                            confirmClear = false
+                        }
+                    }
+                }
+            },
+            onDismiss = { manualAddOpen = false }
         )
     }
 }
