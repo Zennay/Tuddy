@@ -320,6 +320,18 @@ internal fun PrivateSubtitleFileDialog(
         sequenceTotal = 0
         spokenNotice = ""
     }
+    LaunchedEffect(translationOpen, requestSave, voicePickerOpen) {
+        if (translationOpen || requestSave != null || voicePickerOpen) {
+            val wasReadingSequence = sequenceReading
+            speaker.stop()
+            sequenceReading = false
+            sequenceProgress = 0
+            sequenceTotal = 0
+            if (wasReadingSequence) {
+                spokenNotice = "Voorlezen gestopt omdat een dialoog is geopend."
+            }
+        }
+    }
     fun pronounceCue(slow: Boolean) {
         val lang = chosenVoiceLanguage ?: return
         sequenceReading = false
@@ -685,7 +697,7 @@ internal fun PrivateSubtitleFileDialog(
                     Text("Woordkaart en uitspraak · kies de teksttaal zelf",
                         style = MaterialTheme.typography.labelSmall)
                     Box {
-                        TextButton(onClick = { voicePickerOpen = true }) {
+                        TextButton(enabled = !sequenceReading, onClick = { voicePickerOpen = true }) {
                             val label = TargetCatalog.targets.firstOrNull {
                                 it.code == chosenVoiceLanguage
                             }?.title ?: "Kies eerst taal voor lokaal voorlezen…"
