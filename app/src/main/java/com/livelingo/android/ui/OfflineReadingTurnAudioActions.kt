@@ -8,19 +8,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 
 /**
  * User-triggered audio for one completed/unfinished temporary two-way turn.
- * Reuses LocalCaptionSpeaker's installed non-network voice requirement.
- * Never starts a download, remote TTS, sharing or automatic transcript save.
+ * The caller owns ephemeral follow-along state and uses LocalCaptionSpeaker's
+ * installed non-network voice requirement. Never starts a download, remote
+ * TTS, sharing or automatic transcript save.
  */
 @Composable
 internal fun OfflineReadingTurnAudioActions(
     turn: TypedConversationLine,
-    speaker: LocalCaptionSpeaker,
-    onNotice: (String) -> Unit
+    activeSpeechText: String?,
+    onSpeak: (text: String, language: String, side: String, pace: LocalSpeechPace) -> Unit
 ) {
     val playableOriginal = turn.original.isNotBlank() && turn.original.length <= 400
     val playableTranslation = turn.status == "Lokaal vertaald" &&
@@ -30,23 +30,23 @@ internal fun OfflineReadingTurnAudioActions(
         modifier = Modifier.fillMaxWidth()
     ) {
         TextButton(
-            enabled = playableOriginal,
+            enabled = activeSpeechText == null && playableOriginal,
             onClick = {
-                speaker.speak(turn.original, turn.source, LocalSpeechPace.NORMAL, onNotice)
+                onSpeak(turn.original, turn.source, "original", LocalSpeechPace.NORMAL)
             },
             modifier = Modifier.weight(1f)
         ) { Text("🔊 Origineel") }
         TextButton(
-            enabled = playableTranslation,
+            enabled = activeSpeechText == null && playableTranslation,
             onClick = {
-                speaker.speak(turn.translated, turn.target, LocalSpeechPace.NORMAL, onNotice)
+                onSpeak(turn.translated, turn.target, "translated", LocalSpeechPace.NORMAL)
             },
             modifier = Modifier.weight(1f)
         ) { Text("🔊 Vertaling") }
         TextButton(
-            enabled = playableTranslation,
+            enabled = activeSpeechText == null && playableTranslation,
             onClick = {
-                speaker.speak(turn.translated, turn.target, LocalSpeechPace.SLOW, onNotice)
+                onSpeak(turn.translated, turn.target, "translated", LocalSpeechPace.SLOW)
             },
             modifier = Modifier.weight(1f)
         ) { Text("Rustiger") }

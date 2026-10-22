@@ -44,30 +44,39 @@ internal fun OfflineWordText(
     readOwnMeaning: ((String, String) -> String?)? = null,
     saveOwnMeaning: ((String, String, String) -> Boolean)? = null,
     allowSpeech: Boolean = true,
-    highlightQuery: String = ""
+    highlightQuery: String = "",
+    activeSpeechText: String? = null,
+    activeSpeechRange: Pair<Int, Int>? = null
 ) {
-    var layout by remember(text) { mutableStateOf<TextLayoutResult?>(null) }
-    var dialogOpen by remember(text, language) { mutableStateOf(false) }
-    var selectedWord by remember(text, language) { mutableStateOf("") }
+    val normalizedText = text.replace('\n', ' ').replace('\r', ' ').trim()
+    val followsSpeech = activeSpeechText != null && normalizedText == activeSpeechText
+    val visibleText = if (followsSpeech) activeSpeechText.orEmpty() else text
+    val speechRange = activeSpeechRange.takeIf { followsSpeech }
+    var layout by remember(visibleText) { mutableStateOf<TextLayoutResult?>(null) }
+    var dialogOpen by remember(visibleText, language) { mutableStateOf(false) }
+    var selectedWord by remember(visibleText, language) { mutableStateOf("") }
     // Held peek is transient and never modifies the stored glossary/deck.
-    var heldWord by remember(text, language) { mutableStateOf<String?>(null) }
-    var meaningDraft by remember(text, language) { mutableStateOf("") }
-    var noteMessage by remember(text, language) { mutableStateOf("") }
+    var heldWord by remember(visibleText, language) { mutableStateOf<String?>(null) }
+    var meaningDraft by remember(visibleText, language) { mutableStateOf("") }
+    var noteMessage by remember(visibleText, language) { mutableStateOf("") }
 
-    // Styled match spans retain exactly the same character offsets, so wordAt()
-    // still selects the visible source word, even inside a search highlight.
+    // Search and speech spans share the same visible text offsets; tapping a
+    // word continues to resolve against exactly the text rendered to the user.
     val markedText = highlightedCaptionText(
-        text,
+        visibleText,
         highlightQuery,
         MaterialTheme.colorScheme.tertiaryContainer,
-        MaterialTheme.colorScheme.onTertiaryContainer
+        MaterialTheme.colorScheme.onTertiaryContainer,
+        activeRange = speechRange,
+        activeRangeBackground = MaterialTheme.colorScheme.primary,
+        activeRangeForeground = MaterialTheme.colorScheme.onPrimary
     )
     Text(
         text = markedText,
         style = style,
         onTextLayout = { layout = it },
         modifier = Modifier
-            .pointerInput(text) {
+            .pointerInput(visibleText) {
                 detectTapGestures(
                     onPress = {
                         // Both release and scroll cancellation clear the hover
@@ -77,12 +86,16 @@ internal fun OfflineWordText(
                     },
                     onLongPress = { point ->
                         val offset = layout?.getOffsetForPosition(point)
-                        val word = offset?.let { wordAt(text, it) }
+                        val word = offset?.let {
+                            if (visibleText == text) wordAt(text, it) else wordAt(visibleText, it)
+                        }
                         heldWord = word
                     },
                     onTap = { point ->
                         val offset = layout?.getOffsetForPosition(point)
-                        val word = offset?.let { wordAt(text, it) }
+                        val word = offset?.let {
+                            if (visibleText == text) wordAt(text, it) else wordAt(visibleText, it)
+                        }
                         if (word != null) {
                             heldWord = null
                             selectedWord = word

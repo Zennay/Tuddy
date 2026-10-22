@@ -32,3 +32,23 @@ extra cloudverkeer, microfoonrechten of nieuwe accountgegevens toe.
 De functiewijziging raakt niet de open fysieke Android 12+
 vliegtuigmodus-, Koerdische/Pasjtoe ASR/MT-, licentie-,
 native-speaker- en production-signing-gates.
+
+## Lokale voorlezing van tijdelijke gespreksregels
+
+Bij de laatste zes tijdelijke regels kun je het origineel of een daadwerkelijk
+lokaal afgeronde vertaling laten voorlezen. De bijbehorende zijde wordt
+tijdelijk gemarkeerd. Als Android's reeds geïnstalleerde niet-netwerkstem een
+tekstbereik terugmeldt, wordt alleen dat bereik gemarkeerd; anders blijft de
+actieve zijde zichtbaar zonder een woordtiming te verzinnen. De tekstweergave
+blijft ook tijdens het voorlezen tappable voor de bestaande offline woordkaart.
+
+Stoppen, een nieuwe beurt, richtingwissel, het openen van de grotere lees- of
+oefenweergave en het verlaten van het scherm beëindigen de spraak en wissen
+de tijdelijke markering. Geen audio, bereik of afspeelgeschiedenis wordt
+opgeslagen; de gesprekregels blijven uitsluitend sessie-RAM.
+
+### Grote leesweergave
+
+Dezelfde volgmarkering is beschikbaar in de grote leesweergave met maximaal
+80 tijdelijke regels. Zoeken/filteren, richting wisselen, sluiten, stoppen of
+de app op de achtergrond zetten wist de actieve spraakmarkering.
