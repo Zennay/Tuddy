@@ -3193,7 +3193,8 @@ Open een SRT/VTT-bestand in **Gesprekstools → Open SRT/WebVTT…** en kies
 eerst of de exacte ML Kit-tekstmodellen al lokaal beschikbaar zijn. Tuddy
 downloadt niets automatisch en start geen microfoon. De regels worden
 serieel vertaald; bij een fout of annulering wordt geen gedeeltelijk resultaat
-toegepast. Na het bekijken van een voorbeeld bevestig je expliciet het vervangen
-van de tijdelijke tekst. De tijdcodes blijven staan, de bronfile blijft intact
-en je kunt daarna bewust een nieuwe SRT/VTT-kopie bewaren.
+toegepast. Na het bekijken van een voorbeeld kies je **Alleen vertaling** of
+**Origineel + vertaling** en bevestig je expliciet het toepassen op het tijdelijke
+concept. De tijdcodes blijven staan, de bronfile blijft intact en je kunt daarna
+bewust een nieuwe SRT/VTT-kopie bewaren.
 [Bediening en grenzen](docs/LOCAL_SUBTITLE_TRANSLATION.md).
