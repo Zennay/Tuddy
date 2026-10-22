@@ -1,3 +1,14 @@
+## Nieuw: deel alleen zelf aangevinkte gespreksbeurten
+
+Bij het extern delen van je offline eigen-zinnengesprek kiest Tuddy
+standaard **geen** beurten. Selecteer bewust uitsluitend de zinnen
+die je wilt delen, of kies zelf Alles. Alleen deze selectie verschijnt
+in de volledige tekstpreview en wordt na een tweede bevestiging aan
+Android Delen aangeboden. Het overige gesprek blijft lokaal en tijdelijk.
+[Privacystappen](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: privacybewust gesprek delen of terugplakken
 
 Een bewust gekozen offline gesprekscript kan na een **volledige
