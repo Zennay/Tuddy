@@ -8,6 +8,19 @@ Tuddy verandert nooit de echte transcripttekst of opgeslagen
 betekenis; alles gebeurt alleen lokaal tijdens het zoeken.
 [Uitleg](docs/PRIVATE_CONVERSATION_SCRIPT_SEARCH.md).
 
+
+---
+
+## Nieuw: compacte ondertitelkaarten met alle acties binnen bereik
+
+Een gespreksregel toont nu één uitklapbare knop voor correctie,
+zelfgeschreven privékaart, taalrichting, presentatie en wissen in plaats
+van meerdere te brede knoppen naast elkaar. Alle bewerkacties staan
+bij uitklappen verticaal en passen op smalle Android-schermen.
+De oorspronkelijke ondertitels, lokale spraakvoorwaarden en bewuste
+opslagtoestemmingen veranderen niet.
+[Uitleg](docs/COMPACT_CAPTION_ACTIONS.md).
+
 ---
 
 ## Nieuw: maak van een gespreksregel een eigen Kurmanji-, Sorani- of Pasjtoe-kaart
@@ -3143,3 +3156,13 @@ kan na de afzonderlijke controles via **Kopieer pakketoverzicht** de
 statussen naar het Android-klembord kopiëren. Het overzicht bevat
 apparaat- en taalstatussen, niet de gesproken zinnen of audio. Dit
 is vrijwillig, geen upload en geen bewijs van toestelacceptatie.
+
+
+## Nieuw: zoek in gesprekken met Sorani-/Pasjtoe-toetsenbordvarianten
+
+**Zoek in gesprek** vindt nu de oorspronkelijke tekst, de vertaling én
+eigen uitlegnotities. Voor het zoeken herkent Tuddy beperkte varianten
+van Arabische/Perzische yeh en kaf, negeert het optionele klinkertekens,
+tatweel en ZWNJ en normaliseert Unicode-presentatievormen. De bewaarde
+tekst wordt niet herschreven en er wordt geen zoekindex opgeslagen.
+[Werking en grenzen](docs/LIVE_CAPTION_SCRIPT_SEARCH.md).
