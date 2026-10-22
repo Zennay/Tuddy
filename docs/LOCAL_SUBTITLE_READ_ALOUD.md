@@ -44,3 +44,12 @@ tekstbereik wordt indicatief gemarkeerd wanneer beschikbaar. Stoppen,
 naar een andere zin gaan, de weergave wisselen of de app verlaten stopt de
 spraak en wist de tijdelijke markering. Ook hier wordt geen audio opgeslagen
 en wordt geen netwerkstem of stemdownload gebruikt.
+
+## Tweezijdig gesprek
+
+In het tweezijdige gespreksscherm volgt de markering de zijde die je met
+**Tegenover** of **Hier** laat voorlezen. De zichtbare tekst gebruikt dezelfde
+normalisatie als de spraakinvoer, zodat teruggegeven offsets op de getoonde zin
+passen. Wisselen van zijde, stoppen, een nieuwe beurt of de achtergrond in gaan
+stopt de spraak en wist de tijdelijke markering. Ook hier blijft de markering
+afhankelijk van wat de geïnstalleerde lokale stem werkelijk terugmeldt.
