@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.livelingo.android.OwnWord
 import com.livelingo.android.PrivateVocabularyDeck
 import com.livelingo.android.PrivateVocabularyStudySheet
 import com.livelingo.android.LocalCaptionSpeaker
@@ -66,6 +67,8 @@ internal fun SavedWordsPanel(
     val localToday = java.time.LocalDate.now().toEpochDay()
     var confirmDelete by remember { mutableStateOf(false) }
     var practiceOpen by remember { mutableStateOf(false) }
+    var quizOpen by remember { mutableStateOf(false) }
+    var quizScope by remember { mutableStateOf<List<OwnWord>?>(null) }
     var scheduledReviewOpen by remember { mutableStateOf(false) }
     var confirmStartReview by remember { mutableStateOf(false) }
     var confirmEraseReview by remember { mutableStateOf(false) }
@@ -146,7 +149,7 @@ internal fun SavedWordsPanel(
         val shared = incomingBackupJsonText ?: return@LaunchedEffect
         val bytes = shared.toByteArray(Charsets.UTF_8)
         if (pendingImport != null || pendingExport != null || pendingShareSnapshot != null ||
-            pendingStudySheet != null || practiceOpen || scheduledReviewOpen) {
+            pendingStudySheet != null || practiceOpen || quizOpen || scheduledReviewOpen) {
             transferStatus = "Er staat al een woordenlijstimport of export open. Sluit die eerst " +
                 "en deel de back-up opnieuw; je huidige woorden blijven behouden."
         } else {
@@ -171,6 +174,15 @@ internal fun SavedWordsPanel(
             savedWords = allWords,
             onDismiss = { practiceOpen = false },
             allowSpeech = allowSpeech
+        )
+        return
+    }
+
+    if (quizOpen) {
+        OwnWordQuizDialog(
+            notes = quizScope.orEmpty(),
+            curated = true,
+            onDismiss = { quizOpen = false; quizScope = null }
         )
         return
     }
@@ -223,6 +235,15 @@ internal fun SavedWordsPanel(
                     onClick = { speaker.stop(); practiceOpen = true },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Oefen opgeslagen woorden") }
+                OutlinedButton(
+                    enabled = allWords.size >= 2,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        speaker.stop()
+                        quizScope = allWords.map { OwnWord(it.language, it.word, it.entry.definition) }
+                        quizOpen = true
+                    }
+                ) { Text("🎯 Quiz · bewaarde basiswoorden") }
                 if (!deck.reviewsEnabled()) {
                     OutlinedButton(
                         enabled = allWords.isNotEmpty(),
@@ -325,6 +346,15 @@ internal fun SavedWordsPanel(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+                OutlinedButton(
+                    enabled = words.size >= 2,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        speaker.stop()
+                        quizScope = words.map { OwnWord(it.language, it.word, it.entry.definition) }
+                        quizOpen = true
+                    }
+                ) { Text("Quiz met deze ${words.size} gevonden basiswoorden") }
                 Text("${words.size} van ${allWords.size} woorden · betekenissen verborgen om te oefenen",
                     style = MaterialTheme.typography.bodySmall)
                 if (audioNotice.isNotBlank()) {
