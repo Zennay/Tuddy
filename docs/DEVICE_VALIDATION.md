@@ -10,7 +10,7 @@ Latest app-code candidate (22 October 2026, after PR #342):
 
 | Field | Immutable evidence |
 |---|---|
-| Current default-branch / app-code SHA | `9d6b6dc66a835a283dec8074e4c99dab75358503` |
+| App-code SHA for this exact artifact (later docs-only commits may advance main) | `9d6b6dc66a835a283dec8074e4c99dab75358503` |
 | Git tree SHA | `e972b3fccf295a19d03e734db2561e16a7daafe9` |
 | Hosted Android run | [#39737509144](https://github.com/Zennay/Tuddy/actions/runs/39737509144) — COMPLETED SUCCESS; post-merge `build` succeeded |
 | Build checkout commit | `9d6b6dc66a835a283dec8074e4c99dab75358503` (matches exact source SHA in the build manifest) |
@@ -24,8 +24,10 @@ Latest app-code candidate (22 October 2026, after PR #342):
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-This build includes PR #341's privacy-safe manual offline acceptance report and
-PR #342's bounded offline subtitle read-aloud. The checksum sidecar was verified
+This artifact is tied to the app-code commit shown above; a later documentation-only
+commit can advance the full default-branch SHA without changing this APK candidate.
+It includes PR #341's privacy-safe manual offline acceptance report and PR #342's
+bounded offline subtitle read-aloud. The checksum sidecar was verified
 by the hosted build (`app-debug.apk: OK`). This is build provenance only: it
 does not prove physical installation, actual offline speech quality, zero
 network traffic or device acceptance.
