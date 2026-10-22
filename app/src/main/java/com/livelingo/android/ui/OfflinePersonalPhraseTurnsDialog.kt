@@ -60,6 +60,7 @@ internal fun OfflinePersonalPhraseTurnsDialog(
     var manualNotice by remember { mutableStateOf("") }
     var saveNotice by remember { mutableStateOf("") }
     var pendingSave by remember { mutableStateOf<Pair<Int, PersonalPhrase>?>(null) }
+    var pendingBatch by remember { mutableStateOf<List<PersonalPhrase>?>(null) }
     var alternate by remember { mutableStateOf(true) }
     var turns by remember { mutableStateOf<List<LocalPersonalTurn>>(emptyList()) }
     var shown by remember { mutableStateOf<PersonalPhrase?>(null) }
@@ -333,6 +334,29 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                         }
                     }
                 }
+                val temporaryPairs = turns.filter { it.temporary }.map { it.note }
+                if (temporaryPairs.isNotEmpty()) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = temporaryPairs.size in 1..10,
+                        onClick = {
+                            pendingBatch = temporaryPairs.toList()
+                            saveNotice = ""
+                        }
+                    ) {
+                        Text("Bewaar alle " + temporaryPairs.size +
+                            " tijdelijke eigen paren lokaal…")
+                    }
+                    Text(
+                        if (temporaryPairs.size > 10)
+                            "Kies maximaal tien tijdelijke paren door onnodige " +
+                                "beurten eerst afzonderlijk te verwijderen."
+                        else "Alleen na een volledige controlepreview. De hele " +
+                            "selectie wordt in één keer wel of niet opgeslagen; " +
+                            "bestaande zinnen blijven ongewijzigd.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 OfflinePersonalTurnScriptExport(
                     turns = turns.map { it.note to it.fromMeaning }
                 )
@@ -401,6 +425,68 @@ internal fun OfflinePersonalPhraseTurnsDialog(
             },
             dismissButton = {
                 TextButton(onClick = { pendingSave = null }) { Text("Tijdelijk houden") }
+            }
+        )
+    }
+    val proposedBatch = pendingBatch
+    if (proposedBatch != null) {
+        AlertDialog(
+            onDismissRequest = { pendingBatch = null },
+            title = { Text("Deze eigen zinnen in één keer bewaren?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Dit zijn alle " + proposedBatch.size + " tijdelijke zelfgeschreven " +
+                        "paren van dit gesprek. Na jouw bevestiging staan ze " +
+                        "lokaal in de persoonlijke zinnenlijst, niet als gespreksgeschiedenis.",
+                        style = MaterialTheme.typography.bodySmall)
+                    proposedBatch.forEachIndexed { index, note ->
+                        HorizontalDivider()
+                        Text((index + 1).toString() + ". " +
+                            note.language.uppercase() + " → " +
+                            note.meaningLanguage.uppercase(),
+                            style = MaterialTheme.typography.labelMedium)
+                        Text(note.phrase, style = MaterialTheme.typography.bodyLarge.copy(
+                            textDirection = if (note.language in setOf("ckb", "ps"))
+                                TextDirection.Rtl else TextDirection.Ltr
+                        ))
+                        Text(note.ownMeaning, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("Alles-of-niets: dubbele of al bestaande bronzinnen, " +
+                        "ongeldige tekst en volle lokale opslag blokkeren de volledige " +
+                        "bewaaractie. Er wordt niets overschreven, gedeeld of vertaald. " +
+                        "Zelfgeschreven betekenissen zijn niet onafhankelijk gecontroleerd.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val latest = turns.filter { it.temporary }.map { it.note }
+                    if (latest != proposedBatch || latest.size !in 1..10) {
+                        saveNotice = "Het gesprek is veranderd; bekijk je selectie opnieuw."
+                    } else if (deck.saveNewBatch(proposedBatch)) {
+                        notes = deck.entries()
+                        turns = turns.map { turn ->
+                            if (turn.temporary) turn.copy(temporary = false) else turn
+                        }
+                        saveNotice = "Alle " + proposedBatch.size +
+                            " gekozen eigen paren zijn in één lokale bewaaractie opgeslagen."
+                    } else {
+                        saveNotice = "Niets opgeslagen. Controleer op dubbele of al " +
+                            "bestaande bronzinnen en de ruimte in je privéwoordenlijst. " +
+                            "Bestaande zinnen zijn niet gewijzigd."
+                    }
+                    pendingBatch = null
+                }) { Text("Bewaar precies deze paren") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingBatch = null }) {
+                    Text("Alles tijdelijk houden")
+                }
             }
         )
     }
