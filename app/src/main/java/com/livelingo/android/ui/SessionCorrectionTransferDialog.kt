@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.SessionTranslationCorrectionTransfer
 import com.livelingo.android.SessionTranslationCorrectionCsv
+import com.livelingo.android.SessionCorrectionPrintableWorksheet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -53,6 +54,7 @@ internal fun SessionCorrectionTransferDialog(
     val scope = rememberCoroutineScope()
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingCsvExport by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingHtmlExport by remember { mutableStateOf<ByteArray?>(null) }
     var exportSelectionOpen by remember { mutableStateOf(false) }
     var pasteOpen by remember { mutableStateOf(false) }
     var pastedCsv by remember { mutableStateOf("") }
@@ -111,6 +113,31 @@ internal fun SessionCorrectionTransferDialog(
                     "Bewerkbare CSV bewust opgeslagen bij jouw bestandsprovider. " +
                         "Tuddy bewaart zelf geen kopie."
                 } else "CSV opslaan mislukt; huidige correcties blijven ongewijzigd."
+            }
+        }
+    }
+
+    val saveHtml = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri: Uri? ->
+        val bytes = pendingHtmlExport
+        pendingHtmlExport = null
+        if (uri != null && bytes != null) {
+            busy = true
+            scope.launch {
+                val success = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                            stream.write(bytes)
+                            stream.flush()
+                        } ?: error("Kan geen HTML-bestand schrijven")
+                    }.isSuccess
+                }
+                busy = false
+                notice = if (success) {
+                    "Privé oefenblad bewaard bij de door jou gekozen bestandsprovider. " +
+                        "Tuddy bewaart zelf geen kopie."
+                } else "Oefenblad opslaan mislukt; geen correcties gewijzigd."
             }
         }
     }
@@ -453,6 +480,19 @@ internal fun SessionCorrectionTransferDialog(
                     exportSelectionOpen = false
                     notice = ""
                     saveCsv.launch("tuddy-geselecteerde-vertaalcorrecties.csv")
+                }
+            },
+            onExportHtml = { chosen, showAnswers ->
+                val bytes = SessionCorrectionPrintableWorksheet.create(chosen, showAnswers)
+                if (bytes == null) {
+                    notice = "Afdrukbaar blad geweigerd: ongeldige of te grote selectie."
+                } else {
+                    pendingHtmlExport = bytes
+                    exportSelectionOpen = false
+                    notice = ""
+                    val name = if (showAnswers) "tuddy-mijn-antwoordblad.html"
+                        else "tuddy-mijn-invulblad.html"
+                    saveHtml.launch(name)
                 }
             },
             onDismiss = { exportSelectionOpen = false }
