@@ -1,5 +1,20 @@
 # Eigen offline zinnen: back-up samenvoegen of vervangen
 
+## Back-up plakken zonder bestandsprovider
+
+Bij **Mijn eigen offline zinnen → Plak JSON-back-up…** kun je de volledige
+`tuddy-private-phrases-v1` JSON-tekst zelf plakken wanneer je een back-up
+bijvoorbeeld in een bericht hebt ontvangen. Tuddy leest het klembord niet
+automatisch. De invoer is begrensd op 50.000 UTF-8-bytes en gaat door dezelfde
+strikte versie-, schema-, UTF-8-, dubbele-sleutel- en zinnenvalidatie als een
+gekozen bestand.
+
+Een geldige invoer opent de volledige importpreview. Je kiest daarna
+afzonderlijk **Voeg alleen nieuwe zinnen toe** of **Vervang volledige lijst**.
+Als de huidige privéopslag niet veilig kan worden gelezen, wordt geen
+import toegestaan. Annuleren of ongeldige invoer verandert niets. Er is
+geen automatische import, vertaling, netwerktoegang of clipboardtoegang.
+
 In **Mijn eigen Kurmanji/Sorani/Pasjtoe zinnen → Herstel back-up…**
 kiest de gebruiker een eerder opgeslagen JSON-bestand. Tuddy leest het
 bestand begrensd via de Android-bestandskiezer en weigert een ongeldige
