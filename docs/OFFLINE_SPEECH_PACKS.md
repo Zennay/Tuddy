@@ -18,9 +18,11 @@ show `unknown`, never invent installed coverage.
    of: installed, download offered, pending, online-only, unsupported or
    unknown. The app does not create the normal network speech recognizer.
 3. Only for **download offered**, connect to Wi-Fi and tap **Download via wifi**.
-   Before every model request, Tuddy checks that the active network is Wi-Fi.
-   This is an admission check, **not** a guarantee about future Android
-   transport policy if Wi-Fi drops. Android itself controls the download.
+   Before every model request, Tuddy checks that the active network is Wi-Fi
+   and Android reports both internet capability and a validated connection.
+   A disconnected Wi-Fi network or captive portal is refused with a specific
+   explanation. This is an admission check, **not** a guarantee about future
+   Android transport policy if Wi-Fi drops. Android itself controls the download.
 4. Download errors expose **Opnieuw via wifi** rather than trapping the
    user in an error state. During a lengthy status check or OS-managed
    download, **Stop volgen** cancels Tuddy's progress observer, not an

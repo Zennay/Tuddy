@@ -66,10 +66,12 @@ internal fun SpeechPackBrowserDialog(
             onDismissRequest = { confirmTag = null },
             title = { Text("Vraag offline spraakpakket aan?") },
             text = { Text("Alleen het Android-spraakpakket voor " + offeredName +
-                " (" + offeredTag + ") wordt op jouw verzoek via wifi aangevraagd. " +
-                "Android beheert de download. Geen automatische bulkdownloads, " +
-                "geen microfoon, geen cloudspraak. Een download is pas bruikbaar " +
-                "wanneer Android na afloop een lokaal geïnstalleerd pakket meldt.") },
+                " (" + offeredTag + ") wordt op jouw verzoek aangevraagd. Tuddy vereist " +
+                "wifi met door Android bevestigde internettoegang; een captive portal of " +
+                "wifi zonder internet wordt geweigerd. Android beheert de download. " +
+                "Geen automatische bulkdownloads, geen microfoon, geen cloudspraak. " +
+                "Een download is pas bruikbaar wanneer Android na afloop een lokaal " +
+                "geïnstalleerd pakket meldt.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmTag = null
