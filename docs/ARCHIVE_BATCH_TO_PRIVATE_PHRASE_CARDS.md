@@ -3,7 +3,8 @@
 Open **Open JSON-archief…**, zoek of blader naar regels en selecteer maximaal
 tien regels met **Selecteer voor eigen kaart**. De selectie gebruikt de
 oorspronkelijke archiefpositie en blijft behouden als je de zoekterm wijzigt.
-Tik daarna op **Schrijf N eigen privékaarten…**.
+**Wis selectie** maakt de selectie leeg zonder het archief te wijzigen. Tik
+daarna op **Schrijf N eigen privékaarten…**.
 
 ## Schrijven en opslaan
 
