@@ -6,29 +6,25 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest app-code candidate (22 October 2026, after PR #351; built from its exact proposed-merge checkout and now merged to main):
+Latest app-code candidate (22 October 2026, after PR #355; built from its exact proposed-merge checkout and now merged to main):
 
 | Field | Immutable evidence |
 |---|---|
-| Latest app-code merge (PR #351) | `3f57fab8dab9be3201c1645ce946be664f461bc3` |
-| Tree identity | Proposed-merge checkout `19db5a9bed0e7f47136f8ef0da47766c1e230ed7` and merged main have identical blobs for all three PR #351 changed files; both derive unchanged files from base `f110e01567ae3a3ba8503ccd61e032d061030fe6` |
-| Hosted Android run | [#39743473490](https://github.com/Zennay/Tuddy/actions/runs/39743473490) — COMPLETED SUCCESS; source-head, build, APK manifest and checksum steps succeeded |
-| Build checkout commit | `19db5a9bed0e7f47136f8ef0da47766c1e230ed7` (proposed-merge checkout; matches the artifact's `source-commit.txt`) |
-| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39743473490/artifacts/12410218239) (ID `12410218239`, expires 5 November 2026 07:54:36 UTC) |
+| Latest app-code merge (PR #355) | `9a9bad73ec6ac4eaca54690ac10f1aa5fb4eb2e2` |
+| Tree identity | Proposed-merge checkout `f725446996dc4a2b6e75b48aa61de31758b951aa` and merged main have identical GitHub file blobs for all four PR #355 changed files; unchanged files derive from base `4bc5561cd8803c2be80bd446459e5aaad1e48acf` |
+| Hosted Android run | [#39745867690](https://github.com/Zennay/Tuddy/actions/runs/39745867690) — COMPLETED SUCCESS; source-head, build, APK manifest and checksum steps succeeded |
+| Build checkout commit | `f725446996dc4a2b6e75b48aa61de31758b951aa` (proposed-merge checkout; matches the artifact's `source-commit.txt`) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39745867690/artifacts/12411163275) (ID `12411163275`, expires 5 November 2026 08:13:52 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `78dfdd343ac714b020ceca5d7f4de5629e41c0bd6565135f967c340fe06652be` |
+| **APK SHA-256** | `10292346fc16d07ab0beb758d26bde480ca6b68cff9fe9bf8e55049d69a374ef` |
 | APK size | See `build-manifest.txt` inside the artifact |
-| Artifact ZIP SHA-256 (not APK) | `b71a047c7af79b84f335096b08d5707eaa60d0bb44ef06785d9c5316e7da969c` |
+| Artifact ZIP SHA-256 (not APK) | `ae58991de2e456f48cfaf5e123e2d04a236a6611d9de43f4e2a6079c9f291a67` |
 | Package | `com.livelingo.android` |
 | Version | `0.4.0` |
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-This artifact includes PR #351's paginated preview for PR #350's selected-cue offline subtitle
-translation workflow, alongside the existing on-device speech, private subtitle editing
-and fail-closed speech-pack network checks. The checksum sidecar was verified by the
-hosted build (`app-debug.apk: OK`). This is build provenance only: it does not prove
-physical installation, actual offline speech quality, zero network traffic or device acceptance.
+This artifact includes PR #355's direct translation of searched subtitle matches and source-language detection based on the selected cues, alongside PR #352's non-contiguous cue selection, PR #351's paginated translation preview, and the existing on-device speech and fail-closed speech-pack checks. The checksum sidecar was verified by the hosted build (`app-debug.apk: OK`). This is build provenance only: it does not prove physical installation, actual offline speech quality, zero network traffic or device acceptance.
 
 From a Tuddy source checkout, after downloading the artifact ZIP as
 `artifact.zip`, run the reusable integrity verifier:
@@ -36,10 +32,10 @@ From a Tuddy source checkout, after downloading the artifact ZIP as
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  b71a047c7af79b84f335096b08d5707eaa60d0bb44ef06785d9c5316e7da969c \
-  78dfdd343ac714b020ceca5d7f4de5629e41c0bd6565135f967c340fe06652be \
-  19db5a9bed0e7f47136f8ef0da47766c1e230ed7 \
-  39743473490
+  ae58991de2e456f48cfaf5e123e2d04a236a6611d9de43f4e2a6079c9f291a67 \
+  10292346fc16d07ab0beb758d26bde480ca6b68cff9fe9bf8e55049d69a374ef \
+  f725446996dc4a2b6e75b48aa61de31758b951aa \
+  39745867690
 ```
 
 The helper checks the ZIP digest before extraction, rejects archive path-traversal
