@@ -42,7 +42,7 @@ printf 'Artifact ZIP SHA-256: OK (%s)\n' "$actual_zip_sha"
 # Refuse path-traversal entries before extracting a downloaded archive.
 while IFS= read -r entry; do
   case "$entry" in
-    /*|../*|*/../*|*/..|[A-Za-z]:/*)
+    /*|..|../*|*/../*|*/..|[A-Za-z]:/*)
       printf 'Unsafe path in artifact ZIP: %s\n' "$entry" >&2
       exit 1
       ;;
