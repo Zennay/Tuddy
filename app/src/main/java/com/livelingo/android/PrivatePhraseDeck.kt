@@ -532,7 +532,8 @@ internal class PrivatePhraseDeck(context: Context) {
         candidate: PrivatePhraseArchive,
         expectedNotes: List<PersonalPhrase>?,
         expectedThemes: ByteArray?,
-        correctedIds: Set<String> = emptySet()
+        correctedIds: Set<String> = emptySet(),
+        retopicIds: Set<String> = emptySet()
     ): Boolean {
         if (expectedNotes == null || entries() != expectedNotes) return false
         val themeDeck = PrivatePhraseTopics(context)
@@ -569,6 +570,15 @@ internal class PrivatePhraseDeck(context: Context) {
         }
         if (replacements.keys != correctedIds || correctedIds.size > MAX_ROWS) return false
 
+        val retopicNotes = candidate.notes.filter { note ->
+            PrivatePhraseShortcuts.fingerprint(note) in retopicIds
+        }
+        if (retopicIds.size > MAX_ROWS || retopicNotes.size != retopicIds.size ||
+            retopicNotes.any { note ->
+                val old = existingByIdentity[identity(note)]
+                old == null || old.language != note.language || old.phrase != note.phrase
+            }) return false
+
         val combined = current.map { original ->
             replacements[PrivatePhraseShortcuts.fingerprint(original)] ?: original
         } + additions
@@ -585,7 +595,7 @@ internal class PrivatePhraseDeck(context: Context) {
         // Only themes belonging to genuinely new notes are imported. A
         // meaning correction must never create/rename themes behind the user's
         // back; unrelated imported themes remain external until selected.
-        val needed = additions.mapNotNull { note ->
+        val needed = (additions + retopicNotes).mapNotNull { note ->
             candidate.assignments[PrivatePhraseShortcuts.fingerprint(note)]
         }.toSet()
         candidate.topics.filter { it in needed }.forEach { name ->
@@ -614,6 +624,15 @@ internal class PrivatePhraseDeck(context: Context) {
             val hash = PrivatePhraseShortcuts.fingerprint(note)
             val chosen = candidate.assignments[hash] ?: continue
             linked[hash] = canonical[chosen.lowercase(Locale.ROOT)] ?: return false
+        }
+        // A separate, deliberate per-row opt-in permits reclassification
+        // without replacing the underlying note, bookmark or review stage.
+        // An empty incoming theme means remove only this one assignment.
+        for (note in retopicNotes) {
+            val hash = PrivatePhraseShortcuts.fingerprint(note)
+            val chosen = candidate.assignments[hash]
+            if (chosen == null) linked.remove(hash)
+            else linked[hash] = canonical[chosen.lowercase(Locale.ROOT)] ?: return false
         }
         if (linked.size > MAX_ROWS) return false
         val rows = linked.map { (hash, topic) -> "$hash|$topic" }.toSet()
