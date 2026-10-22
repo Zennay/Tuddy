@@ -51,6 +51,7 @@ internal fun PrivateSubtitleTranslationDialog(
     var translating by remember { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(0) }
     var translatedCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
+    var bilingualOutput by remember(cues) { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
 
     fun resetForLanguageChange() {
@@ -60,6 +61,7 @@ internal fun PrivateSubtitleTranslationDialog(
         translating = false
         progress = 0
         translatedCues = null
+        bilingualOutput = false
         message = ""
     }
 
@@ -156,6 +158,19 @@ internal fun PrivateSubtitleTranslationDialog(
     }
 
     val preview = translatedCues
+    val outputCues = if (preview == null) null else if (!bilingualOutput) {
+        preview
+    } else {
+        var updated: List<PrivateSubtitleCue>? = cues.toList()
+        preview.forEachIndexed { index, translated ->
+            val current = updated
+            if (current != null) {
+                val combined = cues[index].text.trim() + "\n" + translated.text
+                updated = PrivateSubtitleDraftEditor.revise(current, index, combined)
+            }
+        }
+        updated
+    }
     AlertDialog(
         onDismissRequest = { closeDialog() },
         title = { Text("Vertaal ondertitelconcept lokaal") },
@@ -237,6 +252,33 @@ internal fun PrivateSubtitleTranslationDialog(
                             "na toepassen kun je het volledige concept doorzoeken en ongedaan maken.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Text(
+                        "Kies hoe de nieuwe tekst in iedere tijdgecodeerde regel wordt opgebouwd:",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = { bilingualOutput = false }) {
+                            Text((if (!bilingualOutput) "✓ " else "") + "Alleen vertaling")
+                        }
+                        TextButton(onClick = { bilingualOutput = true }) {
+                            Text((if (bilingualOutput) "✓ " else "") + "Origineel + vertaling")
+                        }
+                    }
+                    Text(
+                        if (bilingualOutput)
+                            "Tweetalig: origineel boven, vertaling eronder. Beide blijven in dezelfde cue met dezelfde tijdcodes."
+                        else
+                            "Alleen de vertaalde tekst wordt toegepast; het oorspronkelijke bestand blijft onaangeraakt.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (bilingualOutput && outputCues == null) {
+                        Text(
+                            "Tweetalige uitvoer overschrijdt bij minstens één regel de bestaande tekst- of regellimieten. " +
+                                "Kies Alleen vertaling; er wordt niets toegepast.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                     preview.take(5).forEachIndexed { index, cue ->
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text("Regel ${index + 1} · origineel",
@@ -271,10 +313,19 @@ internal fun PrivateSubtitleTranslationDialog(
         },
         confirmButton = {
             if (preview != null) {
-                TextButton(onClick = {
-                    onApply(preview)
-                    closeDialog()
-                }) { Text("Vervang tijdelijke tekst") }
+                TextButton(
+                    enabled = outputCues != null,
+                    onClick = {
+                        val ready = outputCues
+                        if (ready != null) {
+                            onApply(ready)
+                            closeDialog()
+                        }
+                    }
+                ) {
+                    Text(if (bilingualOutput) "Vervang door tweetalige cues"
+                        else "Vervang tijdelijke tekst")
+                }
             } else {
                 TextButton(
                     enabled = receipt?.stage == OfflineTextStage.READY &&
