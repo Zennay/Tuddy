@@ -18,7 +18,9 @@ internal data class IncomingSharedText(
     // A valid, explicitly shared Tuddy correction JSON is handed to its import preview.
     val correctionTransferText: String? = null,
     // The exact five-column personal phrasebook CSV is handed to its own preview.
-    val personalPhraseCsvText: String? = null
+    val personalPhraseCsvText: String? = null,
+    // A Tuddy private phrase backup is routed to the existing merge/replace preview.
+    val personalPhraseBackupJson: String? = null
 )
 
 internal object SharedPlainTextIntent {
@@ -72,6 +74,13 @@ internal object SharedPlainTextIntent {
                 // and presents a human-confirmed import preview.
                 if (PrivatePhraseTopicCsv.hasPortableHeader(candidate)) {
                     return IncomingSharedText(null, null, personalPhraseCsvText = candidate)
+                }
+                // Tuddy's own private phrase backup must never fall through
+                // as a translation prompt. The phrasebook screen performs the
+                // strict version/schema/50 KB validation before its import preview.
+                if (candidate.trimStart().startsWith("{") &&
+                    candidate.contains("\"tuddy-private-phrases-v1\"")) {
+                    return IncomingSharedText(null, null, personalPhraseBackupJson = candidate)
                 }
                 // Tuddy's own correction JSON must never fall through as a
                 // translation prompt. Validate its strict, bounded format and
