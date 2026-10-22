@@ -112,14 +112,30 @@ internal object PrivatePhraseTopicCsv {
      * Only a deliberate, complete personal backup can generate this CSV.
      * Re-parse exact bytes to verify the record ordering and topic mapping.
      */
-    fun snapshot(context: Context, deck: PrivatePhraseDeck): Pair<ByteArray, PrivatePhraseArchive>? {
+    fun snapshot(
+        context: Context,
+        deck: PrivatePhraseDeck,
+        selection: List<PersonalPhrase>? = null
+    ): Pair<ByteArray, PrivatePhraseArchive>? {
         val originalBytes = deck.exportArchiveSnapshot(context) ?: return null
         val original = deck.previewArchiveImport(originalBytes) ?: return null
         if (original.notes.isEmpty()) return null
+        // Optional subset never invents or silently broadens the requested
+        // private export. The original local phrases must match exactly.
+        val selected = if (selection == null) original.notes else {
+            if (selection.isEmpty() || selection.size > MAX_ROWS ||
+                selection.toSet().size != selection.size ||
+                !original.notes.containsAll(selection)) return null
+            val permitted = selection.toSet()
+            original.notes.filter { it in permitted }
+        }
+        if (selected.isEmpty()) return null
+        val allowedIds = selected.map { PrivatePhraseShortcuts.fingerprint(it) }.toSet()
+        val selectedAssignments = original.assignments.filterKeys { it in allowedIds }
 
         val output = buildString {
             append(HEADER).append('\n')
-            original.notes.forEach { note ->
+            selected.forEach { note ->
                 val theme = original.assignments[PrivatePhraseShortcuts.fingerprint(note)].orEmpty()
                 append(
                     listOf(
@@ -132,7 +148,7 @@ internal object PrivatePhraseTopicCsv {
         }.toByteArray(Charsets.UTF_8)
         if (output.size > MAX_BYTES) return null
         val parsed = preview(output, deck) ?: return null
-        if (parsed.notes != original.notes || parsed.assignments != original.assignments) return null
+        if (parsed.notes != selected || parsed.assignments != selectedAssignments) return null
         return output to parsed
     }
 }
