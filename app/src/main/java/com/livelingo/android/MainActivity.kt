@@ -395,6 +395,9 @@ private fun TuddyScreen(
         surface = androidx.compose.ui.graphics.Color(0xFF202238)
     )
     val lines = remember { mutableStateListOf<Line>() }
+    // Only on-device recognizer suggestions for manual correction, never
+    // persisted or included in any archive, subtitle or diagnostic export.
+    val offlineSpeechChoices = remember { mutableStateMapOf<Long, List<String>>() }
     val captionPrefs = remember(context) {
         context.getSharedPreferences(CaptionDisplayPreferences.NAME, Context.MODE_PRIVATE)
     }
@@ -1745,6 +1748,11 @@ private fun TuddyScreen(
                         )
                         speechTranslationStarted[id] = SystemClock.elapsedRealtime()
                         lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
+                        val suggestions = OfflineSpeechCorrectionChoices.fromDeviceResults(
+                            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION),
+                            sentence
+                        )
+                        if (suggestions.isNotEmpty()) offlineSpeechChoices[id] = suggestions
                         // Only real completed speech recognition triggers a short cue:
                         // not interim results, typed text, retries or translations.
                         if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
@@ -1755,6 +1763,7 @@ private fun TuddyScreen(
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             val removed = lines.removeAt(0)
                             speechTranslationStarted.remove(removed.id)
+                            offlineSpeechChoices.remove(removed.id)
                             captionPins = captionPins - removed.id
                             pinnedStudyEdits.remove(removed.id)
                             manuallyAssignedSpeakers.remove(removed.id)
@@ -4222,6 +4231,25 @@ private fun TuddyScreen(
                         Text("Controleer zelf wat er werkelijk is gezegd. De originele " +
                             "zin en de bijbehorende vertaling worden in dit tijdelijke " +
                             "gesprek vervangen. Dit is geen automatische controle.")
+                        val suggestedCorrections = offlineSpeechChoices[correctionId].orEmpty()
+                        if (suggestedCorrections.isNotEmpty()) {
+                            Text("Andere tekstvoorstellen van Android (niet geverifieerd). " +
+                                "Tik om de invoer over te nemen; Tuddy wijzigt niets " +
+                                "totdat je zelf 'Corrigeer en vertaal' bevestigt.",
+                                style = MaterialTheme.typography.bodySmall)
+                            suggestedCorrections.forEachIndexed { choiceIndex, candidate ->
+                                OutlinedButton(
+                                    onClick = { captionCorrectionDraft = candidate },
+                                    enabled = !listening,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Voorstel ${choiceIndex + 1}: " +
+                                        candidate.take(180) +
+                                        if (candidate.length > 180) "…" else "",
+                                        maxLines = 3)
+                                }
+                            }
+                        }
                         OutlinedTextField(
                             value = captionCorrectionDraft,
                             onValueChange = { candidate ->
@@ -4256,6 +4284,7 @@ private fun TuddyScreen(
                                 pendingCaptionShare = null
                                 pendingTranscriptExport = null
                                 exportStatus = ""
+                                offlineSpeechChoices.remove(correctionId)
                                 lines[index] = previous.copy(
                                     original = corrected,
                                     translated = "Vertalen…",
@@ -6384,6 +6413,7 @@ private fun TuddyScreen(
                         offlineModelStatus = ""
                         lines.clear()
         speechTranslationStarted.clear()
+        offlineSpeechChoices.clear()
                         manuallyAssignedSpeakers.clear()
                         captionPins = emptySet()
                         pinnedChosenIds = null
