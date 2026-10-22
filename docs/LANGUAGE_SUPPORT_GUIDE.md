@@ -20,6 +20,8 @@ De app voert geen automatische cloudspraakfallback uit. Het overzicht downloadt 
 
 De gids is informatief en doorzoekbaar; zij vervangt geen toestelcontrole, modellicentiecontrole of native-speakerbeoordeling.
 
+Bij een zoekopdracht op modelnaam, licentie of technische beperking toont Tuddy alleen de bijpassende modelkaarten. **Kopieer gefilterde onderzoeksresultaten** kopieert uitsluitend de openbare kandidaatmetadata, modelkaartlinks, gedeclareerde licenties, omvang en bekende beperkingen (maximaal 16.000 tekens). De zoektekst, eigen zinnen, transcripties en audio worden niet gekopieerd. Dit downloadt of activeert geen model.
+
 ## Modelonderzoek: concrete kandidaten, nog geen ondersteuning
 
 De taalondersteuningdialoog toont nu externe modelkaarten voor drie ASR-kandidaten. Ze zijn **niet** ingebouwd, gedownload of op Android gevalideerd:
