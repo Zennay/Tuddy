@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.PrivateAuthoredConversationScript
+import com.livelingo.android.PrivateAuthoredConversationTurn
 
 /**
  * Save only user-selected authored turns to an explicit Android document.
@@ -36,30 +38,11 @@ internal fun OfflinePersonalTurnScriptExport(
     var consentPreview by remember { mutableStateOf<ByteArray?>(null) }
     var pending by remember { mutableStateOf<ByteArray?>(null) }
     var info by remember { mutableStateOf("") }
-    fun snapshot(): ByteArray? {
-        if (turns.size !in 1..12) return null
-        val script = buildString {
-            appendLine("Tuddy - mijn eigen offline gesprekszinnen")
-            appendLine("Zelf geschreven betekenissen; niet geverifieerd of automatisch vertaald.")
-            appendLine("Geen herkende spraak, audiobestand, kloktijden of offline modelbewijs.")
-            appendLine()
-            turns.forEachIndexed { index, (note, fromMeaning) ->
-                val spoken = if (fromMeaning) note.ownMeaning else note.phrase
-                val answer = if (fromMeaning) note.phrase else note.ownMeaning
-                val fromCode = if (fromMeaning) note.meaningLanguage else note.language
-                val toCode = if (fromMeaning) note.language else note.meaningLanguage
-                appendLine((index + 1).toString() + ". " + fromCode + " -> " + toCode)
-                appendLine("Eigen bronzin: " + spoken)
-                appendLine("Mijn gekozen paar: " + answer)
-                appendLine()
-            }
+    fun snapshot(): ByteArray? = PrivateAuthoredConversationScript.render(
+        turns.map { (note, fromMeaning) ->
+            PrivateAuthoredConversationTurn(note, fromMeaning)
         }
-        val bytes = script.toByteArray(Charsets.UTF_8)
-        return bytes.takeIf {
-            it.size in 1..8192 && it.toString(Charsets.UTF_8)
-                .toByteArray(Charsets.UTF_8).contentEquals(it)
-        }
-    }
+    )
     val createDocument = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/plain")
     ) { uri ->
