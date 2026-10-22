@@ -1,6 +1,6 @@
 # Taalondersteuning in Tuddy
 
-Open in de app **Taal- en modelinstellingen → Bekijk alle taalondersteuning**. Het overzicht is doorzoekbaar op taalcode, Engelse of eigen naam, Nederlandse naam, aliassen, modelkaartnaam, modelcategorie, gedeclareerde licentie en modelomvang; accenten zijn niet vereist. Zoeken naar een model toont de talen waarvoor die onderzoekskandidaat relevant is, maar maakt het model niet beschikbaar of gedownload.
+Open in de app **Taal- en modelinstellingen → Bekijk alle taalondersteuning**. Het overzicht is doorzoekbaar op taalcode, Engelse of eigen naam, Nederlandse naam, aliassen, modelkaartnaam, modelcategorie, gedeclareerde licentie, modelomvang en vermelde taalrichtingen/codes; accenten zijn niet vereist. Zoeken naar een model toont de talen waarvoor die onderzoekskandidaat relevant is, maar maakt het model niet beschikbaar of gedownload. Richtingcodes die een modelkaart noemt, zijn onderzoeksmetadata: ze bewijzen niet dat elk bron-doelpaar bestaat, dat de dialectkwaliteit geschikt is of dat de combinatie op Android werkt.
 
 ## Drie aparte categorieën
 
