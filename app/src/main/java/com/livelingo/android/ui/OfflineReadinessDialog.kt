@@ -47,6 +47,7 @@ internal fun OfflineReadinessDialog(
     onDownloadSpeech: () -> Unit,
     onCancelSpeech: () -> Unit,
     onOpenSpeechSettings: () -> Unit,
+    onOpenAirplaneSettings: () -> Unit,
     onBrowseSpeechPacks: () -> Unit,
     onCopyDiagnostics: () -> Boolean,
     sessionDiagnostics: OfflineSessionDiagnostics,
@@ -184,7 +185,22 @@ internal fun OfflineReadinessDialog(
                 if (diagnosticsMessage.value.isNotBlank())
                     Text(diagnosticsMessage.value, style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
-                Text("3 · Mijn lokale luistersessie",
+                Text("3 · Vliegtuigmodus voorbereiden",
+                    style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Open zelf Android-instellingen, zet vliegtuigmodus aan en " +
+                        "controleer ook wifi en andere verbindingen. Keer daarna " +
+                        "terug naar Tuddy om werkelijk zonder verbinding te luisteren. " +
+                        "Dit opent alleen instellingen en schakelt niets zelf uit.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedButton(
+                    onClick = onOpenAirplaneSettings,
+                    enabled = !isListening,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Open vliegtuigmodusinstellingen") }
+                HorizontalDivider()
+                Text("4 · Mijn lokale luistersessie",
                     style = MaterialTheme.typography.titleSmall)
                 Text(
                     "Tuddy telt alleen gewijzigde tussenteksten, definitieve herkenningen, " +
