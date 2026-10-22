@@ -3038,7 +3038,7 @@ private fun TuddyScreen(
             }
             val stillCurrent = !listening && generation == request.generation &&
                 request.lines.size in 1..10 &&
-                request.lines.all { snapshot -> lines.any { it == snapshot } }
+                request.lines.all { snapshot -> snapshot.original.isNotBlank() && lines.any { it == snapshot } }
             PrivatePhraseBatchCaptureDialog(
                 rows = rows,
                 referenceLabel = "Gespreksreferentie",
@@ -3051,7 +3051,7 @@ private fun TuddyScreen(
                         generation == current.generation &&
                         current.lines == request.lines &&
                         current.lines.size in 1..10 &&
-                        current.lines.all { snapshot -> lines.any { it == snapshot } } &&
+                        current.lines.all { snapshot -> snapshot.original.isNotBlank() && lines.any { it == snapshot } } &&
                         batch.size == current.lines.size &&
                         personalPhrases.saveNewBatch(batch)) {
                         capturedPhraseNotice =
@@ -7066,7 +7066,7 @@ private fun TuddyScreen(
                             lines.count { it.id in livePhraseBatchSelection } ==
                                 livePhraseBatchSelection.size,
                         onClick = {
-                            val selectedLines = lines.filter { it.id in livePhraseBatchSelection }
+                            val selectedLines = lines.filter { it.id in livePhraseBatchSelection && it.original.isNotBlank() }
                             if (selectedLines.size in 1..10 &&
                                 selectedLines.size == livePhraseBatchSelection.size) {
                                 pendingLivePhraseBatchCapture = PendingLivePhraseBatchCapture(
@@ -7151,7 +7151,7 @@ private fun TuddyScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(
                                             checked = line.id in livePhraseBatchSelection,
-                                            enabled = !listening &&
+                                            enabled = !listening && line.original.isNotBlank() &&
                                                 (line.id in livePhraseBatchSelection ||
                                                     livePhraseBatchSelection.size < 10),
                                             onCheckedChange = { checked ->
