@@ -3346,6 +3346,8 @@ volgende regels serieel voor, met voortgang en normaal of rustig tempo.
 Bij lokaal voorlezen van één cue of een reeks toont Tuddy de actuele cue
 en markeert het tekstfragment dat een compatibele lokale stem terugmeldt. Stemmen
 zonder tekstbereiken blijven bij regelvolging; de markering is indicatief, geen exacte fonetische timing.
+Dezelfde tijdelijke volgkaart verschijnt ook bij het voorlezen van origineel
+of vertaling in **Tuddy · Toon gesprekszin**.
 **Stop**, het kiezen van een andere regel, het wijzigen van het concept of het
 verlaten van de app beëindigt de reeks. Alleen reeds geïnstalleerde
 niet-netwerkstemmen worden gebruikt; te lange regels blokkeren de reeks in
