@@ -16,16 +16,20 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.LanguageSearch
+import com.livelingo.android.LocalSpeechVoiceEntry
+import com.livelingo.android.LocalSpeechVoiceInventory
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.UnavailableTextLanguageCatalog
 import com.livelingo.android.SessionCorrectionLanguageCatalog
@@ -44,6 +48,14 @@ internal fun LanguageSupportDialog(
 ) {
     val uriHandler = LocalUriHandler.current
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val localVoiceInventory = remember(context) { LocalSpeechVoiceInventory(context) }
+    var installedLocalVoices by remember { mutableStateOf<List<LocalSpeechVoiceEntry>?>(null) }
+    var checkingLocalVoices by remember { mutableStateOf(false) }
+    var localVoiceNotice by remember { mutableStateOf("Nog niet gecontroleerd op dit toestel.") }
+    DisposableEffect(localVoiceInventory) {
+        onDispose { localVoiceInventory.close() }
+    }
     var linkNotice by remember { mutableStateOf("") }
     var researchCopyNotice by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
@@ -182,6 +194,87 @@ internal fun LanguageSupportDialog(
                     } else {
                         speechCandidates.forEach { candidate ->
                             Text(candidate, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    HorizontalDivider()
+                    Text(
+                        "Lokale voorleesstemmen · tekst naar spraak",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        "Controleer welke stemmen op dit toestel al geïnstalleerd zijn en niet als netwerkafhankelijk zijn gemarkeerd. Dit controleert geen spraakherkenning of vertaling; Tuddy downloadt of spreekt niets tijdens deze controle.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(
+                            enabled = !checkingLocalVoices,
+                            onClick = {
+                                checkingLocalVoices = true
+                                installedLocalVoices = null
+                                localVoiceNotice = "Geïnstalleerde lokale stemmen controleren…"
+                                localVoiceInventory.inspect { result ->
+                                    checkingLocalVoices = false
+                                    result.fold(
+                                        onSuccess = { voices ->
+                                            installedLocalVoices = voices
+                                            localVoiceNotice = if (voices.isEmpty()) {
+                                                "Geen geïnstalleerde lokale voorleesstemmen gevonden. Er is niets gedownload."
+                                            } else {
+                                                "${voices.size} taalvarianten met een geïnstalleerde lokale stem gevonden."
+                                            }
+                                        },
+                                        onFailure = {
+                                            installedLocalVoices = null
+                                            localVoiceNotice = "Android kon de lokale stemlijst niet openen. Er is niets gedownload."
+                                        }
+                                    )
+                                }
+                            }
+                        ) {
+                            Text(if (checkingLocalVoices) "Controleren…" else "Controleer lokale stemmen")
+                        }
+                        TextButton(
+                            onClick = {
+                                val opened = runCatching {
+                                    context.startActivity(
+                                        android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    )
+                                }.isSuccess
+                                localVoiceNotice = if (opened) {
+                                    "Android-toegankelijkheidsinstellingen geopend. Open Tekst-naar-spraakuitvoer en controleer daarna opnieuw."
+                                } else {
+                                    "Android biedt geen toegankelijkheidsinstellingen op dit toestel."
+                                }
+                            }
+                        ) { Text("Android-toegankelijkheidsinstellingen") }
+                    }
+                    Text(
+                        localVoiceNotice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    installedLocalVoices?.let { voices ->
+                        if (voices.isEmpty()) {
+                            Text(
+                                "Geen lokale voorleesstemmen beschikbaar. Een stem kan eventueel via Android-instellingen worden geïnstalleerd; Tuddy start zelf geen download.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        } else {
+                            voices.take(30).forEach { voice ->
+                                Text(
+                                    "${voice.displayName} (${voice.languageTag})",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                            if (voices.size > 30) {
+                                Text(
+                                    "Nog ${voices.size - 30} taalvarianten niet getoond.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                 }
