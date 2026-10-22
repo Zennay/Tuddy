@@ -2594,6 +2594,10 @@ originele zin of lokaal afgeronde vertaling om in de grote leesmodus ook een
 **volledig offline woordkaart** te openen, inclusief bij lokaal gemarkeerde
 zoekresultaten. Dit werkt zowel naast als onder elkaar, ook in de read-only
 privéarchiefweergave, zonder automatische opslag of verzonnen betekenissen.
+De leesmodus vindt bij zoeken ook veelvoorkomende Arabisch/Perzische
+toetsenbordvarianten in originele tekst, afgeronde vertaling en eigen uitleg.
+Alleen letterlijk overeenkomende woorden krijgen een zoekmarkering; de
+gespreks- en archieftekst wordt nergens herschreven.
 [Leesmodus-woordkaarten](docs/FOCUS_OFFLINE_WORD_CARDS.md).
 [Uitleg en privacygrenzen](docs/BILINGUAL_PARALLEL_READING.md).
 

@@ -225,8 +225,10 @@ internal fun FocusTranscriptDialog(
                             Text("Zoekopdracht wissen")
                         }
                     }
-                    Text("Zoeken gebruikt alleen afgeronde sessieregels. De " +
-                        "microfoon blijft onafhankelijk werken; live volgen " +
+                    Text("Zoeken gebruikt alleen afgeronde sessieregels. " +
+                        "Arabische/Perzische toetsenbordvarianten en weggelaten klinkertekens " +
+                        "kunnen dezelfde regel vinden; alleen letterlijke treffers worden " +
+                        "gemarkeerd. Opgeslagen spelling verandert niet. Live volgen " +
                         "hervat alleen na een tik op Volg live.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
