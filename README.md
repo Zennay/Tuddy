@@ -1,3 +1,17 @@
+## Nieuw: bewerkbare vijfkoloms-CSV voor eigen zinnen én thema's
+
+Bewaar nu je volledige persoonlijke Kurmanji-, Sorani- en Pasjtoe-zinnenboek
+**inclusief eigen thema per zin** als bewerkbare UTF-8 CSV. Tuddy toont
+alle zelfgeschreven zinnen en thema's vóór een bewuste Android-bestandskeuze.
+Importeren toont eveneens een volledige preview, waarna je expliciet kiest
+tussen veilig alleen nieuwe zinnen/thema's samenvoegen of de hele
+persoonlijke lijst vervangen. De bestaande vierkoloms-CSV en een
+volledige JSON-back-up blijven apart bestaan. Geen automatische
+machinevertaling, netwerkspraak of opslag zonder toestemming.
+[Handleiding en formaat](docs/PRIVATE_TOPIC_CSV_ROUNDTRIP.md).
+
+---
+
 ## Nieuw: plak een complete CSV-zinnenlijst zonder bestand
 
 Kopieer jouw eigen CSV-tekst inclusief kolomnamen en open

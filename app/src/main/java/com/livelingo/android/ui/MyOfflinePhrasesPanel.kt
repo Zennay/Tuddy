@@ -803,6 +803,7 @@ internal fun MyOfflinePhrasesPanel(
                     }) { Text("Herstel back-up…") }
                 }
                 PrivatePhraseArchiveAction(deck = deck, onChanged = { revision++ })
+                PrivatePhraseTopicCsvAction(deck = deck, onChanged = { revision++ })
                 OutlinedButton(
                     enabled = phrases?.isNotEmpty() == true,
                     onClick = {
