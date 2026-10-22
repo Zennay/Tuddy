@@ -3178,3 +3178,6 @@ van Arabische/Perzische yeh en kaf, negeert het optionele klinkertekens,
 tatweel en ZWNJ en normaliseert Unicode-presentatievormen. De bewaarde
 tekst wordt niet herschreven en er wordt geen zoekindex opgeslagen.
 [Werking en grenzen](docs/LIVE_CAPTION_SCRIPT_SEARCH.md).
+
+
+Modelonderzoek toont waar beschikbaar ook de vastgezette upstream-revisie en SHA-256 van een kandidaat-gewichtbestand. Dit identificeert de onderzochte bytes, maar bewijst geen datasetrechten, kwaliteit of Android-geschiktheid.
