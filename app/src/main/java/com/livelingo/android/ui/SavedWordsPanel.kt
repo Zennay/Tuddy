@@ -47,7 +47,9 @@ internal fun SavedWordsPanel(
     revision: Int,
     onChanged: () -> Unit,
     onDismiss: () -> Unit,
-    allowSpeech: Boolean = true
+    allowSpeech: Boolean = true,
+    incomingBackupJsonText: String? = null,
+    onIncomingBackupJsonConsumed: (String) -> Unit = {}
 ) {
     val allWords = remember(revision) { deck.entries() }
     var search by remember { mutableStateOf("") }
@@ -137,6 +139,30 @@ internal fun SavedWordsPanel(
             }
         }
     }
+
+    LaunchedEffect(incomingBackupJsonText) {
+        val shared = incomingBackupJsonText ?: return@LaunchedEffect
+        val bytes = shared.toByteArray(Charsets.UTF_8)
+        if (pendingImport != null || pendingExport != null || pendingStudySheet != null ||
+            practiceOpen || scheduledReviewOpen) {
+            transferStatus = "Er staat al een woordenlijstimport of export open. Sluit die eerst " +
+                "en deel de back-up opnieuw; je huidige woorden blijven behouden."
+        } else {
+            val candidate = if (bytes.isNotEmpty() && bytes.size <= 16_384 &&
+                bytes.toString(Charsets.UTF_8) == shared) deck.previewImport(bytes) else null
+            if (candidate == null) {
+                transferStatus = "Gedeelde Tuddy-woordenlijstback-up geweigerd: ongeldige JSON/UTF-8, " +
+                    "dubbele sleutels, onbekende versie, niet-herkende woorden of groter dan 16 KB. " +
+                    "Je huidige woorden zijn behouden."
+            } else {
+                pendingImport = candidate
+                transferStatus = "Gedeelde Tuddy-woordenlijstback-up gecontroleerd. Bekijk de volledige " +
+                    "lijst en bevestig apart als je de huidige woorden wilt vervangen."
+            }
+        }
+        onIncomingBackupJsonConsumed(shared)
+    }
+
 
     if (practiceOpen) {
         WordPracticePanel(
@@ -422,10 +448,21 @@ internal fun SavedWordsPanel(
             onDismissRequest = { pendingImport = null },
             title = { Text("Opgeslagen woorden vervangen?") },
             text = {
-                Text("Deze back-up bevat ${importCandidate.size} herkende woorden uit Tuddy's " +
-                    "kleine lokale woordenlijst. Hiermee vervang je je huidige woorden. " +
-                    "Gesprekken of eigen zinnen worden niet geïmporteerd. " +
-                    "Een bestaande herhaalplanning wordt voor deze woorden opnieuw gestart.")
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Deze back-up bevat ${importCandidate.size} herkende woorden uit Tuddy's " +
+                        "kleine lokale woordenlijst. Hiermee vervang je je huidige woorden. " +
+                        "Gesprekken of eigen zinnen worden niet geïmporteerd. " +
+                        "Een bestaande herhaalplanning wordt voor deze woorden opnieuw gestart.")
+                    Text("Volledige lijst ter controle:", style = MaterialTheme.typography.labelMedium)
+                    importCandidate.forEachIndexed { index, key ->
+                        HorizontalDivider()
+                        Text("${index + 1}. ${key.substringBefore('|').uppercase()} · ${key.substringAfter('|')}")
+                    }
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
