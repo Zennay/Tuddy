@@ -1137,7 +1137,7 @@ internal fun MyOfflinePhrasesPanel(
                 pendingImportBase = null
             },
             title = { Text(if (importSource == "paste")
-                "Geplakte eigen zinnen bekijken" else if (importSource == "tsv")
+                "Geplakte eigen zinnen bekijken" else if (importSource == "tsv" || importSource == "csv")
                 "Eigen zinnenlijst importeren?" else "Eigen zinnen vervangen?") },
             text = {
                 Column(
