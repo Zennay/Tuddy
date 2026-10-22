@@ -1922,6 +1922,7 @@ private fun TuddyScreen(
         lines.add(Line(id, sentence, "Vertalen…", "Bezig", sourceCode, targetCode))
         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
             val removed = lines.removeAt(0)
+            offlineSpeechChoices.remove(removed.id)
             manuallyAssignedSpeakers.remove(removed.id)
             captionPins = captionPins - removed.id
                             pinnedStudyEdits.remove(removed.id)
@@ -6139,6 +6140,7 @@ private fun TuddyScreen(
                                 copyStatus = ""
                             }
                             lines.removeAt(index)
+                            offlineSpeechChoices.remove(deleteRequest.first)
                             captionDeleteNotice = "Ondertitel uit dit gesprek gewist."
                         } else {
                             captionDeleteNotice = "Regel is gewijzigd; niets verwijderd."
@@ -7126,6 +7128,7 @@ private fun TuddyScreen(
                                 selectedSource, selectedTarget))
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                                 val removed = lines.removeAt(0)
+                                offlineSpeechChoices.remove(removed.id)
                                 manuallyAssignedSpeakers.remove(removed.id)
                                 captionPins = captionPins - removed.id
                             pinnedStudyEdits.remove(removed.id)
