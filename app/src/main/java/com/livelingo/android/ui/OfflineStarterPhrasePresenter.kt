@@ -38,6 +38,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.model.SafeCommunityPhrasebook
 
 /**
