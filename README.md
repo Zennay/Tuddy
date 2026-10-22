@@ -185,12 +185,13 @@ Bewaar nu je volledige persoonlijke Kurmanji-, Sorani- en Pasjtoe-zinnenboek
 alle zelfgeschreven zinnen en thema's vóór een bewuste Android-bestandskeuze.
 Importeren toont eveneens een volledige preview, waarna je expliciet kiest
 tussen veilig alleen nieuwe zinnen/thema's samenvoegen of de hele
-persoonlijke lijst vervangen. De bestaande vierkoloms-CSV en een
-volledige JSON-back-up blijven apart bestaan. Een eigen Tuddy-JSON-back-up
-kun je ook via Android Bestanden of bewust gedeelde tekst naar Tuddy openen:
-de versie en inhoud worden strikt gevalideerd en verschijnen eerst in dezelfde
-merge/replace-preview. Geen automatische machinevertaling, netwerkspraak of
-opslag zonder toestemming.
+persoonlijke lijst vervangen. De bestaande vierkoloms-CSV en JSON-back-ups
+blijven apart bestaan. Zowel de losse zinnenback-up (maximaal 50 KB) als het
+gecombineerde zinnen+thema's-archief (maximaal 70 KB) kan via Android
+Bestanden of bewust gedeelde tekst naar Tuddy terug. De juiste strikte parser
+opent de volledige import- of herstelpreview; er wordt niets automatisch
+geïmporteerd. Geen automatische machinevertaling, netwerkspraak of opslag
+zonder toestemming.
 [Handleiding en formaat](docs/PRIVATE_TOPIC_CSV_ROUNDTRIP.md).
 
 ---
