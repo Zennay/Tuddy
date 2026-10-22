@@ -242,6 +242,7 @@ internal fun FullscreenCaptionCard(
         speaker.stop()
         activeSpeechText = null
         activeSpeechLabel = ""
+        activeSpeechLanguage = ""
         activeSpeechRange = null
         audioNotice = ""
     }
@@ -437,6 +438,7 @@ internal fun FullscreenCaptionCard(
                         speaker.stop()
                         activeSpeechText = null
                         activeSpeechLabel = ""
+                        activeSpeechLanguage = ""
                         activeSpeechRange = null
                         audioNotice = "Lokale voorlezing gestopt."
                     }) { Text("■ Stop voorlezen") }
