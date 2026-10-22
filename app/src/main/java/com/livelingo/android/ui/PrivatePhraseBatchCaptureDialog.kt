@@ -26,7 +26,7 @@ import com.livelingo.android.PrivatePhraseTextPolicy
 import com.livelingo.android.TranscriptExportRow
 import java.util.Locale
 
-private data class ArchivePrivatePhraseDraft(
+private data class PrivatePhraseBatchDraft(
     val language: String? = null,
     val phrase: String = "",
     val meaningLanguage: String? = null,
@@ -34,9 +34,10 @@ private data class ArchivePrivatePhraseDraft(
 )
 
 /**
- * Deliberate multi-row authoring flow. Imported captions are shown only as
- * unverified reference. Every card starts blank and the entire batch is saved
- * atomically only after the user authors every field and confirms once.
+ * Deliberate multi-row authoring flow for live-session or imported-archive
+ * captions. Each selected row is reference-only and not independently verified.
+ * Every card starts blank; the entire batch is saved atomically only after the
+ * user authors every field and confirms once.
  */
 @Composable
 internal fun PrivatePhraseBatchCaptureDialog(
@@ -49,14 +50,14 @@ internal fun PrivatePhraseBatchCaptureDialog(
     onDismiss: () -> Unit
 ) {
     var drafts by remember(rows) {
-        mutableStateOf(List(rows.size) { ArchivePrivatePhraseDraft() })
+        mutableStateOf(List(rows.size) { PrivatePhraseBatchDraft() })
     }
     var currentIndex by remember(rows) { mutableStateOf(0) }
     var saveError by remember(rows) { mutableStateOf("") }
 
     val labels = listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val meaningLabels = listOf("nl" to "Nederlands", "en" to "Engels")
-    val current = drafts.getOrNull(currentIndex) ?: ArchivePrivatePhraseDraft()
+    val current = drafts.getOrNull(currentIndex) ?: PrivatePhraseBatchDraft()
     val candidates = drafts.mapNotNull { draft ->
         val language = draft.language ?: return@mapNotNull null
         val meaningLanguage = draft.meaningLanguage ?: return@mapNotNull null
@@ -80,7 +81,7 @@ internal fun PrivatePhraseBatchCaptureDialog(
     val canSave = stillCurrent && !rowCountInvalid && existingPhrases != null &&
         allComplete && !duplicateInBatch && !duplicateExisting && !deckFull
 
-    fun updateCurrent(transform: (ArchivePrivatePhraseDraft) -> ArchivePrivatePhraseDraft) {
+    fun updateCurrent(transform: (PrivatePhraseBatchDraft) -> PrivatePhraseBatchDraft) {
         if (currentIndex !in drafts.indices) return
         drafts = drafts.toMutableList().also { it[currentIndex] = transform(it[currentIndex]) }
         saveError = ""
