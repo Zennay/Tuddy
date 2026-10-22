@@ -30,11 +30,11 @@ From a Tuddy source checkout, after downloading the artifact ZIP as
 `artifact.zip`, run the reusable integrity verifier:
 
 ```sh
-bash scripts/verify-tuddy-apk-artifact.sh \\
-  artifact.zip \\
-  ae58991de2e456f48cfaf5e123e2d04a236a6611d9de43f4e2a6079c9f291a67 \\
-  10292346fc16d07ab0beb758d26bde480ca6b68cff9fe9bf8e55049d69a374ef \\
-  f725446996dc4a2b6e75b48aa61de31758b951aa \\
+bash scripts/verify-tuddy-apk-artifact.sh \
+  artifact.zip \
+  ae58991de2e456f48cfaf5e123e2d04a236a6611d9de43f4e2a6079c9f291a67 \
+  10292346fc16d07ab0beb758d26bde480ca6b68cff9fe9bf8e55049d69a374ef \
+  f725446996dc4a2b6e75b48aa61de31758b951aa \
   39745867690
 ```
 
