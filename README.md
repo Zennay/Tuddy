@@ -1,3 +1,15 @@
+## Nieuw: corrigeer eigen gespreksbeurten zonder woordenlijstwijziging
+
+In de tijdelijke offline tweewegconversatie kun je een losse bronzin en
+zelfgeschreven betekenis corrigeren, of alleen de leesrichting van die
+beurt omdraaien. Een correctie maakt alleen die gespreksbeurt tijdelijk:
+bestaande opgeslagen privézinnen blijven ongewijzigd. Opnieuw bewust
+opslaan kan uitsluitend via de aparte toestemmingsactie. Geen automatische
+spraakherkenning of vertaling.
+[Gebruikersuitleg](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: offline eigen tweewegzinnen — zonder spraak- of vertaalmodel
 
 Open **Gesprek met eigen offline zinnen**. Kies exact een opgeslagen eigen zin
