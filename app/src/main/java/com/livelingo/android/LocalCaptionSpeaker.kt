@@ -248,7 +248,8 @@ internal class LocalCaptionSpeaker(context: Context) {
                 }
             })
         } catch (_: RuntimeException) {
-            fail("De lokale Android-voorleesdienst kan niet worden gestart.")
+            stop()
+            feedback("De lokale Android-voorleesdienst kan niet worden gestart. Geen online fallback.")
         }
     }
     private companion object {
