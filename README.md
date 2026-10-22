@@ -1,3 +1,13 @@
+## Nieuw: thema-CSV bewust plakken zonder bestandsprovider
+
+Je kunt een eigen vijfkoloms-CSV nu ook zelf in het invoerveld van
+Tuddy plakken. De bestaande strenge parser bewaakt het formaat; daarna
+volgt de volledige zinnen- en themapreview vóór elke bewaaractie.
+Er is geen automatische klembordtoegang, vertaling of synchronisatie.
+[CSV-handleiding](docs/PRIVATE_TOPIC_CSV_ROUNDTRIP.md).
+
+---
+
 ## Nieuw: deel alleen één taal of privéthema als bewerkbare CSV
 
 In het vijfkoloms zinnenboek kun je vooraf exact kiezen welke
