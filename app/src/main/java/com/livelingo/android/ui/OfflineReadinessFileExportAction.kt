@@ -83,7 +83,7 @@ internal fun OfflineReadinessFileExportAction(
         ) { Text("Bewaar apparaatrapport als tekstbestand…") }
         Text(
             "Alleen op jouw verzoek. Bevat apparaatmodel, systeemversie, " +
-                "buildidentiteit, taalkeuzes en lokale pakketstatus; " +
+                "buildidentiteit, microfoonmachtiging, taalkeuzes en lokale pakketstatus; " +
                 "geen gesprekken, uitgesproken woorden of audio. " +
                 "Een Android-bestandsprovider kan dit extern synchroniseren.",
             style = MaterialTheme.typography.bodySmall
