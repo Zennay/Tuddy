@@ -3138,21 +3138,22 @@ spaced-repetition-over-dagen of formele taaltoets.
 
 ### Woorden oefenen én back-uppen op eigen verzoek
 
-De bestaande knop **Mijn woorden** biedt nu ook **Bewaar back-up…** en
+De bestaande knop **Mijn woorden** biedt **Bewaar back-up…** en
 **Herstel back-up…** voor alleen de zelf opgeslagen taal/woord-sleutels
-uit het kleine lokale, handmatig gecontroleerde woordenboek.
-Herstel controleert eerst bestandsversie, bekende woorden, dubbelen en
-UTF-8-inhoud, toont hoeveel woorden geladen worden en vraagt vervolgens
+uit het kleine lokale, handmatig gecontroleerde woordenboek. Met
+**Deel JSON-back-up…** kun je de volledige lijst eerst controleren en daarna
+bewust via Android Delen versturen zonder eerst een bestand te maken.
+Herstel en ontvangen back-ups controleren eerst de versie, bekende woorden,
+dubbelen en UTF-8-inhoud, tonen de volledige woordenlijst en vragen vervolgens
 apart om de bestaande lijst werkelijk te vervangen. Annuleren raakt de
-woorden niet. Definities komen altijd uit de lokaal geïnstalleerde
-woordenlijst, niet uit het gekozen bestand. Een `tuddy-curated-word-keys-v1`
-JSON-back-up kan ook via Android Delen naar Tuddy worden gestuurd: de ontvanger
-valideert alle sleutels en toont de volledige woordenlijst vóór de afzonderlijke
-vervangbevestiging, in plaats van het bestand als vertaaltekst te openen.
-Geen gesprekken, audio of persoonlijke zinnen worden geëxporteerd of geïmporteerd.
-Android vraagt zelf om een opslaglocatie; een externe bestandsprovider kan
-wel synchroniseren. Zie [woordback-uphandleiding](docs/PRIVATE_WORD_BACKUP.md).
-Fysieke toestelacceptatie en release-APK blijven afzonderlijk vereist.
+woorden niet. Definities komen altijd uit de lokaal geïnstalleerde woordenlijst,
+niet uit het gekozen bestand. Een `tuddy-curated-word-keys-v1` JSON-back-up
+die via Android Delen wordt ontvangen, opent dezelfde importpreview in plaats
+van als vertaaltekst te worden geopend. Geen gesprekken, audio, persoonlijke
+zinnen of oefengegevens worden gedeeld. Tuddy uploadt niets; de door jou gekozen
+ontvangende app kan de tekst zelf opslaan of doorsturen. Zie
+[woordback-uphandleiding](docs/PRIVATE_WORD_BACKUP.md). Fysieke toestelacceptatie
+en release-APK blijven afzonderlijk vereist.
 
 ### Voorlezen van afgeronde vertalingen (op eigen verzoek)
 
