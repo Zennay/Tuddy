@@ -71,3 +71,23 @@ actie buiten Tuddy. Je kunt het bestand in je eigen spreadsheet-editor
 bewerken zolang je de vier kolommen en regels behoudt, en later bewust
 via **Importeer eigen zinnen uit CSV…** opnieuw kiezen. Duplicaten
 worden bij veilig samenvoegen niet overschreven.
+
+## CSV rechtstreeks plakken (geen bestand nodig)
+
+Heb je zelf in een spreadsheet een kleine CSV gemaakt, dan kun je
+zonder Android-bestandskiezer ook **Plak een volledige eigen
+CSV-zinnenlijst…** gebruiken. Je plakt **zelf** de complete tekst
+inclusief de exacte kopregel in het invoerveld (maximaal 12.000 tekens).
+Tuddy vraagt geen klembordrechten en leest nooit vanzelf je klembord.
+Elke rij gebruikt dezelfde `language,phrase,meaningLanguage,ownMeaning`
+CSV-regels als de bestandimport.
+
+Bij foutieve of dubbele regels blijft de complete tekst in het
+invoerveld staan om te corrigeren; lokaal opgeslagen kaarten blijven
+onaangeroerd. Na succesvolle strikte parse verschijnt eerst dezelfde
+**volledige overzichtspagina met alle zinnen en betekenissen**.
+Pas daarna kun je kiezen om uitsluitend nieuwe kaarten toe te voegen
+of om bewust de hele lokale lijst te vervangen. Beide keuzes blijven
+onderworpen aan de bestaande limiet en momentopname-/opslagregels.
+Dit is geen automatische vertaling, online import, of toezegging van
+native-speakercontrole.
