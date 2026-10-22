@@ -335,7 +335,7 @@ internal fun TwoWayTypedConversationDialog(
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { clearSpeech(); onDismiss() },
         title = { Text("Tweeweg-tekstgesprek · offline") },
         text = {
             Column(
