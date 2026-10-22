@@ -34,3 +34,7 @@ daarna op **Schrijf N eigen privékaarten…**.
   een onleesbaar zinnenboek of verouderde archiefcontext maakt opslaan onmogelijk.
 - De eigen betekenissen zijn niet door Tuddy of een moedertaalspreker
   geverifieerd. De bronbestanden en het geopende archief blijven ongewijzigd.
+
+Deze batchwizard wordt ook gebruikt voor een gestopt live gesprek. Zie
+[Meerdere privékaarten uit gesprek of archief](PRIVATE_PHRASE_BATCH_AUTHORING.md)
+voor beide selectieroutes en de gedeelde privacyregels.
