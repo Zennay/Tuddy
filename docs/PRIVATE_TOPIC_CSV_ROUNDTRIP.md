@@ -125,3 +125,18 @@ woordenlijst/thema-indeling na het bekijken van de CSV zorgt nog
 steeds voor een volledige weigering in plaats van een gedeeltelijke
 opslag. Bestandsselectie en handmatig plakken gebruiken dezelfde
 selectieregels, atomaire toevoeging en volledige voorafgaande preview.
+
+## Welke bestaande zinnen worden bij samenvoegen overgeslagen?
+
+De selectieve importpreview telt nu expliciet het aantal nieuwe zinnen
+en zinnen die al in de huidige persoonlijke lijst bestaan.
+Bij elke regel staat **nieuw** of **bestaat lokaal**. Bij veilig
+samenvoegen blijft voor een bestaande bronzin zowel je eigen
+betekenis als je huidige thema altijd leidend, ongeacht wat
+de externe CSV laat zien. Voor nieuwe zinnen toont Tuddy welk
+eigen thema daadwerkelijk zal worden toegevoegd.
+
+Dit helpt de gebruiker vooraf verschil te zien tussen een nieuwe
+taalgroep importeren en een bestaande lokale betekenis onbedoeld
+proberen bijwerken. De preview is geen automatische vertaling
+en voert zelf geen opslagactie uit.
