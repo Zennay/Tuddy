@@ -68,3 +68,23 @@ zonder gedeeltelijke samenvoeging. Samenvoegen is niet mogelijk als
 er maar één eigen thema bestaat en een thema kan nooit naar zichzelf
 worden samengevoegd. Er is geen automatische taalindeling, netwerk
 of upload.
+
+
+## Laatste samenvoeging binnen dit scherm terugdraaien
+
+Na het bewust samenvoegen van twee thema's verschijnt in hetzelfde
+beheerscherm **Maak de laatste themasamenvoeging ongedaan…**.
+Deze tijdelijke mogelijkheid bewaart de oude thema-indeling uitsluitend
+in het geheugen, niet op disk, niet in een account en niet in de cloud.
+
+Voor het terugdraaien krijg je een tweede preview van de betrokken
+zinnen. Daarna herstelt Tuddy de oorspronkelijke themanamen en
+koppelingen in één lokale transactie, uitsluitend als de volledige
+huidige themasnapshot én de oorspronkelijke zinnenlijst nog ongewijzigd
+zijn. Bij nieuwe edits, ontbrekende zinnen of corrupte gegevens weigert
+de app zonder gedeeltelijk herstel. Favorieten, betekenissen en
+herhaalplanning veranderen nooit door deze actie.
+
+**Dit is geen permanente prullenbak of back-up.** Sluit je het scherm of
+de app, dan vervalt de tijdelijke terugdraaimogelijkheid. Voor langdurige
+bewaring gebruik je de expliciete JSON-thema-back-up.
