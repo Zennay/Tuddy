@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.SessionTranslationCorrection
 import com.livelingo.android.SessionTranslationCorrections
+import com.livelingo.android.SessionCorrectionLanguageCatalog
 import com.livelingo.android.TargetCatalog
 
 /**
@@ -33,18 +34,23 @@ import com.livelingo.android.TargetCatalog
 @Composable
 internal fun SessionCorrectionManualAddDialog(
     entries: List<SessionTranslationCorrection>,
+    initialTargetCode: String? = null,
     onAdd: (List<SessionTranslationCorrection>, SessionTranslationCorrection) -> Boolean,
     onDismiss: () -> Unit
 ) {
     val snapshot = remember { entries.toList() }
     var sourceCode by remember { mutableStateOf("nl") }
-    var targetCode by remember { mutableStateOf("en") }
+    var targetCode by remember {
+        mutableStateOf(initialTargetCode?.takeIf {
+            it in SessionCorrectionLanguageCatalog.manualOnlyCodes
+        } ?: "en")
+    }
     var sourceMenuOpen by remember { mutableStateOf(false) }
     var targetMenuOpen by remember { mutableStateOf(false) }
     var original by remember { mutableStateOf("") }
     var translation by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
-    val codeLabel = TargetCatalog.targets.associate { it.code to it.title }
+    val codeLabel = SessionCorrectionLanguageCatalog.targets.associate { it.code to it.title }
     val candidate = SessionTranslationCorrection(
         original, translation, sourceCode, targetCode
     )
@@ -72,6 +78,16 @@ internal fun SessionCorrectionManualAddDialog(
                         "uitsluitend als voorstel getoond en nooit automatisch toegepast.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (sourceCode in SessionCorrectionLanguageCatalog.manualOnlyCodes ||
+                    targetCode in SessionCorrectionLanguageCatalog.manualOnlyCodes) {
+                    Text(
+                        "Handmatig phrasebook: deze taalcode is alleen voor jouw eigen " +
+                            "tekstcorrecties. Er is geen geactiveerd spraak- of vertaalmodel; " +
+                            "deze invoer verandert de live vertaalroute niet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 Box {
                     TextButton(onClick = { sourceMenuOpen = true }) {
                         Text("Brontaal: " + (codeLabel[sourceCode] ?: sourceCode) + " ▾")
@@ -80,7 +96,7 @@ internal fun SessionCorrectionManualAddDialog(
                         expanded = sourceMenuOpen,
                         onDismissRequest = { sourceMenuOpen = false }
                     ) {
-                        TargetCatalog.targets.forEach { target ->
+                        SessionCorrectionLanguageCatalog.targets.forEach { target ->
                             DropdownMenuItem(
                                 text = { Text(target.title + " (" + target.code + ")") },
                                 onClick = {
