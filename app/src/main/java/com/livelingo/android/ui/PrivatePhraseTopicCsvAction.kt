@@ -377,6 +377,13 @@ internal fun PrivatePhraseTopicCsvAction(
         val chosenLinks = review.archive.assignments.filterKeys { it in identities }
         val names = review.archive.topics.filter { it in chosenLinks.values }
         val chosenArchive = PrivatePhraseArchive(chosenNotes, names, chosenLinks)
+        val existingKeys = review.originalNotes.map {
+            it.language + "|" + it.phrase.lowercase(java.util.Locale.ROOT)
+        }.toSet()
+        fun alreadyStored(note: PersonalPhrase): Boolean =
+            note.language + "|" + note.phrase.lowercase(java.util.Locale.ROOT) in existingKeys
+        val newCount = chosenNotes.count { !alreadyStored(it) }
+        val existingCount = chosenNotes.size - newCount
         AlertDialog(
             onDismissRequest = { importReview = null },
             title = { Text("Eigen CSV-zinnen én thema's controleren") },
@@ -419,7 +426,9 @@ internal fun PrivatePhraseTopicCsvAction(
                     }
                     Text("Geselecteerd: " + chosenNotes.size +
                         " van " + review.archive.notes.size + " eigen zinnen. " +
-                        "Alle onderstaande zinnen vormen exact de importpreview.",
+                        newCount + " nieuw, " + existingCount + " bestaan lokaal al. " +
+                        "Bij veilig samenvoegen worden bestaande betekenissen " +
+                        "en themakoppelingen nooit door de CSV overschreven.",
                         style = MaterialTheme.typography.labelMedium)
                     TextButton(onClick = { mergeOnly = true }) {
                         Text(if (mergeOnly) "☑ Voeg veilig alleen nieuwe toe"
@@ -455,6 +464,14 @@ internal fun PrivatePhraseTopicCsvAction(
                         ))
                         Text("Eigen betekenis: " + note.ownMeaning,
                             style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            if (alreadyStored(note))
+                                "Bestaat lokaal: bij samenvoegen behoud je jouw " +
+                                    "huidige betekenis en thema (CSV-rij wordt overgeslagen)."
+                            else "Nieuwe zin: bij samenvoegen wordt deze eigen " +
+                                "zin inclusief gekozen thema toegevoegd.",
+                            style = MaterialTheme.typography.labelSmall
+                        )
                         Text("Thema: " + (chosenLinks[
                             PrivatePhraseShortcuts.fingerprint(note)
                         ] ?: "zonder thema"), style = MaterialTheme.typography.labelMedium)
