@@ -436,3 +436,12 @@ uitgeschakelde wifi en een lege netwerktransportlijst niet eenduidig
 rapporteert. Onbekende status blokkeert de start. Deze keuze vervangt
 **geen** echte fysieke radiocontrole en is na een nieuwe appstart niet
 meer actief. Lees [lokale verbindingsstatus](OFFLINE_RADIO_STATUS.md).
+
+
+### Optionele verbindingbewaking tijdens strikt luisteren
+
+Bij ingeschakelde strikte vliegtuigmodus stopt Tuddy een actieve
+spraakherkenner ook als een volgende Android-momentopname (ongeveer
+elke 1,5 seconde) een actieve of onbekende netwerkstatus meldt. Dat is
+een extra gebruikerscontrole, **niet** een meetbewijs dat gedurende
+de hele tussenliggende tijd geen verkeer mogelijk was.

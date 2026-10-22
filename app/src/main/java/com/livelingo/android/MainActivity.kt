@@ -53,6 +53,7 @@ import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.livelingo.android.model.SafeCommunityPhrasebook
@@ -6345,6 +6346,25 @@ private fun TuddyScreen(
                 onDismiss = { dailyStudyHubOpen = false }
             )
         }
+        // A strict user choice also applies AFTER the microphone has started.
+        // Poll only while a strict session is actively listening; no network
+        // request, background worker or persistent monitor is created.
+        LaunchedEffect(listening, requireOfflineRadioBeforeListening) {
+            while (listening && requireOfflineRadioBeforeListening) {
+                delay(1_500L)
+                if (!listening || !requireOfflineRadioBeforeListening) break
+                val radio = OfflineRadioSnapshot.capture(context)
+                if (radio.airplaneModeOn != true || radio.wifiEnabled != false ||
+                    radio.networkReadFailed || radio.visibleTransports.isNotEmpty()) {
+                    stop()
+                    error = "Strikt offline luisteren gestopt: Android meldt " +
+                        "een gewijzigde of onbekende netwerkverbinding. " +
+                        "Controleer vliegtuigmodus en wifi opnieuw."
+                    offlineReadinessOpen = true
+                    break
+                }
+            }
+        }
         Surface(Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(18.dp),
@@ -6374,6 +6394,17 @@ private fun TuddyScreen(
                         "Offline startcheck · beide modellen aanwezig"
                     else "Offline startcheck · controleer spraak én tekst")
                 }
+                Text(
+                    if (requireOfflineRadioBeforeListening)
+                        "Strikte vliegtuigmodus is aan voor deze sessie. " +
+                            "Luisteren stopt bij nieuwe of onduidelijke verbindingen."
+                    else "Strikte vliegtuigmodus staat uit. Schakel hem " +
+                        "desgewenst in via Offline startcheck.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (requireOfflineRadioBeforeListening)
+                        MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val canStart = offlineAvailable && !listening
                     Button(
