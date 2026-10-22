@@ -41,6 +41,7 @@ import com.livelingo.android.LocalSpeechPace
  * Two-person, offline presentation of the exact temporary conversation turns.
  * Unlike a phrase-deck slideshow, each turn keeps its chosen speaking direction.
  * User-triggered local voice is optional, and practice can conceal the reply.
+ * Difficult-turn markers and focus navigation also stay only in UI memory.
  * No automatic recording, translation, sharing or persistence.
  */
 @Composable
@@ -57,6 +58,10 @@ internal fun OfflinePersonalTurnTableDialog(
     var practice by remember { mutableStateOf(false) }
     var revealed by remember(index, practice) { mutableStateOf(false) }
     var slowSpeech by remember { mutableStateOf(false) }
+    var repeatIndices by remember(turns) { mutableStateOf<Set<Int>>(emptySet()) }
+    var repeatOnly by remember(turns) { mutableStateOf(false) }
+    val navigation = if (repeatOnly) repeatIndices.sorted() else turns.indices.toList()
+    val position = navigation.indexOf(index)
     var audioNotice by remember { mutableStateOf("") }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
@@ -154,12 +159,19 @@ internal fun OfflinePersonalTurnTableDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(enabled = index > 0, onClick = { index-- }) {
+                        TextButton(enabled = position > 0,
+                            onClick = { index = navigation[position - 1] }) {
                             Text("← Vorige")
                         }
-                        Text("Beurt ${if (turn == null) 0 else index + 1} / ${turns.size}",
-                            style = MaterialTheme.typography.labelMedium)
-                        TextButton(enabled = index < turns.lastIndex, onClick = { index++ }) {
+                        Text(
+                            if (repeatOnly)
+                                "Herhalen ${if (position >= 0) position + 1 else 0}/${navigation.size}"
+                            else "Beurt ${if (turn == null) 0 else index + 1}/${turns.size}",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        TextButton(enabled = position >= 0 &&
+                            position < navigation.lastIndex,
+                            onClick = { index = navigation[position + 1] }) {
                             Text("Volgende →")
                         }
                     }
@@ -175,6 +187,44 @@ internal fun OfflinePersonalTurnTableDialog(
                             speaker.stop()
                             onBack()
                         }) { Text("Terug") }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(enabled = turn != null, onClick = {
+                            if (index !in repeatIndices) {
+                                repeatIndices = repeatIndices + index
+                            } else {
+                                val remaining = repeatIndices - index
+                                repeatIndices = remaining
+                                if (repeatOnly) {
+                                    if (remaining.isEmpty()) {
+                                        repeatOnly = false
+                                    } else {
+                                        index = remaining.sorted().firstOrNull { it > index }
+                                            ?: remaining.minOrNull()!!
+                                    }
+                                }
+                            }
+                        }) {
+                            Text(if (index in repeatIndices) "✓ Nog lastig"
+                                else "↻ Markeer lastig")
+                        }
+                        TextButton(
+                            enabled = repeatIndices.isNotEmpty(),
+                            onClick = {
+                                repeatOnly = !repeatOnly
+                                if (repeatOnly && index !in repeatIndices) {
+                                    index = repeatIndices.minOrNull() ?: index
+                                }
+                            }
+                        ) {
+                            Text(if (repeatOnly) "Alle beurten"
+                                else "Herhaal (${repeatIndices.size})")
+                        }
+                        Text("${repeatIndices.size} lastig",
+                            style = MaterialTheme.typography.labelSmall)
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
