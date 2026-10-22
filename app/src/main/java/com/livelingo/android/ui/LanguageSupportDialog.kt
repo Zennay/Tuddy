@@ -51,9 +51,9 @@ internal fun LanguageSupportDialog(
         val evidence = "$license $limitation".lowercase()
         return when {
             listOf("cc-by-nc", "niet-commercieel", "non-commercial", "noncommercial")
-                .any(evidence::contains) -> "Niet-commercieel"
+                .any { phrase -> evidence.contains(phrase) } -> "Niet-commercieel"
             listOf("gated", "contactinformatie", "contact information", "share contact")
-                .any(evidence::contains) -> "Toegang beperkt"
+                .any { phrase -> evidence.contains(phrase) } -> "Toegang beperkt"
             else -> "Overig/onbekend"
         }
     }
