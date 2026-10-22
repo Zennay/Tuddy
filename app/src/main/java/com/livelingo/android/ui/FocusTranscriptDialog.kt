@@ -50,7 +50,8 @@ internal fun FocusTranscriptDialog(
     pinnedCaptionIds: Set<Long> = emptySet(),
     onTogglePin: ((Long) -> String)? = null,
     onCycleManualSpeaker: ((Long) -> Unit)? = null,
-    onRequestTranslationCorrection: ((Long) -> Unit)? = null
+    onRequestTranslationCorrection: ((Long) -> Unit)? = null,
+    onRequestOriginalCorrection: ((Long) -> Unit)? = null
 ) {
     val listState = rememberLazyListState()
     var followLive by remember { mutableStateOf(true) }
@@ -333,6 +334,16 @@ internal fun FocusTranscriptDialog(
                                         Text(if (line.id in pinnedCaptionIds)
                                             "★ Markering verwijderen" else
                                             "☆ Markeer voor dit gesprek")
+                                    }
+                                }
+                                if (!archiveMode && !listening &&
+                                    onRequestOriginalCorrection != null &&
+                                    line.original.isNotBlank()
+                                ) {
+                                    TextButton(onClick = {
+                                        onRequestOriginalCorrection(line.id)
+                                    }) {
+                                        Text("✎ Corrigeer herkende zin…")
                                     }
                                 }
                                 if (!archiveMode && !listening &&
