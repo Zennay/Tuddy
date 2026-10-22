@@ -21,6 +21,17 @@ voorleesbediening. Deze functie gebruikt de reeds bestaande
   Met name Kurmanji, Sorani en Pasjtoe kunnen zonder geschikte
   reeds geïnstalleerde Android-stem volledig stil blijven.
 
+## Tijdelijke volgmarkering
+
+Tijdens het voorlezen van een eigen zin, eigen betekenis, bronwoord of
+ingebouwd doelwoord blijft de bijbehorende zijde zichtbaar gemarkeerd.
+Wanneer de reeds geïnstalleerde Android-stem een tekstbereik terugmeldt,
+markeert Tuddy alleen dat bereik. Zonder callback toont de app de actieve
+zijde maar claimt zij geen exacte woordtiming. Wisselen van kaart of
+bron-/doeltaal, stoppen, achtergrond en sluiten beëindigen de spraak en
+wissen de tijdelijke markering. Er wordt geen audio, bereik of afspeelgeschiedenis
+opgeslagen.
+
 ## Grenzen en privacy
 
 De zinnen en betekenissen in **Mijn eigen zinnen** zijn door de

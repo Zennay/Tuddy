@@ -15,6 +15,12 @@ voorleesdienst, zonder online spraak.
 - **Oefen opgeslagen woorden**: dezelfde knoppen staan bij de
   getoonde vraag. Nieuwe kaart, andere taalset, een nieuwe
   ronde of sluiten stoppen de audio.
+- **Volgmarkering:** tijdens een uitgesproken woord toont Tuddy het
+  actieve woord in de lijst of oefenkaart. Als de geïnstalleerde stem
+  een tekstbereik terugmeldt, markeert Tuddy alleen dat bereik; zonder
+  bereik blijft het woord zichtbaar zonder exacte woordtiming te claimen.
+  Zoeken, een andere kaart, verwijderen, stoppen, achtergrond en openen
+  van de oefenweergave stoppen de stem en wissen de tijdelijke markering.
 - **Microfoon actief?** Dan zijn voorleesknoppen uitgeschakeld
   en stopt bestaande stemweergave zodra de live microfoon
   begint. Zo worden voorgelezen woorden niet opnieuw als

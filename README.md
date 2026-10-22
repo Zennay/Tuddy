@@ -2491,11 +2491,14 @@ per moeilijke kaart. De voortgang verdwijnt bij sluiten:
 
 In **Mijn opgeslagen woorden** kun je elk lokaal bewaard woord
 met **🔊 Hoor woord**, **Rustig** en **Stop** uitspreken met een
-bestaande geïnstalleerde Android-stem. Dezelfde bediening
-zit in **Oefen opgeslagen woorden**. Bij woordwissel,
-achtergrond of actieve live microfoon stopt de audio; tijdens
-luisteren met de microfoon zijn de knoppen uitgeschakeld.
-Geen stemdownload, cloudspraak of nieuwe opslag.
+bestaande geïnstalleerde Android-stem. Terwijl de stem spreekt, blijft
+het juiste woord in de lijst zichtbaar gemarkeerd wanneer Android een
+tekstbereik terugmeldt; anders toont Tuddy geen verzonnen woordtiming.
+Dezelfde volgmarkering zit in **Oefen opgeslagen woorden**. Bij zoeken,
+woordwissel, verwijderen, achtergrond of actieve live microfoon stopt
+de audio en verdwijnt de tijdelijke markering; tijdens luisteren met
+de microfoon zijn de startknoppen uitgeschakeld. Geen stemdownload,
+cloudspraak of nieuwe opslag.
 [Werking en beperkingen](docs/OFFLINE_SAVED_WORD_AUDIO.md).
 
 ## Nieuw: luister naar je eigen offline oefenkaart
@@ -2526,11 +2529,14 @@ achtergrondgang stopt het vorige geluid.
 De grote eigen-zinnenkaart én de vijf ingebouwde voorbeeldwoorden
 bieden nu **🔊 Zin/Bronwoord**, **🔊 Betekenis/Doelwoord**, **Rustig**
 en **Stop**. De app gebruikt alleen een stem die Android zelf als
-reeds geïnstalleerd en niet-netwerkafhankelijk meldt. Als een
-Kurmanji-, Sorani- of Pasjtoe-stem ontbreekt, blijft de knop zonder
-online uitwijkroute stil en verschijnt een melding. Wisselen van
-kaart, achtergrond en sluiten stoppen het geluid. Eigen betekenissen
-zijn **niet geverifieerd**.
+reeds geïnstalleerd en niet-netwerkafhankelijk meldt. Tijdens het spreken
+blijft de juiste eigen zin, betekenis, bronwoord of doelwoord gemarkeerd;
+als de stem een tekstbereik terugmeldt, markeert Tuddy dat bereik. Zonder
+bereik toont Tuddy alleen welke zijde actief is en claimt het geen exacte
+woordtiming. Als een Kurmanji-, Sorani- of Pasjtoe-stem ontbreekt, blijft
+de knop zonder online uitwijkroute stil en verschijnt een melding.
+Wisselen van kaart, bron-/doeltaal, achtergrond en sluiten stoppen het
+geluid. Eigen betekenissen zijn **niet geverifieerd**.
 [Handleiding en privacy](docs/PRONOUNCE_OFFLINE_PHRASE_CARDS.md).
 
 ## Nieuw: handmatig woord voor woord lezen
