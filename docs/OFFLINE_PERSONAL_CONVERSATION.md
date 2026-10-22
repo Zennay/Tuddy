@@ -74,6 +74,16 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    toestemmingsactie. De import bewaart nooit automatisch in de woordenlijst
    of op schijf.
 
+### Plak een zelf gedeeld gesprekscript zonder bestand
+
+Ontvang je een Tuddy-gesprek als platte tekst, kies dan zelf
+**Plak een zelf gedeeld Tuddy-gesprekscript…**. Plak het gehele script,
+tik op **Lees volledige controlepreview…** en bekijk alle zinnen en de
+richting van elke beurt. Dezelfde strikte UTF-8-/8-KiB-/12-beurtcontrole
+geldt als voor bestandsimport. Kies afzonderlijk om het gesprek tijdelijk
+te vervangen of aan te vullen. Tuddy leest nooit automatisch je klembord
+en bewaart de geplakte tekst niet in je woordenlijst.
+
 De Android Documenten-app kan externe cloudbestandsproviders aanbieden,
 maar Tuddy uploadt of vertaalt het geselecteerde bestand niet. Dit is
 geen compatibiliteit met willekeurige ondertitels of vertaalbestanden:
@@ -94,6 +104,20 @@ eventuele bestanden onafhankelijk van Tuddy.
 - Geen automatische vertaling, netwerkspraak, audio-export of modeldownload.
 - Zelfgeschreven betekenissen zijn niet onafhankelijk gecontroleerd:
   ongeschikt voor medische, juridische of andere urgente beslissingen.
+
+## Bewust een geselecteerd gesprek via Android delen
+
+**Deel dit volledige eigen gesprekscript bewust…** opent eerst een
+volledige preview van de maximaal twaalf geselecteerde beurten
+(hoogstens 8192 UTF-8 bytes). Alleen wanneer jij daarna apart
+**Open Android-deelvenster…** kiest, krijgt Android het getoonde
+tekstscript. Tuddy controleert vlak vóór het delen opnieuw dat de
+gekozen beurten onveranderd zijn; anders gaat het deelvenster niet open.
+
+Een externe door jou gekozen app kan de tekst uploaden, opslaan of
+doorsturen; Tuddy kan dat niet terugdraaien. Geen andere persoonlijke
+zinnen, onzichtbare geschiedenis, audio of automatische vertaling wordt
+toegevoegd. Deel alleen teksten waarvoor jij bewust toestemming geeft.
 
 ## Niet ondersteund
 
