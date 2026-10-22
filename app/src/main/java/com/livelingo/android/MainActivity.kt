@@ -3803,6 +3803,24 @@ private fun TuddyScreen(
                         else -> "Maximaal ${SessionCaptionPins.MAX_PINS} sessieregels te markeren."
                     }
                     pinsNotice
+                },
+                onRequestTranslationCorrection = { id ->
+                    // The fullscreen reader only routes a deliberate action
+                    // to the existing revision-fenced manual-correction dialog.
+                    // Never permit a saved archive row to mutate a live caption.
+                    val current = lines.firstOrNull { it.id == id }
+                    if (!listening && current != null &&
+                        current.status in setOf("Lokaal", "Lokaal vertaald") &&
+                        current.translated.isNotBlank()
+                    ) {
+                        focusMode = false
+                        editingTranslationId = id
+                        translationCorrectionDraft = current.translated
+                        translationCorrectionBaseline = current.translated
+                        translationCorrectionRevision = current.translationRevision
+                        translationCorrectionGeneration = generation
+                        correctionNotice = ""
+                    }
                 }
             )
         }

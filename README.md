@@ -2602,6 +2602,12 @@ De leesmodus vindt bij zoeken ook veelvoorkomende Arabisch/Perzische
 toetsenbordvarianten in originele tekst, afgeronde vertaling en eigen uitleg.
 Alleen letterlijk overeenkomende woorden krijgen een zoekmarkering; de
 gespreks- en archieftekst wordt nergens herschreven.
+Bij een afgeronde lokale vertaling in een **livegesprek** kun je meteen
+**✎ Corrigeer deze vertaling…** kiezen: de grote leesmodus sluit en
+de bestaande revisiebeveiligde tekstcorrectie opent. Tijdens luisteren,
+bij onvoltooide vertalingen en in het **alleen-lezen archief** is deze
+actie niet beschikbaar.
+[Handmatige vertaalcorrectie](docs/MANUAL_LIVE_TRANSLATION_CORRECTION.md).
 [Leesmodus-woordkaarten](docs/FOCUS_OFFLINE_WORD_CARDS.md).
 [Uitleg en privacygrenzen](docs/BILINGUAL_PARALLEL_READING.md).
 
