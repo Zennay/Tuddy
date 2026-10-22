@@ -6,7 +6,24 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest main candidate (21 October 2026):
+Latest main candidate (22 October 2026):
+
+| Field | Immutable evidence |
+|---|---|
+| Source Git SHA | `6efc1e645861734942c1be73160b9ad61c87c670` |
+| Hosted Android run | [#39717339120](https://github.com/Zennay/Tuddy/actions/runs/39717339120) — COMPLETED SUCCESS |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39717339120/artifacts/12399837589) (ID `12399837589`, expires 5 November 2026) |
+| APK filename | `app-debug.apk` |
+| **APK SHA256** | `7684327f1b2d403fa26968abebb4bb53169082cc829486d531c852e4336ba318` |
+| Artifact ZIP SHA256 (not APK) | `d7e8c5e909a05d88560c09d25370047a06cd94c51e2707af7312c3cbd292e43f` |
+| Package | `com.livelingo.android` (legacy ID retained until deliberate migration) |
+| Version | `0.4.0` |
+| Proof of physical installation | **NOT PROVIDED** |
+| Proof of airplane-mode session | **NOT PROVIDED** |
+
+The exact-head workflow computed and verified the APK SHA-256 before uploading the artifact and bound the artifact to the source checkout above. The artifact ZIP digest is recorded separately and must never be substituted for the APK digest. **This proves build provenance only, not physical installation or device acceptance.**
+
+Previous candidate (21 October 2026; superseded by the 22 October main candidate):
 
 | Field | Immutable evidence |
 |---|---|
@@ -21,7 +38,7 @@ Latest main candidate (21 October 2026):
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-The artifact was downloaded from run #39655468714. Its `source-commit.txt` exactly matches the source SHA above, and the APK bytes verified successfully against the bundled `app-debug.apk.sha256`. The artifact ZIP digest is recorded separately and must never be substituted for the APK digest. **This proves build provenance only, not installation or device acceptance.**
+The 21 October table is historical evidence only; do not use that APK as the current main candidate. For the current candidate, download artifact `12399837589` from run `39717339120` and independently verify `source-commit.txt` plus the APK SHA-256 before installation. If main changes, derive a new exact source/APK pair. Neither successful CI nor a matching checksum substitutes for a physical Android 12+ airplane-mode acceptance record.
 
 Previous candidate (17 October 2026; superseded by the latest main candidate):
 
