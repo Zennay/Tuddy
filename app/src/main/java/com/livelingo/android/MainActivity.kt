@@ -2767,6 +2767,11 @@ private fun TuddyScreen(
             pinnedExportOpen = false
             editingCaptionId = null
             captionCorrectionDraft = ""
+            editingTranslationId = null
+            translationCorrectionDraft = ""
+            translationCorrectionBaseline = ""
+            translationCorrectionRevision = -1
+            translationCorrectionGeneration = -1
             pendingLivePhraseCapture = null
             pendingLivePhraseBatchCapture = null
             livePhraseBatchSelection = emptySet()
@@ -4236,6 +4241,7 @@ private fun TuddyScreen(
                                 pendingCaptionShare = null
                                 pendingTranscriptExport = null
                                 pendingSpeakerExport = null
+                                pendingPinnedExport = null
                                 exportStatus = ""
                                 lines[index] = previous.copy(
                                     translated = corrected,
