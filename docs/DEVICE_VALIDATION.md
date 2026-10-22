@@ -28,8 +28,6 @@ The hosted workflow built proposed-merge checkout `78b28f4…`; its complete Git
 
 Previous app-code candidate (22 October 2026, after PR #316 and before PR #318):
 
-
-
 | Field | Immutable evidence |
 |---|---|
 | Default-branch SHA | `d0abed8680c7e50949d20aeeb6af993f42fbe1b9` |
