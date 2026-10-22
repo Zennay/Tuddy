@@ -75,8 +75,11 @@ internal fun LanguageSupportDialog(
             }
         }.filterValues { it.isNotEmpty() }
     }
+    val hasAnyResearchCandidates = unavailable.any {
+        UnavailableTextLanguageCatalog.candidatesFor(it, query).isNotEmpty()
+    }
     val hasResearchCandidates = taskFilteredCandidates.isNotEmpty()
-    val researchSummary = remember(normalizedQuery, taskFilteredCandidates) {
+    val researchSummary = remember(normalizedQuery, taskFilteredCandidates, modelTaskFilter) {
         val fullSummary = buildString {
             appendLine("Tuddy — modelonderzoek")
             appendLine("Filter: ${modelTaskFilter}; onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd.")
@@ -121,32 +124,6 @@ internal fun LanguageSupportDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (taskFilteredCandidates.isNotEmpty()) {
-                    Text("Filter modelonderzoek", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf("Alle", "ASR", "MT").forEach { filter ->
-                            FilterChip(
-                                selected = modelTaskFilter == filter,
-                                onClick = {
-                                    modelTaskFilter = filter
-                                    researchCopyNotice = ""
-                                },
-                                label = {
-                                    Text(
-                                        when (filter) {
-                                            "ASR" -> "Spraak → tekst"
-                                            "MT" -> "Tekstvertaling"
-                                            else -> "Alle modellen"
-                                        }
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
                 if (!modelOnlyQuery) {
                     HorizontalDivider()
                     Text(
@@ -211,6 +188,32 @@ internal fun LanguageSupportDialog(
                     Text("Modelkaarten hieronder zijn alleen onderzoekskandidaten. " +
                         "Openen gaat naar een externe website; Tuddy downloadt of activeert niets.",
                         style = MaterialTheme.typography.bodySmall)
+                    if (hasAnyResearchCandidates) {
+                        Text("Filter modelonderzoek", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("Alle", "ASR", "MT").forEach { filter ->
+                                FilterChip(
+                                    selected = modelTaskFilter == filter,
+                                    onClick = {
+                                        modelTaskFilter = filter
+                                        researchCopyNotice = ""
+                                    },
+                                    label = {
+                                        Text(
+                                            when (filter) {
+                                                "ASR" -> "Spraak → tekst"
+                                                "MT" -> "Tekstvertaling"
+                                                else -> "Alle modellen"
+                                            }
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
                     if (normalizedQuery.isNotEmpty() && hasResearchCandidates) {
                         TextButton(onClick = {
                             clipboard.setText(AnnotatedString(researchSummary))
