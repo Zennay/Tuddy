@@ -180,6 +180,12 @@ speech or full transcripts** with reports.
    speech packs separately** in system settings. Record both speech and ML Kit
    models; only the latter is downloaded by Tuddy's button. Wi-Fi may be used
    for model downloading, never as a cloud speech recognition fallback.
+   For the Android speech-pack request UI (PR #344), separately confirm that
+   cellular-only/no-Wi-Fi and Wi-Fi without validated internet (including a
+   captive portal) fail closed with an actionable message. Only active Wi-Fi
+   with Android-reported internet capability and validation may start an
+   explicitly requested Android-managed download. A request receipt is not
+   proof that the speech pack installed; verify the pack independently.
 3. **Network-disabled proof:** switch on airplane mode and independently
    disable/restrict remaining connectivity. Record at least **10** sequential
    NL→EN and EN→NL bilingual utterances; each must yield correct interim/final
