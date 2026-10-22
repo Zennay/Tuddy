@@ -50,6 +50,7 @@ internal fun SessionCorrectionTransferDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var pendingExport by remember { mutableStateOf<ByteArray?>(null) }
+    var exportSelectionOpen by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
     var selectedRows by remember { mutableStateOf(emptySet<Int>()) }
     var pairPickerOpen by remember { mutableStateOf(false) }
@@ -165,6 +166,11 @@ internal fun SessionCorrectionTransferDialog(
                     enabled = !busy && entries.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Bewaar mijn eigen JSON-bestand…") }
+                OutlinedButton(
+                    onClick = { exportSelectionOpen = true },
+                    enabled = !busy && entries.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Kies zinnen voor export…") }
                 OutlinedButton(
                     onClick = { preview = null; notice = ""; open.launch(
                         arrayOf("application/json", "text/plain")
@@ -322,4 +328,21 @@ internal fun SessionCorrectionTransferDialog(
             TextButton(onClick = onDismiss, enabled = !busy) { Text("Sluiten") }
         }
     )
+    if (exportSelectionOpen) {
+        SessionCorrectionExportSelectionDialog(
+            entries = entries,
+            onExport = { chosen ->
+                val bytes = SessionTranslationCorrectionTransfer.encode(chosen)
+                if (bytes == null) {
+                    notice = "Deze selectie kan niet veilig als JSON worden opgeslagen."
+                } else {
+                    pendingExport = bytes
+                    exportSelectionOpen = false
+                    notice = ""
+                    save.launch("tuddy-geselecteerde-vertaalcorrecties.json")
+                }
+            },
+            onDismiss = { exportSelectionOpen = false }
+        )
+    }
 }
