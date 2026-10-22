@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.LanguageSearch
 import com.livelingo.android.LocalSpeechVoiceEntry
 import com.livelingo.android.LocalSpeechVoiceInventory
+import com.livelingo.android.LocalSpeechVoicePreferences
 import com.livelingo.android.TargetCatalog
 import com.livelingo.android.UnavailableTextLanguageCatalog
 import com.livelingo.android.SessionCorrectionLanguageCatalog
@@ -52,6 +53,7 @@ internal fun LanguageSupportDialog(
     val localVoiceInventory = remember(context) { LocalSpeechVoiceInventory(context) }
     var installedLocalVoices by remember { mutableStateOf<List<LocalSpeechVoiceEntry>?>(null) }
     var checkingLocalVoices by remember { mutableStateOf(false) }
+    var voicePreferenceRevision by remember { mutableStateOf(0) }
     var localVoiceNotice by remember { mutableStateOf("Nog niet gecontroleerd op dit toestel.") }
     DisposableEffect(localVoiceInventory) {
         onDispose { localVoiceInventory.close() }
@@ -202,7 +204,7 @@ internal fun LanguageSupportDialog(
                         style = MaterialTheme.typography.titleSmall
                     )
                     Text(
-                        "Controleer welke stemmen op dit toestel al geïnstalleerd zijn en niet als netwerkafhankelijk zijn gemarkeerd. Dit controleert geen spraakherkenning of vertaling; Tuddy downloadt of spreekt niets tijdens deze controle.",
+                        "Controleer welke stemmen op dit toestel al geïnstalleerd zijn en niet als netwerkafhankelijk zijn gemarkeerd. Kies desgewenst een voorkeursstem; die keuze wordt alleen lokaal per taal bewaard. De inventaris spreekt niets uit en downloadt geen stemmen.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Row(
@@ -223,7 +225,7 @@ internal fun LanguageSupportDialog(
                                             localVoiceNotice = if (voices.isEmpty()) {
                                                 "Geen geïnstalleerde lokale voorleesstemmen gevonden. Er is niets gedownload."
                                             } else {
-                                                "${voices.size} taalvarianten met een geïnstalleerde lokale stem gevonden."
+                                                "${voices.size} geïnstalleerde lokale stemvarianten gevonden."
                                             }
                                         },
                                         onFailure = {
@@ -264,16 +266,57 @@ internal fun LanguageSupportDialog(
                             )
                         } else {
                             voices.take(30).forEach { voice ->
-                                Text(
-                                    "${voice.displayName} (${voice.languageTag})",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                                val isPreferred = remember(
+                                    voicePreferenceRevision, voice.languageTag, voice.voiceName
+                                ) {
+                                    LocalSpeechVoicePreferences.selectedVoiceName(
+                                        context, voice.languageTag
+                                    ) == voice.voiceName
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        "${voice.displayName} (${voice.languageTag})",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        voice.voiceName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    TextButton(
+                                        onClick = {
+                                            val saved = LocalSpeechVoicePreferences.selectVoice(
+                                                context, voice.languageTag, voice.voiceName
+                                            )
+                                            if (saved) {
+                                                voicePreferenceRevision++
+                                                localVoiceNotice =
+                                                    "Voorkeursstem voor ${voice.languageTag} lokaal opgeslagen. Geen online fallback."
+                                            } else {
+                                                localVoiceNotice =
+                                                    "Deze stemvoorkeur kon niet worden opgeslagen."
+                                            }
+                                        }
+                                    ) {
+                                        Text(if (isPreferred) "Voorkeur voor deze taal" else "Gebruik deze stem")
+                                    }
+                                }
                             }
                             if (voices.size > 30) {
                                 Text(
-                                    "Nog ${voices.size - 30} taalvarianten niet getoond.",
+                                    "Nog ${voices.size - 30} stemvarianten niet getoond.",
                                     style = MaterialTheme.typography.bodySmall
                                 )
+                            }
+                            TextButton(
+                                onClick = {
+                                    LocalSpeechVoicePreferences.clearAll(context)
+                                    voicePreferenceRevision++
+                                    localVoiceNotice =
+                                        "Lokale stemvoorkeuren gewist. Tuddy kiest weer automatisch een passende lokale stem."
+                                }
+                            ) {
+                                Text("Automatische stemkeuze herstellen")
                             }
                         }
                     }

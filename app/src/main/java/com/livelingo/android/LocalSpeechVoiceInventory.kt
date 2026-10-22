@@ -8,6 +8,7 @@ import java.util.Locale
 
 /** A single language/locale represented by an already-installed, local TTS voice. */
 internal data class LocalSpeechVoiceEntry(
+    val voiceName: String,
     val languageTag: String,
     val displayName: String,
     val quality: Int
@@ -64,16 +65,20 @@ internal class LocalSpeechVoiceInventory(context: Context) {
                                     null
                                 } else {
                                     LocalSpeechVoiceEntry(
+                                        voiceName = voice.name,
                                         languageTag = tag,
                                         displayName = locale.getDisplayName(Locale.getDefault()),
                                         quality = voice.quality
                                     )
                                 }
                             }
-                            .groupBy { it.languageTag.lowercase(Locale.ROOT) }
-                            .values
-                            .mapNotNull { group -> group.maxByOrNull { it.quality } }
-                            .sortedBy { it.displayName.lowercase(Locale.ROOT) }
+                            .distinctBy { it.voiceName }
+                            .sortedWith(
+                                compareBy<LocalSpeechVoiceEntry> {
+                                    it.displayName.lowercase(Locale.ROOT)
+                                }.thenByDescending { it.quality }
+                                    .thenBy { it.voiceName.lowercase(Locale.ROOT) }
+                            )
                             .toList()
                     } catch (_: RuntimeException) {
                         close()
