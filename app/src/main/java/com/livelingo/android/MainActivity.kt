@@ -750,11 +750,16 @@ private fun TuddyScreen(
         source.speechCode, source.translateCode, target.translateCode,
         spoken.map { it.speechCode to it.translateCode }
     )
-    val normalizedHistoryQuery = historySearchQuery.trim()
+    // Apply the same search-only script folding as the private phrasebook.
+    // Stored captions and translations are never normalized or rewritten.
+    val normalizedHistoryQuery = PrivatePhraseScriptSearch.fold(historySearchQuery.trim())
     val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
         else lines.indices.filter { index ->
-            lines[index].original.contains(normalizedHistoryQuery, ignoreCase = true) ||
-                lines[index].translated.contains(normalizedHistoryQuery, ignoreCase = true)
+            PrivatePhraseScriptSearch.contains(lines[index].original, normalizedHistoryQuery) ||
+                PrivatePhraseScriptSearch.contains(lines[index].translated, normalizedHistoryQuery) ||
+                lines[index].personalMeaning?.let {
+                    PrivatePhraseScriptSearch.contains(it, normalizedHistoryQuery)
+                } == true
         }
 
     fun captureCombinedStudyBook(): ByteArray? =
@@ -6754,7 +6759,10 @@ private fun TuddyScreen(
                         value = historySearchQuery,
                         onValueChange = { historySearchQuery = it.take(80) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Zoek originele tekst of vertaling") },
+                        label = { Text("Zoek tekst, vertaling of eigen uitleg") },
+                        supportingText = {
+                            Text("Zoekt ook met veelvoorkomende Arabisch/Perzische toetsenbordvarianten; opgeslagen tekst blijft exact behouden.")
+                        },
                         singleLine = true
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
