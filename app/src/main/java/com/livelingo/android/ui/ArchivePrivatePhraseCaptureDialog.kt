@@ -52,10 +52,12 @@ internal fun ArchivePrivatePhraseCaptureDialog(
     val duplicate = language != null && existingPhrases?.any {
         it.language == language && it.phrase.equals(phraseText, ignoreCase = true)
     } == true
+    val deckFull = existingPhrases?.size?.let { it >= 80 } == true
     val validInput = language != null && meaningLanguage != null &&
         PrivatePhraseTextPolicy.valid(phraseText, 120) &&
         PrivatePhraseTextPolicy.valid(meaningText, 180)
-    val canSave = stillCurrent && existingPhrases != null && validInput && !duplicate
+    val canSave = stillCurrent && existingPhrases != null &&
+        validInput && !duplicate && !deckFull
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -146,6 +148,12 @@ internal fun ArchivePrivatePhraseCaptureDialog(
                     Text(
                         "Deze zin bestaat al voor de gekozen taal. " +
                             "Wijzig de bestaande kaart bewust in Mijn eigen offline zinnen.",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                if (deckFull) {
+                    Text(
+                        "Je privézinnenboek bevat al 80 kaarten. Verwijder eerst bewust een bestaande kaart.",
                         color = MaterialTheme.colorScheme.error
                     )
                 }
