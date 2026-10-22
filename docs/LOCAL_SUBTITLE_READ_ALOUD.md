@@ -6,6 +6,13 @@ een taal in de bestaande lokale-stemkiezer. Tuddy leest de geselecteerde cue en
 de volgende regels in volgorde voor, met een zichtbare voortgangsteller. Je kunt vóór het starten kiezen tussen
 normaal en rustig tempo; de keuze geldt voor de hele reeks.
 
+Tijdens het voorlezen toont Tuddy ook de **actuele cue**. Wanneer de geïnstalleerde
+Android-TTS-stem tekstbereiken terugmeldt, markeert de app het bijbehorende
+tekstfragment in die cue. Sommige stemmen geven geen bereik of slechts grove
+fragmenten door; dan blijft alleen de actuele regel zichtbaar gemarkeerd. Dit
+zijn door de spraakdienst gemelde aanwijzingen, geen exacte fonetische timing
+of bewijs van woordgrenzen. De bronondertitels en tijdcodes worden niet gewijzigd.
+
 ## Veilig gedrag
 
 - Alleen reeds geïnstalleerde Android-TTS-stemmen die door het systeem als
