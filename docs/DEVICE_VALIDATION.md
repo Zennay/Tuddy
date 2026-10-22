@@ -6,36 +6,36 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest app-code candidate (22 October 2026, after PR #331):
+Latest app-code candidate (22 October 2026, after PR #333):
 
 | Field | Immutable evidence |
 |---|---|
-| Current default-branch SHA | `69f8f0b57c2e2b0a690834620a1b344598de6059` |
-| Default-branch app-code SHA at build | `69f8f0b57c2e2b0a690834620a1b344598de6059` |
-| Hosted Android run | [#39729655359](https://github.com/Zennay/Tuddy/actions/runs/39729655359) — COMPLETED SUCCESS; exact-head `build` and `source-head` both passed |
-| Build checkout commit (PR merge candidate) | `b58efaf873a26555a8bf55e2e4fe89fdb7764df7` |
-| Git tree SHA for checkout and merged PR #331 main | `db708cdaf4cad5d0ec677988d91e5fdba3460fc8` (identical) |
-| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39729655359/artifacts/12405011561) (ID `12405011561`, expires 5 November 2026 05:47:20 UTC) |
+| Current default-branch SHA | `fc75935de2a9646ee6f4a0f63f2a752e2288d065` |
+| Default-branch app-code SHA at build | `fc75935de2a9646ee6f4a0f63f2a752e2288d065` |
+| Hosted Android run | [#39730828470](https://github.com/Zennay/Tuddy/actions/runs/39730828470) — COMPLETED SUCCESS; exact-head `build` and `source-head` both passed |
+| Build checkout commit (PR merge candidate) | `51dde85242ed02094f899ff03378f664611859ee` |
+| Git tree SHA for checkout and merged PR #333 main | `85d28d2fabd301c7ae48ad6dea5917955b1e220d` (identical) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39730828470/artifacts/12405013789) (ID `12405013789`, expires 5 November 2026 05:59:40 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `c4c67ea8393ac2c307dde8252cfeff5291be173bd1bcce476fb2d446bf0d4e2d` |
-| APK size | `103364834` bytes |
-| Artifact ZIP SHA-256 (not APK) | `736ef9b5a7b9d0df42273bff5703c238527ba6f7135e4fa1c9c8a61a580a6a9a` |
+| **APK SHA-256** | `ed95c6ec7baa1576c2c12af519f47e0894c6f6c83c7835a9b08c75799665bbe3` |
+| APK size | `103413986` bytes |
+| Artifact ZIP SHA-256 (not APK) | `2275f56609a701409d94abb3a32f95caf20cae608f2697871b913b29204e369a` |
 | Package | `com.livelingo.android` (legacy ID retained until deliberate migration) |
 | Version | `0.4.0` |
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-The PR #331 Android workflow built proposed-merge checkout `b58efaf…`; its full Git tree SHA `db708cd…` is identical to merged default-branch commit `69f8f0b…`. The build includes the unified script-aware search for personal phrases, live captions, pinned captions and explicitly opened archives. The artifact ZIP digest is separate from the APK digest. This proves build provenance only, not physical installation or offline-device acceptance.
+The PR #333 Android workflow built proposed-merge checkout `51dde852…`; its full Git tree SHA `85d28d2…` is identical to merged default-branch commit `fc75935…`. This build includes explicit authoring of local private phrase cards from an opened JSON archive row; the archive is reference-only, and both text fields/language choices start empty. The artifact ZIP digest is separate from the APK digest. This proves build provenance only, not physical installation or offline-device acceptance.
 
 From a Tuddy source checkout, after downloading the artifact ZIP as `artifact.zip`, run the reusable integrity verifier:
 
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  736ef9b5a7b9d0df42273bff5703c238527ba6f7135e4fa1c9c8a61a580a6a9a \
-  c4c67ea8393ac2c307dde8252cfeff5291be173bd1bcce476fb2d446bf0d4e2d \
-  b58efaf873a26555a8bf55e2e4fe89fdb7764df7 \
-  39729655359
+  2275f56609a701409d94abb3a32f95caf20cae608f2697871b913b29204e369a \
+  ed95c6ec7baa1576c2c12af519f47e0894c6f6c83c7835a9b08c75799665bbe3 \
+  51dde85242ed02094f899ff03378f664611859ee \
+  39730828470
 ```
 
 The helper checks the ZIP digest before extraction, rejects archive path-traversal entries, verifies the APK and its checksum sidecar, and cross-checks the embedded build manifest, source commit and workflow run ID. It deliberately reports integrity only; it does not claim physical installation or offline acceptance. Only after verification should an authorized tester install the APK and record the device evidence below.
