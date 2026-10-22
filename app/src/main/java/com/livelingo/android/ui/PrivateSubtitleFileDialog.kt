@@ -894,10 +894,10 @@ internal fun PrivateSubtitleFileDialog(
                     }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(enabled = chosenVoiceLanguage != null &&
+                        TextButton(enabled = chosenVoiceLanguage != null && !sequenceReading &&
                             current.text.length <= 400,
                             onClick = { pronounceCue(false) }) { Text("🔊 Hoor lokaal") }
-                        TextButton(enabled = chosenVoiceLanguage != null &&
+                        TextButton(enabled = chosenVoiceLanguage != null && !sequenceReading &&
                             current.text.length <= 400,
                             onClick = { pronounceCue(true) }) { Text("Rustig") }
                         TextButton(onClick = {
