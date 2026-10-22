@@ -14,7 +14,7 @@ import java.io.StringReader
  */
 internal object StrictJsonKeyGuard {
     private const val MAX_DEPTH = 32
-    private const val MAX_TOKENS = 20_000
+    private const val MAX_TOKENS = 40_000
 
     fun accepts(source: String): Boolean = try {
         JsonReader(StringReader(source)).use { reader ->
