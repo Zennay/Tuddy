@@ -28,6 +28,8 @@ import androidx.compose.runtime.setValue
 import kotlin.random.Random
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -37,6 +39,45 @@ import com.livelingo.android.SavedWord
 import com.livelingo.android.WordPracticeRound
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
+
+/**
+ * Displays the active word exactly as normalized for local TTS and highlights
+ * only ranges reported by the installed Android voice.
+ */
+@Composable
+private fun WordPracticeFollowText(
+    text: String,
+    activeSpeechText: String?,
+    activeSpeechRange: Pair<Int, Int>?,
+    prefix: String = ""
+): androidx.compose.ui.text.AnnotatedString {
+    val normalized = text.replace('\n', ' ').replace('\r', ' ').trim()
+    val followsSpeech = activeSpeechText != null && normalized == activeSpeechText
+    val displayedText = if (followsSpeech) activeSpeechText.orEmpty() else text
+    val range = activeSpeechRange.takeIf { followsSpeech }
+    val background = MaterialTheme.colorScheme.primary
+    val foreground = MaterialTheme.colorScheme.onPrimary
+    return remember(prefix, displayedText, range, background, foreground) {
+        buildAnnotatedString {
+            append(prefix)
+            val offset = length
+            append(displayedText)
+            if (range != null && range.first >= 0 &&
+                range.second > range.first && range.second <= displayedText.length
+            ) {
+                addStyle(
+                    SpanStyle(
+                        background = background,
+                        color = foreground,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    offset + range.first,
+                    offset + range.second
+                )
+            }
+        }
+    }
+}
 
 /**
  * Optional offline practice. Scores are self-reported and exist only while
@@ -64,10 +105,15 @@ internal fun WordPracticePanel(
     val owner = LocalLifecycleOwner.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     var audioNotice by remember { mutableStateOf("") }
+    var activeSpeechText by remember { mutableStateOf<String?>(null) }
+    var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     DisposableEffect(owner, speaker) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
                 speaker.stop()
+                activeSpeechText = null
+                activeSpeechRange = null
+                audioNotice = "Voorlezen gestopt bij verlaten van het scherm."
             }
         }
         owner.lifecycle.addObserver(observer)
@@ -79,11 +125,55 @@ internal fun WordPracticePanel(
     LaunchedEffect(current?.word, current?.language, selectedLanguage,
         shuffleVersion, round.attempts, allowSpeech) {
         speaker.stop()
+        activeSpeechText = null
+        activeSpeechRange = null
         audioNotice = if (allowSpeech) "" else "Voorlezen uit terwijl de microfoon luistert."
     }
 
+    fun pronounceCurrent(pace: LocalSpeechPace) {
+        val safe = current?.word?.replace('\n', ' ')?.replace('\r', ' ')?.trim().orEmpty()
+        val language = current?.language.orEmpty()
+        if (!allowSpeech || safe.isBlank() || safe.length > 400 ||
+            safe.any { it.isISOControl() } || language.isBlank()
+        ) {
+            speaker.stop()
+            activeSpeechText = null
+            activeSpeechRange = null
+            audioNotice = if (!allowSpeech)
+                "Voorlezen uit terwijl de microfoon luistert."
+            else "Dit woord kan niet veilig met een lokale stem worden voorgelezen."
+            return
+        }
+        activeSpeechText = safe
+        activeSpeechRange = null
+        audioNotice = "Lokale voorlezing voorbereiden…"
+        speaker.speakSequence(
+            lines = listOf(safe),
+            languageTag = language,
+            pace = pace,
+            onProgress = { completed, total ->
+                audioNotice = "Lokaal voorlezen: $completed/$total regels."
+            },
+            feedback = { audioNotice = it },
+            onFinished = { completed ->
+                activeSpeechText = null
+                activeSpeechRange = null
+                if (completed) audioNotice = "Voorlezen voltooid."
+            },
+            onLineStarted = { activeSpeechRange = null },
+            onWordRange = { _, start, endExclusive ->
+                activeSpeechRange = start to endExclusive
+            }
+        )
+    }
+
     AlertDialog(
-        onDismissRequest = { speaker.stop(); onDismiss() },
+        onDismissRequest = {
+            speaker.stop()
+            activeSpeechText = null
+            activeSpeechRange = null
+            onDismiss()
+        },
         title = { Text("Oefen mijn woorden · offline") },
         text = {
             Column(
@@ -129,7 +219,12 @@ internal fun WordPracticePanel(
                     )
                     HorizontalDivider()
                     Text(
-                        "${current.illustration}  ${current.word}",
+                        WordPracticeFollowText(
+                            text = current.word,
+                            activeSpeechText = activeSpeechText,
+                            activeSpeechRange = activeSpeechRange,
+                            prefix = "${current.illustration}  "
+                        ),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -141,27 +236,31 @@ internal fun WordPracticePanel(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(
                             modifier = Modifier.weight(1f),
-                            enabled = allowSpeech,
-                            onClick = {
-                                speaker.speak(current.word, current.language,
-                                    LocalSpeechPace.NORMAL) { audioNotice = it }
-                            }
+                            enabled = allowSpeech && activeSpeechText == null,
+                            onClick = { pronounceCurrent(LocalSpeechPace.NORMAL) }
                         ) { Text("🔊 Hoor woord") }
                         TextButton(
                             modifier = Modifier.weight(1f),
-                            enabled = allowSpeech,
-                            onClick = {
-                                speaker.speak(current.word, current.language,
-                                    LocalSpeechPace.SLOW) { audioNotice = it }
-                            }
+                            enabled = allowSpeech && activeSpeechText == null,
+                            onClick = { pronounceCurrent(LocalSpeechPace.SLOW) }
                         ) { Text("Rustig") }
                         TextButton(onClick = {
                             speaker.stop()
+                            activeSpeechText = null
+                            activeSpeechRange = null
                             audioNotice = "Lokale voorlezing gestopt."
                         }) { Text("■ Stop") }
                     }
                     if (audioNotice.isNotBlank()) {
                         Text(audioNotice, style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (activeSpeechText != null) {
+                        Text(
+                            if (activeSpeechRange != null)
+                                "Indicatieve tekstmarkering van de geïnstalleerde stem."
+                            else "Markering verschijnt als de stem tekstbereiken terugmeldt.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     Text("Luisteren alleen na tik met een reeds geïnstalleerde " +
                         "Android-stem zonder netwerkvereiste. Geen stemdownload.",
