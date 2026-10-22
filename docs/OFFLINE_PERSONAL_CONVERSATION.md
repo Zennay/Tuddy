@@ -32,6 +32,26 @@ zinparen. De functie herkent geen spraak, voorspelt geen betekenis en biedt
    de bovenste helft is omgekeerd en de onderste helft leesbaar vanaf
    jouw kant. Met **Kanten** bepaal je welke tekst aan welke persoon
    wordt getoond. Blader per beurt met Vorige/Volgende.
+### Samen oefenen, zonder online spraakdienst
+
+In de fullscreen tafelmodus kun je **Oefenmodus** inschakelen. De tweede
+zijde van de gekozen beurt wordt dan verborgen totdat je zelf
+**Toon antwoord** tikt. Bij **Vorige/Volgende** wordt het antwoord
+opnieuw verborgen. De oefenmodus verandert geen woordenlijst of gesprek.
+
+Met **🔊 Eigen zin** en **🔊 Betekenis** kun je de bijbehorende eigen
+teksten uitsluitend **na een expliciete tik** laten uitspreken door een
+al geïnstalleerde Android-stem die als **niet-netwerkafhankelijk**
+wordt gemeld. Kies desgewenst **Langzaam** of **Normaal** en gebruik
+**■ Stop** voor directe onderbreking. Een verborgen antwoord wordt niet
+voorgelezen voordat het bewust is onthuld. Naar een andere beurt gaan,
+de kanten wisselen, de oefenmodus veranderen, de app verlaten of de
+tafelmodus sluiten stopt de lokale stem en ruimt de sessie op.
+
+Niet elke taal heeft op het toestel een geschikte lokale stem: bij gebrek
+daaraan meldt Tuddy dit zonder cloudfallback of automatische downloads.
+Uitspraak en je eigen betekenissen zijn niet onafhankelijk gecontroleerd.
+
 8. Wil je een zelfgetypte tijdelijke beurt toch later kunnen hergebruiken,
    kies expliciet **Bewaar dit eigen paar in mijn privéwoordenlijst…** bij
    die specifieke beurt. In het tweede venster zie je beide volledige

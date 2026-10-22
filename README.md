@@ -1,3 +1,18 @@
+## Nieuw: oefenen met een echte twee-persoons tafelmodus
+
+In de eigen offline zinnengesprekken kun je **Oefenmodus** kiezen:
+de antwoordzijde wordt verborgen totdat je zelf **Toon antwoord**
+aanraakt en wordt opnieuw verborgen bij de volgende beurt. Optioneel
+kun je per zijde **Eigen zin / Betekenis** bewust laten voorlezen op
+normaal of rustig tempo. Tuddy gebruikt uitsluitend reeds geïnstalleerde
+Android-stemmen die als offline gemeld worden; ontbreekt zo'n stem, dan
+is er **geen cloudspraakfallback**. Voorlezen stopt bij wisselen van
+beurt, verlaten van de app of sluiten. De gebruiker beheert zelf alle
+zinnen en krijgt geen onterecht geclaimde machinevertaling.
+[Volledige handleiding](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: deel alleen zelf aangevinkte gespreksbeurten
 
 Bij het extern delen van je offline eigen-zinnengesprek kiest Tuddy
