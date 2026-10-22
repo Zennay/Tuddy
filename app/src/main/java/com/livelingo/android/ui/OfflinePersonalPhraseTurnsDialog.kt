@@ -178,8 +178,11 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                         Text(if (alternate) "✓ Wissel na beurt" else "☐ Wissel na beurt")
                     }
                     TextButton(onClick = {
+                        val removed = turns.lastOrNull()
                         turns = turns.dropLast(1)
-                        if (alternate) fromMeaning = !fromMeaning
+                        // Restore the direction used by the removed turn, even if
+                        // the user changed the alternating setting afterwards.
+                        if (removed != null) fromMeaning = removed.fromMeaning
                     }, enabled = turns.isNotEmpty()) {
                         Text("↶ Laatste beurt terug")
                     }
