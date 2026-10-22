@@ -202,8 +202,11 @@ internal fun PrivatePhraseBatchCaptureDialog(
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (!stillCurrent) {
-                    Text("Het archief is gesloten of vervangen. Niets wordt opgeslagen.",
-                        color = MaterialTheme.colorScheme.error)
+                    Text(
+                        "De geselecteerde ${originLabel} is gewijzigd of de broncontext is verlopen. " +
+                            "Niets wordt opgeslagen.",
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
                 if (existingPhrases == null) {
                     Text("Het privézinnenboek kan niet veilig worden gelezen. Niets wordt opgeslagen.",
