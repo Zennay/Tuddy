@@ -192,7 +192,8 @@ internal fun PrivateSubtitleTranslationDialog(
                 if (texts == null || texts.size != selectedCues.size) {
                     receipt = null
                     translatedIndices = emptyList()
-                    message = error ?: "Vertaling niet voltooid. Het concept is ongewijzigd."
+                    message = remapSubtitleTranslationError(error, indices)
+                        ?: "Vertaling niet voltooid. Het concept is ongewijzigd."
                 } else {
                     var updated: List<PrivateSubtitleCue>? = selectedCues.toList()
                     texts.forEachIndexed { index, text ->
@@ -575,6 +576,27 @@ private fun TargetLanguageMenu(
                 )
             }
         }
+    }
+}
+
+/**
+ * The controller receives a compact list of selected cues and reports errors
+ * using that batch's row numbers. Translate those numbers back to the original
+ * subtitle document so non-contiguous selections never point users at the wrong cue.
+ */
+private fun remapSubtitleTranslationError(
+    error: String?,
+    selectedIndices: List<Int>
+): String? {
+    if (error.isNullOrBlank()) return error
+    val rowPattern = Regex("(?i)\\bregel\\s+(\\d+)\\b")
+    return rowPattern.replace(error) { match ->
+        val batchRow = match.groupValues[1].toIntOrNull()
+        val originalRow = batchRow
+            ?.let { selectedIndices.getOrNull(it - 1) }
+            ?.plus(1)
+        if (originalRow == null) match.value
+        else match.value.replace(match.groupValues[1], originalRow.toString())
     }
 }
 
