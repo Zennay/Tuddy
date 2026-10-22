@@ -1,7 +1,11 @@
 # Gevonden SRT/VTT-ondertitels bewust als eigen bestand bewaren
 
 Open een ondertitelbestand in Tuddy. Zoek op een deel van de tekst in
-**Zoek in dit document**. Kies daarna **Bewaar alleen gevonden regels…**
+**Zoek in dit document**. De filter herkent veelvoorkomende
+Arabische/Perzische toetsenbordvarianten (zoals yeh/kaf), presentatietekens,
+weggelaten klinkertekens en ZWNJ uitsluitend tijdens zoeken. Dit is
+geen inhoudelijke taalcorrectie: de originele spelling en tijdcodes blijven
+exact behouden. Kies daarna **Bewaar alleen gevonden regels…**
 om exact de gefilterde ondertitelregels als aparte nieuwe SRT- of
 WebVTT-kopie te maken. De niet-overeenkomende tekst komt niet in de
 export terecht. De oorspronkelijke en tijdelijke editorbestanden worden
