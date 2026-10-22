@@ -3,12 +3,16 @@
 Open **Taalondersteuning → Controleer lokale stemmen** om reeds
 geïnstalleerde, niet-netwerkafhankelijke Android-stemvarianten te bekijken.
 De volledige lijst is doorzoekbaar op stemnaam, taal/regio en engine-ID.
+Tik op **Luister** om de vaste korte voorbeeldzin via precies die lokale
+stem af te spelen; **Stop stemproef** beëindigt het geluid. De preview gebruikt
+geen eigen tekst, downloadt geen stem en stopt ook wanneer je het venster sluit
+of de zoekopdracht wijzigt.
 Kies met **Gebruik deze stem** een lokale voorkeursstem per taal; de voorkeur
 wordt alleen op dit toestel opgeslagen en geldt voor alle lokale Tuddy-
 voorleesfuncties. Met **Automatische stemkeuze herstellen** wis je deze
 voorkeuren. Via **Android-toegankelijkheidsinstellingen** kun je zelf naar
-Tekst-naar-spraakuitvoer gaan. De inventaris spreekt niets uit en downloadt
-geen stem.
+Tekst-naar-spraakuitvoer gaan. Alleen een expliciete tik op **Luister** speelt
+audio af; de inventariscontrole zelf spreekt niets uit.
 
 Dit gaat uitsluitend over lokale tekst-naar-spraak (voorlezen). Het bewijst
 geen offline spraakherkenning, machinevertaling, dialectkwaliteit of
