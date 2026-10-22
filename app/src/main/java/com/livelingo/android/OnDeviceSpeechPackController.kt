@@ -141,10 +141,23 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
             return
         }
         val network = context.getSystemService(ConnectivityManager::class.java)
-        val capabilities = network?.getNetworkCapabilities(network.activeNetwork)
-        if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) {
-            callback(SpeechPackReceipt(tag, SpeechPackStage.ERROR,
-                "Maak eerst verbinding met wifi. Tuddy start geen download via mobiele data."))
+        val activeNetwork = network?.activeNetwork
+        val capabilities = activeNetwork?.let { active ->
+            runCatching { network.getNetworkCapabilities(active) }.getOrNull()
+        }
+        val networkBlocker = when {
+            capabilities == null ->
+                "Android kan de actieve netwerkverbinding niet bevestigen. Controleer wifi en probeer opnieuw."
+            !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ->
+                "Maak eerst verbinding met wifi. Tuddy start geen download via mobiele data."
+            !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ->
+                "Dit wifi-netwerk meldt geen internettoegang. Herstel de verbinding voordat je het pakket aanvraagt."
+            !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) ->
+                "Android heeft de internetverbinding nog niet gevalideerd. Voltooi eventueel de wifi-inlogpagina en probeer opnieuw."
+            else -> null
+        }
+        if (networkBlocker != null) {
+            callback(SpeechPackReceipt(tag, SpeechPackStage.ERROR, networkBlocker))
             return
         }
         val (token, engine) = fresh(tag) ?: run {
