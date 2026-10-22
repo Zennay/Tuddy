@@ -18,7 +18,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.LanguageSearch
 import com.livelingo.android.TargetCatalog
@@ -36,7 +38,9 @@ internal fun LanguageSupportDialog(
     onDismiss: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
+    val clipboard = LocalClipboardManager.current
     var linkNotice by remember { mutableStateOf("") }
+    var researchCopyNotice by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
     val normalizedQuery = LanguageSearch.normalize(query)
     val textTargets = remember(normalizedQuery) {
@@ -56,6 +60,32 @@ internal fun LanguageSupportDialog(
         unavailable.none { item ->
             LanguageSearch.matches(query, listOf(item.code, item.title, item.aliases, item.reason))
         }
+    val hasResearchCandidates = unavailable.any {
+        UnavailableTextLanguageCatalog.candidatesFor(it, query).isNotEmpty()
+    }
+    val researchSummary = remember(normalizedQuery, unavailable) {
+        val fullSummary = buildString {
+            appendLine("Tuddy — modelonderzoek")
+            appendLine("Onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd.")
+            unavailable.forEach { item ->
+                val candidates = UnavailableTextLanguageCatalog.candidatesFor(item, query)
+                if (candidates.isNotEmpty()) {
+                    appendLine()
+                    appendLine("${item.title} (${item.code})")
+                    appendLine(item.reason)
+                    candidates.forEach { candidate ->
+                        appendLine("- ${candidate.category}: ${candidate.title}")
+                        appendLine("  Modelkaart: ${candidate.url}")
+                        appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
+                        appendLine("  Omvang: ${candidate.footprint}")
+                        appendLine("  Beperking: ${candidate.limitation}")
+                    }
+                }
+            }
+        }
+        if (fullSummary.length <= 16_000) fullSummary
+        else fullSummary.take(15_940) + "\n[Samenvatting afgekapt op 16.000 tekens.]"
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -73,7 +103,7 @@ internal fun LanguageSupportDialog(
                 )
                 OutlinedTextField(
                     value = query,
-                    onValueChange = { query = it.take(60) },
+                    onValueChange = { query = it.take(60); researchCopyNotice = "" },
                     label = { Text("Zoek taal, code, alias, model of licentie") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -136,6 +166,19 @@ internal fun LanguageSupportDialog(
                     Text("Modelkaarten hieronder zijn alleen onderzoekskandidaten. " +
                         "Openen gaat naar een externe website; Tuddy downloadt of activeert niets.",
                         style = MaterialTheme.typography.bodySmall)
+                    if (normalizedQuery.isNotEmpty() && hasResearchCandidates) {
+                        TextButton(onClick = {
+                            clipboard.setText(AnnotatedString(researchSummary))
+                            researchCopyNotice = "Gekopieerd: alleen openbare modelmetadata, geen gesprekken of audio."
+                        }) { Text("Kopieer gefilterde onderzoeksresultaten") }
+                        if (researchCopyNotice.isNotBlank()) {
+                            Text(
+                                researchCopyNotice,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     unavailable.forEach { item ->
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
@@ -144,25 +187,10 @@ internal fun LanguageSupportDialog(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Text(item.reason, style = MaterialTheme.typography.bodySmall)
-                            val allCandidates = item.speechCandidates + item.translationCandidates
                             val languageMatchesQuery = LanguageSearch.matches(
                                 query, listOf(item.code, item.title, item.aliases, item.reason)
                             )
-                            val matchingCandidates = allCandidates.filter { candidate ->
-                                LanguageSearch.matches(query, listOf(
-                                    candidate.category,
-                                    candidate.title,
-                                    candidate.url,
-                                    candidate.declaredLicense,
-                                    candidate.footprint,
-                                    candidate.limitation
-                                ))
-                            }
-                            val candidates = if (normalizedQuery.isEmpty() || languageMatchesQuery) {
-                                allCandidates
-                            } else {
-                                matchingCandidates
-                            }
+                            val candidates = UnavailableTextLanguageCatalog.candidatesFor(item, query)
                             if (candidates.isNotEmpty()) {
                                 Text("Modelonderzoek · niet in Tuddy geïntegreerd",
                                     style = MaterialTheme.typography.labelMedium)
