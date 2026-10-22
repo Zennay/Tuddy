@@ -566,7 +566,6 @@ private fun TuddyScreen(
         } ?: false
         if (incomingPersonalCsv?.requestId != request.requestId) return@LaunchedEffect
         if (isOwnWords) {
-            stop()
             personalPhrasesOpen = false
             ownWordsOpen = true
         } else {
