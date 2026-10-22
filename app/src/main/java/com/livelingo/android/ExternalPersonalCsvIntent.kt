@@ -18,20 +18,21 @@ internal object ExternalPersonalCsvIntent {
     private val allowedTypes = setOf("text/csv", "application/csv")
 
     fun read(intent: Intent?, requestId: Long): IncomingPersonalCsvDocument? {
-        val action = intent?.action
+        val supplied = intent ?: return null
+        val action = supplied.action
         if (action != Intent.ACTION_VIEW && action != Intent.ACTION_SEND) return null
-        val mime = intent.type?.substringBefore(';')?.trim()?.lowercase()
+        val mime = supplied.type?.substringBefore(';')?.trim()?.lowercase()
         if (mime !in allowedTypes) return null // Other subtitle/text routes keep priority.
         if (action == Intent.ACTION_SEND && (
-                !intent.hasExtra(Intent.EXTRA_STREAM) ||
-                intent.hasExtra(Intent.EXTRA_TEXT) ||
-                intent.hasExtra(Intent.EXTRA_HTML_TEXT) ||
-                (intent.clipData?.itemCount ?: 0) > 1
+                !supplied.hasExtra(Intent.EXTRA_STREAM) ||
+                supplied.hasExtra(Intent.EXTRA_TEXT) ||
+                supplied.hasExtra(Intent.EXTRA_HTML_TEXT) ||
+                (supplied.clipData?.itemCount ?: 0) > 1
             )) return IncomingPersonalCsvDocument(
                 requestId, null, "Deel precies één CSV-bestand zonder extra tekst."
             )
-        val chosen = if (action == Intent.ACTION_VIEW) intent.data else
-            runCatching { intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) }
+        val chosen = if (action == Intent.ACTION_VIEW) supplied.data else
+            runCatching { supplied.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) }
                 .getOrNull()
         if (chosen == null || chosen.scheme != "content" ||
             chosen.authority.isNullOrBlank()) return IncomingPersonalCsvDocument(
