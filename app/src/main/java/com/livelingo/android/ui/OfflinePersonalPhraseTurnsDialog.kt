@@ -35,9 +35,10 @@ private data class LocalPersonalTurn(
 )
 
 /**
- * Finite phrase-memory conversation, not machine translation: a turn is
- * available ONLY if a saved, user-authored sentence matches exactly.
- * Entire interaction is Compose RAM; it is never a persisted transcript.
+ * Finite user-authored conversation, never machine translation: a turn is
+ * available from an exact saved personal phrase OR when both sides are manually
+ * provided in full for a temporary pair. All turns live in Compose RAM.
+ * Only a separately previewed, user-approved Android SAF export can persist them.
  */
 @Composable
 internal fun OfflinePersonalPhraseTurnsDialog(
@@ -91,10 +92,11 @@ internal fun OfflinePersonalPhraseTurnsDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Typ om de beurt een zin die je zelf eerder hebt opgeslagen. " +
-                    "Alleen letterlijke overeenkomsten krijgen jouw oorspronkelijke " +
-                    "betekenis terug. Geen vrije vertaling, spraakherkenning of internet. " +
-                    "De gekozen beurten verdwijnen bij sluiten.",
+                Text("Kies om de beurt een exact bewaard eigen zinnenpaar, " +
+                    "of typ zelf beide kanten van een nieuw tijdelijk paar. " +
+                    "Tuddy genereert geen betekenis: geen vrije vertaling, " +
+                    "spraakherkenning of internet. De gekozen beurten " +
+                    "verdwijnen bij sluiten, tenzij je zelf expliciet exporteert.",
                     style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     listOf("kmr", "ckb", "ps").forEach { option ->
