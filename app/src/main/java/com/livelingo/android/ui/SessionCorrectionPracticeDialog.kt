@@ -1,6 +1,7 @@
 package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -43,14 +46,47 @@ internal fun SessionCorrectionPracticeDialog(
     var revealed by remember { mutableStateOf(false) }
     var recalled by remember { mutableIntStateOf(0) }
     var toRepeat by remember { mutableIntStateOf(0) }
+    var hardCards by remember { mutableStateOf(emptyList<SessionTranslationCorrection>()) }
+    var retryCards by remember { mutableStateOf(emptyList<SessionTranslationCorrection>()) }
+    var retryOnly by remember { mutableStateOf(false) }
+    var reverse by remember { mutableStateOf(false) }
     var speechMessage by remember { mutableStateOf("") }
-    val batch = snapshot.drop(offset).take(12)
+    var pairMenuOpen by remember { mutableStateOf(false) }
+    var selectedPair by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val pairs = snapshot.map { it.sourceCode to it.targetCode }.distinct()
+    val filtered = if (selectedPair == null) snapshot else snapshot.filter {
+        (it.sourceCode to it.targetCode) == selectedPair
+    }
+    val batch = if (retryOnly) retryCards else filtered.drop(offset).take(12)
     val current = batch.getOrNull(currentIndex)
+    val prompt = current?.let { if (reverse) it.translation else it.original }
+    val answer = current?.let { if (reverse) it.original else it.translation }
+    val promptLang = current?.let { if (reverse) it.targetCode else it.sourceCode }
+    val answerLang = current?.let { if (reverse) it.sourceCode else it.targetCode }
     DisposableEffect(speaker) { onDispose { speaker.stop() } }
+
+    fun selectPair(pair: Pair<String, String>?) {
+        speaker.stop()
+        selectedPair = pair
+        pairMenuOpen = false
+        offset = 0
+        currentIndex = 0
+        revealed = false
+        recalled = 0
+        toRepeat = 0
+        hardCards = emptyList()
+        retryCards = emptyList()
+        retryOnly = false
+        speechMessage = ""
+    }
 
     fun advance(known: Boolean) {
         speaker.stop()
-        if (known) recalled++ else toRepeat++
+        if (known) recalled++ else {
+            toRepeat++
+            val card = current
+            if (card != null && card !in hardCards) hardCards = hardCards + card
+        }
         currentIndex++
         revealed = false
         speechMessage = ""
@@ -71,7 +107,32 @@ internal fun SessionCorrectionPracticeDialog(
                         "Je antwoorden worden nergens bewaard.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                if (snapshot.isEmpty()) {
+                if (snapshot.isNotEmpty()) {
+                    Box {
+                        TextButton(onClick = { pairMenuOpen = true }) {
+                            val selected = selectedPair
+                            Text("Oefen taalpaar: " +
+                                (if (selected == null) "Alle" else
+                                    selected.first + " → " + selected.second) + " ▾")
+                        }
+                        DropdownMenu(
+                            expanded = pairMenuOpen,
+                            onDismissRequest = { pairMenuOpen = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Alle taalparen") },
+                                onClick = { selectPair(null) }
+                            )
+                            pairs.forEach { pair ->
+                                DropdownMenuItem(
+                                    text = { Text(pair.first + " → " + pair.second) },
+                                    onClick = { selectPair(pair) }
+                                )
+                            }
+                        }
+                    }
+                }
+                if (filtered.isEmpty()) {
                     Text("Er zijn nog geen eigen correcties om te oefenen.")
                 } else if (current == null) {
                     Text(
@@ -79,11 +140,32 @@ internal fun SessionCorrectionPracticeDialog(
                             toRepeat + " nog oefenen.",
                         style = MaterialTheme.typography.titleMedium
                     )
-                    val hasNextBatch = offset + batch.size < snapshot.size
+                    if (hardCards.isNotEmpty()) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                speaker.stop()
+                                retryCards = hardCards.toList()
+                                retryOnly = true
+                                hardCards = emptyList()
+                                currentIndex = 0
+                                revealed = false
+                                recalled = 0
+                                toRepeat = 0
+                                speechMessage = ""
+                            }
+                        ) { Text("Herhaal mijn moeilijke zinnen (" +
+                            hardCards.size + ")") }
+                    }
+                    val normalSize = filtered.drop(offset).take(12).size
+                    val hasNextBatch = offset + normalSize < filtered.size
                     Button(
                         onClick = {
                             speaker.stop()
-                            offset = if (hasNextBatch) offset + batch.size else 0
+                            offset = if (hasNextBatch) offset + normalSize else 0
+                            retryOnly = false
+                            retryCards = emptyList()
+                            hardCards = emptyList()
                             currentIndex = 0
                             recalled = 0
                             toRepeat = 0
@@ -96,39 +178,59 @@ internal fun SessionCorrectionPracticeDialog(
                             else "Opnieuw beginnen")
                     }
                 } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            enabled = !revealed,
+                            onClick = {
+                                speaker.stop()
+                                reverse = false
+                                speechMessage = ""
+                            }
+                        ) { Text(if (reverse) "Bron → vertaling" else "✓ Bron → vertaling") }
+                        OutlinedButton(
+                            enabled = !revealed,
+                            onClick = {
+                                speaker.stop()
+                                reverse = true
+                                speechMessage = ""
+                            }
+                        ) { Text(if (reverse) "✓ Omgekeerd" else "Omgekeerd") }
+                    }
                     Text(
-                        "Kaart " + (offset + currentIndex + 1) + " van " +
-                            snapshot.size + " · " + current.sourceCode +
-                            " → " + current.targetCode,
+                        "Kaart " + (if (retryOnly) currentIndex + 1 else
+                            offset + currentIndex + 1) + " van " +
+                            (if (retryOnly) batch.size else filtered.size) + " · " +
+                            promptLang + " → " + answerLang +
+                            (if (retryOnly) " · moeilijke zinnen" else ""),
                         style = MaterialTheme.typography.labelMedium
                     )
-                    Text(current.original, style = MaterialTheme.typography.titleLarge)
+                    Text(prompt.orEmpty(), style = MaterialTheme.typography.titleLarge)
                     TextButton(onClick = {
                         speaker.speak(
-                            current.original, current.sourceCode, LocalSpeechPace.NORMAL
+                            prompt.orEmpty(), promptLang.orEmpty(), LocalSpeechPace.NORMAL
                         ) { speechMessage = it }
-                    }) { Text("🔊 Beluister bronzin lokaal") }
+                    }) { Text("🔊 Beluister vraag lokaal") }
                     if (!revealed) {
                         Text(
-                            "Probeer de vertaling zelf te herinneren. Tik pas daarna " +
-                                "om jouw eerder opgeslagen antwoord te zien.",
+                            "Probeer de andere taalrichting zelf te herinneren. " +
+                                "Tik pas daarna om jouw eigen antwoord te zien.",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Button(
                             onClick = { speaker.stop(); revealed = true; speechMessage = "" },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Toon mijn vertaling") }
+                        ) { Text("Onthul mijn antwoord") }
                     } else {
                         Text(
-                            current.translation,
+                            answer.orEmpty(),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                         TextButton(onClick = {
                             speaker.speak(
-                                current.translation, current.targetCode, LocalSpeechPace.SLOW
+                                answer.orEmpty(), answerLang.orEmpty(), LocalSpeechPace.SLOW
                             ) { speechMessage = it }
-                        }) { Text("🔊 Beluister vertaling rustig lokaal") }
+                        }) { Text("🔊 Beluister antwoord rustig lokaal") }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { advance(false) }) {
                                 Text("Nog oefenen")
