@@ -1,3 +1,15 @@
+## Nieuw: complete eigen offline gesprekszinnen bewust delen
+
+Een geselecteerd zelfgeschreven gesprek kan nu na een **volledige preview**
+ook via Android Delen als tekst worden doorgegeven. Tuddy controleert de
+exacte momentopname nogmaals voordat het deelvenster verschijnt. Alleen
+deze maximaal twaalf expliciet gekozen beurten worden aangeboden;
+geen opname, andere notities of automatische netwerkactie. De externe
+ontvanger/app kan de inhoud wel opslaan of uploaden.
+[Privacy en uitleg](docs/OFFLINE_PERSONAL_CONVERSATION.md).
+
+---
+
 ## Nieuw: exporteer én heropen een zelfgeschreven privégesprek
 
 Tuddy kan een bewust als `.txt` bewaard gesprek nu later weer als
