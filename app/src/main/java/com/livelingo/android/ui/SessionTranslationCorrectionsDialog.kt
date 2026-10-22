@@ -50,6 +50,7 @@ internal fun SessionTranslationCorrectionsDialog(
     var practiceOpen by remember { mutableStateOf(false) }
     var transferOpen by remember { mutableStateOf(false) }
     var manualAddOpen by remember { mutableStateOf(false) }
+    var manualBatchOpen by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
     var batchMode by remember { mutableStateOf(false) }
     var chosenCorrections by remember { mutableStateOf(emptySet<SessionTranslationCorrection>()) }
@@ -124,6 +125,15 @@ internal fun SessionTranslationCorrectionsDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Schrijf eigen correctie zonder microfoon…") }
+                OutlinedButton(
+                    onClick = {
+                        speaker.stop()
+                        editing = null
+                        confirmClear = false
+                        manualBatchOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Schrijf meerdere eigen correcties tegelijk…") }
                 OutlinedButton(
                     onClick = {
                         speaker.stop()
@@ -436,6 +446,28 @@ internal fun SessionTranslationCorrectionsDialog(
                 }
             },
             onDismiss = { manualAddOpen = false }
+        )
+    }
+    if (manualBatchOpen) {
+        SessionCorrectionManualBatchDialog(
+            entries = entries,
+            onAddBatch = { snapshot, additions ->
+                if (entries != snapshot || additions.isEmpty() ||
+                    additions.size > 10 ||
+                    !SessionTranslationCorrections.validEntries(snapshot + additions)) {
+                    false
+                } else {
+                    speaker.stop()
+                    onReplace(snapshot + additions).also { changed ->
+                        if (changed) {
+                            editing = null
+                            editError = ""
+                            confirmClear = false
+                        }
+                    }
+                }
+            },
+            onDismiss = { manualBatchOpen = false }
         )
     }
 }
