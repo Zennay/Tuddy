@@ -18,6 +18,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +44,8 @@ internal fun MyOwnWordsPanel(
     deck: PrivateOwnWordDeck,
     initialLanguage: String,
     onChanged: () -> Unit,
+    incomingBackupJsonText: String? = null,
+    onIncomingBackupJsonConsumed: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val defaultLanguage = initialLanguage.replace('_', '-').substringBefore('-')
@@ -184,6 +187,35 @@ internal fun MyOwnWordsPanel(
             }
         }
     }
+
+    LaunchedEffect(incomingBackupJsonText) {
+        val shared = incomingBackupJsonText ?: return@LaunchedEffect
+        val bytes = shared.toByteArray(Charsets.UTF_8)
+        val baseline = deck.entries()
+        if (pendingRestore != null || pasteWordsOpen || pasteBackupOpen ||
+            pendingBackup != null || pendingTsvExport != null ||
+            selectedTsvPreview != null || pendingPrintable != null ||
+            printableConsent || editing != null || pendingDelete != null) {
+            notice = "Er staat al een eigen-woordenbewerking of export open. Sluit die eerst " +
+                "en deel de back-up opnieuw; de huidige selectie is behouden."
+        } else {
+            val imported = if (bytes.isNotEmpty() &&
+                bytes.size <= PrivateOwnWordDeck.MAX_BACKUP_BYTES &&
+                bytes.toString(Charsets.UTF_8) == shared) deck.previewImport(bytes) else null
+            if (imported == null || baseline == null) {
+                notice = "Gedeelde Tuddy-woordenback-up geweigerd: ongeldige versie, UTF-8, " +
+                    "woorden of bestandsgrootte, of lokale opslag onleesbaar. Niets gewijzigd."
+            } else {
+                pendingRestore = imported
+                pendingRestoreBase = baseline.toList()
+                restoreOrigin = "json"
+                notice = "Gedeelde Tuddy-woordenback-up ontvangen. Controleer de volledige lijst; " +
+                    "er is nog niets geïmporteerd."
+            }
+        }
+        onIncomingBackupJsonConsumed(shared)
+    }
+
     val tsvPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
