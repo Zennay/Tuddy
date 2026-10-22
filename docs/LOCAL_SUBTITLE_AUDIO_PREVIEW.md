@@ -40,7 +40,10 @@ Tuddy gebruikt voor de audio een **bestandskiezer die aan de hoofdactiviteit han
 Bij geladen audio kun je **⌕ Zoek passage en spring naar ondertitel…**
 openen. De speler wordt eerst gepauzeerd. Zoek lokaal op een woord of
 begintijd in de maximaal 500 cues van het bewust geselecteerde SRT/VTT
-document. Je ziet de overeenkomende tekst, regelnummers en tijdcodes.
+document. Ook gangbare Arabische/Perzische toetsenbordvarianten tellen bij
+tekstzoekopdrachten mee; begintijden blijven letterlijk doorzoekbaar.
+Dit verandert de eigen geschreven tekst of tijdcodes niet.
+Je ziet de overeenkomende tekst, regelnummers en tijdcodes.
 Tik een regel om de audiopositie naar die **zelf aangeleverde begintijd**
 te verplaatsen; een eerdere fragmentherhaling wordt uitgeschakeld.
 Regels die pas ná het einde van het gekozen audiobestand beginnen zijn
