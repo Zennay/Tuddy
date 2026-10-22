@@ -195,7 +195,7 @@ internal fun FaceToFacePersonalPhraseDialog(
                     Text(
                         if (difficultOnly) "Alleen jouw ${difficult.size} lastige kaarten"
                         else "Tijdelijke oefensessie · ${difficult.size} gemarkeerd · " +
-                            if (mixed) "willekeurige volgorde" else "opgeslagen volgorde",
+                            (if (mixed) "willekeurige volgorde" else "opgeslagen volgorde"),
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center
                     )
