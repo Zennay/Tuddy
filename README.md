@@ -2121,7 +2121,9 @@ externe tijdmapping worden niet stilzwijgend overgenomen.
 ## Nieuw: alleen gevonden ondertitels als bestand bewaren
 
 Zoek in een zelf geopend SRT/VTT-bestand en kies vervolgens
-**Bewaar alleen gevonden regels…**. Kies tussen de originele
+**Bewaar alleen gevonden regels…**. Ook Arabisch/Perzische
+toetsenbordvarianten worden voor het zoeken herkend, zonder originele
+tekst of tijdcodes te herschrijven. Kies tussen de originele
 tijdcodes en een vanaf 00:00 aaneengesloten selectie. Vooraf zie
 je het aantal regels en de uitvoergrootte; opslag vereist nog steeds
 een afzonderlijke Android-bestandskeuze. Het oorspronkelijke document
