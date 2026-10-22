@@ -13,7 +13,11 @@ internal data class OfflineLanguageModelCandidate(
     val footprint: String,
     val limitation: String,
     /** Advertised language codes or unresolved pair coverage; never proof of support. */
-    val directionEvidence: String = ""
+    val directionEvidence: String = "",
+    /** Immutable upstream commit when captured; blank means the live page is not pinned. */
+    val sourceRevision: String = "",
+    /** SHA-256 of the named weight file; blank means no exact artifact digest is recorded. */
+    val artifactSha256: String = ""
 )
 
 internal data class UnavailableTextLanguage(
@@ -203,11 +207,14 @@ internal object UnavailableTextLanguageCatalog {
                 OfflineLanguageModelCandidate(
                     category = "Spraakherkenning (ASR)",
                     title = "amedcj/whisper-kurmanji",
-                    url = "https://huggingface.co/amedcj/whisper-kurmanji",
+                    url = "https://huggingface.co/amedcj/whisper-kurmanji/tree/d7a083101e13012e3748f4c7d77234fa7d195441",
                     directionEvidence = "Spraak → tekst (ASR), Kurmanji volgens modelkaart en Common Voice; geen vertaling of Android-geschiktheid aangetoond.",
                     declaredLicense = "Apache-2.0 volgens modelkaart",
-                    footprint = "modelbestand circa 967 MB",
-                    limitation = "Modelkaart noemt Common Voice Kurmanji, maar geen datasetversie of evaluatiescore. " +
+                    footprint = "model.safetensors 966.995.080 bytes (967 MB)",
+                    sourceRevision = "d7a083101e13012e3748f4c7d77234fa7d195441",
+                    artifactSha256 = "7411638aad942d5d1038e0ff3b79f5632ad479c60ce98e2739f08c6cbdae5ada",
+                    limitation = "Snapshot en modelbestand zijn gepind voor reproduceerbaar onderzoek; de hash bewijst alleen de bestandsidentiteit, niet de rechten of kwaliteit. " +
+                        "Modelkaart noemt Common Voice Kurmanji, maar geen datasetversie of evaluatiescore. " +
                         "Mozilla Data Collective publiceert Common Voice Kurmanji 26.0 onder CC0-1.0, maar zonder release-ID " +
                         "is niet bewezen dat deze gewichten precies die versie gebruiken. Trainingsdatarechten, dialectnauwkeurigheid, " +
                         "latency en geheugenbeslag zijn niet onafhankelijk geverifieerd. Niet geïntegreerd of op Android getest."
