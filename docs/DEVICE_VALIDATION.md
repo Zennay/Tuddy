@@ -425,3 +425,14 @@ spraak. Zie [lokale verbindingsstatus](OFFLINE_RADIO_STATUS.md). Deze
 momentopname is **geen onafhankelijk bewijs** dat alle radios uit zijn of
 dat geen enkele Android-dienst netwerkverkeer uitvoert: volg onverkort
 het handmatige toestel- en isolatieprotocol hierboven.
+
+
+### Optionele strikte luisterstart
+
+De live verbindingsstatus heeft ook de tijdelijke keuze **Strikte
+vliegtuigmodus voor luisteren inschakelen**. Deze verhindert een eerste
+microfoonstart én automatische herstart zodra Android vliegtuigmodus,
+uitgeschakelde wifi en een lege netwerktransportlijst niet eenduidig
+rapporteert. Onbekende status blokkeert de start. Deze keuze vervangt
+**geen** echte fysieke radiocontrole en is na een nieuwe appstart niet
+meer actief. Lees [lokale verbindingsstatus](OFFLINE_RADIO_STATUS.md).

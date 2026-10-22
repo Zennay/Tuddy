@@ -33,3 +33,21 @@ Deze functionaliteit vereist alleen de Android normale permissies
 locatiemachtiging, leest geen wifi-netwerkidentiteit en bouwt geen
 netwerkmonitor of automatische upload. Issue #2 (volledige offline
 Kurmanji, Sorani en Pasjtoe) wordt hierdoor niet opgelost.
+
+## Strikte vliegtuigmodus voor de microfoon (bewuste sessiekeuze)
+
+Met **Strikte vliegtuigmodus voor luisteren inschakelen** kiest de gebruiker
+alleen voor deze geopende app-sessie een extra fail-closed startregel.
+Vóór het starten van de microfoon en vóór elke automatische herstart eist
+Tuddy dan dat Android vliegtuigmodus meldt, de wifi-radio als uit rapporteert
+en geen zichtbaar netwerktransport of onbekende transportstatus opgeeft.
+Bij twijfel weigert de app de microfoon te starten, stopt een eerdere
+herkenner en opent de offline startcheck met een concrete melding.
+
+Het is uitdrukkelijk een **optionele** veiligheidsrem: offline
+spraakherkenning werkt ook zonder die extra instelling. Er is geen
+automatische aanpassing van vliegtuigmodus of wifi, en de keuze wordt
+niet bewaard voor een volgende appstart. De schakelaar kan tijdens
+luisteren niet worden gewijzigd. Zelfs met de schakelaar aan blijft
+een menselijke toestelcontrole vereist: Android kan radios of andere
+verkeerbronnen verbergen die niet via deze APIs zichtbaar zijn.
