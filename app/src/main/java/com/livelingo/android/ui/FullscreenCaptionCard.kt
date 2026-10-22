@@ -77,6 +77,7 @@ private fun CaptionSide(text: String, code: String, large: Boolean,
 private fun CaptionAudioFollowCard(
     text: String,
     label: String,
+    languageCode: String,
     range: Pair<Int, Int>?
 ) {
     val background = MaterialTheme.colorScheme.primary
@@ -99,7 +100,8 @@ private fun CaptionAudioFollowCard(
             }
         }
     }
-    val fallbackRtl = text.firstOrNull()?.let { it.code in 0x0600..0x08FF } ?: false
+    val fallbackRtl = languageCode.substringBefore('-') in
+        setOf("ar", "fa", "ur", "he", "ps", "ckb")
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.secondaryContainer,
@@ -157,6 +159,7 @@ internal fun FullscreenCaptionCard(
     var audioNotice by remember { mutableStateOf("") }
     var activeSpeechText by remember { mutableStateOf<String?>(null) }
     var activeSpeechLabel by remember { mutableStateOf("") }
+    var activeSpeechLanguage by remember { mutableStateOf("") }
     var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val context = LocalContext.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
@@ -167,6 +170,7 @@ internal fun FullscreenCaptionCard(
                 speaker.stop()
                 activeSpeechText = null
                 activeSpeechLabel = ""
+                activeSpeechLanguage = ""
                 activeSpeechRange = null
             }
         }
@@ -197,12 +201,14 @@ internal fun FullscreenCaptionCard(
             speaker.stop()
             activeSpeechText = null
             activeSpeechLabel = ""
+            activeSpeechLanguage = ""
             activeSpeechRange = null
             audioNotice = "Alleen geselecteerde tekst tot 400 tekens zonder controletekens kan lokaal worden voorgelezen."
             return
         }
         activeSpeechText = safe
         activeSpeechLabel = label
+        activeSpeechLanguage = languageTag
         activeSpeechRange = null
         audioNotice = "Lokale voorlezing voorbereiden…"
         speaker.speakSequence(
@@ -216,6 +222,7 @@ internal fun FullscreenCaptionCard(
             onFinished = { completed ->
                 activeSpeechText = null
                 activeSpeechLabel = ""
+                activeSpeechLanguage = ""
                 activeSpeechRange = null
                 if (completed) audioNotice = "Lokaal voorlezen voltooid."
             },
@@ -329,6 +336,7 @@ internal fun FullscreenCaptionCard(
                         CaptionAudioFollowCard(
                             text = text,
                             label = activeSpeechLabel,
+                            languageCode = activeSpeechLanguage,
                             range = activeSpeechRange
                         )
                     }
