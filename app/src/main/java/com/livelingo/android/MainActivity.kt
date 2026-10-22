@@ -401,6 +401,7 @@ private fun TuddyScreen(
     var translationMemoryRevision by remember { mutableIntStateOf(0) }
     var translationMemoryOpen by remember { mutableStateOf(false) }
     var translationMemoryInitialTargetCode by remember { mutableStateOf<String?>(null) }
+    var pendingCorrectionTransferText by remember { mutableStateOf<String?>(null) }
     // Only on-device recognizer suggestions for manual correction, never
     // persisted or included in any archive, subtitle or diagnostic export.
     val offlineSpeechChoices = remember { mutableStateMapOf<Long, List<String>>() }
@@ -2941,7 +2942,20 @@ private fun TuddyScreen(
     LaunchedEffect(incomingExternalText) {
         val shared = incomingExternalText
         if (shared != null) {
-            if (shared.subtitleDraft != null) {
+            if (shared.correctionTransferText != null) {
+                // Explicit incoming phrasebook share: open the correction manager
+                // and its import preview, never the ordinary translation input.
+                stop()
+                quickTypedOpen = false
+                twoWayTypedOpen = false
+                sharedTextToTwoWay = null
+                draftFromExternalShare = false
+                manualText = ""
+                translationMemoryInitialTargetCode = null
+                pendingCorrectionTransferText = shared.correctionTransferText
+                translationMemoryOpen = true
+                error = ""
+            } else if (shared.subtitleDraft != null) {
                 // A validated sharesheet subtitle is ONLY a draft for the
                 // existing explicit preview / acceptance UI. Never replace
                 // another open subtitle editor or silently mutate a session.
@@ -3075,6 +3089,11 @@ private fun TuddyScreen(
             com.livelingo.android.ui.SessionTranslationCorrectionsDialog(
                 entries = translationMemory.entries(),
                 initialTargetCode = translationMemoryInitialTargetCode,
+                incomingTransferText = pendingCorrectionTransferText,
+                onIncomingTransferTextConsumed = { received ->
+                    if (pendingCorrectionTransferText == received)
+                        pendingCorrectionTransferText = null
+                },
                 speaker = captionSpeaker,
                 onRemove = { entry ->
                     if (translationMemory.forget(entry)) translationMemoryRevision++
