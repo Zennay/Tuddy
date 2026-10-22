@@ -67,7 +67,7 @@ internal fun LanguageSupportDialog(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it.take(60) },
-                    label = { Text("Zoek taal, code of alias") },
+                    label = { Text("Zoek taal, code, alias, model of licentie") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
