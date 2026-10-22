@@ -1,3 +1,22 @@
+## Nieuw: APK-checksum zonder 64 tekens overtypen
+
+In **Offline startcheck → Leg fysieke offline-waarnemingen vast** kun je
+na het bewust kiezen van de build de bijbehorende
+`app-debug.apk.sha256` openen via Android Documenten. Tuddy leest
+uitsluitend een kleine, exacte `sha256sum`-regel uit het geselecteerde
+bestand en vult het verwachte APK-hashveld in. Een fout of verkeerd
+formaat wijzigt het veld niet. De reeds geïnstalleerde APK-hash blijft
+apart berekend en moet exact overeenkomen.
+
+Het bijbehorende GitHub-buildnummer en de herkomst van het
+`.sha256`-bestand moet je onafhankelijk controleren: **een passende
+checksum is geen handtekening**, fysieke vliegtuigmodusproef of
+productie-admission. Tuddy uploadt het gekozen bestand niet; de
+Android-bestandsprovider kan zelf gesynchroniseerd zijn.
+[Handleiding](docs/DEVICE_VALIDATION.md).
+
+---
+
 ## Nieuw: twintig eerlijke offline toestel-waarnemingen vastleggen
 
 Via **Offline startcheck → Leg fysieke offline-waarnemingen vast** registreert
