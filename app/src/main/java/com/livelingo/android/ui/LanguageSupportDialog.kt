@@ -51,11 +51,14 @@ internal fun LanguageSupportDialog(
     var modelAccessFilter by remember { mutableStateOf("Alle") }
     fun candidateAccessClass(license: String, limitation: String): String {
         val evidence = "$license $limitation".lowercase()
+        val declared = license.lowercase()
         return when {
             listOf("cc-by-nc", "niet-commercieel", "non-commercial", "noncommercial")
                 .any { phrase -> evidence.contains(phrase) } -> "Niet-commercieel"
             listOf("gated", "contactinformatie", "contact information", "share contact")
                 .any { phrase -> evidence.contains(phrase) } -> "Toegang beperkt"
+            listOf("apache-2.0", "apache 2.0", "mit", "bsd-2-clause", "bsd-3-clause", "cc0-1.0", "isc")
+                .any { phrase -> declared.contains(phrase) } -> "Permissief volgens modelkaart"
             else -> "Overig/onbekend"
         }
     }
@@ -207,6 +210,7 @@ internal fun LanguageSupportDialog(
                         )
                     }
                     Text("Modelkaarten hieronder zijn alleen onderzoekskandidaten. " +
+                        "‘Permissief vermeld’ leest alleen de opgegeven modellicentie; datasetrechten, toegangsgates en distributiegoedkeuring blijven aparte vragen. " +
                         "Openen gaat naar een externe website; Tuddy downloadt of activeert niets.",
                         style = MaterialTheme.typography.bodySmall)
                     if (hasAnyResearchCandidates) {
@@ -239,7 +243,7 @@ internal fun LanguageSupportDialog(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            listOf("Alle", "Niet-commercieel", "Toegang beperkt", "Overig/onbekend").forEach { filter ->
+                            listOf("Alle", "Niet-commercieel", "Toegang beperkt", "Permissief volgens modelkaart", "Overig/onbekend").forEach { filter ->
                                 FilterChip(
                                     selected = modelAccessFilter == filter,
                                     onClick = {
@@ -251,6 +255,7 @@ internal fun LanguageSupportDialog(
                                             when (filter) {
                                                 "Niet-commercieel" -> "Niet-commercieel"
                                                 "Toegang beperkt" -> "Toegang gated"
+                                                "Permissief volgens modelkaart" -> "Permissief vermeld"
                                                 "Overig/onbekend" -> "Overig / onbekend"
                                                 else -> "Alle statussen"
                                             }
