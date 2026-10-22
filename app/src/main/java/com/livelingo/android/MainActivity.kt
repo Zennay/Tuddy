@@ -59,6 +59,7 @@ import com.livelingo.android.ui.OfflineWordText
 import com.livelingo.android.ui.DailyStudyHub
 import com.livelingo.android.ui.SavedWordsPanel
 import com.livelingo.android.ui.MyOfflinePhrasesPanel
+import com.livelingo.android.ui.ArchivePrivatePhraseCaptureDialog
 import com.livelingo.android.ui.OfflinePhraseQuickPicker
 import com.livelingo.android.ui.MyOwnWordsPanel
 import com.livelingo.android.ui.SessionMeaningIndexDialog
@@ -266,6 +267,12 @@ private data class PendingLivePhraseCapture(
     val original: String,
     val revision: Int,
     val generation: Int
+)
+
+private data class PendingArchivePhraseCapture(
+    val generation: Int,
+    val archive: List<TranscriptExportRow>,
+    val row: TranscriptExportRow
 )
 
 private data class Line(
@@ -618,6 +625,10 @@ private fun TuddyScreen(
     var pendingArchiveExcerpt by remember {
         mutableStateOf<Triple<Int, TranscriptExportRow, String>?>(null)
     }
+    var pendingArchivePhraseCapture by remember {
+        mutableStateOf<PendingArchivePhraseCapture?>(null)
+    }
+    var archivePhraseCaptureNotice by remember { mutableStateOf("") }
     var archiveExcerptNotice by remember { mutableStateOf("") }
     var copyStatus by remember { mutableStateOf("") }
     var lastCopiedCaptionId by remember { mutableStateOf<Long?>(null) }
@@ -2256,9 +2267,13 @@ private fun TuddyScreen(
                 archiveExcerptNotice = ""
                 if (loaded == null) {
                     previewArchiveRows = null
+                    pendingArchivePhraseCapture = null
+                    archivePhraseCaptureNotice = ""
                     error = readNotice + " Het huidige gesprek is niet gewijzigd."
                 } else {
                     previewArchiveRows = loaded
+                    pendingArchivePhraseCapture = null
+                    archivePhraseCaptureNotice = ""
                     archiveSearchQuery = ""
                     exportStatus = ""
                     error = ""
@@ -2504,6 +2519,8 @@ private fun TuddyScreen(
                 draftFromExternalShare = false
                 manualText = ""
                 previewArchiveRows = null
+                pendingArchivePhraseCapture = null
+                archivePhraseCaptureNotice = ""
                 subtitleFileCues = null
                 viewedSubtitlePreview = null
                 subtitlePasteOpen = false
@@ -2553,6 +2570,8 @@ private fun TuddyScreen(
             meaningIndexOpen = false
             stop() // stop() already releases and nulls Android's recognizer
             previewArchiveRows = null
+            pendingArchivePhraseCapture = null
+            archivePhraseCaptureNotice = ""
             subtitleFileCues = null
             viewedSubtitlePreview = null
             subtitlePasteOpen = false
@@ -4092,10 +4111,12 @@ private fun TuddyScreen(
             )
         }
         if (archive != null && pendingArchiveExcerpt == null &&
-            !archiveStudyOpen && !archiveReaderOpen) {
+            pendingArchivePhraseCapture == null && !archiveStudyOpen && !archiveReaderOpen) {
             AlertDialog(
                 onDismissRequest = {
                     pendingArchiveExcerpt = null
+                    pendingArchivePhraseCapture = null
+                    archivePhraseCaptureNotice = ""
                     previewArchiveRows = null
                     archiveSubtitleConsentOpen = false
                     archiveSearchQuery = ""
@@ -4169,6 +4190,11 @@ private fun TuddyScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary)
                         }
+                        if (archivePhraseCaptureNotice.isNotBlank()) {
+                            Text(archivePhraseCaptureNotice,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
                         Spacer(Modifier.height(8.dp))
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
@@ -4194,6 +4220,15 @@ private fun TuddyScreen(
                                             fontSize = MaterialTheme.typography.bodyLarge.fontSize * captionSize.scale
                                         )
                                     )
+                                    TextButton(
+                                        enabled = !listening && row.original.isNotBlank(),
+                                        onClick = {
+                                            pendingArchivePhraseCapture = PendingArchivePhraseCapture(
+                                                generation, archive, row
+                                            )
+                                            archivePhraseCaptureNotice = ""
+                                        }
+                                    ) { Text("＋ Maak eigen privékaart…") }
                                     if (row.status == "Lokaal vertaald" &&
                                         row.translated.isNotBlank()) {
                                         TextButton(enabled = !listening, onClick = {
@@ -4219,11 +4254,39 @@ private fun TuddyScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         pendingArchiveExcerpt = null
+                        pendingArchivePhraseCapture = null
+                        archivePhraseCaptureNotice = ""
                         archiveExcerptNotice = ""
                         previewArchiveRows = null
                         archiveSearchQuery = ""
                     }) { Text("Sluiten") }
                 }
+            )
+        }
+
+        val archivePhraseRequest = pendingArchivePhraseCapture
+        if (archivePhraseRequest != null) {
+            val request = archivePhraseRequest
+            val stillCurrent = !listening && generation == request.generation &&
+                previewArchiveRows === request.archive && request.row in request.archive
+            ArchivePrivatePhraseCaptureDialog(
+                row = request.row,
+                stillCurrent = stillCurrent,
+                existingPhrases = personalPhrases.entries(),
+                onSave = { language, phrase, meaningLanguage, meaning ->
+                    val current = pendingArchivePhraseCapture
+                    if (current != null && !listening &&
+                        generation == current.generation &&
+                        previewArchiveRows === current.archive &&
+                        current.row == request.row && current.row in current.archive &&
+                        personalPhrases.saveNew(language, phrase, meaningLanguage, meaning)) {
+                        archivePhraseCaptureNotice =
+                            "Eigen privékaart bewust opgeslagen. Open Mijn eigen offline zinnen om die te bekijken."
+                        pendingArchivePhraseCapture = null
+                        true
+                    } else false
+                },
+                onDismiss = { pendingArchivePhraseCapture = null }
             )
         }
 
@@ -5671,6 +5734,8 @@ private fun TuddyScreen(
                         pinnedExportOpen = false
                         exportStatus = ""
                         previewArchiveRows = null
+                        pendingArchivePhraseCapture = null
+                        archivePhraseCaptureNotice = ""
                         archiveSearchQuery = ""
                         pendingArchiveGeneration = null
                         pendingArchiveExcerpt = null
