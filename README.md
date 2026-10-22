@@ -3145,10 +3145,12 @@ Herstel controleert eerst bestandsversie, bekende woorden, dubbelen en
 UTF-8-inhoud, toont hoeveel woorden geladen worden en vraagt vervolgens
 apart om de bestaande lijst werkelijk te vervangen. Annuleren raakt de
 woorden niet. Definities komen altijd uit de lokaal geïnstalleerde
-woordenlijst, niet uit het gekozen bestand. Geen gesprekken, audio of
-persoonlijke zinnen worden geëxporteerd of geïmporteerd. Android vraagt
-zelf om een opslaglocatie; een externe bestandsprovider kan wel
-synchroniseren. Zie [woordback-uphandleiding](docs/PRIVATE_WORD_BACKUP.md).
+woordenlijst, niet uit het gekozen bestand. Een JSON-back-up kan ook via
+Android Delen naar Tuddy worden gestuurd: de ontvanger valideert het bestand
+en toont dezelfde importpreview in plaats van het als vertaaltekst te openen.
+Geen gesprekken, audio of persoonlijke zinnen worden geëxporteerd of geïmporteerd.
+Android vraagt zelf om een opslaglocatie; een externe bestandsprovider kan
+wel synchroniseren. Zie [woordback-uphandleiding](docs/PRIVATE_WORD_BACKUP.md).
 Fysieke toestelacceptatie en release-APK blijven afzonderlijk vereist.
 
 ### Voorlezen van afgeronde vertalingen (op eigen verzoek)
