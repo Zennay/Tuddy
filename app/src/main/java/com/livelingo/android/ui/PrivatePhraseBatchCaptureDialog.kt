@@ -213,7 +213,7 @@ internal fun PrivatePhraseBatchCaptureDialog(
                         color = MaterialTheme.colorScheme.error)
                 }
                 if (rowCountInvalid) {
-                    Text("Kies maximaal 10 archiefregels per batch.",
+                    Text("Kies maximaal 10 regels per batch.",
                         color = MaterialTheme.colorScheme.error)
                 }
                 if (!allComplete && existingPhrases != null) {
@@ -241,7 +241,7 @@ internal fun PrivatePhraseBatchCaptureDialog(
             TextButton(enabled = canSave, onClick = {
                 if (canSave && onSave(candidates)) onDismiss()
                 else saveError =
-                    "Niet opgeslagen: de batch botste met de actuele kaartstatus of het archief veranderde."
+                    "Niet opgeslagen: de batch botste met de actuele kaartstatus of de broncontext veranderde."
             }) { Text("Bewaar alle ${rows.size} kaarten") }
         },
         dismissButton = {
