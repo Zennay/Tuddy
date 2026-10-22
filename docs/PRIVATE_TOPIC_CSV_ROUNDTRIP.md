@@ -213,3 +213,41 @@ berekend en tegen de complete bevestigde CSV vergeleken; gewijzigde of
 verwijderde geselecteerde zinnen veroorzaken een weigering. Een nieuwe
 export begint met alle zichtbare zinnen geselecteerd. Geen verborgen
 ongevraagde zinnen, transcriptdata of automatisch gedeelde bestanden.
+
+
+## Bestaande zelfgeschreven betekenissen gecontroleerd corrigeren
+
+Bij een geldige vijfkoloms CSV-import via Android Documenten of bewust
+plakken verschijnt naast elke **reeds aanwezige** bronzin zowel de
+**huidige lokale betekenis** als het **voorstel uit de CSV**. Standaard
+blijft iedere bestaande betekenis onaangeroerd; het importeren van alleen
+nieuwe zinnen werkt zoals voorheen.
+
+Wanneer broncode, volledige bronzin (inclusief hoofdletters) en
+taalcode exact overeenkomen, maar je eerder geschreven betekenis of
+betekenistaal afwijkt, kun je **per bestaande zin** bewust aanvinken:
+**Corrigeer deze bestaande betekenis (apart akkoord)**. Zonder dit
+vinkje blijft de lokale betekenis leidend, zelfs wanneer een CSV een
+andere vertaling bevat. Een bronzin met alleen een andere schrijfwijze
+is geen veilig correctiedoel en wordt niet automatisch hernoemd.
+
+De laatste importknop toont hoeveel nieuwe zinnen worden toegevoegd en
+hoeveel bestaande betekenissen bewust worden gecorrigeerd. In dezelfde
+**atomaire lokale transactie** worden de werkelijk gekozen nieuwe
+zinnen toegevoegd en de afzonderlijk goedgekeurde betekenissen
+bijgewerkt. Er is nooit een gedeeltelijke bewaaractie: gewijzigde
+gegevens na de preview of overschrijding van opslaglimieten weigert alles.
+
+Een betekeniscorrectie behoudt de favoriet en het reeds bestaande
+thema van de oorspronkelijke bronzin. Alleen de **herhaalplanning van
+de gecorrigeerde zin** vervalt, zodat een vroeger geleerd antwoord niet
+onterecht als gekend blijft staan. De planning van alle andere zinnen
+blijft behouden. CSV-thema's bij bestaande zinnen overschrijven
+nooit je eigen lokale indeling.
+
+Ook bij een gedeeltelijke taal-, thema- of rijselectie blijven alleen
+niet-destructieve samenvoeging en expliciete betekeniscorrecties
+mogelijk. De bestaande volledige, afzonderlijk gewaarschuwde
+vervangoptie is niet beschikbaar zolang er correcties zijn aangevinkt.
+Dit zijn uitsluitend door de gebruiker zelfgeschreven betekenissen,
+geen geverifieerde automatische vertaling of spraakherkenning.
