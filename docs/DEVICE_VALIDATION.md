@@ -6,25 +6,35 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Latest app-code candidate (22 October 2026, after PR #320):
+Latest app-code candidate (22 October 2026, after PR #324):
 
 | Field | Immutable evidence |
 |---|---|
-| Current default-branch SHA | `4ea59e7c6ea53f873334322e3a8aabc3c627dcb7` |
-| Default-branch app-code SHA at build | `4ea59e7c6ea53f873334322e3a8aabc3c627dcb7` |
-| Hosted Android run | [#39721897504](https://github.com/Zennay/Tuddy/actions/runs/39721897504) — COMPLETED SUCCESS |
-| Build checkout commit (PR merge candidate) | `c043cb9b97636399725a134710a3a70ccdfdd29f` |
-| Git tree SHA for checkout and merged PR #320 main | `772777784346ee9f37687fa3189b27599055e8f2` (identical) |
-| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39721897504/artifacts/12401243613) (ID `12401243613`, expires 5 November 2026 04:23:49 UTC) |
+| Current default-branch SHA | `2cd2183f1db1b9da26906f85366cda9cb70eaff8` |
+| Default-branch app-code SHA at build | `2cd2183f1db1b9da26906f85366cda9cb70eaff8` |
+| Hosted Android run | [#39724071919](https://github.com/Zennay/Tuddy/actions/runs/39724071919) — COMPLETED SUCCESS; exact-head `build` and `source-head` both passed |
+| Build checkout commit (PR merge candidate) | `a322a1fd07f110aefed48fde969d5d7bbbafaf90` |
+| Git tree SHA for checkout and merged PR #324 main | `c2c98607043548c835b30dc9fa651f4576c0d707` (identical) |
+| Artifact | [Tuddy-debug-apk](https://github.com/Zennay/Tuddy/actions/runs/39724071919/artifacts/12402970635) (ID `12402970635`, expires 5 November 2026 04:48:13 UTC) |
 | APK filename | `app-debug.apk` |
-| **APK SHA-256** | `693b5b9c371cdfd52cf6b9708cedf17af6479e06e02bf4cfd239cb67a6e24c8e` |
-| Artifact ZIP SHA-256 (not APK) | `7d5f5800a1693c407bfa17c93b39791e50826bc6e178429572c152867d1ef50a` |
+| **APK SHA-256** | `6af97fe6275cfbcb9579b691fad03e7c78645d1164034a17252cf9cba292a915` |
+| Artifact ZIP SHA-256 (not APK) | `9fd7e5c6f1d5a6de3932eb18d9f43b8dba5101ed97afa5f0cb1b888eb27c9eed` |
 | Package | `com.livelingo.android` (legacy ID retained until deliberate migration) |
 | Version | `0.4.0` |
 | Proof of physical installation | **NOT PROVIDED** |
 | Proof of airplane-mode session | **NOT PROVIDED** |
 
-The hosted workflow built proposed-merge checkout `c043cb9…`; its complete Git tree SHA `7727777…` is identical to merged PR #320 main commit `4ea59e7…`. The workflow verified the APK SHA-256 before upload. The artifact ZIP digest is recorded separately and must never be substituted for the APK digest. **This proves build provenance only, not physical installation or device acceptance.**
+The PR #324 Android workflow built proposed-merge checkout `a322a1f…`; its full Git tree SHA `c2c9860…` is identical to merged default-branch PR #324 commit `2cd2183…`. The workflow verified the APK SHA-256 before upload. The artifact ZIP digest is a separate digest and must never be substituted for the APK digest. This proves build provenance only, not physical installation or offline-device acceptance.
+
+After downloading the artifact ZIP, verify the ZIP itself before extracting it:
+
+```sh
+echo '9fd7e5c6f1d5a6de3932eb18d9f43b8dba5101ed97afa5f0cb1b888eb27c9eed  artifact.zip' | sha256sum --check -
+unzip artifact.zip
+echo '6af97fe6275cfbcb9579b691fad03e7c78645d1164034a17252cf9cba292a915  app-debug.apk' | sha256sum --check -
+```
+
+Keep the two checks separate: the first checks the downloaded ZIP, the second the extracted APK. Only after the APK check passes should an authorized tester install it and record the physical-device evidence below.
 
 Previous app-code candidate (22 October 2026, after PR #318 and before PR #320):
 
