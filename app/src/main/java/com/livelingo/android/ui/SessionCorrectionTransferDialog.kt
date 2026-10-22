@@ -48,6 +48,9 @@ internal fun SessionCorrectionTransferDialog(
     var preview by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
     var notice by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    // One explicit rollback inside this dialog only; never saved to app storage.
+    var undoBefore by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
+    var undoAfter by remember { mutableStateOf<List<SessionTranslationCorrection>?>(null) }
 
     val save = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -163,6 +166,22 @@ internal fun SessionCorrectionTransferDialog(
                 if (notice.isNotBlank()) Text(
                     notice, style = MaterialTheme.typography.bodySmall
                 )
+                val rollback = undoBefore
+                if (rollback != null && entries == undoAfter) {
+                    OutlinedButton(
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            if (onReplace(rollback)) {
+                                undoBefore = null
+                                undoAfter = null
+                                preview = null
+                                notice = "De vorige tijdelijke correcties zijn hersteld. " +
+                                    "Bestaande gespreksregels zijn niet gewijzigd."
+                            } else notice = "Herstellen geweigerd; er is niets gewijzigd."
+                        }
+                    ) { Text("↶ Maak laatste import ongedaan") }
+                }
                 val imported = preview
                 if (imported != null) {
                     Text(
@@ -183,6 +202,8 @@ internal fun SessionCorrectionTransferDialog(
                     Button(
                         onClick = {
                             if (onReplace(imported)) {
+                                undoBefore = entries.toList()
+                                undoAfter = imported.toList()
                                 preview = null
                                 notice = "Geselecteerde correcties zijn alleen in RAM geladen. " +
                                     "Bestaande gespreksregels zijn niet gewijzigd."
