@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -108,7 +109,10 @@ private fun CaptionAudioFollowCard(
         shape = MaterialTheme.shapes.medium
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier.fillMaxWidth()
+                .heightIn(max = 180.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
