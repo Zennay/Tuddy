@@ -299,10 +299,14 @@ internal fun PrivateSubtitleFileDialog(
     DisposableEffect(speaker, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE) {
+                val wasReadingSequence = sequenceReading
                 speaker.stop()
                 sequenceReading = false
                 sequenceProgress = 0
                 sequenceTotal = 0
+                if (wasReadingSequence) {
+                    spokenNotice = "Voorlezen gestopt toen Tuddy naar de achtergrond ging."
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
