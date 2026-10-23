@@ -202,6 +202,26 @@ internal object UnavailableTextLanguageCatalog {
             "of op Android getest; zelfs de gequantiseerde variant is groot."
     )
 
+    private val soraniToEnglishMarianResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Tekstvertaling",
+        title = "TartarusXXX/ckb-en-marian-transformers",
+        url = "https://huggingface.co/TartarusXXX/ckb-en-marian-transformers",
+        directionEvidence = "Tekst → tekst (MT), Sorani/ckb → Engels/en; modelkaart rapporteert BLEU 30,2383 en chrF 56,6711 uit trainingslogs, niet onafhankelijk herhaald.",
+        declaredLicense = "Geen expliciete licentie vermeld op modelkaart",
+        footprint = "51,9M parameters, F32; exacte downloadgrootte niet vermeld",
+        limitation = "Modelkaart noemt InterdialectCorpus, Tatoeba, Wikimedia, TICO-19 en Navinaananthan Sorani parallel corpus als trainingsdataselectie en OpenLanguageData FLORES+ voor validatie/test. De auteur vraagt expliciet om dataset- en licentiecompatibiliteit te controleren vóór herdistributie. Licentie, corpusversies/rechten, immutable gewichten/tokenizer-hashes, Android-runtime, geheugen, latency en native-speakerkwaliteit zijn niet onafhankelijk bevestigd. Niet geïntegreerd, gedownload of geactiveerd."
+    )
+
+    private val englishToSoraniMarianResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Tekstvertaling",
+        title = "TartarusXXX/en-ckb-marian-transformers",
+        url = "https://huggingface.co/TartarusXXX/en-ckb-marian-transformers",
+        directionEvidence = "Tekst → tekst (MT), Engels/en → Sorani/ckb; modelkaart rapporteert BLEU 14,2475 en chrF 45,1146 uit trainingslogs, niet onafhankelijk herhaald.",
+        declaredLicense = "Geen expliciete licentie vermeld op modelkaart",
+        footprint = "51,9M parameters, F32; exacte downloadgrootte niet vermeld",
+        limitation = "Modelkaart noemt dezelfde trainingsdataselectie en OpenLanguageData FLORES+ voor validatie/test. De auteur vraagt expliciet om dataset- en licentiecompatibiliteit te controleren vóór herdistributie. Licentie, corpusversies/rechten, immutable gewichten/tokenizer-hashes, Android-runtime, geheugen, latency en native-speakerkwaliteit zijn niet onafhankelijk bevestigd. Niet geïntegreerd, gedownload of geactiveerd."
+    )
+
     val entries = listOf(
         UnavailableTextLanguage(
             "kmr", "Kurmancî · Kurmanji (Noord-Koerdisch)",
@@ -262,7 +282,8 @@ internal object UnavailableTextLanguageCatalog {
             ),
             translationCandidates = listOf(
                 nllbResearchCandidate, madladResearchCandidate,
-                opusMtIndoEuropeanResearchCandidate, opusMtOnnxInt8ResearchCandidate
+                opusMtIndoEuropeanResearchCandidate, opusMtOnnxInt8ResearchCandidate,
+                soraniToEnglishMarianResearchCandidate, englishToSoraniMarianResearchCandidate
             )
         ),
         UnavailableTextLanguage(
