@@ -8,8 +8,19 @@ In **Vandaag offline oefenen** is er nu één extra actie:
 - Tuddy neemt uitsluitend de woorden en zinnen die vandaag of
   eerder volgens hun **afzonderlijk ingeschakelde** privéplanning
   aan de beurt zijn.
-- Kaarten uit drie categorieën wisselen elkaar af: opgeslagen
-  basiswoorden, zelfgeschreven zinnen en eigen woordbetekenissen.
+- Voor het beginnen kies je één, twee of drie leergroepen:
+  **opgeslagen basiswoorden**, **zelfgeschreven zinnen** en
+  **eigen woordbetekenissen**. De aantallen komen uitsluitend uit
+  vrijwillig ingeschakelde planningen met kaarten die al aan de beurt zijn.
+  Een leergroep zonder kaarten is niet te kiezen; met nul geselecteerde
+  kaarten kun je de ronde niet starten. Kies daarnaast **alle kaarten**,
+  **5 kaarten** of **10 kaarten** om zelf een korte ronde af te bakenen.
+  De telling toont hoeveel kaarten buiten die ronde nog volgens hun huidige
+  schema aan de beurt blijven. Alleen de gekozen kaarten worden getoond;
+  de overige krijgen geen beoordeling of verschoven herhaaldatum.
+  De keuze staat daarna vast zodat een eerder beoordeelde kaart niet opnieuw
+  via een filter kan verschijnen.
+- Kaarten uit de gekozen categorieën wisselen elkaar af.
   Een volle categorie krijgt niet automatisch voorrang op de rest.
 - De betekenis blijft verborgen totdat de gebruiker zelf
   **Toon antwoord** indrukt. Draai desgewenst de richting om;

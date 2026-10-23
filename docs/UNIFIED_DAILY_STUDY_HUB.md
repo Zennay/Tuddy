@@ -14,6 +14,13 @@ een compact lokaal studieoverzicht. Je hoeft niet eerst aparte beheermenu's te z
   De aantallen tonen hoeveel kaarten vandaag voor elke selectie klaarstaan.
   Een kaart die je al hebt beoordeeld, verschijnt niet opnieuw als je tijdens
   dezelfde sessie van taal of thema wisselt.
+- **Eigen mix kiezen:** bij **Mix alle kaarten van vandaag** kies je eerst
+  welke leergroepen (basiswoorden, zelfgeschreven zinnen of eigen woorden)
+  meedoen. Tuddy toont per groep de vandaag beschikbare kaarten en laat je
+  niet met een lege keuze beginnen. Je kiest bovendien **alle**, **5** of
+  **10 kaarten** voor een langere of korte ronde, zonder de overige kaarten
+  als beoordeeld te markeren. De keuze staat vast na **Begin mijn
+  gekozen oefenronde**; reeds beoordeelde kaarten verschijnen niet opnieuw.
 - **Zonder beoordeling overslaan:** in de herhaling van basiswoorden,
   eigen woorden, eigen zinnen en de gemengde ronde hoef je niets als geleerd
   te markeren als je het antwoord nu niet wilt beoordelen. Alleen de
