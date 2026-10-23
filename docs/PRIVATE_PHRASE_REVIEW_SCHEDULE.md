@@ -9,10 +9,16 @@ Dit staat standaard uit, los van **Oefen mijn eigen zinnen**.
 1. Voeg eerst zelf een zin plus eigen betekenis toe in **Mijn eigen offline zinnen**.
 2. Kies **Plan mijn eigen zinnen voor herhaling…** en bevestig afzonderlijk.
 3. Open **Herhaal eigen zinnen vandaag**.
-4. Kies zin → betekenis of betekenis → zin; Sorani en Pasjtoe gebruiken RTL.
-5. Onthul het antwoord bewust en beoordeel jezelf. **Nog oefenen**: volgende
+4. Filter de kaarten op taal (Kurmanji, Sorani of Pasjtoe) en/of op een eigen
+   thema. De aantallen tonen hoeveel kaarten vandaag voor die selectie klaarstaan.
+   **Alle talen** en **Alle thema's** herstellen het volledige overzicht;
+   **Zonder thema** toont kaarten waaraan geen thema is toegewezen.
+5. Kies zin → betekenis of betekenis → zin; Sorani en Pasjtoe gebruiken RTL.
+6. Onthul het antwoord bewust en beoordeel jezelf. **Nog oefenen**: volgende
    dag. **Ik wist het**: over 2, 4, 7, 14 of 30 dagen.
-6. Wis het optionele schema met **Wis herhaalplanning eigen zinnen**.
+7. Je kunt tijdens dezelfde sessie van taal of thema wisselen. Een kaart die
+   je al hebt beoordeeld, verschijnt in die sessie niet opnieuw.
+8. Wis het optionele schema met **Wis herhaalplanning eigen zinnen**.
    Je zelfgeschreven zinnen blijven dan gewoon bestaan.
 
 De planning heeft geen achtergrondtimer of pushmelding. Ze wordt pas zichtbaar
