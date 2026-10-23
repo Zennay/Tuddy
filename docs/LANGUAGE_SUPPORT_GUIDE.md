@@ -40,6 +40,17 @@ De taalondersteuningdialoog toont nu externe modelkaarten voor drie ASR-kandidat
 - [Meta M2M100 418M](https://huggingface.co/facebook/m2m100_418M) vermeldt MIT en bevat volgens de modelkaart Pasjtoe, Nederlands en Engels, maar de volledige repository is circa 3,88 GB. Het model bevat geen Kurmanji- of Sorani-taalcode; zonder gequantiseerd Android-pakket, runtime- en toestelbewijs is dit alleen een Pasjtoe-onderzoekskandidaat, geen Tuddy-feature.
 - Een licentielabel van een modelkaart is geen onafhankelijke audit van de dataset, gewichten, tokenizer en alle upstreamcomponenten. Er is geen modeldownload of externe runtime in Tuddy toegevoegd.
 
+### Nieuwe kleine Sorani-MT-onderzoekskandidaten — 23 oktober 2026
+
+Twee extra modelkaarten beschrijven afzonderlijke richtingen met Marian-checkpoints van 51,9M parameters (F32):
+
+| Richting | Kandidaat | Modelkaart rapporteert | Blokker |
+|---|---|---|---|
+| Sorani `ckb` → Engels `en` | [TartarusXXX/ckb-en-marian-transformers](https://huggingface.co/TartarusXXX/ckb-en-marian-transformers) | BLEU 30,2383 / chrF 56,6711 uit trainingslogs; validatie/testrecept OpenLanguageData FLORES+ | Geen expliciete licentie zichtbaar op de modelkaart; auteur vraagt om dataset- en licentiecompatibiliteit te controleren vóór herdistributie |
+| Engels `en` → Sorani `ckb` | [TartarusXXX/en-ckb-marian-transformers](https://huggingface.co/TartarusXXX/en-ckb-marian-transformers) | BLEU 14,2475 / chrF 45,1146 uit trainingslogs; validatie/testrecept OpenLanguageData FLORES+ | Dezelfde ontbrekende expliciete licentie en waarschuwing over dataset-/licentiecompatibiliteit |
+
+De modelkaarten noemen InterdialectCorpus, Tatoeba, Wikimedia, TICO-19 en een Sorani-parallelcorpus als trainingsdataselectie. Dit is een bruikbare, kleine **research lead**, geen goedgekeurde modelpack: de licentie is niet vastgesteld, exacte gewicht-/tokenizer-hashes en datasetversies zijn niet vastgepind, de cijfers zijn niet onafhankelijk gereproduceerd en Android-runtime, geheugen, latency, native-speakerkwaliteit en vliegtuigmodusgedrag zijn onbekend. De twee richtingen zijn afzonderlijke checkpoints; geen van beide is in Tuddy gedownload, geïntegreerd of geactiveerd.
+
 **Volgende productgate:** selecteer per dialect een model met controleerbare herkomst en geschikte licentie, maak een realistische gequantiseerde Android-pack, integreer echte lokale ASR én MT, en pas daarna native-speakerreview en geautoriseerde fysieke vliegtuigmodusacceptatie toe. Tot dat moment blijft de app de drie talen als preview-only markeren.
 
 ## Scriptrichting bij eigen Sorani- en Pasjtoe-zinnen
