@@ -9,6 +9,10 @@ als de eerste stem ontbreekt stopt de reeks zonder de tweede kant af te spelen.
 app op de achtergrond zetten onderbreken de reeks. De markering komt alleen
 van optionele TTS-woordbereiken, niet van echte microfoonwoordtiming of
 gevalideerde vertaaluitlijning. Er wordt geen audio of transcript opgeslagen.
+Dezelfde twee-taals voorleesknoppen zijn beschikbaar bij de door de
+gebruiker geschreven **Mijn gesprekskaart**-zinnen voor Kurmanji, Sorani en
+Pasjtoe, met dezelfde lokale-stemcontrole. Die kaarten zijn niet automatisch
+vertaald of door moedertaalsprekers beoordeeld.
 Zie [de offline tweetalige voorleesmodus](docs/BILINGUAL_CAPTION_REPLAY.md).
 
 ---
