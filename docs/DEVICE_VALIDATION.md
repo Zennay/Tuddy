@@ -1,4 +1,4 @@
-> **Current hosted debug-APK handoff — exact main tree after PR #448 (23 October 2026):** app-code `main` is at [`acd89687f6c1a8c9394431cd8364a1803d4d364f`](https://github.com/Zennay/Tuddy/commit/acd89687f6c1a8c9394431cd8364a1803d4d364f). Successful exact-head Android workflow [#39887034723](https://github.com/Zennay/Tuddy/actions/runs/39887034723) passed both `build` and `source-head`. Artifact [Tuddy-debug-apk #12472868788](https://github.com/Zennay/Tuddy/actions/runs/39887034723/artifacts/12472868788) expires **6 November 2026 02:02:45 UTC**. Build source merge-ref SHA `6317ee4bc3df62bf5569e533a87a5e142624962f` has tree SHA `cb821385ff4c78565e15ecafc7a0ecc17a2f4c8c`, exactly matching current main's tree. APK `app-debug.apk` is 105,167,194 bytes (`com.livelingo.android` / `0.4.0`); **APK SHA-256** `667a0b967f7decbb5b49c3ed9b039c18be4f3bfa9d4a653c06983bc320c9599d`; **artifact ZIP SHA-256** `828e71ae62bcd1078ed11e5e68fc8261fb9455c837c23ecd50fb146c7da7a7c8`. Both hashes were checked against the sidecar/GitHub metadata and actual bytes. This artifact is exact-tree current-main source, but physical installation and a real airplane-mode session remain **NOT PROVIDED**. Refresh if a later app-code PR changes main before device testing.
+> **Current hosted debug-APK handoff — main push after PR #448 (23 October 2026):** app-code `main` is at [`acd89687f6c1a8c9394431cd8364a1803d4d364f`](https://github.com/Zennay/Tuddy/commit/acd89687f6c1a8c9394431cd8364a1803d4d364f). Successful main-push Android workflow [#39887445818](https://github.com/Zennay/Tuddy/actions/runs/39887445818) passed its `build` job; `source-head` was skipped because this was a push event. Artifact [Tuddy-debug-apk #12472864727](https://github.com/Zennay/Tuddy/actions/runs/39887445818/artifacts/12472864727) expires **6 November 2026 02:07:12 UTC**. The manifest source SHA is exactly `acd89687f6c1a8c9394431cd8364a1803d4d364f`, ref `refs/heads/main`, and current main tree SHA is `cb821385ff4c78565e15ecafc7a0ecc17a2f4c8c`. APK `app-debug.apk` is 105,167,194 bytes (`com.livelingo.android` / `0.4.0`); **APK SHA-256** `e18d92a67993aa88c039a3c56de9d6af061d49aa40b35b0b8f6c7dddf8167844`; **artifact ZIP SHA-256** `ceadecad997c9433f1e4ead9803832e587a5ead418877c8d35fb2352cd475fb6`. The ZIP digest matches GitHub artifact metadata; the APK hash matches its sidecar and the actual APK bytes. This is an exact-current-main hosted debug APK, not proof of physical installation or airplane-mode acceptance. Refresh if a later app-code PR changes main before device testing.
 
 ---
 
@@ -82,27 +82,27 @@ airplane-mode demonstration or language-model acceptance.
 | Field | Immutable evidence |
 |---|---|
 | App-code merge (PR #448) | [`acd89687f6c1a8c9394431cd8364a1803d4d364f`](https://github.com/Zennay/Tuddy/commit/acd89687f6c1a8c9394431cd8364a1803d4d364f) — `merged=true` |
-| Hosted Android run | [#39887034723](https://github.com/Zennay/Tuddy/actions/runs/39887034723) — exact-head `build` and `source-head` succeeded |
-| Exact build checkout/source identity | `6317ee4bc3df62bf5569e533a87a5e142624962f` (`event_name=pull_request`, `ref=refs/pull/448/merge`) |
-| Main-tree correspondence | Build tree `cb821385ff4c78565e15ecafc7a0ecc17a2f4c8c` matches current main commit `acd89687f6c1a8c9394431cd8364a1803d4d364f` tree exactly |
-| Artifact | [Tuddy-debug-apk #12472868788](https://github.com/Zennay/Tuddy/actions/runs/39887034723/artifacts/12472868788), expires 6 November 2026 02:02:45 UTC |
+| Hosted Android run | [#39887445818](https://github.com/Zennay/Tuddy/actions/runs/39887445818) — main-push `build` succeeded (`source-head` skipped on push event) |
+| Exact build checkout/source identity | `acd89687f6c1a8c9394431cd8364a1803d4d364f` (`event_name=push`, `ref=refs/heads/main`) |
+| Main-tree correspondence | Build source SHA is the exact current main commit; main tree `cb821385ff4c78565e15ecafc7a0ecc17a2f4c8c` |
+| Artifact | [Tuddy-debug-apk #12472864727](https://github.com/Zennay/Tuddy/actions/runs/39887445818/artifacts/12472864727), expires 6 November 2026 02:07:12 UTC |
 | APK filename / size | `app-debug.apk` / 105,167,194 bytes |
-| **APK SHA-256** | `667a0b967f7decbb5b49c3ed9b039c18be4f3bfa9d4a653c06983bc320c9599d` |
-| **Artifact ZIP SHA-256 (different file)** | `828e71ae62bcd1078ed11e5e68fc8261fb9455c837c23ecd50fb146c7da7a7c8` |
+| **APK SHA-256** | `e18d92a67993aa88c039a3c56de9d6af061d49aa40b35b0b8f6c7dddf8167844` |
+| **Artifact ZIP SHA-256 (different file)** | `ceadecad997c9433f1e4ead9803832e587a5ead418877c8d35fb2352cd475fb6` |
 | Package-version | `com.livelingo.android` / `0.4.0` |
 | Physical installation and real airplane-mode session | **NOT PROVIDED** |
 
-The downloaded ZIP digest matches GitHub artifact metadata and the APK digest matches its included SHA-256 sidecar and the actual APK bytes. The manifest records the PR merge-ref SHA, not the squash-merge commit SHA; the merge-ref's full Git tree matches current main exactly. This is a hosted debug APK and does not prove physical/offline acceptance.
+The downloaded ZIP digest matches GitHub artifact metadata and the APK digest matches its included SHA-256 sidecar and the actual APK bytes. The manifest records the exact main commit and branch ref. This is a hosted debug APK and does not prove physical/offline acceptance.
 
 Verify the ZIP and APK from a Tuddy source checkout before any authorized device installation:
 
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  828e71ae62bcd1078ed11e5e68fc8261fb9455c837c23ecd50fb146c7da7a7c8 \
-  667a0b967f7decbb5b49c3ed9b039c18be4f3bfa9d4a653c06983bc320c9599d \
-  6317ee4bc3df62bf5569e533a87a5e142624962f \
-  39887034723
+  ceadecad997c9433f1e4ead9803832e587a5ead418877c8d35fb2352cd475fb6 \
+  e18d92a67993aa88c039a3c56de9d6af061d49aa40b35b0b8f6c7dddf8167844 \
+  acd89687f6c1a8c9394431cd8364a1803d4d364f \
+  39887445818
 ```
 
 ## Install the exact debug APK on an authorized handset
