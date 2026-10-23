@@ -7509,12 +7509,26 @@ private fun TuddyScreen(
                                         else -> "Pasjtoe"
                                     }
                                     DropdownMenuItem(
-                                        text = { Text("Selecteer $previewLabel voor de basiswoordenpreview") },
+                                        text = { Text("Open 5 basisuitdrukkingen · $previewLabel") },
                                         onClick = {
+                                            if (listening) stop()
+                                            previewTarget = previewSuggestion
+                                            starterPhraseboardTarget = previewSuggestion
+                                            previewResult = null
+                                            targetQuery = ""
+                                            targetOpen = false
+                                            starterPhraseboardOpen = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Zoek mijn eigen offline zinnen · $previewLabel") },
+                                        onClick = {
+                                            if (listening) stop()
                                             previewTarget = previewSuggestion
                                             previewResult = null
                                             targetQuery = ""
                                             targetOpen = false
+                                            quickPhrasePickerOpen = true
                                         }
                                     )
                                 }

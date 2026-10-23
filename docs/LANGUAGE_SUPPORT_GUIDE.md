@@ -117,3 +117,23 @@ woorden, maar **geen vrije automatische vertaling of spraakherkenning**.
 Issue #2 blijft open totdat de drie talen een rechtengecontroleerde,
 Android-geïntegreerde offline ASR+MT-route hebben met native-speakerreview
 en echte vliegtuigmodusacceptatie.
+
+## Kurmanji/Sorani/Pasjtoe vinden zonder ondersteund ASR-/MT-model
+
+Wanneer je in de **vertaaldoeltaalzoeker** een specifiek Kurmanji-, Sorani- of
+Pasjtoewoord of de bijbehorende taalcode typt, toont Tuddy geen fictieve
+automatische taalondersteuning. In plaats daarvan kun je direct kiezen:
+
+- **Open 5 basisuitdrukkingen:** open het aparte offline paneel met vijf
+  ingebouwde vaste uitdrukkingen voor de gevonden taal.
+- **Zoek mijn eigen offline zinnen:** open uitsluitend het zelf opgeslagen
+  privézinnenboek voor de gevonden taal, met door de gebruiker geschreven
+  betekenissen. Lege resultaten worden niet automatisch ingevuld.
+
+Beide opties stoppen eventueel lopende microfoonopname voordat een
+offline-presentatie wordt geopend. Het kiezen van de snelkoppeling verandert
+de actieve ML Kit- of ASR-taalkeuze niet, downloadt niets en maakt geen
+free-form offline model actief. Voor de volledige ondersteunde dialecten,
+modelrechten, vertaalvalidatie en fysieke toestelacceptatie blijven issues
+#1 en #2 open. Zelfgeschreven vertalingen zijn niet geverifieerd voor
+medische, juridische of andere hoogrisicotoepassingen.
