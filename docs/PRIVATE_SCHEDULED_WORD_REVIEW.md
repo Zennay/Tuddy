@@ -12,7 +12,13 @@ moment opnieuw toont.
 4. Open **Herhaal vandaag**. De betekenis is standaard verborgen.
 5. Tik **Toon betekenis** en beoordeel zelf: **Nog oefenen** (morgen weer)
    of **Ik wist het** (na 2, 4, 7, 14 of 30 dagen opnieuw).
-6. **Wis mijn herhaalplanning** verwijdert het schema zonder de woorden te wissen.
+6. Gebruik **Sla over zonder beoordeling** als je vandaag geen beoordeling
+   wilt geven. De bestaande herhaaldatum blijft staan. Aan het einde zie je
+   hoeveel je daadwerkelijk beoordeeld of nog overgeslagen hebt en kun je
+   met **Herhaal overgeslagen woorden** uitsluitend die kaarten nogmaals
+   bekijken binnen dezelfde sessie. Sluiten schrijft voor overgeslagen kaarten
+   geen nieuwe voortgang.
+7. **Wis mijn herhaalplanning** verwijdert het schema zonder de woorden te wissen.
    **Wis alle woorden** en **Wis mijn oefengegevens** verwijderen beide.
 
 Een nieuw bewaard woord staat de eerste keer direct klaar voor herhaling.

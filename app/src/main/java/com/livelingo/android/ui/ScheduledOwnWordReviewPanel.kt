@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateOwnWordDeck
+import com.livelingo.android.ScheduledOwnWord
 import java.time.LocalDate
 
 /** Deliberate, private review of only self-written, explicitly saved notes. */
@@ -43,7 +44,11 @@ internal fun ScheduledOwnWordReviewPanel(
     var writeFirst by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
-    val card = due.getOrNull(index)
+    var reviewed by remember { mutableIntStateOf(0) }
+    var skippedCards by remember { mutableStateOf<List<ScheduledOwnWord>>(emptyList()) }
+    var replayCards by remember { mutableStateOf<List<ScheduledOwnWord>?>(null) }
+    val activeCards = replayCards ?: due
+    val card = activeCards.getOrNull(index)
     val rtlCodes = setOf("ckb", "ps", "ar", "fa", "ur", "sd", "ug")
 
     AlertDialog(
@@ -63,15 +68,27 @@ internal fun ScheduledOwnWordReviewPanel(
                         "Er is niets veranderd.", color = MaterialTheme.colorScheme.error)
                 } else if (card == null) {
                     Text(if (due.isEmpty()) "Vandaag zijn er geen eigen woorden aan de beurt."
-                        else "Alle ${due.size} eigen woorden van vandaag zijn beoordeeld.",
+                        else "Ronde afgerond: $reviewed beoordeeld, ${skippedCards.size} nog overgeslagen.",
                         style = MaterialTheme.typography.titleMedium)
-                    Text("Open Tuddy later zelf opnieuw. Geen pushmeldingen, " +
-                        "account of automatische vertaling.",
+                    Text("Overgeslagen woorden behouden hun oorspronkelijke herhaaldatum. " +
+                        "Er zijn geen pushmeldingen of automatische beoordelingen.",
                         style = MaterialTheme.typography.bodySmall)
+                    if (skippedCards.isNotEmpty()) {
+                        OutlinedButton(onClick = {
+                            replayCards = skippedCards.toList()
+                            skippedCards = emptyList()
+                            index = 0
+                            reveal = false
+                            draft = ""
+                            notice = ""
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Herhaal ${skippedCards.size} overgeslagen woorden")
+                        }
+                    }
                 } else {
                     val note = card.entry
                     val rtl = note.language in rtlCodes
-                    Text("Kaart ${index + 1} van ${due.size} · ${note.language.uppercase()}",
+                    Text("Kaart ${index + 1} van ${activeCards.size} · ${note.language.uppercase()}",
                         style = MaterialTheme.typography.labelMedium)
                     TextButton(onClick = { reverse = !reverse; reveal = false; draft = "" }) {
                         Text(if (reverse) "Eigen betekenis → woord ⇄" else "Woord → eigen betekenis ⇄")
@@ -127,6 +144,7 @@ internal fun ScheduledOwnWordReviewPanel(
                                 onClick = {
                                     if (deck.rateScheduledWord(note, false)) {
                                         onChanged()
+                                        reviewed++
                                         index++
                                         reveal = false
                                         draft = ""
@@ -139,6 +157,7 @@ internal fun ScheduledOwnWordReviewPanel(
                                 onClick = {
                                     if (deck.rateScheduledWord(note, true)) {
                                         onChanged()
+                                        reviewed++
                                         index++
                                         reveal = false
                                         draft = ""
@@ -150,6 +169,13 @@ internal fun ScheduledOwnWordReviewPanel(
                         Text("Moeilijk: morgen. Zelf onthouden: na 2/4/7/14/30 dagen opnieuw.",
                             style = MaterialTheme.typography.bodySmall)
                     }
+                    TextButton(onClick = {
+                        skippedCards = skippedCards + card
+                        index++
+                        reveal = false
+                        draft = ""
+                        notice = ""
+                    }) { Text("Sla over zonder beoordeling") }
                 }
                 if (notice.isNotBlank()) Text(notice,
                     color = MaterialTheme.colorScheme.error)

@@ -14,6 +14,12 @@ een compact lokaal studieoverzicht. Je hoeft niet eerst aparte beheermenu's te z
   De aantallen tonen hoeveel kaarten vandaag voor elke selectie klaarstaan.
   Een kaart die je al hebt beoordeeld, verschijnt niet opnieuw als je tijdens
   dezelfde sessie van taal of thema wisselt.
+- **Zonder beoordeling overslaan:** in de herhaling van basiswoorden,
+  eigen woorden, eigen zinnen en de gemengde ronde hoef je niets als geleerd
+  te markeren als je het antwoord nu niet wilt beoordelen. Alleen de
+  daadwerkelijk beoordeelde kaarten wijzigen hun planning. Aan het einde
+  van de basiswoord-, eigenwoord- en gemengde ronde kun je overgeslagen
+  kaarten opnieuw bekijken zonder eerder beoordeelde kaarten te herhalen.
 - **Volgende datum:** als er vandaag niets klaarstaat, verschijnt de vroegste
   volgende geplande datum, als die bestaat.
 - **Beheer:** elk onderdeel linkt naar de bestaande eigen woorden- of
