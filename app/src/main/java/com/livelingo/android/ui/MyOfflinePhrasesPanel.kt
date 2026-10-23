@@ -1135,7 +1135,7 @@ internal fun MyOfflinePhrasesPanel(
                 if (favoriteNotice.isNotBlank()) {
                     Text(favoriteNotice, style = MaterialTheme.typography.bodySmall)
                 }
-                if (favoritesOnly && pinnedNotes.isEmpty()) {
+                if (phrases != null && favoritesOnly && pinnedNotes.isEmpty()) {
                     Text("Nog geen favorieten. Bewaar een eigen zin met '☆ Favoriet'.",
                         style = MaterialTheme.typography.bodySmall)
                 }
