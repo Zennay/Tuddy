@@ -14,7 +14,7 @@ internal object ModelResearchSummary {
         if (completeLength <= MAX_CHARS) {
             return buildString(completeLength) {
                 append(header)
-                candidateBlocks.forEach(::append)
+                candidateBlocks.forEach { append(it) }
             }
         }
 
