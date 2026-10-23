@@ -13,7 +13,11 @@ internal data class OfflineLanguageModelCandidate(
     val footprint: String,
     val limitation: String,
     /** Advertised language codes or unresolved pair coverage; never proof of support. */
-    val directionEvidence: String = ""
+    val directionEvidence: String = "",
+    /** Immutable model repository revision when captured; empty means not recorded. */
+    val snapshotRevision: String = "",
+    /** SHA-256 of the exact weight/export file when captured; empty means not recorded. */
+    val weightsSha256: String = ""
 )
 
 internal data class UnavailableTextLanguage(
@@ -92,7 +96,9 @@ internal object UnavailableTextLanguageCatalog {
         url = "https://huggingface.co/OpenVoiceOS/omnilingual-asr-ctc-300m-onnx",
         directionEvidence = "ASR-modelkaartfamilie omvat volgens de officiële taal-ID-lijst ckb_Arab, pbt_Arab en pus_Arab; dit is geen target-specifieke CTC-benchmark en kmr_Latn ontbreekt in de lijst.",
         declaredLicense = "Apache-2.0 voor Meta-model/gewichten en ONNX-export; trainingscorpus CC-BY-4.0",
-        footprint = "328 MB INT8 ONNX; SHA-256 38a6cc569d46eb382f27d85b3208b883e834ff281b2057a606ec79e4ae501545; snapshot bc55e1de19af8a907b0a010d06fc4637a2d5bf0c",
+        footprint = "328 MB INT8 ONNX",
+        snapshotRevision = "bc55e1de19af8a907b0a010d06fc4637a2d5bf0c",
+        weightsSha256 = "38a6cc569d46eb382f27d85b3208b883e834ff281b2057a606ec79e4ae501545",
         limitation = "Modelkaart meldt alleen sanity-checks op en/fr/de/es en spot-checks op pt/sw; geen specifieke ckb/pbt/pus-evaluatie voor deze 300M-export. " +
             "CTC-model is niet taalgeconditioneerd en kan de verkeerde schriftsoort produceren; meestal geen interpunctie/hoofdletters, audio korter dan 40 seconden. " +
             "CPU-snelheid is op desktop gemeten, niet op Android. Vereist een onnx-asr-integratieruntime; geen Android-packaging, native-speakerreview of vliegtuigmodusacceptatie. Niet geïntegreerd of geactiveerd."
@@ -248,7 +254,9 @@ internal object UnavailableTextLanguageCatalog {
                     url = "https://huggingface.co/amedcj/whisper-kurmanji",
                     directionEvidence = "Spraak → tekst (ASR), Kurmanji volgens modelkaart en Common Voice; geen vertaling of Android-geschiktheid aangetoond.",
                     declaredLicense = "Apache-2.0 volgens modelkaart",
-                    footprint = "966.995.080 bytes; SHA-256 7411638aad942d5d1038e0ff3b79f5632ad479c60ce98e2739f08c6cbdae5ada; snapshot d7a083101e13012e3748f4c7d77234fa7d195441",
+                    footprint = "966.995.080 bytes",
+                    snapshotRevision = "d7a083101e13012e3748f4c7d77234fa7d195441",
+                    weightsSha256 = "7411638aad942d5d1038e0ff3b79f5632ad479c60ce98e2739f08c6cbdae5ada",
                     limitation = "Modelkaart noemt Common Voice Kurmanji, maar geen datasetversie of evaluatiescore. " +
                         "Deze immutable revision maakt alleen de checkpointbytes reproduceerbaar; zij bewijst niet dat de trainingsdata Common Voice 26.0 is. " +
                         "Mozilla Data Collective publiceert Common Voice Kurmanji 26.0 onder CC0-1.0, maar zonder release-ID " +
@@ -408,6 +416,8 @@ internal object UnavailableTextLanguageCatalog {
                 candidate.url,
                 candidate.declaredLicense,
                 candidate.footprint,
+                candidate.snapshotRevision,
+                candidate.weightsSha256,
                 candidate.limitation,
                 candidate.directionEvidence
             ))
@@ -424,6 +434,8 @@ internal object UnavailableTextLanguageCatalog {
                     candidate.url,
                     candidate.declaredLicense,
                     candidate.footprint,
+                    candidate.snapshotRevision,
+                    candidate.weightsSha256,
                     candidate.limitation,
                     candidate.directionEvidence
                 )
