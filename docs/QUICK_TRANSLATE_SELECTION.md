@@ -3,10 +3,11 @@
 Selecteer een passage in een Android-app en kies in het tekstselectiemenu
 **Vertaal met Tuddy**. Gewone platte tekst opent een aparte, tijdelijke
 vertaalweergave. De geselecteerde tekst wordt niet automatisch vertaald:
-controleer eerst de bron- en doeltaal en tik daarna op **Vertaal lokaal**.
+controleer eerst de bron- en doeltaal (of vraag een optioneel lokaal brontaalvoorstel) en tik daarna op **Vertaal lokaal**.
 
 ## Werking
 
+- **Stel brontaal lokaal voor** gebruikt de reeds ingebouwde on-device taalidentificatie op een korte selectie. Het voorstel wordt nooit automatisch toegepast zonder dat de gebruiker het ziet; controleer het zelf en kies desnoods handmatig.
 - Tuddy controleert vóór vertaling of de exacte ML Kit-tekstmodellen al lokaal
   beschikbaar zijn. Engels gebruikt het ingebouwde ML Kit-model; voor andere
   talen moet het bijbehorende model al op het toestel staan.
