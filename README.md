@@ -2,7 +2,7 @@
 
 Selecteer een passage in een andere app en kies **Vertaal met Tuddy** in
 het Android-tekstselectiemenu. Tuddy toont de geselecteerde tekst, laat je
-de bron- en doeltaal controleren en vertaalt pas na **Vertaal lokaal**.
+de bron- en doeltaal controleren, optioneel een lokaal brontaalvoorstel opvragen en vertaalt pas na **Vertaal lokaal**.
 De exacte ML Kit-tekstmodellen moeten al lokaal beschikbaar zijn: de snelle
 selectieactie downloadt niets, start geen microfoon en heeft geen online
 fallback. Na afloop kun je de vertaling kopiëren of — als de bronapp de
