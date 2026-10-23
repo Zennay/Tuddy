@@ -253,7 +253,7 @@ internal fun FullscreenCaptionCard(
         val first = firstText.replace('\n', ' ').replace('\r', ' ').trim()
         val second = secondText.replace('\n', ' ').replace('\r', ' ').trim()
         if (listOf(first, second).any {
-                it.isBlank() || it.length > 400 || it.any(Char::isISOControl)
+                it.isBlank() || it.length > 400 || it.any { ch -> ch.isISOControl() }
             }) {
             speaker.stop()
             activeSpeechText = null
@@ -415,11 +415,11 @@ internal fun FullscreenCaptionCard(
                     if (card.status == "Lokaal vertaald" && translation != null &&
                         card.sourceCode != card.targetCode
                     ) {
-                        Row(modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             OutlinedButton(
                                 enabled = activeSpeechText == null,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     pronounceBilingual(card.original, card.sourceCode, "Origineel",
                                         translation, card.targetCode, "Vertaling")
@@ -427,7 +427,7 @@ internal fun FullscreenCaptionCard(
                             ) { Text("🔊 Origineel → vertaling") }
                             OutlinedButton(
                                 enabled = activeSpeechText == null,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     pronounceBilingual(translation, card.targetCode, "Vertaling",
                                         card.original, card.sourceCode, "Origineel")
