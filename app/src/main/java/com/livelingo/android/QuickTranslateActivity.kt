@@ -150,7 +150,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     private fun suggestSourceLanguage() {
         if (busy || detectingSource || inputNotice.isNotBlank()) return
-        val sample = incomingText.replace('\\n', ' ').trim().take(1200)
+        val sample = incomingText.replace('\n', ' ').trim().take(1200)
         if (sample.length < 8) {
             detectionNotice = "Er staat te weinig tekst in deze selectie om lokaal een brontaal voor te stellen."
             return
