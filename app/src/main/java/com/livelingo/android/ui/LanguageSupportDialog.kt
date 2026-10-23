@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -75,6 +76,7 @@ internal fun LanguageSupportDialog(
     }
     var linkNotice by remember { mutableStateOf("") }
     var researchCopyNotice by remember { mutableStateOf("") }
+    var researchSharePreview by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var modelTaskFilter by remember { mutableStateOf("Alle") }
     var modelAccessFilter by remember { mutableStateOf("Alle") }
@@ -147,7 +149,9 @@ internal fun LanguageSupportDialog(
     ) {
         val fullSummary = buildString {
             appendLine("Tuddy — modelonderzoek")
+            appendLine("Zoekterm: ${query.ifBlank { "(geen)" }}.")
             appendLine("Taakfilter: ${modelTaskFilter}; licentie-/toegangsfilter: ${modelAccessFilter}.")
+            appendLine("Aantal getoonde kandidaten: ${taskFilteredCandidates.values.sumOf { it.size }}.")
             appendLine("Onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd; labels zijn geen distributiegoedkeuring.")
             taskFilteredCandidates.forEach { (item, candidates) ->
                 appendLine()
@@ -564,6 +568,10 @@ internal fun LanguageSupportDialog(
                             clipboard.setText(AnnotatedString(researchSummary))
                             researchCopyNotice = "Gekopieerd: alleen openbare modelmetadata, geen gesprekken of audio."
                         }) { Text("Kopieer gefilterde onderzoeksresultaten") }
+                        TextButton(onClick = {
+                            researchSharePreview = researchSummary
+                            researchCopyNotice = ""
+                        }) { Text("Bekijk en deel onderzoeksresultaten…") }
                         if (researchCopyNotice.isNotBlank()) {
                             Text(
                                 researchCopyNotice,
@@ -646,4 +654,51 @@ internal fun LanguageSupportDialog(
             TextButton(onClick = onDismiss) { Text("Sluiten") }
         }
     )
+    val sharePreview = researchSharePreview
+    if (sharePreview != null) {
+        AlertDialog(
+            onDismissRequest = { researchSharePreview = null },
+            title = { Text("Onderzoeksresultaten delen?") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Controleer de volledige selectie hieronder. Dit bevat alleen openbare " +
+                            "modelkaartmetadata, zoekterm en licentie-/beperkingsnotities; geen " +
+                            "gesprekken, audio, eigen zinnen of apparaatdiagnostiek. Een gekozen " +
+                            "ontvanger kan het rapport bewaren of verder delen.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(sharePreview, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent.createChooser(
+                                Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, "Tuddy — modelonderzoek")
+                                    putExtra(Intent.EXTRA_TEXT, sharePreview)
+                                },
+                                "Deel modelonderzoek"
+                            )
+                        )
+                    }.onSuccess {
+                        researchSharePreview = null
+                        researchCopyNotice = "Android-deelmenu geopend. Controleer ontvanger en inhoud."
+                    }.onFailure {
+                        linkNotice = "Android-deelmenu kon niet worden geopend; er is niets verzonden."
+                    }
+                }) { Text("Deel via Android…") }
+            },
+            dismissButton = {
+                TextButton(onClick = { researchSharePreview = null }) { Text("Annuleren") }
+            }
+        )
+    }
 }
