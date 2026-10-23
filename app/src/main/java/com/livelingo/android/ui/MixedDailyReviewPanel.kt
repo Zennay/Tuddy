@@ -92,7 +92,13 @@ internal fun MixedDailyReviewPanel(
     var replayCards by remember { mutableStateOf<List<MixedStudyCard>?>(null) }
     // Pick once before the round; later filtering would allow previously
     // rated cards to reappear in this still-open session.
-    var selectedLanes by remember { mutableStateOf(setOf("basis", "phrase", "own")) }
+    var selectedLanes by remember(mixed) {
+        mutableStateOf(buildSet {
+            if (mixed.orEmpty().any { it is MixedStudyCard.Basis }) add("basis")
+            if (mixed.orEmpty().any { it is MixedStudyCard.Phrase }) add("phrase")
+            if (mixed.orEmpty().any { it is MixedStudyCard.Own }) add("own")
+        })
+    }
     var started by remember { mutableStateOf(false) }
     val selectedCards = mixed?.filter { card ->
         when (card) {
