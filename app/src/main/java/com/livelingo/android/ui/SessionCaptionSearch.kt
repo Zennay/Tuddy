@@ -94,7 +94,9 @@ internal fun SessionCaptionSearchText(
     style: TextStyle,
     enableOfflineWordCards: Boolean = false,
     wordLanguage: String? = null,
-    allowWordSpeech: Boolean = true
+    allowWordSpeech: Boolean = true,
+    activeSpeechText: String? = null,
+    activeSpeechRange: Pair<Int, Int>? = null
 ) {
     if (enableOfflineWordCards) {
         OfflineWordText(
@@ -102,7 +104,9 @@ internal fun SessionCaptionSearchText(
             language = wordLanguage,
             style = style,
             allowSpeech = allowWordSpeech,
-            highlightQuery = query
+            highlightQuery = query,
+            activeSpeechText = activeSpeechText,
+            activeSpeechRange = activeSpeechRange
         )
         return
     }

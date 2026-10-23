@@ -1,3 +1,18 @@
+## Live lezen: focus blijft op het laatste tekstwoord
+
+Wanneer voorlopige spraaktekst een afgeronde sessieregel wordt, blijft de
+laatste tekstwoord-focus zichtbaar op de nieuwste afgeronde bronregel en de
+lokaal voltooide vertaling. Dit werkt alleen tijdens luisteren en **Volg live**,
+zonder actieve zoek- of filterweergave. Terugscrollen pauzeert de automatische
+focus en scroll; de gebruiker hervat dit zelf met **Volg live**. De woorden
+blijven aanklikbaar voor de bestaande lokale woordkaart.
+
+Dit is tekstfocus, geen audio-woordtiming of bewezen woorduitlijning. Er zijn
+geen extra audio-, model-, netwerk- of opslagacties. Zie
+[de uitleg over live woordfocus](docs/LIVE_FINAL_WORD_FOCUS.md).
+
+---
+
 ## Nieuw: vertaal geselecteerde tekst direct vanuit Android
 
 Selecteer een passage in een andere app en kies **Vertaal met Tuddy** in

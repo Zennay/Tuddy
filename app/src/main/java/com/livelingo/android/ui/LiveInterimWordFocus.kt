@@ -10,6 +10,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 
 /**
+ * Text-only focus for the latest visible token. This is deliberately not an
+ * audio timestamp or a claim of word-level speech alignment.
+ */
+internal fun normalizedLiveFocusText(text: String): String =
+    text.replace('\n', ' ').replace('\r', ' ').trim()
+
+internal fun lastTextWordRange(text: String): Pair<Int, Int>? {
+    val visible = normalizedLiveFocusText(text)
+    val end = visible.length
+    if (end <= 0) return null
+    val start = visible.indexOfLast { it.isWhitespace() } + 1
+    return if (start < end) start to end else null
+}
+
+/**
  * Follows the text already emitted by Android's on-device recognizer.
  * Highlights only the last non-whitespace token in a provisional original.
  *

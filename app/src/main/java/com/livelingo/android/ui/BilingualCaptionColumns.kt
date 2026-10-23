@@ -25,6 +25,7 @@ internal fun BilingualCaptionColumns(
     status: String,
     fontScale: Float,
     isInterim: Boolean,
+    highlightLatestFinal: Boolean = false,
     searchQuery: String = "",
     enableOfflineWordCards: Boolean = false,
     allowWordSpeech: Boolean = true
@@ -53,7 +54,9 @@ internal fun BilingualCaptionColumns(
                     original, searchQuery, originalStyle,
                     enableOfflineWordCards = enableOfflineWordCards,
                     wordLanguage = sourceCode,
-                    allowWordSpeech = allowWordSpeech
+                    allowWordSpeech = allowWordSpeech,
+                    activeSpeechText = if (highlightLatestFinal) normalizedLiveFocusText(original) else null,
+                    activeSpeechRange = if (highlightLatestFinal) lastTextWordRange(original) else null
                 )
             }
         }
@@ -79,7 +82,9 @@ internal fun BilingualCaptionColumns(
                     translation, searchQuery, translatedStyle,
                     enableOfflineWordCards = enableOfflineWordCards,
                     wordLanguage = targetCode,
-                    allowWordSpeech = allowWordSpeech
+                    allowWordSpeech = allowWordSpeech,
+                    activeSpeechText = if (highlightLatestFinal) normalizedLiveFocusText(translation) else null,
+                    activeSpeechRange = if (highlightLatestFinal) lastTextWordRange(translation) else null
                 )
             } else {
                 Text("[Vertaling niet voltooid: $status]",
