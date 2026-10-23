@@ -16,7 +16,7 @@ herstel je snel de volledige selectie binnen de actieve filters. De teller toont
 het aantal gevonden zinnen en een lege zoekopdracht meldt expliciet wanneer er
 geen overeenkomst is. De zoeknormalisatie is alleen voor zoeken en verandert
 geen opgeslagen tekst. Kiezen blijft een bewuste actie: Tuddy vertaalt of
-verstuur de zin niet automatisch.
+verstuurt de zin niet automatisch.
 
 ## Favorieten direct beheren in je eigen zinnenlijst
 
