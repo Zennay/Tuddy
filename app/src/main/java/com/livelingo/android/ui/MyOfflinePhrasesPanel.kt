@@ -37,6 +37,7 @@ import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivateOfflineSearch
 import com.livelingo.android.PrivatePhraseTextPolicy
 import com.livelingo.android.PrivatePhraseTopics
+import com.livelingo.android.PrivatePhraseShortcuts
 import com.livelingo.android.PrivatePrintablePhrasebook
 
 private data class PendingScopedTsv(
@@ -80,6 +81,8 @@ internal fun MyOfflinePhrasesPanel(
     var phrase by remember { mutableStateOf("") }
     var meaning by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
+    var favoritesOnly by remember { mutableStateOf(false) }
+    var favoriteNotice by remember { mutableStateOf("") }
     var chosenTopicFilter by remember { mutableStateOf<String?>(null) }
     var manageTopicsOpen by remember { mutableStateOf(false) }
     var bulkTopicsOpen by remember { mutableStateOf(false) }
@@ -123,6 +126,7 @@ internal fun MyOfflinePhrasesPanel(
     var pendingPrintable by remember { mutableStateOf<PendingTopicPhrasebook?>(null) }
     val context = LocalContext.current
     val phraseTopics = remember(context) { PrivatePhraseTopics(context) }
+    val phraseShortcuts = remember(context) { PrivatePhraseShortcuts(context) }
     fun matchesTopic(record: PersonalPhrase, topic: String?): Boolean = when (topic) {
         null -> true
         "__without__" -> phraseTopics.topicFor(record) == null
@@ -354,6 +358,9 @@ internal fun MyOfflinePhrasesPanel(
         }
     }
     val phrases = remember(revision) { deck.entries() }
+    val pinnedNotes = remember(revision, phrases) {
+        phraseShortcuts.pinnedNotes(phrases.orEmpty())
+    }
     val topics = remember(revision) { phraseTopics.topics() }
     val topicCounts = remember(revision) { phraseTopics.counts(phrases.orEmpty()) }
     val selectedTopic = chosenTopicFilter?.takeIf { it == "__without__" || it in topics }
@@ -1119,6 +1126,19 @@ internal fun MyOfflinePhrasesPanel(
                             "$topic (${topicCounts[topic] ?: 0})")
                     }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
+                        Text(if (favoritesOnly) "★ Alleen favorieten ✓"
+                            else "☆ Favorieten (${pinnedNotes.size})")
+                    }
+                }
+                if (favoriteNotice.isNotBlank()) {
+                    Text(favoriteNotice, style = MaterialTheme.typography.bodySmall)
+                }
+                if (favoritesOnly && pinnedNotes.isEmpty()) {
+                    Text("Nog geen favorieten. Bewaar een eigen zin met '☆ Favoriet'.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 OutlinedTextField(
                     value = search, onValueChange = { search = it.take(60) },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
@@ -1141,7 +1161,8 @@ internal fun MyOfflinePhrasesPanel(
                             "__without__" -> assigned == null
                             else -> assigned == selectedTopic
                         }
-                        searchMatches && topicMatches
+                        val favoriteMatches = !favoritesOnly || it in pinnedNotes
+                        searchMatches && topicMatches && favoriteMatches
                     }
                     Text("${shown.size} van ${phrases.size} zelf ingevoerde zinnen",
                         style = MaterialTheme.typography.bodySmall)
@@ -1178,8 +1199,25 @@ internal fun MyOfflinePhrasesPanel(
                         TextButton(onClick = { assigningTopicTo = item }) {
                             Text("▤ Kies thema voor deze zin")
                         }
-                        OutlinedButton(onClick = { displayedPhrase = item }) {
-                            Text("▣ Toon groot · gesprekskaart")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { displayedPhrase = item }) {
+                                Text("▣ Toon groot · gesprekskaart")
+                            }
+                            TextButton(onClick = {
+                                val changed = phraseShortcuts.toggle(item, phrases)
+                                if (changed == null) {
+                                    favoriteNotice = "Niet opgeslagen. Maximaal " +
+                                        PrivatePhraseShortcuts.MAX_PINS +
+                                        " favorieten, of lokale opslag niet beschikbaar."
+                                } else {
+                                    revision++
+                                    favoriteNotice = if (changed)
+                                        "Gesprekszin als favoriet bewaard."
+                                    else "Favoriet verwijderd."
+                                }
+                            }) {
+                                Text(if (item in pinnedNotes) "★ Bewaard" else "☆ Favoriet")
+                            }
                         }
                         TextButton(onClick = {
                             editingPhrase = item
