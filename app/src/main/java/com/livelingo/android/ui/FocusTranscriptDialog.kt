@@ -8,11 +8,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.AnnotatedString
 import com.livelingo.android.PrivateCaptionCopy
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -24,8 +24,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 /**
- * Purely visual, session-only screen. No persistence, microphone acquisition,
- * translator access, network call or speaker identification.
+ * Session-only reader. Copying is an explicit user-triggered system clipboard
+ * action; the screen does not acquire the microphone or invoke translation,
+ * network calls or speaker identification.
  */
 internal data class FocusCaptionLine(
     val id: Long,
@@ -65,6 +66,7 @@ internal fun FocusTranscriptDialog(
     var captionQuery by remember { mutableStateOf("") }
     var onlyPinned by remember { mutableStateOf(false) }
     var pinNotice by remember { mutableStateOf("") }
+    var copyNotice by remember { mutableStateOf("") }
     var speakerMenuOpen by remember { mutableStateOf(false) }
     // Columns only when Android reports adequate width; never crush two
     // full-length languages into half a narrow portrait phone screen.
@@ -280,6 +282,11 @@ internal fun FocusTranscriptDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
                 }
+                if (copyNotice.isNotBlank()) {
+                    Text(copyNotice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Text(
                     "Tik in een afgeronde zin of vertaling op een woord voor een lokale woordkaart. " +
                         "Zoekmarkering blijft zichtbaar. Geen online woordenboek of automatische betekenis.",
@@ -365,10 +372,10 @@ internal fun FocusTranscriptDialog(
                                             targetCode = line.targetCode
                                         )
                                         if (payload == null) {
-                                            pinNotice = "Deze caption kan niet veilig worden gekopieerd."
+                                            copyNotice = "Deze caption kan niet veilig worden gekopieerd."
                                         } else {
                                             clipboard.setText(AnnotatedString(payload))
-                                            pinNotice = "Origineel + vertaling gekopieerd. Het systeemklembord kan door andere apps worden gelezen."
+                                            copyNotice = "Origineel + vertaling gekopieerd. Het systeemklembord kan door andere apps worden gelezen."
                                         }
                                     }) {
                                         Text("Kopieer origineel + vertaling")
