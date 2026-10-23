@@ -4,6 +4,17 @@ In **5 basisuitdrukkingen → Zoek in mijn eigen zinnen** kun je uitsluitend
 zelfgeschreven zinnen doorzoeken. Dit scherm levert geen automatische of
 geverifieerde vertalingen.
 
+## Een eigen zin snel kiezen als gespreksbeurt
+
+Bij **Gebruik eerder opgeslagen zin als beurt** kun je nu ook zoeken op woorden
+uit de eigen zin én de zelfgeschreven NL/EN-betekenis. Elk zoekwoord mag in een
+van beide velden staan; de volgorde maakt niet uit. De bestaande taalrichting,
+favorietenfilter en zelfgekozen themafilter blijven actief naast de zoekopdracht.
+De teller toont het aantal gevonden zinnen en een lege zoekopdracht meldt
+expliciet wanneer er geen overeenkomst is. De zoeknormalisatie is alleen voor
+zoeken en verandert geen opgeslagen tekst. Kiezen blijft een bewuste actie:
+Tuddy vertaalt of verstuurt de zin niet automatisch.
+
 ## Favorieten direct beheren in je eigen zinnenlijst
 
 Open **Mijn eigen offline zinnen** om een eigen kaart direct als favoriet te
