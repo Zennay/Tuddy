@@ -1,3 +1,17 @@
+## Leesmodus: kopieer een afgeronde tweetalige caption
+
+In **Tuddy · Leesmodus** kan elke afgeronde caption met één bewuste actie als
+`Taal: origineel` en `Taal: vertaling` naar het Android-systeemklembord worden
+gekopieerd. De actie verschijnt alleen bij afgeronde lokale vertalingen; voorlopige
+spraak en onafgeronde vertalingen worden niet gekopieerd. De tekst wordt begrensd
+en ontdaan van ongeldige controletekens. Het klembord valt buiten Tuddy's RAM-only
+privacygrens: andere apps kunnen gekopieerde tekst lezen. Kopiëren is nooit
+automatisch.
+
+Zie [de uitleg over tweetalig kopiëren](docs/FOCUS_TRANSCRIPT_COPY.md).
+
+---
+
 ## Live lezen: focus blijft op het laatste tekstwoord
 
 Wanneer voorlopige spraaktekst een afgeronde sessieregel wordt, blijft de
