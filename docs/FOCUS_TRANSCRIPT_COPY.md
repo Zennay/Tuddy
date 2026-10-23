@@ -37,3 +37,15 @@ dat Androids systeemklembord buiten de RAM-only privacygrens van Tuddy valt
 en door andere apps kan worden gelezen. Andere kaart selecteren wist enkel
 de zichtbare melding, niet de door Android beheerde inhoud van het klembord.
 Er is geen automatische clipboardsynchronisatie of nieuwe netwerktoegang.
+
+## Fullscreen gesprekszin: bewust delen via Android
+
+Bij een lokaal afgeronde tweetalige caption toont **Tuddy · Toon gesprekszin**
+ook **Deel deze tweetalige caption**. De actie maakt dezelfde begrensde,
+geschoonde `PrivateCaptionCopy`-tekst als de kopieeractie en opent uitsluitend
+het standaard Android-deelvenster. Jij kiest zelf een bestemming; er wordt
+niet automatisch een ontvanger gekozen of een bericht verstuurd. De gekozen
+app ontvangt de twee gelabelde tekstregels en kan die vervolgens verwerken of
+online versturen. Deel daarom alleen tekst die je bewust met die app wilt delen.
+Niet-afgeronde of ongeldige captions worden geweigerd. Dit is geen nieuwe
+vertaling, opslag, spraakherkenning of netwerkverbinding van Tuddy zelf.
