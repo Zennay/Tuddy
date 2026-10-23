@@ -1,5 +1,6 @@
 package com.livelingo.android.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -22,10 +24,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivatePhraseDeck
+import com.livelingo.android.PrivatePhraseTopics
 import java.time.LocalDate
+
+private const val NO_TOPIC_FILTER = "\u0000"
 
 /** One day's self-directed, local-only Kurmanji/Sorani/Pashto phrase review. */
 @Composable
@@ -35,15 +42,69 @@ internal fun ScheduledPhraseReviewPanel(
     onDismiss: () -> Unit
 ) {
     val today = remember { LocalDate.now().toEpochDay() }
-    val due = remember { deck.scheduledReviews().orEmpty().filter { it.dueDay <= today } }
+    val allDue = remember(deck, today) {
+        deck.scheduledReviews().orEmpty().filter { it.dueDay <= today }
+    }
+    val context = LocalContext.current
+    val topicIndex = remember(context) { PrivatePhraseTopics(context) }
+    val topicNames = remember(context) { topicIndex.topics() }
+    val topicByPhrase = remember(allDue, topicNames) {
+        allDue.associate { it.phrase to topicIndex.topicFor(it.phrase) }
+    }
+
+    var languageFilter by remember { mutableStateOf<String?>(null) }
+    var topicFilter by remember { mutableStateOf<String?>(null) }
+    var reviewedPhrases by remember { mutableStateOf(setOf<PersonalPhrase>()) }
+    var skippedPhrases by remember { mutableStateOf(setOf<PersonalPhrase>()) }
     var index by remember { mutableIntStateOf(0) }
     var revealed by remember { mutableStateOf(false) }
     var reverse by remember { mutableStateOf(false) }
     var writeFirst by remember { mutableStateOf(false) }
     var typedAnswer by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
+
+    val languageOptions: List<Pair<String?, String>> = buildList {
+        add(null to ("Alle talen (" + allDue.size + ")"))
+        listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
+            .forEach { (code, label) ->
+                val count = allDue.count { it.phrase.language == code }
+                if (count > 0) add(code to "$label ($count)")
+            }
+    }
+    val topicOptions: List<Pair<String?, String>> = buildList {
+        add(null to ("Alle thema's (" + allDue.size + ")"))
+        val withoutTopic = allDue.count { topicByPhrase[it.phrase].isNullOrBlank() }
+        if (withoutTopic > 0) add(NO_TOPIC_FILTER to "Zonder thema ($withoutTopic)")
+        topicNames.filter { name -> allDue.any { topicByPhrase[it.phrase] == name } }
+            .forEach { name ->
+                val count = allDue.count { topicByPhrase[it.phrase] == name }
+                add(name to "$name ($count)")
+            }
+    }
+    val matchingDue = remember(allDue, languageFilter, topicFilter, topicByPhrase) {
+        allDue.filter { item ->
+            (languageFilter == null || item.phrase.language == languageFilter) &&
+                when (topicFilter) {
+                    null -> true
+                    NO_TOPIC_FILTER -> topicByPhrase[item.phrase].isNullOrBlank()
+                    else -> topicByPhrase[item.phrase] == topicFilter
+                }
+        }
+    }
+    // Remove a self-rated card from the live queue. This lets users switch
+    // filters mid-session without seeing a card they already rated again.
+    val due = remember(matchingDue, reviewedPhrases) {
+        matchingDue.filterNot { it.phrase in reviewedPhrases || it.phrase in skippedPhrases }
+    }
     val current = due.getOrNull(index)
     val langNames = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
+
+    fun resetCurrentCard() {
+        index = 0
+        revealed = false
+        typedAnswer = ""
+        notice = ""
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -60,10 +121,49 @@ internal fun ScheduledPhraseReviewPanel(
                         "Geen microfoon, model, account of internet.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                Text("Filter op taal", style = MaterialTheme.typography.labelMedium)
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    languageOptions.forEach { (code, label) ->
+                        FilterChip(
+                            selected = languageFilter == code,
+                            onClick = {
+                                languageFilter = code
+                                resetCurrentCard()
+                            },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                Text("Filter op thema", style = MaterialTheme.typography.labelMedium)
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    topicOptions.forEach { (topic, label) ->
+                        FilterChip(
+                            selected = topicFilter == topic,
+                            onClick = {
+                                topicFilter = topic
+                                resetCurrentCard()
+                            },
+                            label = { Text(label) }
+                        )
+                    }
+                }
                 if (current == null) {
                     Text(
-                        if (due.isEmpty()) "Vandaag zijn er geen eigen zinnen aan de beurt."
-                        else "Je hebt alle ${due.size} zinnen van vandaag bekeken.",
+                        when {
+                            allDue.isEmpty() -> "Vandaag zijn er geen eigen zinnen aan de beurt."
+                            matchingDue.isEmpty() -> "Geen zinnen in deze selectie zijn vandaag aan de beurt."
+                            matchingDue.any { it.phrase in skippedPhrases } ->
+                                "Alle zinnen in deze selectie zijn bekeken of overgeslagen. " +
+                                    "Overgeslagen zinnen blijven gepland."
+                            else -> "Je hebt alle " + matchingDue.size +
+                                " zinnen in deze selectie bekeken."
+                        },
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
@@ -76,8 +176,15 @@ internal fun ScheduledPhraseReviewPanel(
                     val rtl = phrase.language == "ckb" || phrase.language == "ps"
                     val prompt = if (reverse) phrase.ownMeaning else phrase.phrase
                     val answer = if (reverse) phrase.phrase else phrase.ownMeaning
-                    Text("Zin ${index + 1} van ${due.size} · ${langNames[phrase.language]}",
-                        style = MaterialTheme.typography.labelMedium)
+                    val topic = topicByPhrase[phrase]
+                    Text(
+                        "Zin " + (matchingDue.size - due.size + 1) + " van " +
+                            matchingDue.size + " · " + langNames[phrase.language],
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    if (!topic.isNullOrBlank()) {
+                        Text("Thema · $topic", style = MaterialTheme.typography.labelMedium)
+                    }
                     TextButton(onClick = {
                         reverse = !reverse
                         revealed = false
@@ -89,13 +196,15 @@ internal fun ScheduledPhraseReviewPanel(
                         writeFirst = !writeFirst
                         typedAnswer = ""
                         revealed = false
-                    }) { Text(if (writeFirst) "✓ Zelf antwoord schrijven" else
-                        "✍ Zelf antwoord schrijven") }
+                    }) {
+                        Text(if (writeFirst) "✓ Zelf antwoord schrijven" else
+                            "✍ Zelf antwoord schrijven")
+                    }
                     HorizontalDivider()
                     Text(
                         prompt,
                         style = MaterialTheme.typography.headlineSmall.copy(
-                            textDirection = if ((!reverse && rtl)) TextDirection.Rtl
+                            textDirection = if (!reverse && rtl) TextDirection.Rtl
                                 else TextDirection.Ltr
                         )
                     )
@@ -140,8 +249,8 @@ internal fun ScheduledPhraseReviewPanel(
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     if (deck.rateScheduledPhrase(phrase, false)) {
+                                        reviewedPhrases = reviewedPhrases + phrase
                                         onChanged()
-                                        index++
                                         revealed = false
                                         typedAnswer = ""
                                         notice = ""
@@ -152,8 +261,8 @@ internal fun ScheduledPhraseReviewPanel(
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     if (deck.rateScheduledPhrase(phrase, true)) {
+                                        reviewedPhrases = reviewedPhrases + phrase
                                         onChanged()
-                                        index++
                                         revealed = false
                                         typedAnswer = ""
                                         notice = ""
@@ -165,11 +274,28 @@ internal fun ScheduledPhraseReviewPanel(
                             "Nog oefenen: morgen. Ik wist het: later na 2, 4, 7, 14 of 30 dagen.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        TextButton(onClick = {
+                            skippedPhrases = skippedPhrases + phrase
+                            revealed = false
+                            typedAnswer = ""
+                            notice = ""
+                        }) { Text("Sla over zonder beoordeling") }
                     } else {
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { revealed = true }
-                        ) { Text("Toon mijn betekenis") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    skippedPhrases = skippedPhrases + phrase
+                                    revealed = false
+                                    typedAnswer = ""
+                                    notice = ""
+                                }
+                            ) { Text("Sla over") }
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                onClick = { revealed = true }
+                            ) { Text("Toon mijn betekenis") }
+                        }
                     }
                 }
                 if (notice.isNotBlank()) Text(
