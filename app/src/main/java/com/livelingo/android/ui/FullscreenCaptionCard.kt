@@ -25,6 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import com.livelingo.android.PrivateCaptionCopy
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +41,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 
-/** Read-only, ephemeral card for finished live captions. No network or export. */
+/** Ephemeral full-screen card for finished live captions. User copying is explicit
+ * and crosses into Android's system clipboard; no network or automatic export.
+ */
 private enum class CaptionCardSide { BOTH, ORIGINAL, TRANSLATION }
 
 @Composable
@@ -161,12 +166,14 @@ internal fun FullscreenCaptionCard(
     var side by remember { mutableStateOf(CaptionCardSide.BOTH) }
     var large by remember { mutableStateOf(true) }
     var audioNotice by remember { mutableStateOf("") }
+    var copyNotice by remember { mutableStateOf("") }
     var speechPace by remember { mutableStateOf(LocalSpeechPace.NORMAL) }
     var activeSpeechText by remember { mutableStateOf<String?>(null) }
     var activeSpeechLabel by remember { mutableStateOf("") }
     var activeSpeechLanguage by remember { mutableStateOf("") }
     var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(speaker, lifecycleOwner) {
@@ -307,6 +314,7 @@ internal fun FullscreenCaptionCard(
         activeSpeechLanguage = ""
         activeSpeechRange = null
         audioNotice = ""
+        copyNotice = ""
     }
 
     Dialog(
@@ -333,7 +341,7 @@ internal fun FullscreenCaptionCard(
                     TextButton(onClick = { speaker.stop(); onDismiss() }) { Text("Sluiten") }
                 }
                 Text(
-                    "Alleen deze tijdelijke sessie · geen kopie of verzending. " +
+                    "Alleen deze tijdelijke sessie. Kopiëren is optioneel en gaat naar Android. " +
                         "Een lokale vertaling kan fouten bevatten.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -363,6 +371,31 @@ internal fun FullscreenCaptionCard(
                     }
                     TextButton(onClick = { large = !large }) {
                         Text(if (large) "Kleinere letters" else "Grotere letters")
+                    }
+                    if (card.status == "Lokaal vertaald" && translation != null) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                val payload = PrivateCaptionCopy.snapshot(
+                                    original = card.original,
+                                    translated = card.translated,
+                                    status = card.status,
+                                    sourceCode = card.sourceCode,
+                                    targetCode = card.targetCode
+                                )
+                                if (payload == null) {
+                                    copyNotice = "Deze afgeronde caption kan niet veilig worden gekopieerd."
+                                } else {
+                                    clipboard.setText(AnnotatedString(payload))
+                                    copyNotice = "Origineel + vertaling bewust gekopieerd. " +
+                                        "Het Android-systeemklembord kan door andere apps worden gelezen."
+                                }
+                            }
+                        ) { Text("⧉ Kopieer deze tweetalige caption") }
+                    }
+                    if (copyNotice.isNotBlank()) {
+                        Text(copyNotice, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (onStudyCaption != null && card.status == "Lokaal vertaald" &&
                         translation != null && card.original != translation &&
