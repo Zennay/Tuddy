@@ -105,7 +105,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
         }
 
         setContent {
-            QuickTranslateScreen(
+            MaterialTheme {
+                QuickTranslateScreen(
                 text = incomingText,
                 inputNotice = inputNotice,
                 readOnly = selectionReadOnly,
@@ -118,13 +119,15 @@ internal class QuickTranslateActivity : ComponentActivity() {
                 result = translationResult,
                 onSourceSelected = { code -> changePair(source = code) },
                 onTargetSelected = { code -> changePair(target = code) },
+                onSwapLanguages = { changePair(source = targetCode, target = sourceCode) },
                 onSuggestSource = { suggestSourceLanguage() },
                 onTranslate = { startTranslation() },
                 onCopy = { status = "Vertaling gekopieerd. Tuddy bewaart geen kopie." },
                 onReturnResult = { returnTranslationToCaller() },
                 onOpenTuddy = { openTuddy() },
                 onClose = { closeAndFinish() }
-            )
+                )
+            }
         }
     }
 
@@ -335,6 +338,7 @@ private fun QuickTranslateScreen(
     result: String?,
     onSourceSelected: (String) -> Unit,
     onTargetSelected: (String) -> Unit,
+    onSwapLanguages: () -> Unit,
     onSuggestSource: () -> Unit,
     onTranslate: () -> Unit,
     onCopy: () -> Unit,
@@ -397,6 +401,11 @@ private fun QuickTranslateScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        TextButton(
+            onClick = onSwapLanguages,
+            enabled = !busy && !detectingSource,
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("⇄ Wissel talen") }
         OutlinedButton(
             onClick = onSuggestSource,
             enabled = text.length >= 8 && inputNotice.isBlank() && !busy && !detectingSource,
