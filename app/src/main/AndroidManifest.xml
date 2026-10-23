@@ -77,17 +77,17 @@
                 <data android:mimeType="text/csv"/>
                 <data android:mimeType="application/csv"/>
             </intent-filter>
+            <!-- Android text-selection entrypoint; MainActivity forwards ordinary text internally. -->
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
         </activity>
     <activity
         android:name=".QuickTranslateActivity"
         android:label="Vertaal met Tuddy"
-        android:exported="true"
-        android:excludeFromRecents="true">
-        <intent-filter>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <category android:name="android.intent.category.DEFAULT"/>
-            <data android:mimeType="text/plain"/>
-        </intent-filter>
-    </activity>
+        android:exported="false"
+        android:excludeFromRecents="true"/>
     </application>
 </manifest>
