@@ -25,6 +25,20 @@ internal object CommunityLanguageAvailabilityHint {
             "Kies hieronder bewust een preview of je eigen, niet-gecontroleerde gesprekskaarten."
     }
 
+    /**
+     * Preserve distinct dialects for ambiguous generic Kurdish requests.
+     * Never silently guess Kurmanji or Sorani in the automatic translation picker.
+     */
+    fun targetsForQuery(query: String): List<String> {
+        targetForQuery(query)?.let { return listOf(it) }
+        val normalized = LanguageSearch.normalize(query)
+        val words = normalized.split(Regex("[^\\p{L}\\p{N}-]+"))
+            .filter { it.isNotBlank() }
+        return if (words.any {
+                it in setOf("kurdish", "koerdisch", "kurdisch", "kurdi", "کردی")
+            }) listOf("kmr", "ckb") else emptyList()
+    }
+
     /** A specific dialect can be preselected in the existing five-phrase panel. */
     fun targetForQuery(query: String): String? {
         val normalized = LanguageSearch.normalize(query)
