@@ -2,6 +2,7 @@ package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +25,7 @@ import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivateOfflineSearch
 import com.livelingo.android.PrivatePhraseShortcuts
 import com.livelingo.android.PrivatePhraseTopics
+import java.util.Locale
 
 /** Pick an explicitly authored note for a RAM-only conversational turn. */
 @Composable
@@ -55,7 +57,17 @@ internal fun OfflinePhraseTurnTopicPicker(
                 PrivateOfflineSearch.contains(note.phrase, term) ||
                     PrivateOfflineSearch.contains(note.ownMeaning, term)
             }
-    }
+    }.sortedWith(compareBy<PersonalPhrase>(
+        { if (foldedQuery.isNotBlank() &&
+            (PrivateOfflineSearch.equalsTo(it.phrase, foldedQuery) ||
+                PrivateOfflineSearch.equalsTo(it.ownMeaning, foldedQuery))) 0 else 1 },
+        { if (foldedQuery.isNotBlank() &&
+            (PrivateOfflineSearch.beginsWith(it.phrase, foldedQuery) ||
+                PrivateOfflineSearch.beginsWith(it.ownMeaning, foldedQuery))) 0 else 1 },
+        { if (it in favorites) 0 else 1 },
+        { topics.topicFor(it).orEmpty().lowercase(Locale.ROOT) },
+        { it.phrase.lowercase(Locale.ROOT) }
+    ))
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -71,9 +83,13 @@ internal fun OfflinePhraseTurnTopicPicker(
             label = { Text("Zoek in eigen zin of betekenis") }
         )
         Text(
-            "Meerdere zoekwoorden mogelijk; elk woord mag in de zin of je eigen betekenis staan.",
+            "Meerdere zoekwoorden mogelijk; elk woord mag in de zin of je eigen betekenis staan. " +
+                "Exacte en beginmatches staan bovenaan, daarna favorieten.",
             style = MaterialTheme.typography.bodySmall
         )
+        if (searchQuery.isNotBlank()) {
+            TextButton(onClick = { searchQuery = "" }) { Text("Wis zoeken") }
+        }
         TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
             Text(if (favoritesOnly) "✓ Alleen favoriete zinnen"
                 else "☆ Alleen favoriete zinnen")
@@ -102,6 +118,18 @@ internal fun OfflinePhraseTurnTopicPicker(
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             eligible.forEach { note ->
+                val topic = topics.topicFor(note)
+                if (note in favorites || !topic.isNullOrBlank()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (note in favorites) {
+                            Text("★ Favoriet", style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
+                        if (!topic.isNullOrBlank()) {
+                            Text("Thema · $topic", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
                 Text(note.phrase, style = MaterialTheme.typography.bodyMedium.copy(
                     textDirection = if (note.language in setOf("ckb", "ps"))
                         TextDirection.Rtl else TextDirection.Ltr))
