@@ -7495,14 +7495,14 @@ private fun TuddyScreen(
                             )
                             val matchingTargets = TargetCatalog.search(targetQuery).take(35)
                             if (matchingTargets.isEmpty()) {
-                                val previewSuggestion = CommunityLanguageAvailabilityHint.targetForQuery(targetQuery)
+                                val previewSuggestions = CommunityLanguageAvailabilityHint.targetsForQuery(targetQuery)
                                 Text(
                                     CommunityLanguageAvailabilityHint.forQuery(targetQuery)
                                         ?: "Geen vertaaltaal gevonden.",
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                     style = MaterialTheme.typography.bodySmall
                                 )
-                                if (previewSuggestion != null) {
+                                previewSuggestions.forEach { previewSuggestion ->
                                     val previewLabel = when (previewSuggestion) {
                                         "kmr" -> "Kurmanji"
                                         "ckb" -> "Sorani"
