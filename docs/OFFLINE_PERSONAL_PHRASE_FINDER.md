@@ -10,10 +10,13 @@ Bij **Gebruik eerder opgeslagen zin als beurt** kun je nu ook zoeken op woorden
 uit de eigen zin én de zelfgeschreven NL/EN-betekenis. Elk zoekwoord mag in een
 van beide velden staan; de volgorde maakt niet uit. De bestaande taalrichting,
 favorietenfilter en zelfgekozen themafilter blijven actief naast de zoekopdracht.
-De teller toont het aantal gevonden zinnen en een lege zoekopdracht meldt
-expliciet wanneer er geen overeenkomst is. De zoeknormalisatie is alleen voor
-zoeken en verandert geen opgeslagen tekst. Kiezen blijft een bewuste actie:
-Tuddy vertaalt of verstuurt de zin niet automatisch.
+Exacte overeenkomsten en beginmatches staan bovenaan, gevolgd door favorieten;
+elk resultaat toont ook het eigen thema en de favorietstatus. Met **Wis zoeken**
+herstel je snel de volledige selectie binnen de actieve filters. De teller toont
+het aantal gevonden zinnen en een lege zoekopdracht meldt expliciet wanneer er
+geen overeenkomst is. De zoeknormalisatie is alleen voor zoeken en verandert
+geen opgeslagen tekst. Kiezen blijft een bewuste actie: Tuddy vertaalt of
+verstuur de zin niet automatisch.
 
 ## Favorieten direct beheren in je eigen zinnenlijst
 
