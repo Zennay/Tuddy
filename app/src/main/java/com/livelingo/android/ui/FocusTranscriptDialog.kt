@@ -9,6 +9,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import com.livelingo.android.PrivateCaptionCopy
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -56,6 +59,7 @@ internal fun FocusTranscriptDialog(
     onRequestOriginalCorrection: ((Long) -> Unit)? = null
 ) {
     val listState = rememberLazyListState()
+    val clipboard = LocalClipboardManager.current
     var followLive by remember { mutableStateOf(true) }
     var speakerFilter by remember { mutableStateOf<String?>(null) }
     var captionQuery by remember { mutableStateOf("") }
@@ -347,6 +351,27 @@ internal fun FocusTranscriptDialog(
                                         Text(if (line.id in pinnedCaptionIds)
                                             "★ Markering verwijderen" else
                                             "☆ Markeer voor dit gesprek")
+                                    }
+                                }
+                                if (line.status in setOf("Lokaal", "Lokaal vertaald") &&
+                                    line.original.isNotBlank() && line.translated.isNotBlank()
+                                ) {
+                                    TextButton(onClick = {
+                                        val payload = PrivateCaptionCopy.snapshot(
+                                            original = line.original,
+                                            translated = line.translated,
+                                            status = line.status,
+                                            sourceCode = line.sourceCode,
+                                            targetCode = line.targetCode
+                                        )
+                                        if (payload == null) {
+                                            pinNotice = "Deze caption kan niet veilig worden gekopieerd."
+                                        } else {
+                                            clipboard.setText(AnnotatedString(payload))
+                                            pinNotice = "Origineel + vertaling gekopieerd. Het systeemklembord kan door andere apps worden gelezen."
+                                        }
+                                    }) {
+                                        Text("Kopieer origineel + vertaling")
                                     }
                                 }
                                 if (!archiveMode && !listening &&
