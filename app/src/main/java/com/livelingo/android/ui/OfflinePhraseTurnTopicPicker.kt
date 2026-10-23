@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PersonalPhrase
+import com.livelingo.android.PrivateOfflineSearch
 import com.livelingo.android.PrivatePhraseShortcuts
 import com.livelingo.android.PrivatePhraseTopics
 
@@ -38,12 +40,21 @@ internal fun OfflinePhraseTurnTopicPicker(
     val favorites = remember(notes) { pins.pinnedNotes(notes) }
     var theme by remember { mutableStateOf<String?>(null) }
     var favoritesOnly by remember { mutableStateOf(false) }
-    val eligible = notes.filter {
-        it.language == language && it.meaningLanguage == meaningLanguage &&
-            (!favoritesOnly || it in favorites) &&
+    var searchQuery by remember { mutableStateOf("") }
+    // Search-only normalization tolerates script/keyboard variants without
+    // altering the saved phrase or the user's own meaning.
+    val foldedQuery = PrivateOfflineSearch.fold(searchQuery.trim())
+    val terms = foldedQuery.split(Regex("\\s+")).filter { it.isNotBlank() }
+    val eligible = notes.filter { note ->
+        note.language == language && note.meaningLanguage == meaningLanguage &&
+            (!favoritesOnly || note in favorites) &&
             (theme == null ||
-                (theme == "__without__" && topics.topicFor(it) == null) ||
-                (theme != "__without__" && topics.topicFor(it) == theme))
+                (theme == "__without__" && topics.topicFor(note) == null) ||
+                (theme != "__without__" && topics.topicFor(note) == theme)) &&
+            terms.all { term ->
+                PrivateOfflineSearch.contains(note.phrase, term) ||
+                    PrivateOfflineSearch.contains(note.ownMeaning, term)
+            }
     }
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -52,6 +63,17 @@ internal fun OfflinePhraseTurnTopicPicker(
         Text("Kies zelf een eerder opgeslagen zin om als losse beurt te tonen. " +
             "Niets wordt vertaald of naar het gesprek gekopieerd vóór je tikt.",
             style = MaterialTheme.typography.bodySmall)
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it.take(80).filterNot { char -> char.isISOControl() } },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text("Zoek in eigen zin of betekenis") }
+        )
+        Text(
+            "Meerdere zoekwoorden mogelijk; elk woord mag in de zin of je eigen betekenis staan.",
+            style = MaterialTheme.typography.bodySmall
+        )
         TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
             Text(if (favoritesOnly) "✓ Alleen favoriete zinnen"
                 else "☆ Alleen favoriete zinnen")
@@ -69,8 +91,11 @@ internal fun OfflinePhraseTurnTopicPicker(
             }
         }
         HorizontalDivider()
-        Text(eligible.size.toString() + " eigen zinnen in deze selectie",
-            style = MaterialTheme.typography.labelMedium)
+        Text(
+            if (foldedQuery.isBlank()) eligible.size.toString() + " eigen zinnen in deze selectie"
+            else eligible.size.toString() + " eigen zinnen gevonden",
+            style = MaterialTheme.typography.labelMedium
+        )
         Column(
             modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
                 .verticalScroll(rememberScrollState()),
@@ -88,8 +113,11 @@ internal fun OfflinePhraseTurnTopicPicker(
                 HorizontalDivider()
             }
         }
-        if (eligible.isEmpty()) Text("Geen eigen zinnen in deze selectie. " +
-            "Er wordt geen overeenkomst verzonnen.",
-            style = MaterialTheme.typography.bodySmall)
+        if (eligible.isEmpty()) Text(
+            if (foldedQuery.isBlank())
+                "Geen eigen zinnen in deze selectie. Er wordt geen overeenkomst verzonnen."
+            else "Geen eigen zinnen gevonden. Wis of wijzig de zoekwoorden; Tuddy verzint geen overeenkomst.",
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
