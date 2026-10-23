@@ -16,9 +16,12 @@ Dit staat standaard uit, los van **Oefen mijn eigen zinnen**.
 5. Kies zin → betekenis of betekenis → zin; Sorani en Pasjtoe gebruiken RTL.
 6. Onthul het antwoord bewust en beoordeel jezelf. **Nog oefenen**: volgende
    dag. **Ik wist het**: over 2, 4, 7, 14 of 30 dagen.
-7. Je kunt tijdens dezelfde sessie van taal of thema wisselen. Een kaart die
-   je al hebt beoordeeld, verschijnt in die sessie niet opnieuw.
-8. Wis het optionele schema met **Wis herhaalplanning eigen zinnen**.
+7. Kies **Sla over** vóór het antwoord of **Sla over zonder beoordeling**
+   erna om door te gaan zonder de herhaaldatum te wijzigen. De kaart blijft
+   gepland voor een volgende sessie en verschijnt niet opnieuw in de huidige sessie.
+8. Je kunt tijdens dezelfde sessie van taal of thema wisselen. Een kaart die
+   je al hebt beoordeeld of overgeslagen, verschijnt in die sessie niet opnieuw.
+9. Wis het optionele schema met **Wis herhaalplanning eigen zinnen**.
    Je zelfgeschreven zinnen blijven dan gewoon bestaan.
 
 De planning heeft geen achtergrondtimer of pushmelding. Ze wordt pas zichtbaar
