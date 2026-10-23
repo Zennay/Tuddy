@@ -4,21 +4,34 @@ Tuddy kan vanuit het standaard Android-deelmenu als bestemming verschijnen voor 
 
 Bij een gewone zin opent na **Delen → Tuddy** het venster **Gedeelde tekst · eerst controleren**. De tekst is slechts een bewerkbaar concept in het tijdelijke geheugen. Controleer de inhoud, geselecteerde talen en eventuele persoonlijke gegevens. Pas na **Vertaal lokaal** wordt de tekst als nieuwe regel aan het tijdelijke Tuddy-gesprek toegevoegd en via de bestaande ML Kit-tekstvertaler verwerkt. **Annuleren** en naar de achtergrond gaan wissen het open concept.
 
-## Geselecteerde tekst vertalen
+## Geselecteerde tekst direct vertalen
 
-Selecteer tekst in een Android-app en kies waar die app het aanbiedt
-**Tekst verwerken / Tuddy**. Android geeft slechts die selectie mee via
-`ACTION_PROCESS_TEXT`, `text/plain` en `EXTRA_PROCESS_TEXT`. Tuddy
-opent exact hetzelfde tijdelijke, bewerkbare bevestigingsvenster als
-via Delen. De selectie wordt **niet** direct vertaald en de originele
-tekst in de andere app wordt **niet** vervangen. Tuddy geeft geen
-gewijzigde tekst als resultaat terug; eerdere apps houden hun eigen data.
+Selecteer tekst in een Android-app en kies **Vertaal met Tuddy** in het
+tekstselectiemenu. Gewone platte tekst opent een aparte, tijdelijke
+vertaalweergave. De selectie wordt **niet automatisch vertaald**: controleer
+eerst de bron- en doeltaal (of vraag een optioneel lokaal brontaalvoorstel) en tik daarna op **Vertaal lokaal**.
 
-Deze systeemactie is niet in elk tekstveld of elke app beschikbaar.
-Ontbrekende selectie, HTML, bestanden, te lange tekst en onverwachte
-stuurtekens worden geweigerd. Ontvangen tekst wordt na eenmalig
-verwerken ook uit de relevante Android-Intent-extra verwijderd.
+**Stel brontaal lokaal voor** gebruikt de ingebouwde on-device taalidentificatie op een korte selectie. Het voorstel wordt zichtbaar getoond en nooit automatisch als vertaalrichting toegepast.
 
+Tuddy controleert vóór vertaling of de exacte ML Kit-tekstmodellen al lokaal
+beschikbaar zijn. Engels gebruikt het ingebouwde model; voor andere talen moet
+het bijbehorende model al op het toestel staan. De selectieactie downloadt geen
+modellen, start geen microfoon en gebruikt geen online vertaalfallback. Als een
+model ontbreekt, open dan Tuddy → **Offline startcheck → Tekst via wifi** en
+selecteer de tekst daarna opnieuw.
+
+Na een geslaagde vertaling kun je de tekst kopiëren. Alleen wanneer de bronapp
+de selectie als bewerkbaar markeert, verschijnt **Vervang geselecteerde tekst
+in de andere app**. Pas na die afzonderlijke tik geeft Tuddy het resultaat via
+`EXTRA_PROCESS_TEXT` terug. Voor een alleen-lezen selectie blijft kopiëren
+mogelijk, maar wordt de oorspronkelijke tekst niet vervangen.
+
+Bekende Tuddy-back-ups, correctie-CSV/JSON en complete ondertitelblokken blijven
+via de bestaande strikte import-/ondertitelpreview lopen; ze worden niet als
+gewone zinnen vertaald. Ongeldige of te lange tekst wordt geweigerd. De selectie
+en vertaling worden niet opgeslagen en verdwijnen wanneer de snelle vertaal-
+weergave naar de achtergrond gaat of wordt gesloten.
+ 
 ## Gedeelde getimede ondertitels (SRT/VTT/LRC/CSV/TSV)
 
 Een volledig, geldig `text/plain`-ondertitelblok dat expliciet via

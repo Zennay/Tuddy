@@ -1,3 +1,22 @@
+## Nieuw: vertaal geselecteerde tekst direct vanuit Android
+
+Selecteer een passage in een andere app en kies **Vertaal met Tuddy** in
+het Android-tekstselectiemenu. Tuddy toont de geselecteerde tekst, laat je
+de bron- en doeltaal controleren, optioneel een lokaal brontaalvoorstel opvragen en vertaalt pas na **Vertaal lokaal**.
+De exacte ML Kit-tekstmodellen moeten al lokaal beschikbaar zijn: de snelle
+selectieactie downloadt niets, start geen microfoon en heeft geen online
+fallback. Na afloop kun je de vertaling kopiëren of — als de bronapp de
+selectie bewerkbaar heeft gemarkeerd — bewust teruggeven om de geselecteerde
+tekst te vervangen. Bekende Tuddy-back-ups en volledige ondertitelblokken
+blijven naar hun bestaande strikte preview gaan.
+
+De selectie en vertaling worden niet bewaard en verdwijnen wanneer het
+venster naar de achtergrond gaat. Ontbreekt een model, open dan Tuddy →
+**Offline startcheck → Tekst via wifi** en selecteer de tekst daarna opnieuw.
+Zie [de volledige handleiding](docs/QUICK_TRANSLATE_SELECTION.md).
+
+---
+
 ## Nieuw: controleer geïnstalleerde lokale voorleesstemmen
 
 Open **Taalondersteuning → Controleer lokale stemmen** om reeds
