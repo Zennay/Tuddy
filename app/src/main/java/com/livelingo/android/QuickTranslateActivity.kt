@@ -49,6 +49,7 @@ import java.util.Locale
  */
 internal class QuickTranslateActivity : ComponentActivity() {
     private val inventory = OfflineTextModelInventory()
+    private val detector = LocalLanguageDetector()
     private var generation = 0L
     private var activeTranslator: Translator? = null
 
@@ -58,6 +59,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var sourceCode by mutableStateOf("nl")
     private var targetCode by mutableStateOf("en")
     private var busy by mutableStateOf(false)
+    private var detectingSource by mutableStateOf(false)
+    private var detectionNotice by mutableStateOf("")
     private var status by mutableStateOf("")
     private var translationResult by mutableStateOf<String?>(null)
 
@@ -110,10 +113,13 @@ internal class QuickTranslateActivity : ComponentActivity() {
                 sourceCode = sourceCode,
                 targetCode = targetCode,
                 busy = busy,
+                detectingSource = detectingSource,
+                detectionNotice = detectionNotice,
                 status = status,
                 result = translationResult,
                 onSourceSelected = { code -> changePair(source = code) },
                 onTargetSelected = { code -> changePair(target = code) },
+                onSuggestSource = { suggestSourceLanguage() },
                 onTranslate = { startTranslation() },
                 onCopy = { status = "Vertaling gekopieerd. Tuddy bewaart geen kopie." },
                 onReturnResult = { returnTranslationToCaller() },
@@ -132,6 +138,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun changePair(source: String? = null, target: String? = null) {
+        detector.close()
+        detectingSource = false
+        detectionNotice = ""
         cancelOperation()
         sourceCode = source ?: sourceCode
         targetCode = target ?: targetCode
@@ -139,8 +148,37 @@ internal class QuickTranslateActivity : ComponentActivity() {
         status = ""
     }
 
+    private fun suggestSourceLanguage() {
+        if (busy || detectingSource || inputNotice.isNotBlank()) return
+        val sample = incomingText.replace('\\n', ' ').trim().take(1200)
+        if (sample.length < 8) {
+            detectionNotice = "Er staat te weinig tekst in deze selectie om lokaal een brontaal voor te stellen."
+            return
+        }
+        detector.close()
+        detectingSource = true
+        detectionNotice = "Brontaalvoorstel lokaal berekenen…"
+        detector.identify(sample) { detected ->
+            if (isFinishing) return@identify
+            detectingSource = false
+            val supported = detected?.takeIf { it in TargetCatalog.codes }
+            if (supported == null) {
+                detectionNotice = if (detected == null) {
+                    "Geen bruikbaar lokaal brontaalvoorstel. Kies de taal handmatig."
+                } else {
+                    "Het lokale voorstel '$detected' valt buiten de tekstvertaalcatalogus. Kies handmatig."
+                }
+            } else {
+                changePair(source = supported)
+                val label = TargetCatalog.targets.firstOrNull { it.code == supported }?.title ?: supported
+                detectionNotice = "Brontaalvoorstel: $label ($supported). Controleer zelf; er is nog niets vertaald."
+            }
+            detector.close()
+        }
+    }
+
     private fun startTranslation() {
-        if (busy || inputNotice.isNotBlank() || incomingText.isBlank()) return
+        if (busy || detectingSource || inputNotice.isNotBlank() || incomingText.isBlank()) return
         if (sourceCode !in TargetCatalog.codes || targetCode !in TargetCatalog.codes) {
             status = "Kies een ondersteunde bron- en doeltaal."
             return
@@ -263,6 +301,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        detector.close()
+        detectingSource = false
+        detectionNotice = ""
         cancelOperation()
         if (!isFinishing) {
             incomingText = ""
@@ -273,6 +314,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        detector.close()
         cancelOperation()
         incomingText = ""
         translationResult = null
@@ -288,10 +330,13 @@ private fun QuickTranslateScreen(
     sourceCode: String,
     targetCode: String,
     busy: Boolean,
+    detectingSource: Boolean,
+    detectionNotice: String,
     status: String,
     result: String?,
     onSourceSelected: (String) -> Unit,
     onTargetSelected: (String) -> Unit,
+    onSuggestSource: () -> Unit,
     onTranslate: () -> Unit,
     onCopy: () -> Unit,
     onReturnResult: () -> Unit,
@@ -353,12 +398,22 @@ private fun QuickTranslateScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        OutlinedButton(
+            onClick = onSuggestSource,
+            enabled = text.length >= 8 && inputNotice.isBlank() && !busy && !detectingSource,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (detectingSource) "Brontaal lokaal voorstellen…" else "Stel brontaal lokaal voor")
+        }
+        if (detectionNotice.isNotBlank()) {
+            Text(detectionNotice, style = MaterialTheme.typography.bodySmall)
+        }
         if (sourceCode == targetCode) {
             Text("Kies twee verschillende talen.", color = MaterialTheme.colorScheme.error)
         }
         Button(
             onClick = onTranslate,
-            enabled = text.isNotBlank() && inputNotice.isBlank() && !busy &&
+            enabled = text.isNotBlank() && inputNotice.isBlank() && !busy && !detectingSource &&
                 sourceCode != targetCode,
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (busy) "Lokaal controleren/vertalen…" else "Vertaal lokaal") }
