@@ -9,7 +9,9 @@ Bij een gewone zin opent na **Delen → Tuddy** het venster **Gedeelde tekst · 
 Selecteer tekst in een Android-app en kies **Vertaal met Tuddy** in het
 tekstselectiemenu. Gewone platte tekst opent een aparte, tijdelijke
 vertaalweergave. De selectie wordt **niet automatisch vertaald**: controleer
-eerst de bron- en doeltaal en tik daarna op **Vertaal lokaal**.
+eerst de bron- en doeltaal (of vraag een optioneel lokaal brontaalvoorstel) en tik daarna op **Vertaal lokaal**.
+
+**Stel brontaal lokaal voor** gebruikt de ingebouwde on-device taalidentificatie op een korte selectie. Het voorstel wordt zichtbaar getoond en nooit automatisch als vertaalrichting toegepast.
 
 Tuddy controleert vóór vertaling of de exacte ML Kit-tekstmodellen al lokaal
 beschikbaar zijn. Engels gebruikt het ingebouwde model; voor andere talen moet
