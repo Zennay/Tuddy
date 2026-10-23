@@ -58,6 +58,8 @@ internal fun LanguageSupportDialog(
     var voicePreferenceRevision by remember { mutableStateOf(0) }
     var localVoiceNotice by remember { mutableStateOf("Nog niet gecontroleerd op dit toestel.") }
     var localVoiceQuery by remember { mutableStateOf("") }
+    var onlyPreferredLocalVoices by remember { mutableStateOf(false) }
+    var visibleLocalVoiceCount by remember { mutableStateOf(20) }
     var previewingVoice by remember { mutableStateOf<String?>(null) }
     var localVoicePreviewNotice by remember { mutableStateOf("") }
     DisposableEffect(localVoiceInventory, localVoicePreview) {
@@ -229,6 +231,7 @@ internal fun LanguageSupportDialog(
                                 localVoicePreview.close()
                                 previewingVoice = null
                                 localVoicePreviewNotice = ""
+                                visibleLocalVoiceCount = 20
                                 checkingLocalVoices = true
                                 installedLocalVoices = null
                                 localVoiceNotice = "Geïnstalleerde lokale stemmen controleren…"
@@ -287,18 +290,25 @@ internal fun LanguageSupportDialog(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         } else {
-                            val filteredVoices = remember(voices, localVoiceQuery) {
+                            val filteredVoices = remember(
+                                voices, localVoiceQuery, onlyPreferredLocalVoices, voicePreferenceRevision
+                            ) {
                                 voices.filter { voice ->
                                     LanguageSearch.matches(
                                         localVoiceQuery,
                                         listOf(voice.displayName, voice.languageTag, voice.voiceName)
-                                    )
+                                    ) && (!onlyPreferredLocalVoices ||
+                                        LocalSpeechVoicePreferences.selectedVoiceName(
+                                            context, voice.languageTag
+                                        ) == voice.voiceName)
                                 }
                             }
+                            val displayedVoices = filteredVoices.take(visibleLocalVoiceCount)
                             OutlinedTextField(
                                 value = localVoiceQuery,
                                 onValueChange = {
                                     localVoiceQuery = it.take(80)
+                                    visibleLocalVoiceCount = 20
                                     if (previewingVoice != null) {
                                         localVoicePreview.close()
                                         previewingVoice = null
@@ -309,21 +319,43 @@ internal fun LanguageSupportDialog(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            Row(
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                FilterChip(
+                                    selected = !onlyPreferredLocalVoices,
+                                    onClick = {
+                                        onlyPreferredLocalVoices = false
+                                        visibleLocalVoiceCount = 20
+                                    },
+                                    label = { Text("Alle lokale stemmen") }
+                                )
+                                FilterChip(
+                                    selected = onlyPreferredLocalVoices,
+                                    onClick = {
+                                        onlyPreferredLocalVoices = true
+                                        visibleLocalVoiceCount = 20
+                                    },
+                                    label = { Text("Mijn voorkeursstemmen") }
+                                )
+                            }
                             Text(
-                                if (localVoiceQuery.isBlank()) {
-                                    "${voices.size} lokale stemvarianten beschikbaar."
-                                } else {
-                                    "${filteredVoices.size} van ${voices.size} stemvarianten gevonden."
-                                },
+                                "${displayedVoices.size} van ${filteredVoices.size} passende stemmen getoond " +
+                                    "(${voices.size} lokale stemmen geïnstalleerd).",
                                 style = MaterialTheme.typography.bodySmall
                             )
                             if (filteredVoices.isEmpty()) {
                                 Text(
-                                    "Geen lokale stemvarianten gevonden voor deze zoekopdracht.",
+                                    if (onlyPreferredLocalVoices) {
+                                        "Geen gekozen voorkeursstem gevonden. Kies Alle lokale stemmen om er een in te stellen."
+                                    } else {
+                                        "Geen lokale stemvarianten gevonden voor deze zoekopdracht."
+                                    },
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             } else {
-                                filteredVoices.forEach { voice ->
+                                displayedVoices.forEach { voice ->
                                     val isPreferred = remember(
                                         voicePreferenceRevision, voice.languageTag, voice.voiceName
                                     ) {
@@ -397,6 +429,13 @@ internal fun LanguageSupportDialog(
                                                 Text(if (previewingVoice == voice.voiceName) "Stop stemproef" else "Luister")
                                             }
                                         }
+                                    }
+                                }
+                                if (displayedVoices.size < filteredVoices.size) {
+                                    TextButton(
+                                        onClick = { visibleLocalVoiceCount += 20 }
+                                    ) {
+                                        Text("Toon volgende stemmen (${filteredVoices.size - displayedVoices.size} over)")
                                     }
                                 }
                             }
