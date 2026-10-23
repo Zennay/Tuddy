@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.PrivateVocabularyDeck
+import com.livelingo.android.ScheduledWordReview
 import java.time.LocalDate
 
 /**
@@ -45,7 +46,11 @@ internal fun ScheduledWordReviewPanel(
     var writeFirst by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
-    val current = cards.getOrNull(index)
+    var reviewed by remember { mutableIntStateOf(0) }
+    var skippedCards by remember { mutableStateOf<List<ScheduledWordReview>>(emptyList()) }
+    var replayCards by remember { mutableStateOf<List<ScheduledWordReview>?>(null) }
+    val activeCards = replayCards ?: cards
+    val current = activeCards.getOrNull(index)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -65,19 +70,31 @@ internal fun ScheduledWordReviewPanel(
                 if (current == null) {
                     Text(
                         if (cards.isEmpty()) "Vandaag zijn er geen woorden aan de beurt."
-                        else "Alle ${cards.size} woorden van vandaag zijn beoordeeld.",
+                        else "Ronde afgerond: $reviewed beoordeeld, ${skippedCards.size} nog overgeslagen.",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        "Kom morgen of later terug via Mijn opgeslagen woorden. " +
-                            "Zelfbeoordelingen zijn geen officiële taaltoets; " +
-                            "een back-up van woorden bevat geen herhaalschema.",
+                        "Overgeslagen kaarten blijven volgens hun oude datum aan de beurt. " +
+                            "Alleen zelf beoordeelde kaarten zijn opnieuw ingepland. " +
+                            "Een back-up bevat geen herhaalschema.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (skippedCards.isNotEmpty()) {
+                        OutlinedButton(onClick = {
+                            replayCards = skippedCards.toList()
+                            skippedCards = emptyList()
+                            index = 0
+                            revealed = false
+                            draft = ""
+                            notice = ""
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Herhaal ${skippedCards.size} overgeslagen woorden")
+                        }
+                    }
                 } else {
                     Text(
-                        "Kaart ${index + 1} van ${cards.size} · " +
-                            "${cards.size - index - 1} hierna",
+                        "Kaart ${index + 1} van ${activeCards.size} · " +
+                            "${activeCards.size - index - 1} hierna",
                         style = MaterialTheme.typography.labelMedium
                     )
                     TextButton(onClick = {
@@ -130,6 +147,7 @@ internal fun ScheduledWordReviewPanel(
                                     if (deck.rateScheduledWord(current.saved.language,
                                             current.saved.word, false)) {
                                         onChanged()
+                                        reviewed++
                                         index++
                                         revealed = false
                                         draft = ""
@@ -143,6 +161,7 @@ internal fun ScheduledWordReviewPanel(
                                     if (deck.rateScheduledWord(current.saved.language,
                                             current.saved.word, true)) {
                                         onChanged()
+                                        reviewed++
                                         index++
                                         revealed = false
                                         draft = ""
@@ -157,6 +176,13 @@ internal fun ScheduledWordReviewPanel(
                             onClick = { revealed = true }
                         ) { Text("Toon betekenis") }
                     }
+                    TextButton(onClick = {
+                        skippedCards = skippedCards + current
+                        index++
+                        revealed = false
+                        draft = ""
+                        notice = ""
+                    }) { Text("Sla over zonder beoordeling") }
                 }
                 if (notice.isNotEmpty()) {
                     Text(notice, color = MaterialTheme.colorScheme.error)
