@@ -70,32 +70,32 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Current hosted debug-APK handoff (23 October 2026, after PR #435 merged to main).
-The workflow built the PR's proposed merge checkout. All three files changed by
-PR #435 have identical Git blob IDs in that checkout and post-merge main; other
-files are inherited unchanged from base commit `4db8f19f06f328b3f74b9e4f0494c00a9584fee7`.
-The manifest records PR merge-ref source SHA, not main-push source SHA.
-This is tree-equivalent build provenance only, **not** a signed release,
-physical installation, demonstrated airplane-mode operation or language-model
-acceptance.
+Current hosted debug-APK handoff after PR #438 merged to `main`. The workflow
+built the proposed PR merge-ref, not a main-push checkout. The full Git tree
+SHA of that checkout exactly matches merged main, so the artifact's complete
+source tree is identical to current main. This is build provenance only, **not**
+a signed release, physical installation, airplane-mode demonstration or
+language-model acceptance.
 
 | Field | Immutable evidence |
 |---|---|
-| App-code merge (PR #435) | [`94421c8b578c9dee25f5d8e0c83dce4acd5f5165`](https://github.com/Zennay/Tuddy/commit/94421c8b578c9dee25f5d8e0c83dce4acd5f5165) — `merged=true` |
-| Hosted Android run | [#39876042758](https://github.com/Zennay/Tuddy/actions/runs/39876042758) — exact-head `build` and `source-head` succeeded |
-| Exact build checkout/source identity | `a7d708837b64ec182502dad59847057d2014724b` (`event_name=pull_request`, `ref=refs/pull/435/merge`) |
-| Main-tree correspondence | All three PR #435 changed-file blobs match post-merge main; inherited base `4db8f19f06f328b3f74b9e4f0494c00a9584fee7` |
-| Artifact | [Tuddy-debug-apk #12467808496](https://github.com/Zennay/Tuddy/actions/runs/39876042758/artifacts/12467808496), expires 6 November 2026 00:10:33 UTC |
-| APK filename / size | `app-debug.apk` / 105,003,254 bytes |
-| **APK SHA-256** | `c855238ecfa6f812289a2f42503779a17a788a153ab25254d5baeabd62ec4ecc` |
-| **Artifact ZIP SHA-256 (different file)** | `5877610a472263b99924be87fb1d70d794be1011feeb61234fff8620c3c17f56` |
+| App-code merge (PR #438) | [`ab1a439c76bf5bd359fa1c1ab561b5ec202b9676`](https://github.com/Zennay/Tuddy/commit/ab1a439c76bf5bd359fa1c1ab561b5ec202b9676) — `merged=true` |
+| Hosted Android run | [#39879320687](https://github.com/Zennay/Tuddy/actions/runs/39879320687) — exact-head `build` and `source-head` succeeded |
+| Exact build checkout/source identity | `8a2239116540c05c53e383669cb473a8708a32c3` (`event_name=pull_request`, `ref=refs/pull/438/merge`) |
+| Main-tree correspondence | Build tree `ad3c68959ce6e1820578c71bdc3534df9a3ba871` equals merged main tree `ad3c68959ce6e1820578c71bdc3534df9a3ba871` |
+| Artifact | [Tuddy-debug-apk #12470016453](https://github.com/Zennay/Tuddy/actions/runs/39879320687/artifacts/12470016453), expires 6 November 2026 00:42:39 UTC |
+| APK filename / size | `app-debug.apk` / 105,101,658 bytes |
+| **APK SHA-256** | `ec7b0cda7c336ef5feaaa9e04e124afae8cd047825fdfae1096f637353696111` |
+| **Artifact ZIP SHA-256 (different file)** | `251abcfa484afb692fc7e8b5c35396d98f7bc14c2b3e3446f20fa565c05cca7f` |
 | Package-version | `com.livelingo.android` / `0.4.0` |
 | Physical installation and real airplane-mode session | **NOT PROVIDED** |
 
-The downloaded ZIP digest matched GitHub artifact metadata and the embedded APK
-digest matched its SHA-256 sidecar. Only build integrity and changed-file blob
-correspondence are demonstrated. An authorized human still must install and
-evaluate this exact APK on a physical Android 12+ device.
+The downloaded ZIP digest matched GitHub artifact metadata and the extracted APK
+digest matched its SHA-256 sidecar. The manifest records the PR merge-ref SHA,
+not the squash-merge commit SHA; the identical full tree hash proves that the
+source tree is the one now on main. It does not prove the operator installed
+this APK, that all radios were disabled, or that free-form offline speech and
+translation work for any particular language pair.
 
 Verify the ZIP and APK from a Tuddy source checkout before any authorized device
 installation:
@@ -103,10 +103,10 @@ installation:
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  5877610a472263b99924be87fb1d70d794be1011feeb61234fff8620c3c17f56 \
-  c855238ecfa6f812289a2f42503779a17a788a153ab25254d5baeabd62ec4ecc \
-  a7d708837b64ec182502dad59847057d2014724b \
-  39876042758
+  251abcfa484afb692fc7e8b5c35396d98f7bc14c2b3e3446f20fa565c05cca7f \
+  ec7b0cda7c336ef5feaaa9e04e124afae8cd047825fdfae1096f637353696111 \
+  8a2239116540c05c53e383669cb473a8708a32c3 \
+  39879320687
 ```
 
 ## Install the exact debug APK on an authorized handset
