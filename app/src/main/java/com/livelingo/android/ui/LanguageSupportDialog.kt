@@ -676,8 +676,9 @@ internal fun LanguageSupportDialog(
                     Text(
                         "Controleer de volledige selectie hieronder. Dit bevat alleen openbare " +
                             "modelkaartmetadata en licentie-/beperkingsnotities; de zoekterm wordt " +
-                            "niet opgenomen. Kandidaatblokken worden volledig weggelaten als de limiet " +
-                            "wordt bereikt; geen gesprekken, audio, eigen zinnen of apparaatdiagnostiek. " +
+                            "niet opgenomen. Alleen volledige kandidaatblokken worden opgenomen; eventuele " +
+                            "resterende blokken worden geteld en weggelaten. Geen gesprekken, audio, eigen " +
+                            "zinnen of apparaatdiagnostiek. " +
                             "Een gekozen ontvanger kan het rapport bewaren of verder delen.",
                         style = MaterialTheme.typography.bodySmall
                     )
