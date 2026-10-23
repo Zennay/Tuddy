@@ -14,7 +14,12 @@ is een **afzonderlijke, uitgeschakelde-tot-toestemming** herhaalplanning.
 4. Bekijk je eigen antwoord pas na **Toon mijn eigen antwoord**.
 5. **Nog oefenen** plant de volgende dag; **Ik wist het** schuift
    het interval naar 2, 4, 7, 14 en uiteindelijk 30 dagen.
-6. **Wis herhaalplanning eigen woorden** wist deze extra voortgang
+6. **Sla over zonder beoordeling** schuift alleen de huidige kaart
+   uit beeld. De herhaaldatum blijft onveranderd. Na de laatste kaart
+   zie je het aantal beoordeelde en nog overgeslagen woorden. Kies
+   **Herhaal overgeslagen woorden** om alleen die woorden opnieuw te oefenen
+   zonder eerdere beoordelingen nogmaals aan te bieden.
+7. **Wis herhaalplanning eigen woorden** wist deze extra voortgang
    zonder jouw woorden en betekenissen te verwijderen.
 
 Er zijn geen pushmeldingen of achtergrondtimers. De lokale
