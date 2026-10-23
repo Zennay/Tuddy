@@ -24,6 +24,13 @@ De vijf voorbeelden zijn geen volledige vertaalmodellen en zijn niet
 onafhankelijk door moedertaalsprekers geverifieerd. Een bewaarde kaart is
 jouw eigen gecontroleerde notitie, geen bewijs dat de vertaling juist is.
 
+Gebruik **Bewaar geselecteerde basiswoorden als set…** om meerdere voorbeelden
+in één bewerkbare lijst te beoordelen. Je kunt bestaande of ongewenste woorden
+uitsluiten, beide kanten corrigeren en de volledige selectie expliciet bevestigen.
+Tuddy slaat de selectie atomair op: als één geselecteerde kaart ongeldig, dubbel
+of niet meer in de beschikbare 80 plekken past, wordt niets toegevoegd en niets
+overschreven.
+
 ---
 ## Offline tweetalig voorlezen in groot beeld
 
