@@ -93,9 +93,13 @@ internal fun ScheduledPhraseReviewPanel(
     }
     // Remove a self-rated card from the live queue. This lets users switch
     // filters mid-session without seeing a card they already rated again.
-    val due = remember(matchingDue, reviewedPhrases) {
+    // Every state that affects queue membership must be a remember key.
+    // Otherwise a skipped card stays visible until some unrelated filter changes.
+    val due = remember(matchingDue, reviewedPhrases, skippedPhrases) {
         matchingDue.filterNot { it.phrase in reviewedPhrases || it.phrase in skippedPhrases }
     }
+    val reviewedCount = matchingDue.count { it.phrase in reviewedPhrases }
+    val skippedCount = matchingDue.count { it.phrase in skippedPhrases }
     val current = due.getOrNull(index)
     val langNames = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
 
@@ -153,6 +157,11 @@ internal fun ScheduledPhraseReviewPanel(
                         )
                     }
                 }
+                Text(
+                    "Sessievoortgang · $reviewedCount beoordeeld · $skippedCount overgeslagen · " +
+                        "${due.size} te gaan",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 if (current == null) {
                     Text(
                         when {
@@ -171,6 +180,16 @@ internal fun ScheduledPhraseReviewPanel(
                             "Open de app later zelf opnieuw: er zijn geen meldingen.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (skippedCount > 0) {
+                        TextButton(onClick = {
+                            val replay = matchingDue
+                                .filter { it.phrase in skippedPhrases }
+                                .map { it.phrase }
+                                .toSet()
+                            skippedPhrases = skippedPhrases - replay
+                            resetCurrentCard()
+                        }) { Text("Herhaal overgeslagen zinnen") }
+                    }
                 } else {
                     val phrase = current.phrase
                     val rtl = phrase.language == "ckb" || phrase.language == "ps"
