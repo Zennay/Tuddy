@@ -308,7 +308,8 @@ internal fun FocusTranscriptDialog(
                     items(displayedCaptions, key = { it.id }) { line ->
                         val highlightLatestFinal = listening && followLive && !archiveMode &&
                             captionQuery.isBlank() && speakerFilter == null && !onlyPinned &&
-                            interimOriginal.isBlank() && line.id == displayedCaptions.lastOrNull()?.id
+                            interimOriginal.isBlank() && line.original.isNotBlank() &&
+                            line.id == displayedCaptions.lastOrNull()?.id
                         Card(shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth()) {
                             Column(
