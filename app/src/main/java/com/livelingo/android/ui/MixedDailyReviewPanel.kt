@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -89,8 +90,19 @@ internal fun MixedDailyReviewPanel(
     var notice by remember { mutableStateOf("") }
     var skippedCards by remember { mutableStateOf<List<MixedStudyCard>>(emptyList()) }
     var replayCards by remember { mutableStateOf<List<MixedStudyCard>?>(null) }
-    val activeCards = replayCards ?: mixed
-    val card = activeCards?.getOrNull(index)
+    // Pick once before the round; later filtering would allow previously
+    // rated cards to reappear in this still-open session.
+    var selectedLanes by remember { mutableStateOf(setOf("basis", "phrase", "own")) }
+    var started by remember { mutableStateOf(false) }
+    val selectedCards = mixed?.filter { card ->
+        when (card) {
+            is MixedStudyCard.Basis -> "basis" in selectedLanes
+            is MixedStudyCard.Phrase -> "phrase" in selectedLanes
+            is MixedStudyCard.Own -> "own" in selectedLanes
+        }
+    }
+    val activeCards = replayCards ?: selectedCards
+    val card = if (started) activeCards?.getOrNull(index) else null
     val rtlLanguages = setOf("ckb", "ps", "ar", "fa", "ur", "he", "sd", "ug")
 
     fun rateCurrent(known: Boolean) {
@@ -142,6 +154,46 @@ internal fun MixedDailyReviewPanel(
                             "worden gelezen. Er is niets gewijzigd.",
                         color = MaterialTheme.colorScheme.error
                     )
+                } else if (!started) {
+                    Text("Kies de leergroepen voor deze ronde",
+                        style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Alleen ingeschakelde privé-herhaalplanningen leveren kaarten. " +
+                            "Je keuze blijft voor deze ronde vast staan. " +
+                            "Er wordt niets automatisch beoordeeld of opgeslagen.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    val lanes = listOf(
+                        Triple("basis", "Bewaarde basiswoorden",
+                            mixed.count { it is MixedStudyCard.Basis }),
+                        Triple("phrase", "Zelfgeschreven zinnen",
+                            mixed.count { it is MixedStudyCard.Phrase }),
+                        Triple("own", "Eigen woordbetekenissen",
+                            mixed.count { it is MixedStudyCard.Own })
+                    )
+                    lanes.forEach { (key, label, count) ->
+                        FilterChip(
+                            selected = key in selectedLanes,
+                            onClick = {
+                                selectedLanes = if (key in selectedLanes)
+                                    selectedLanes - key else selectedLanes + key
+                            },
+                            enabled = count > 0,
+                            label = { Text("$label ($count)") }
+                        )
+                    }
+                    Text("${selectedCards?.size ?: 0} kaarten geselecteerd",
+                        style = MaterialTheme.typography.bodyMedium)
+                    if (selectedCards.isNullOrEmpty()) {
+                        Text("Kies minimaal één leergroep met kaarten aan de beurt. " +
+                            "Er wordt geen lege ronde gestart.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    Button(onClick = { started = true },
+                        enabled = !selectedCards.isNullOrEmpty(),
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text("Begin mijn gekozen oefenronde")
+                    }
                 } else if (card == null) {
                     Text(
                         if (mixed.isEmpty()) "Geen kaarten aan de beurt."
