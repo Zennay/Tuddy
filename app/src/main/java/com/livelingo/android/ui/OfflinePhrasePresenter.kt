@@ -143,6 +143,7 @@ internal fun OfflinePhrasePresenter(
     var pendingShare by remember { mutableStateOf<PersonalPhrase?>(null) }
     var shareNotice by remember { mutableStateOf("") }
     var audioNotice by remember { mutableStateOf("") }
+    var pairPace by remember { mutableStateOf(LocalSpeechPace.NORMAL) }
     var activeSpeechSide by remember { mutableStateOf<String?>(null) }
     var activeSpeechText by remember { mutableStateOf<String?>(null) }
     var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -216,6 +217,63 @@ internal fun OfflinePhrasePresenter(
             }
         )
     }
+    /** Sequentially read user-authored notes with two separate installed local voices. */
+    fun pronounceOwnPair(note: PersonalPhrase, meaningFirst: Boolean) {
+        val phrase = note.phrase.replace('\n', ' ').replace('\r', ' ').trim()
+        val meaning = note.ownMeaning.replace('\n', ' ').replace('\r', ' ').trim()
+        if (listOf(phrase, meaning).any { value ->
+                value.isBlank() || value.length > 400 ||
+                    value.any { ch -> ch.isISOControl() }
+            }) {
+            speaker.stop()
+            activeSpeechSide = null
+            activeSpeechText = null
+            activeSpeechRange = null
+            audioNotice = "Twee veilige afgeronde eigen tekstvelden zijn vereist."
+            return
+        }
+        val stages = if (meaningFirst)
+            listOf(Triple(meaning, note.meaningLanguage, "meaning"),
+                Triple(phrase, note.language, "phrase"))
+        else listOf(Triple(phrase, note.language, "phrase"),
+            Triple(meaning, note.meaningLanguage, "meaning"))
+        fun playStage(stage: Int) {
+            val (spokenText, language, kind) = stages[stage]
+            activeSpeechSide = kind
+            activeSpeechText = spokenText
+            activeSpeechRange = null
+            audioNotice = "Geïnstalleerde lokale stem voor " +
+                (if (kind == "phrase") "eigen zin" else "eigen betekenis") +
+                " controleren…"
+            speaker.speakSequence(
+                lines = listOf(spokenText),
+                languageTag = language,
+                pace = pairPace,
+                onProgress = { _, _ -> Unit },
+                feedback = { audioNotice = it },
+                onFinished = { completed ->
+                    if (completed && stage == 0) {
+                        playStage(1)
+                    } else {
+                        activeSpeechSide = null
+                        activeSpeechText = null
+                        activeSpeechRange = null
+                        if (completed) audioNotice = "Beide eigen teksten lokaal voorgelezen."
+                    }
+                },
+                onLineStarted = {
+                    activeSpeechRange = null
+                    audioNotice = "Nu voorgelezen: " +
+                        (if (kind == "phrase") "eigen zin." else "eigen betekenis.")
+                },
+                onWordRange = { _, start, endExclusive ->
+                    activeSpeechRange = start to endExclusive
+                }
+            )
+        }
+        playStage(0)
+    }
+
     @Composable
     fun RenderPhraseSide(text: String, code: String, label: String, kind: String) {
         PhraseSide(
@@ -386,6 +444,35 @@ internal fun OfflinePhrasePresenter(
                                 }
                             ) { Text("🔊 Mijn betekenis") }
                         }
+                        Text("Tweetalige eigen zinnen na elkaar · geen modelvertaling",
+                            style = MaterialTheme.typography.labelSmall)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            TextButton(
+                                enabled = activeSpeechText == null,
+                                modifier = Modifier.weight(1f),
+                                onClick = { pairPace = LocalSpeechPace.NORMAL }
+                            ) { Text(if (pairPace == LocalSpeechPace.NORMAL)
+                                "Normaal ✓" else "Normaal") }
+                            TextButton(
+                                enabled = activeSpeechText == null,
+                                modifier = Modifier.weight(1f),
+                                onClick = { pairPace = LocalSpeechPace.SLOW }
+                            ) { Text(if (pairPace == LocalSpeechPace.SLOW)
+                                "Rustig ✓" else "Rustig") }
+                        }
+                        OutlinedButton(
+                            enabled = activeSpeechText == null,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { pronounceOwnPair(selected, meaningFirst = false) }
+                        ) { Text("🔊 Mijn zin → eigen betekenis") }
+                        OutlinedButton(
+                            enabled = activeSpeechText == null,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { pronounceOwnPair(selected, meaningFirst = true) }
+                        ) { Text("🔊 Eigen betekenis → mijn zin") }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
