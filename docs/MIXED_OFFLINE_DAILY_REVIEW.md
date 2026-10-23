@@ -20,9 +20,15 @@ In **Vandaag offline oefenen** is er nu één extra actie:
 - **Sla zonder beoordeling over** laat het woord of de zin
   gewoon op zijn oorspronkelijke datum staan. Sluiten bewaart
   alleen beoordelingen die je al afzonderlijk hebt bevestigd.
-- De ronde laat een tijdelijke terugblik op onthouden, nog oefenen
-  en zonder beoordeling overgeslagen zien. Na sluiten verdwijnt
-  dat overzicht.
+- Na de laatste kaart toont Tuddy hoeveel woorden/zinnen je
+  daadwerkelijk beoordeeld hebt, hoeveel kaarten nog onbeoordeeld
+  zijn en hoeveel overslaacties plaatsvonden. Met **Herhaal overgeslagen
+  kaarten** speel je alleen de overgeslagen kaarten opnieuw af.
+  Eerder beoordeelde kaarten worden in die sessie niet opnieuw aangeboden.
+  Je kunt ook opnieuw overslaan of de ronde sluiten zonder een nieuwe
+  herhaaldatum te creëren.
+- Deze tellingen, de herkansingswachtrij en getypte oefenantwoorden
+  verdwijnen zodra je de ronde sluit; ze worden niet als scoreprofiel bewaard.
 
 ## Privacy en onderzoeksintegriteit
 
