@@ -78,7 +78,7 @@
                 <data android:mimeType="application/csv"/>
             </intent-filter>
             <!-- Android text-selection entrypoint; MainActivity forwards ordinary text internally. -->
-            <intent-filter>
+            <intent-filter android:label="Vertaal met Tuddy">
                 <action android:name="android.intent.action.PROCESS_TEXT"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="text/plain"/>
