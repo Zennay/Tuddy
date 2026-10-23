@@ -1,8 +1,8 @@
 package com.livelingo.android
 
 /**
- * Honest guidance for languages that are currently available only in the
- * separate five-phrase preview, not as free-form offline speech/translation.
+ * Honest guidance for community languages with a five-phrase preview and
+ * user-authored personal cards, not free-form offline speech/translation.
  */
 internal object CommunityLanguageAvailabilityHint {
     private val phraseOnlyNames = setOf(
@@ -20,8 +20,9 @@ internal object CommunityLanguageAvailabilityHint {
         val isPhraseOnly = words.any { it in phraseOnlyNames } ||
             phraseOnlyPhrases.any { normalized.contains(it) }
         if (!isPhraseOnly) return null
-        return "Kurmanji, Sorani en Pasjtoe zijn nu alleen beschikbaar als vijf-woordenpreview. " +
-            "Volledige offline spraakherkenning en vrije vertaling zijn nog niet beschikbaar."
+        return "Kurmanji, Sorani en Pasjtoe hebben 5 vaste basisuitdrukkingen en jouw eigen offline zinnen. " +
+            "Volledige offline spraakherkenning en vrije vertaling zijn niet beschikbaar. " +
+            "Kies hieronder bewust een preview of je eigen, niet-gecontroleerde gesprekskaarten."
     }
 
     /** A specific dialect can be preselected in the existing five-phrase panel. */
