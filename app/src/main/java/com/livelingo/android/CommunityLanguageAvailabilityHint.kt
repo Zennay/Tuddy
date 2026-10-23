@@ -25,6 +25,20 @@ internal object CommunityLanguageAvailabilityHint {
             "Kies hieronder bewust een preview of je eigen, niet-gecontroleerde gesprekskaarten."
     }
 
+    /**
+     * Preserve distinct dialects for ambiguous generic Kurdish requests.
+     * Never silently guess Kurmanji or Sorani in the automatic translation picker.
+     */
+    fun targetsForQuery(query: String): List<String> {
+        targetForQuery(query)?.let { return listOf(it) }
+        val normalized = LanguageSearch.normalize(query)
+        val words = normalized.split(Regex("[^\\p{L}\\p{N}-]+"))
+            .filter { it.isNotBlank() }
+        return if (words.any {
+                it in setOf("kurdish", "koerdisch", "kurdisch", "kurdi", "کردی", "کوردی", "کوردیی")
+            }) listOf("kmr", "ckb") else emptyList()
+    }
+
     /** A specific dialect can be preselected in the existing five-phrase panel. */
     fun targetForQuery(query: String): String? {
         val normalized = LanguageSearch.normalize(query)
@@ -32,7 +46,7 @@ internal object CommunityLanguageAvailabilityHint {
             .filter { it.isNotBlank() }
         return when {
             words.any { it in setOf("kurmanji", "kurmani", "kurmanci", "kmr", "کورمانجی", "كورمانجي") } -> "kmr"
-            words.any { it in setOf("sorani", "ckb", "سۆرانی", "کوردی", "کوردیی", "کردی") } ||
+            words.any { it in setOf("sorani", "ckb", "سۆرانی") } ||
                 normalized.contains("central kurdish") -> "ckb"
             words.any { it in setOf("pashto", "pasjtoe", "pushto", "ps", "پښتو", "پشتو") } -> "ps"
             else -> null
