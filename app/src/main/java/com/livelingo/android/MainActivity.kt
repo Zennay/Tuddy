@@ -320,8 +320,35 @@ class MainActivity : ComponentActivity() {
     private var pendingPersonalCsv by mutableStateOf<IncomingPersonalCsvDocument?>(null)
     private var nextPersonalCsvRequest = 0L
 
+    /**
+     * Keep the exported Android entrypoint narrowly scoped: ordinary selected
+     * text is handed to a non-exported quick-translate Activity. Structured
+     * Tuddy backups/subtitles and invalid text remain on the existing preview path.
+     */
+    private fun routePlainTextSelection(sourceIntent: Intent): Boolean {
+        if (sourceIntent.action != Intent.ACTION_PROCESS_TEXT) return false
+        val incoming = SharedPlainTextIntent.read(sourceIntent)
+        val selected = incoming?.draft ?: return false
+        if (incoming.notice != null) return false
+        val readOnly = sourceIntent.getBooleanExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, true)
+        sourceIntent.removeExtra(Intent.EXTRA_PROCESS_TEXT)
+        sourceIntent.removeExtra(Intent.EXTRA_TEXT)
+        setIntent(sourceIntent)
+        startActivity(Intent(this, QuickTranslateActivity::class.java).apply {
+            action = Intent.ACTION_PROCESS_TEXT
+            type = "text/plain"
+            putExtra(Intent.EXTRA_PROCESS_TEXT, selected)
+            putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, readOnly)
+        })
+        return true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null && routePlainTextSelection(intent)) {
+            finish()
+            return
+        }
         PrivateScreenShield.restore(this)
         // A configuration recreation must never re-import private text from
         // the original Intent after it was already dismissed or consumed.
@@ -361,6 +388,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (routePlainTextSelection(intent)) {
+            finish()
+            return
+        }
         pendingPersonalCsv = ExternalPersonalCsvIntent.read(
             intent, ++nextPersonalCsvRequest
         )
