@@ -63,7 +63,7 @@ internal fun ScheduledPhraseReviewPanel(
     var notice by remember { mutableStateOf("") }
 
     val languageOptions: List<Pair<String?, String>> = buildList {
-        add(null to "Alle talen (\u0024{allDue.size})")
+        add(null to ("Alle talen (" + allDue.size + ")"))
         listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
             .forEach { (code, label) ->
                 val count = allDue.count { it.phrase.language == code }
@@ -71,7 +71,7 @@ internal fun ScheduledPhraseReviewPanel(
             }
     }
     val topicOptions: List<Pair<String?, String>> = buildList {
-        add(null to "Alle thema's (\u0024{allDue.size})")
+        add(null to ("Alle thema's (" + allDue.size + ")"))
         val withoutTopic = allDue.count { topicByPhrase[it.phrase].isNullOrBlank() }
         if (withoutTopic > 0) add(NO_TOPIC_FILTER to "Zonder thema ($withoutTopic)")
         topicNames.filter { name -> allDue.any { topicByPhrase[it.phrase] == name } }
@@ -157,7 +157,8 @@ internal fun ScheduledPhraseReviewPanel(
                         when {
                             allDue.isEmpty() -> "Vandaag zijn er geen eigen zinnen aan de beurt."
                             matchingDue.isEmpty() -> "Geen zinnen in deze selectie zijn vandaag aan de beurt."
-                            else -> "Je hebt alle ${matchingDue.size} zinnen in deze selectie bekeken."
+                            else -> "Je hebt alle " + matchingDue.size +
+                                " zinnen in deze selectie bekeken."
                         },
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -173,7 +174,8 @@ internal fun ScheduledPhraseReviewPanel(
                     val answer = if (reverse) phrase.phrase else phrase.ownMeaning
                     val topic = topicByPhrase[phrase]
                     Text(
-                        "Zin ${matchingDue.size - due.size + 1} van ${matchingDue.size} · ${langNames[phrase.language]}",
+                        "Zin " + (matchingDue.size - due.size + 1) + " van " +
+                            matchingDue.size + " · " + langNames[phrase.language],
                         style = MaterialTheme.typography.labelMedium
                     )
                     if (!topic.isNullOrBlank()) {
