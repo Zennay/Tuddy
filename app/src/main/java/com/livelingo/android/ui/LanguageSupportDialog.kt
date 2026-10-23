@@ -703,7 +703,7 @@ internal fun LanguageSupportDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "Controleer de volledige selectie hieronder. Dit bevat alleen openbare " +
+                        "Controleer de exportpreview hieronder. Dit bevat alleen openbare " +
                             "modelkaartmetadata en licentie-/beperkingsnotities; de zoekterm wordt " +
                             "niet opgenomen. Alleen volledige kandidaatblokken worden opgenomen; eventuele " +
                             "resterende blokken worden geteld en weggelaten. Geen gesprekken, audio, eigen " +
