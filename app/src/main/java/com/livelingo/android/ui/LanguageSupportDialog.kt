@@ -147,31 +147,39 @@ internal fun LanguageSupportDialog(
     val researchSummary = remember(
         normalizedQuery, taskFilteredCandidates, modelTaskFilter, modelAccessFilter
     ) {
-        val fullSummary = buildString {
-            appendLine("Tuddy — modelonderzoek")
-            appendLine("Zoekterm: ${query.ifBlank { "(geen)" }}.")
-            appendLine("Taakfilter: ${modelTaskFilter}; licentie-/toegangsfilter: ${modelAccessFilter}.")
-            appendLine("Aantal getoonde kandidaten: ${taskFilteredCandidates.values.sumOf { it.size }}.")
-            appendLine("Onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd; labels zijn geen distributiegoedkeuring.")
+        val candidateBlocks = buildList {
             taskFilteredCandidates.forEach { (item, candidates) ->
-                appendLine()
-                appendLine("${item.title} (${item.code})")
-                appendLine(item.reason)
                 candidates.forEach { candidate ->
-                    appendLine("- ${candidate.category}: ${candidate.title}")
-                    appendLine("  Modelkaart: ${candidate.url}")
-                    appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
-                    appendLine("  Licentie-/toegangssignaal (heuristiek): ${candidateAccessClass(candidate.declaredLicense, candidate.limitation)}")
-                    appendLine("  Omvang: ${candidate.footprint}")
-                    if (candidate.directionEvidence.isNotBlank()) {
-                        appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
-                    }
-                    appendLine("  Beperking: ${candidate.limitation}")
+                    add(buildString {
+                        appendLine()
+                        appendLine("${item.title} (${item.code}) — ${item.reason}")
+                        appendLine("- ${candidate.category}: ${candidate.title}")
+                        appendLine("  Modelkaart: ${candidate.url}")
+                        appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
+                        appendLine(
+                            "  Licentie-/toegangssignaal (heuristiek): " +
+                                candidateAccessClass(candidate.declaredLicense, candidate.limitation)
+                        )
+                        appendLine("  Omvang: ${candidate.footprint}")
+                        if (candidate.directionEvidence.isNotBlank()) {
+                            appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
+                        }
+                        appendLine("  Beperking: ${candidate.limitation}")
+                    })
                 }
             }
         }
-        if (fullSummary.length <= 16_000) fullSummary
-        else fullSummary.take(15_940) + "\n[Samenvatting afgekapt op 16.000 tekens.]"
+        val summaryHeader = buildString {
+            appendLine("Tuddy — modelonderzoek")
+            appendLine("Zoekterm niet opgenomen om onbedoelde persoonlijke tekst niet te delen.")
+            appendLine("Taakfilter: ${modelTaskFilter}; licentie-/toegangsfilter: ${modelAccessFilter}.")
+            appendLine("Aantal gefilterde kandidaten: ${candidateBlocks.size}.")
+            appendLine(
+                "Onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd; " +
+                    "licentie-/toegangssignalen zijn heuristieken, geen distributiegoedkeuring."
+            )
+        }
+        ModelResearchSummary.render(summaryHeader, candidateBlocks)
     }
 
     AlertDialog(
@@ -667,9 +675,10 @@ internal fun LanguageSupportDialog(
                 ) {
                     Text(
                         "Controleer de volledige selectie hieronder. Dit bevat alleen openbare " +
-                            "modelkaartmetadata, zoekterm en licentie-/beperkingsnotities; geen " +
-                            "gesprekken, audio, eigen zinnen of apparaatdiagnostiek. Een gekozen " +
-                            "ontvanger kan het rapport bewaren of verder delen.",
+                            "modelkaartmetadata en licentie-/beperkingsnotities; de zoekterm wordt " +
+                            "niet opgenomen. Kandidaatblokken worden volledig weggelaten als de limiet " +
+                            "wordt bereikt; geen gesprekken, audio, eigen zinnen of apparaatdiagnostiek. " +
+                            "Een gekozen ontvanger kan het rapport bewaren of verder delen.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(sharePreview, style = MaterialTheme.typography.bodySmall)
