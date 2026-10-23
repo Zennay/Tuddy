@@ -137,3 +137,15 @@ free-form offline model actief. Voor de volledige ondersteunde dialecten,
 modelrechten, vertaalvalidatie en fysieke toestelacceptatie blijven issues
 #1 en #2 open. Zelfgeschreven vertalingen zijn niet geverifieerd voor
 medische, juridische of andere hoogrisicotoepassingen.
+
+## Generiek Koerdisch: geen dialect aannemen
+
+Zoek je alleen op **Koerdisch**, **Kurdish**, **kurdi** of generieke Koerdische
+schriftvormen zoals **کوردی** of **کردی**, dan biedt Tuddy **twee duidelijk
+gelabelde offline-routes**: Kurmanji en Sorani. Elk heeft afzonderlijk de vijf
+vaste basisuitdrukkingen en de eigen opgeslagen-zinnenroute.
+De app kiest dus niet ongemerkt Sorani omdat de tekst in Arabisch schrift
+geschreven is. Zoek je expliciet op **Kurmanji/kmr** of **Sorani/ckb**, dan
+wordt alleen die concrete dialectoptie aangeboden. Ook hier worden geen
+ML Kit-taalcodes geactiveerd of nieuwe woorden vertaald.
+
