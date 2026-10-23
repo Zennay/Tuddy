@@ -141,11 +141,19 @@ internal fun OfflinePhraseTurnTopicPicker(
                 HorizontalDivider()
             }
         }
-        if (eligible.isEmpty()) Text(
-            if (foldedQuery.isBlank())
-                "Geen eigen zinnen in deze selectie. Er wordt geen overeenkomst verzonnen."
-            else "Geen eigen zinnen gevonden. Wis of wijzig de zoekwoorden; Tuddy verzint geen overeenkomst.",
-            style = MaterialTheme.typography.bodySmall
-        )
+        if (eligible.isEmpty()) {
+            Text(
+                if (foldedQuery.isBlank()) "Geen eigen zinnen in deze selectie. Er wordt geen overeenkomst verzonnen."
+                else "Geen eigen zinnen gevonden. Wis of wijzig de zoekwoorden; Tuddy verzint geen overeenkomst.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            if (foldedQuery.isNotBlank() || favoritesOnly || theme != null) {
+                TextButton(onClick = {
+                    searchQuery = ""
+                    favoritesOnly = false
+                    theme = null
+                }) { Text("Wis zoek-, favoriet- en themafilters") }
+            }
+        }
     }
 }
