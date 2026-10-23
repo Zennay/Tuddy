@@ -14,7 +14,7 @@ import androidx.compose.ui.text.style.TextDirection
  * audio timestamp or a claim of word-level speech alignment.
  */
 internal fun normalizedLiveFocusText(text: String): String =
-    text.replace('\\n', ' ').replace('\\r', ' ').trim()
+    text.replace('\n', ' ').replace('\r', ' ').trim()
 
 internal fun lastTextWordRange(text: String): Pair<Int, Int>? {
     val visible = normalizedLiveFocusText(text)
