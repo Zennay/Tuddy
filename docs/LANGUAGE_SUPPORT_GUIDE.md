@@ -51,6 +51,10 @@ Twee extra modelkaarten beschrijven afzonderlijke richtingen met Marian-checkpoi
 
 De modelkaarten noemen InterdialectCorpus, Tatoeba, Wikimedia, TICO-19 en een Sorani-parallelcorpus als trainingsdataselectie. Dit is een bruikbare, kleine **research lead**, geen goedgekeurde modelpack: de licentie is niet vastgesteld, exacte gewicht-/tokenizer-hashes en datasetversies zijn niet vastgepind, de cijfers zijn niet onafhankelijk gereproduceerd en Android-runtime, geheugen, latency, native-speakerkwaliteit en vliegtuigmodusgedrag zijn onbekend. De twee richtingen zijn afzonderlijke checkpoints; geen van beide is in Tuddy gedownload, geïntegreerd of geactiveerd.
 
+### Eén meertalige bron-naar-Engels-kandidaat voor kmr/ckb/pus — 23 oktober 2026
+
+De [Helsinki-NLP/opus-mt-tc-bible-big-iir-en-modelkaart](https://huggingface.co/Helsinki-NLP/opus-mt-tc-bible-big-iir-en) noemt `kmr` (Kurmanji), `ckb` (Sorani) en `pus` (Pasjtoe, ISO 639-3) als brontalen met Engels (`eng`) als doeltaal. De kaart vermeldt Apache-2.0 en circa 0,2B parameters in F32; het exacte pakketformaat en de bestandsgrootte zijn niet vastgesteld. De kaart rapporteert een algemene multi-eng Tatoeba-score (BLEU 36,4 / chr-F 0,55062 over 10.000 zinnen), geen aparte score voor elk van deze dialecten. De trainingsmix omvat OPUS en een meertalige Bijbelcorpus. Daarom blijven corpusversies/rechten en afgeleide gewichtsprovenance **onopgelost** totdat de bronrechten en exacte modelrevisie onafhankelijk zijn vastgesteld. Het is bovendien alleen een mogelijke vertaalrichting naar Engels: geen ASR en geen bewezen Engels→kmr/ckb/pus-route. Niet downloaden of bundelen op basis van het modelkaartlabel alleen.
+
 **Volgende productgate:** selecteer per dialect een model met controleerbare herkomst en geschikte licentie, maak een realistische gequantiseerde Android-pack, integreer echte lokale ASR én MT, en pas daarna native-speakerreview en geautoriseerde fysieke vliegtuigmodusacceptatie toe. Tot dat moment blijft de app de drie talen als preview-only markeren.
 
 ## Scriptrichting bij eigen Sorani- en Pasjtoe-zinnen
