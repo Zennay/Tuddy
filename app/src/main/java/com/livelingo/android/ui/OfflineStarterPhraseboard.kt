@@ -45,6 +45,7 @@ internal fun OfflineStarterPhraseboard(
     var personalLookupOpen by remember { mutableStateOf(false) }
     var saveIndex by remember { mutableStateOf<Int?>(null) }
     var saveNotice by remember { mutableStateOf("") }
+    var batchSaveOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val phraseDeck = remember(context) { PrivatePhraseDeck(context) }
     val choices = listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
@@ -132,6 +133,10 @@ internal fun OfflineStarterPhraseboard(
                     }
                 }
                 OutlinedButton(
+                    onClick = { batchSaveOpen = true; saveNotice = "" },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Bewaar geselecteerde basiswoorden als set…") }
+                OutlinedButton(
                     onClick = { personalLookupOpen = true },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Zoek in maximaal 80 eigen offline zinnen…") }
@@ -176,5 +181,20 @@ internal fun OfflineStarterPhraseboard(
                 )
             }
         }
+    }
+
+    if (batchSaveOpen) {
+        OfflineStarterPhraseBatchSaveDialog(
+            starter = starter,
+            target = target,
+            source = source,
+            existingNotes = phraseDeck.entries(),
+            onSaveBatch = { batch -> phraseDeck.saveNewBatch(batch) },
+            onSaved = {
+                batchSaveOpen = false
+                saveNotice = "Geselecteerde voorbeeldset nagelezen en lokaal bewaard."
+            },
+            onDismiss = { batchSaveOpen = false }
+        )
     }
 }

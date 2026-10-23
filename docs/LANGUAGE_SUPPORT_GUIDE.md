@@ -146,6 +146,10 @@ automatische taalondersteuning. In plaats daarvan kun je direct kiezen:
   bevestig beide velden expliciet; het voorbeeld is niet onafhankelijk door
   moedertaalsprekers geverifieerd. Dit bewaart alleen een eigen lokale notitie
   en activeert geen vrij vertaalmodel.
+- **Bewaar geselecteerde basiswoorden als set…:** beoordeel meerdere voorbeelden
+  tegelijk in een bewerkbare lijst. Je kunt duplicaten uitsluiten en elk paar
+  corrigeren; pas na expliciete bevestiging wordt de set in één atomaire lokale
+  transactie opgeslagen, of wordt bij een fout helemaal niets opgeslagen.
 - **Zoek mijn eigen offline zinnen:** open uitsluitend het zelf opgeslagen
   privézinnenboek voor de gevonden taal, met door de gebruiker geschreven
   betekenissen. Lege resultaten worden niet automatisch ingevuld.
