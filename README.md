@@ -1,3 +1,18 @@
+## Offline tweetalig voorlezen in groot beeld
+
+Open een lokaal afgeronde tweetalige caption als **Toon gesprekszin**.
+Kies **Normaal** of **Rustig** en tik op **Origineel → vertaling** of
+**Vertaling → origineel** om beide kanten na elkaar te laten voorlezen.
+Elke taal vereist een al geïnstalleerde niet-netwerkafhankelijke Android-stem;
+als de eerste stem ontbreekt stopt de reeks zonder de tweede kant af te spelen.
+**Stop voorlezen**, een andere caption kiezen, het scherm verlaten en de
+app op de achtergrond zetten onderbreken de reeks. De markering komt alleen
+van optionele TTS-woordbereiken, niet van echte microfoonwoordtiming of
+gevalideerde vertaaluitlijning. Er wordt geen audio of transcript opgeslagen.
+Zie [de offline tweetalige voorleesmodus](docs/BILINGUAL_CAPTION_REPLAY.md).
+
+---
+
 ## Leesmodus: kopieer een afgeronde tweetalige caption
 
 In **Tuddy · Leesmodus** kan elke afgeronde caption met één bewuste actie als
