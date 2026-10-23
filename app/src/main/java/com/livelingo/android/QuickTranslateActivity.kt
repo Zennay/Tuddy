@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -296,8 +298,8 @@ private fun QuickTranslateScreen(
     onOpenTuddy: () -> Unit,
     onClose: () -> Unit
 ) {
-    var sourcePicker by mutableStateOf(false)
-    var targetPicker by mutableStateOf(false)
+    var sourcePicker by remember { mutableStateOf(false) }
+    var targetPicker by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
     val sourceLabel = TargetCatalog.targets.firstOrNull { it.code == sourceCode }?.title ?: sourceCode
     val targetLabel = TargetCatalog.targets.firstOrNull { it.code == targetCode }?.title ?: targetCode
@@ -339,15 +341,15 @@ private fun QuickTranslateScreen(
                 onClick = { sourcePicker = true },
                 enabled = !busy,
                 modifier = Modifier.weight(1f)
-            ) { Text("Van · \${sourceCode.uppercase()}") }
+            ) { Text("Van · ${sourceCode.uppercase()}") }
             OutlinedButton(
                 onClick = { targetPicker = true },
                 enabled = !busy,
                 modifier = Modifier.weight(1f)
-            ) { Text("Naar · \${targetCode.uppercase()}") }
+            ) { Text("Naar · ${targetCode.uppercase()}") }
         }
         Text(
-            "\$sourceLabel → \$targetLabel",
+            "$sourceLabel → $targetLabel",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -446,7 +448,7 @@ private fun LanguagePickerDialog(
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit
 ) {
-    var query by mutableStateOf("")
+    var query by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -468,7 +470,7 @@ private fun LanguagePickerDialog(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(target.title)
                                 Text(
-                                    if (target.code == selectedCode) "\${target.code.uppercase()} · geselecteerd"
+                                    if (target.code == selectedCode) "${target.code.uppercase()} · geselecteerd"
                                     else target.code.uppercase(),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
