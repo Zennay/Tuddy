@@ -1,5 +1,7 @@
 package com.livelingo.android.ui
 
+import android.content.Intent
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -167,6 +169,7 @@ internal fun FullscreenCaptionCard(
     var large by remember { mutableStateOf(true) }
     var audioNotice by remember { mutableStateOf("") }
     var copyNotice by remember { mutableStateOf("") }
+    var shareNotice by remember { mutableStateOf("") }
     var speechPace by remember { mutableStateOf(LocalSpeechPace.NORMAL) }
     var activeSpeechText by remember { mutableStateOf<String?>(null) }
     var activeSpeechLabel by remember { mutableStateOf("") }
@@ -315,6 +318,7 @@ internal fun FullscreenCaptionCard(
         activeSpeechRange = null
         audioNotice = ""
         copyNotice = ""
+        shareNotice = ""
     }
 
     Dialog(
@@ -341,8 +345,8 @@ internal fun FullscreenCaptionCard(
                     TextButton(onClick = { speaker.stop(); onDismiss() }) { Text("Sluiten") }
                 }
                 Text(
-                    "Alleen deze tijdelijke sessie. Kopiëren is optioneel en gaat naar Android. " +
-                        "Een lokale vertaling kan fouten bevatten.",
+                    "Alleen deze tijdelijke sessie. Kopiëren of delen is optioneel en gaat naar Android. " +
+                        "Andere apps kunnen gekozen tekst ontvangen. Een lokale vertaling kan fouten bevatten.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -392,9 +396,42 @@ internal fun FullscreenCaptionCard(
                                 }
                             }
                         ) { Text("⧉ Kopieer deze tweetalige caption") }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                val payload = PrivateCaptionCopy.snapshot(
+                                    original = card.original,
+                                    translated = translation,
+                                    status = card.status,
+                                    sourceCode = card.sourceCode,
+                                    targetCode = card.targetCode
+                                )
+                                if (payload == null) {
+                                    shareNotice = "Deze afgeronde caption kan niet veilig worden gedeeld."
+                                } else {
+                                    val started = runCatching {
+                                        val send = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, payload)
+                                        }
+                                        context.startActivity(Intent.createChooser(
+                                            send, "Kies waar je tweetalige caption deelt"
+                                        ))
+                                        true
+                                    }.getOrDefault(false)
+                                    shareNotice = if (started)
+                                        "Android-deelvenster geopend. Jij kiest waar je de caption deelt; de gekozen app ontvangt de tekst."
+                                    else "Delen niet beschikbaar. Er is niets verzonden."
+                                }
+                            }
+                        ) { Text("↗ Deel deze tweetalige caption") }
                     }
                     if (copyNotice.isNotBlank()) {
                         Text(copyNotice, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (shareNotice.isNotBlank()) {
+                        Text(shareNotice, style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (onStudyCaption != null && card.status == "Lokaal vertaald" &&

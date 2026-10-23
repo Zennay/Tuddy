@@ -44,7 +44,10 @@ gekopieerd. De actie verschijnt alleen bij afgeronde lokale vertalingen; voorlop
 spraak en onafgeronde vertalingen worden niet gekopieerd. De tekst wordt begrensd
 en ontdaan van ongeldige controletekens. Het klembord valt buiten Tuddy's RAM-only
 privacygrens: andere apps kunnen gekopieerde tekst lezen. Kopiëren is nooit
-automatisch.
+automatisch. In **Tuddy · Toon gesprekszin** kun je dezelfde afgeronde tweetalige
+caption ook bewust delen via **Deel deze tweetalige caption**. Dat opent het
+Android-deelvenster; jij kiest de app. De gekozen app ontvangt de tekst en kan
+zelf gegevens verwerken of online versturen.
 
 Zie [de uitleg over tweetalig kopiëren](docs/FOCUS_TRANSCRIPT_COPY.md).
 
