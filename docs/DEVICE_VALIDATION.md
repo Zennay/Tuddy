@@ -71,12 +71,11 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Current hosted debug-APK handoff after PR #440 merged to `main`. The workflow
-built the proposed PR merge-ref, not a main-push checkout. Its full Git tree
-SHA matched main at the time of the PR #440 merge. This guide refresh is a
-later documentation-only change, so the full repository tree will differ after
-this guide is merged; PR #440's app source remains unchanged. This is build
-provenance only, **not** a signed release, physical installation,
+Current hosted debug-APK handoff after PR #448 merged to `main`. The workflow
+built the exact main-push checkout, and its source SHA matches the app-code
+commit. This guide refresh is documentation-only, so the full repository tree
+will differ after this guide is merged; app source remains unchanged. This is
+build provenance only, **not** a signed release, physical installation,
 airplane-mode demonstration or language-model acceptance.
 
 | Field | Immutable evidence |
