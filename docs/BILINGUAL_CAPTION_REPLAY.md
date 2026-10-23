@@ -36,3 +36,18 @@ offline ASR/MT voor Kurmanji, Sorani of Pasjtoe. Daarvoor blijven
 modelrechten, daadwerkelijke mobiele werking, native-speaker-evaluatie en
 fysieke offline-acceptatie afzonderlijke gates (issues #1 en #2).
 
+
+## Mijn eigen zinnen: twee talen afspelen
+
+Ook in **Mijn gesprekskaart** (het persoonlijke Kurmanji-, Sorani- en
+Pasjtoezinnenboek) zijn nu twee bewuste acties beschikbaar:
+**Mijn zin → eigen betekenis** en **Eigen betekenis → mijn zin**.
+Kies zelf het normale of rustige tempo. Beide teksten zijn door de gebruiker
+zelf geschreven en niet door Tuddy of een moedertaalspreker gecontroleerd.
+Tuddy leest achtereenvolgens de tekst in de betreffende taal, uitsluitend
+wanneer Android daarvoor een vooraf geïnstalleerde niet-netwerkafhankelijke
+stem aanbiedt. Ontbreekt de eerste stem, dan wordt de tweede kant niet alsnog
+uitgesproken. Stemselectie, indicatieve woordhighlight en Stop blijven lokaal.
+
+Dit is een offline presentatie-/studiefunctie, **niet** de ontbrekende vrije
+spraakherkenning of machinevertaling voor kmr/ckb/ps.
