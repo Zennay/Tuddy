@@ -71,6 +71,24 @@ are not represented as full ML Kit translation targets in the selector;
 there is no licensed free-form offline MT or separate ASR engine included.
 The app never claims the inventory above makes these dialects available.
 
+## Share a filtered model-research brief
+
+In **Taalondersteuning**, search for a language/model and optionally narrow the
+results by ASR vs. text translation and by license/access signal. **Bekijk en
+deel onderzoeksresultaten…** opens a scrollable preview of the complete
+filtered brief before Android's explicit share chooser is launched. The report
+includes the search term, task/access filters, candidate count, public model
+card references, declared license, estimated footprint, advertised directions
+and unresolved limitations. It explicitly says that catalog classifications
+are text heuristics—not legal clearance, model installation or dialect
+validation.
+
+Nothing is sent until the user confirms the share action and chooses an
+Android share target. No report is saved in Tuddy, no network request is
+started by Tuddy, and no user phrases, conversations, audio or device
+diagnostics are included. A selected recipient can retain or forward the
+metadata; inspect the preview and chosen destination before sharing.
+
 Google model manager docs:
 https://developers.google.com/ml-kit/language/translation/android
 https://developers.google.com/android/reference/com/google/mlkit/common/model/RemoteModelManager
