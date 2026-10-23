@@ -306,6 +306,9 @@ internal fun FocusTranscriptDialog(
                         }
                     }
                     items(displayedCaptions, key = { it.id }) { line ->
+                        val highlightLatestFinal = listening && followLive && !archiveMode &&
+                            captionQuery.isBlank() && speakerFilter == null && !onlyPinned &&
+                            interimOriginal.isBlank() && line.id == displayedCaptions.lastOrNull()?.id
                         Card(shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth()) {
                             Column(
@@ -320,6 +323,13 @@ internal fun FocusTranscriptDialog(
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                if (highlightLatestFinal) {
+                                    Text(
+                                        "Laatste afgeronde regel · laatste tekstwoord benadrukt · geen audio-woordtiming",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                                 if (!archiveMode && onCycleManualSpeaker != null) {
                                     TextButton(onClick = { onCycleManualSpeaker(line.id) }) {
                                         Text(when (line.speaker) {
@@ -386,6 +396,7 @@ internal fun FocusTranscriptDialog(
                                         status = line.status,
                                         fontScale = fontScale,
                                         isInterim = false,
+                                        highlightLatestFinal = highlightLatestFinal,
                                         searchQuery = captionQuery,
                                         enableOfflineWordCards = true,
                                         allowWordSpeech = !listening
@@ -398,7 +409,9 @@ internal fun FocusTranscriptDialog(
                                     ),
                                     enableOfflineWordCards = true,
                                     wordLanguage = line.sourceCode,
-                                    allowWordSpeech = !listening)
+                                    allowWordSpeech = !listening,
+                                    activeSpeechText = if (highlightLatestFinal) normalizedLiveFocusText(line.original) else null,
+                                    activeSpeechRange = if (highlightLatestFinal) lastTextWordRange(line.original) else null)
                                     if (line.status == "Lokaal vertaald" || line.status == "Lokaal") {
                                     SessionCaptionSearchText(line.translated, captionQuery,
                                         style = MaterialTheme.typography.headlineSmall.copy(
@@ -408,7 +421,9 @@ internal fun FocusTranscriptDialog(
                                         ),
                                         enableOfflineWordCards = true,
                                         wordLanguage = line.targetCode,
-                                        allowWordSpeech = !listening)
+                                        allowWordSpeech = !listening,
+                                        activeSpeechText = if (highlightLatestFinal) normalizedLiveFocusText(line.translated) else null,
+                                        activeSpeechRange = if (highlightLatestFinal) lastTextWordRange(line.translated) else null)
                                 } else {
                                     Text("[Vertaling niet voltooid: ${line.status}]",
                                         style = MaterialTheme.typography.bodyMedium,
