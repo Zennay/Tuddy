@@ -38,6 +38,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.model.SafeCommunityPhrasebook
 
@@ -111,11 +112,14 @@ internal fun OfflineStarterPhrasePresenter(
     var targetFirst by remember { mutableStateOf(true) }
     var larger by remember { mutableStateOf(true) }
     var audioNotice by remember { mutableStateOf("") }
+    var saveOwnPhraseOpen by remember { mutableStateOf(false) }
+    var saveNotice by remember { mutableStateOf("") }
     var activeSpeechSide by remember { mutableStateOf<String?>(null) }
     var activeSpeechText by remember { mutableStateOf<String?>(null) }
     var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val context = LocalContext.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
+    val phraseDeck = remember(context) { PrivatePhraseDeck(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(speaker, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -382,6 +386,15 @@ internal fun OfflineStarterPhrasePresenter(
                         }
                     }
                 }
+                if (item != null && result != null) {
+                    OutlinedButton(
+                        enabled = original.isNotBlank() && result.isNotBlank(),
+                        onClick = { clearSpeech(); saveNotice = ""; saveOwnPhraseOpen = true }
+                    ) { Text("Bewaar als eigen zin…") }
+                }
+                if (saveNotice.isNotBlank()) Text(saveNotice,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall)
                 if (audioNotice.isNotBlank()) {
                     Text(audioNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -407,5 +420,24 @@ internal fun OfflineStarterPhrasePresenter(
                 }
             }
         }
+    }
+
+    if (saveOwnPhraseOpen && item != null && result != null) {
+        OfflineStarterPhraseSaveDialog(
+            language = target,
+            meaningLanguage = source,
+            initialPhrase = result,
+            initialMeaning = original,
+            onSaveNew = { selectedLanguage, selectedPhrase, selectedMeaningLanguage, selectedMeaning ->
+                phraseDeck.saveNew(
+                    selectedLanguage, selectedPhrase, selectedMeaningLanguage, selectedMeaning
+                )
+            },
+            onSaved = {
+                saveOwnPhraseOpen = false
+                saveNotice = "Voorbeeld nagelezen en als eigen offline notitie bewaard."
+            },
+            onDismiss = { saveOwnPhraseOpen = false }
+        )
     }
 }
