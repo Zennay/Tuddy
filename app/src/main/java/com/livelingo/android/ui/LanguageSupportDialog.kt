@@ -36,6 +36,11 @@ import com.livelingo.android.TargetCatalog
 import com.livelingo.android.UnavailableTextLanguageCatalog
 import com.livelingo.android.SessionCorrectionLanguageCatalog
 
+private val permissiveModelLicensePattern = Regex(
+    """(?:^|[^a-z0-9])(?:apache[- ]2[.]0|mit|bsd[- ](?:2|3)-clause|cc0[- ]1[.]0|isc)(?:$|[^a-z0-9])""",
+    RegexOption.IGNORE_CASE
+)
+
 /**
  * User-facing capability inventory. It intentionally separates target text
  * translation, device-provided speech candidates, and unavailable language
@@ -77,16 +82,25 @@ internal fun LanguageSupportDialog(
         val evidence = "$license $limitation".lowercase()
         val declared = license.lowercase()
         return when {
-            listOf("cc-by-nc", "niet-commercieel", "non-commercial", "noncommercial")
-                .any { phrase -> evidence.contains(phrase) } -> "Niet-commercieel"
-            listOf("gated", "contactinformatie", "contact information", "share contact")
-                .any { phrase -> evidence.contains(phrase) } -> "Toegang beperkt"
+            // Unresolved upstream rights override any permissive-looking model-card label.
             listOf(
                 "conflict onopgelost", "licentieconflict", "licentiecompatibiliteit",
-                "provenance onopgelost", "licentieherkomst onopgelost", "onopgelost"
-            ).any { phrase -> declared.contains(phrase) } -> "Licentieconflict/onopgelost"
-            listOf("apache-2.0", "apache 2.0", "mit", "bsd-2-clause", "bsd-3-clause", "cc0-1.0", "isc")
-                .any { phrase -> declared.contains(phrase) } -> "Permissief volgens modelkaart"
+                "provenance onopgelost", "licentieherkomst onopgelost",
+                "license conflict", "licence conflict", "unresolved license",
+                "unresolved licence", "unresolved provenance", "provenance unresolved",
+                "onopgelost"
+            ).any { phrase -> evidence.contains(phrase) } -> "Licentieconflict/onopgelost"
+            listOf("gated", "contactinformatie", "contact information", "share contact")
+                .any { phrase -> evidence.contains(phrase) } -> "Toegang beperkt"
+            listOf("cc-by-nc", "niet-commercieel", "non-commercial", "noncommercial")
+                .any { phrase -> evidence.contains(phrase) } -> "Niet-commercieel"
+            // Attribution and share-alike/no-derivatives terms are not an unconditional permissive signal.
+            listOf(
+                "cc-by-4.0", "cc-by 4.0", "cc-by-3.0", "cc-by 3.0",
+                "cc-by-2.0", "cc-by 2.0", "cc-by-sa", "cc-by-nd",
+                "creative commons attribution", "attribution required", "naamsvermelding vereist"
+            ).any { phrase -> evidence.contains(phrase) } -> "Naamsvermelding/extra voorwaarden"
+            permissiveModelLicensePattern.containsMatchIn(declared) -> "Permissief volgens modelkaart"
             else -> "Overig/onbekend"
         }
     }
@@ -143,6 +157,7 @@ internal fun LanguageSupportDialog(
                     appendLine("- ${candidate.category}: ${candidate.title}")
                     appendLine("  Modelkaart: ${candidate.url}")
                     appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
+                    appendLine("  Licentie-/toegangssignaal (heuristiek): ${candidateAccessClass(candidate.declaredLicense, candidate.limitation)}")
                     appendLine("  Omvang: ${candidate.footprint}")
                     if (candidate.directionEvidence.isNotBlank()) {
                         appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
@@ -511,8 +526,9 @@ internal fun LanguageSupportDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             listOf(
-                                "Alle", "Niet-commercieel", "Toegang beperkt",
-                                "Licentieconflict/onopgelost", "Permissief volgens modelkaart", "Overig/onbekend"
+                                "Alle", "Licentieconflict/onopgelost", "Toegang beperkt",
+                                "Niet-commercieel", "Naamsvermelding/extra voorwaarden",
+                                "Permissief volgens modelkaart", "Overig/onbekend"
                             ).forEach { filter ->
                                 FilterChip(
                                     selected = modelAccessFilter == filter,
@@ -525,6 +541,7 @@ internal fun LanguageSupportDialog(
                                             when (filter) {
                                                 "Niet-commercieel" -> "Niet-commercieel"
                                                 "Toegang beperkt" -> "Toegang gated"
+                                                "Naamsvermelding/extra voorwaarden" -> "Naamsvermelding / extra voorwaarden"
                                                 "Permissief volgens modelkaart" -> "Permissief vermeld"
                                                 "Licentieconflict/onopgelost" -> "Licentieconflict / open"
                                                 "Overig/onbekend" -> "Overig / onbekend"
@@ -536,7 +553,7 @@ internal fun LanguageSupportDialog(
                             }
                         }
                         Text(
-                            "Dit filter classificeert alleen tekst uit de modelkaart/catalogus. Expliciet vermelde licentieconflicten vallen niet onder ‘Permissief vermeld’, ook als één bron Apache of MIT noemt. Geen enkel label is een automatische vrijgave.",
+                            "Dit filter leest zowel het licentieveld als de vermelde beperkingen. Onopgeloste licentie-/provenanceconflicten gaan vóór permissieve labels; CC-BY en extra voorwaarden krijgen een apart signaal. Dit blijft tekstuele triage, geen juridische of distributiegoedkeuring.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

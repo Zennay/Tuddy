@@ -202,6 +202,36 @@ internal object UnavailableTextLanguageCatalog {
             "of op Android getest; zelfs de gequantiseerde variant is groot."
     )
 
+    private val soraniToEnglishMarianResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Tekstvertaling",
+        title = "TartarusXXX/ckb-en-marian-transformers",
+        url = "https://huggingface.co/TartarusXXX/ckb-en-marian-transformers",
+        directionEvidence = "Tekst → tekst (MT), Sorani/ckb → Engels/en; modelkaart rapporteert BLEU 30,2383 en chrF 56,6711 uit trainingslogs, niet onafhankelijk herhaald.",
+        declaredLicense = "Geen expliciete licentie vermeld op modelkaart",
+        footprint = "51,9M parameters, F32; exacte downloadgrootte niet vermeld",
+        limitation = "Modelkaart noemt InterdialectCorpus, Tatoeba, Wikimedia, TICO-19 en Navinaananthan Sorani parallel corpus als trainingsdataselectie en OpenLanguageData FLORES+ voor validatie/test. De auteur vraagt expliciet om dataset- en licentiecompatibiliteit te controleren vóór herdistributie. Licentie, corpusversies/rechten, immutable gewichten/tokenizer-hashes, Android-runtime, geheugen, latency en native-speakerkwaliteit zijn niet onafhankelijk bevestigd. Niet geïntegreerd, gedownload of geactiveerd."
+    )
+
+    private val englishToSoraniMarianResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Tekstvertaling",
+        title = "TartarusXXX/en-ckb-marian-transformers",
+        url = "https://huggingface.co/TartarusXXX/en-ckb-marian-transformers",
+        directionEvidence = "Tekst → tekst (MT), Engels/en → Sorani/ckb; modelkaart rapporteert BLEU 14,2475 en chrF 45,1146 uit trainingslogs, niet onafhankelijk herhaald.",
+        declaredLicense = "Geen expliciete licentie vermeld op modelkaart",
+        footprint = "51,9M parameters, F32; exacte downloadgrootte niet vermeld",
+        limitation = "Modelkaart noemt dezelfde trainingsdataselectie en OpenLanguageData FLORES+ voor validatie/test. De auteur vraagt expliciet om dataset- en licentiecompatibiliteit te controleren vóór herdistributie. Licentie, corpusversies/rechten, immutable gewichten/tokenizer-hashes, Android-runtime, geheugen, latency en native-speakerkwaliteit zijn niet onafhankelijk bevestigd. Niet geïntegreerd, gedownload of geactiveerd."
+    )
+
+    private val multilingualCommunityToEnglishResearchCandidate = OfflineLanguageModelCandidate(
+        category = "Tekstvertaling",
+        title = "Helsinki-NLP/opus-mt-tc-bible-big-iir-en",
+        url = "https://huggingface.co/Helsinki-NLP/opus-mt-tc-bible-big-iir-en",
+        directionEvidence = "Tekst → tekst (MT), modelkaart noemt kmr (Kurmanji), ckb (Sorani) en pus (Pasjtoe, ISO 639-3) → en. Alleen algemene multi-eng Tatoeba-resultaten zijn gerapporteerd; geen dialectspecifieke score.",
+        declaredLicense = "Apache-2.0 volgens modelkaart; provenance onopgelost",
+        footprint = "0,2B parameters, F32; exacte pakketgrootte niet vastgesteld",
+        limitation = "Modelkaart noemt broncodes kmr/ckb/pus en doel eng; dit is alleen een kandidaat voor vertaling naar Engels, niet Engels→community-taal en geen ASR. De trainingsmix omvat OPUS en een meertalige Bijbelcorpus; corpusversies/rechten en afgeleide gewichtsrechten zijn niet onafhankelijk vastgesteld. Algemene modelkaartscore is zelfgerapporteerd en geen dialectspecifieke evaluatie. Geen Android-runtime, geheugen, latency, native-speakerreview of vliegtuigmodusacceptatie bewezen. Niet geïntegreerd, gedownload of geactiveerd."
+    )
+
     val entries = listOf(
         UnavailableTextLanguage(
             "kmr", "Kurmancî · Kurmanji (Noord-Koerdisch)",
@@ -231,7 +261,7 @@ internal object UnavailableTextLanguageCatalog {
             translationCandidates = listOf(
                 nllbResearchCandidate, madladResearchCandidate,
                 opusMtIndoEuropeanResearchCandidate, opusMtOnnxInt8ResearchCandidate,
-                badiniTranslationResearchCandidate
+                badiniTranslationResearchCandidate, multilingualCommunityToEnglishResearchCandidate
             )
         ),
         UnavailableTextLanguage(
@@ -262,7 +292,9 @@ internal object UnavailableTextLanguageCatalog {
             ),
             translationCandidates = listOf(
                 nllbResearchCandidate, madladResearchCandidate,
-                opusMtIndoEuropeanResearchCandidate, opusMtOnnxInt8ResearchCandidate
+                opusMtIndoEuropeanResearchCandidate, opusMtOnnxInt8ResearchCandidate,
+                soraniToEnglishMarianResearchCandidate, englishToSoraniMarianResearchCandidate,
+                multilingualCommunityToEnglishResearchCandidate
             )
         ),
         UnavailableTextLanguage(
@@ -312,7 +344,8 @@ internal object UnavailableTextLanguageCatalog {
                     limitation = "De modelkaart bevat Pasjtoe (ps), Nederlands (nl) en Engels (en), " +
                         "maar geen Koerdische taalcode. Niet geïntegreerd; er is geen gequantiseerd " +
                         "Android-pakket of toestelprestatie aangetoond."
-                )
+                ),
+                multilingualCommunityToEnglishResearchCandidate
             )
         ),
         UnavailableTextLanguage(
