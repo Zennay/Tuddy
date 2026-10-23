@@ -24,3 +24,16 @@ vertaling, opslag of netwerkverbinding gestart.
 - De functie kopieert tekst zoals Tuddy die toont; ze certificeert geen
   herkenningsnauwkeurigheid of vertaalcorrectheid.
 
+
+## Fullscreen gesprekszin: dezelfde bewuste kopieeractie
+
+In **Tuddy · Toon gesprekszin** is **Kopieer deze tweetalige caption**
+beschikbaar als de getoonde zin al lokaal is vertaald en beide tekstzijden
+beschikbaar zijn. Dit gebruikt exact dezelfde bounded en geschoonde
+`PrivateCaptionCopy`-payload als de gewone live-leesmodus: twee regels met
+de brontaal en doeltaal, nooit een onvoltooid interim of verborgen archief.
+De gebruiker tikt zelf op de knop. Er verschijnt een blijvende waarschuwing
+dat Androids systeemklembord buiten de RAM-only privacygrens van Tuddy valt
+en door andere apps kan worden gelezen. Andere kaart selecteren wist enkel
+de zichtbare melding, niet de door Android beheerde inhoud van het klembord.
+Er is geen automatische clipboardsynchronisatie of nieuwe netwerktoegang.
