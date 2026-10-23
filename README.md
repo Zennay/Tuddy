@@ -1,3 +1,14 @@
+## Sneller door je eigen offline zinnen zoeken
+
+De persoonlijke Kurmanji-, Sorani- en Pasjtoe-zoekkaart ondersteunt nu
+meerdere zoekwoorden over beide taalvelden, favorieten als filter en
+zichtbare 20-kaartenpagina's. Taalfilters zijn horizontaal schuifbaar op
+kleine schermen. Alles blijft uitsluitend jouw eigen opgeslagen tekst;
+er wordt niets automatisch vertaald of online gezocht.
+Zie [offline zoeken in eigen zinnen](docs/OFFLINE_PERSONAL_PHRASE_FINDER.md).
+
+---
+
 ## Leesmodus: kopieer een afgeronde tweetalige caption
 
 In **Tuddy · Leesmodus** kan elke afgeronde caption met één bewuste actie als
