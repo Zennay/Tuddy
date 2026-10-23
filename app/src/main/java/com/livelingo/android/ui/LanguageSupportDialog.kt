@@ -83,9 +83,22 @@ internal fun LanguageSupportDialog(
     fun candidateAccessClass(license: String, limitation: String): String {
         val evidence = "$license $limitation".lowercase()
         val declared = license.lowercase()
+        val rightsEvidence = listOf(
+            "trainingsdatarechten", "datasetrechten", "datasetherkomst", "rechtenherkomst",
+            "corpusrechten", "training data rights", "dataset rights", "dataset provenance",
+            "dataset origin", "training data provenance", "corpus rights", "rights provenance",
+            "data provenance"
+        ).any { phrase -> evidence.contains(phrase) }
+        val rightsUnverified = listOf(
+            "niet geverifieerd", "niet onafhankelijk geverifieerd",
+            "niet onafhankelijk gecontroleerd", "niet bevestigd", "niet vastgesteld",
+            "not verified", "not independently verified", "not independently checked",
+            "not confirmed", "not established", "not audited", "unverified", "unknown"
+        ).any { phrase -> evidence.contains(phrase) }
+        val unresolvedDataRights = rightsEvidence && rightsUnverified
         return when {
-            // Unresolved upstream rights override any permissive-looking model-card label.
-            listOf(
+            // Dataset/training-data rights or provenance explicitly marked unverified override a permissive model-card label.
+            unresolvedDataRights || listOf(
                 "conflict onopgelost", "licentieconflict", "licentiecompatibiliteit",
                 "provenance onopgelost", "licentieherkomst onopgelost",
                 "license conflict", "licence conflict", "unresolved license",
