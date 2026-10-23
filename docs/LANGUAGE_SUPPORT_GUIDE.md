@@ -141,6 +141,11 @@ automatische taalondersteuning. In plaats daarvan kun je direct kiezen:
 
 - **Open 5 basisuitdrukkingen:** open het aparte offline paneel met vijf
   ingebouwde vaste uitdrukkingen voor de gevonden taal.
+- **Bewaar als eigen zin…:** vanuit het voorbeeldpaneel of de grote lezer kun je
+  een woord als bewerkbaar concept in je privézinnenboek opnemen. Controleer en
+  bevestig beide velden expliciet; het voorbeeld is niet onafhankelijk door
+  moedertaalsprekers geverifieerd. Dit bewaart alleen een eigen lokale notitie
+  en activeert geen vrij vertaalmodel.
 - **Zoek mijn eigen offline zinnen:** open uitsluitend het zelf opgeslagen
   privézinnenboek voor de gevonden taal, met door de gebruiker geschreven
   betekenissen. Lege resultaten worden niet automatisch ingevuld.
