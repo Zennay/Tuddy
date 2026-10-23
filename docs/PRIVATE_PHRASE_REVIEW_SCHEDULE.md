@@ -19,10 +19,16 @@ Dit staat standaard uit, los van **Oefen mijn eigen zinnen**.
 7. Kies **Sla over** vóór het antwoord of **Sla over zonder beoordeling**
    erna om door te gaan zonder de herhaaldatum te wijzigen. De kaart blijft
    gepland voor een volgende sessie en verschijnt niet opnieuw in de huidige sessie.
-8. Je kunt tijdens dezelfde sessie van taal of thema wisselen. Een kaart die
-   je al hebt beoordeeld of overgeslagen, verschijnt in die sessie niet opnieuw.
-9. Wis het optionele schema met **Wis herhaalplanning eigen zinnen**.
-   Je zelfgeschreven zinnen blijven dan gewoon bestaan.
+8. Je kunt tijdens dezelfde sessie van taal of thema wisselen. De voortgang
+   toont hoeveel kaarten in de huidige selectie zijn beoordeeld, overgeslagen
+   en nog openstaan. Een beoordeelde of overgeslagen kaart verschijnt niet
+   opnieuw zolang je de sessie voortzet.
+9. Is de selectie klaar maar heb je kaarten overgeslagen? Kies **Herhaal
+   overgeslagen zinnen** om alleen die kaarten uit de huidige selectie opnieuw
+   in de wachtrij te zetten. Hun herhaaldatum verandert niet; beoordeelde kaarten
+   worden niet opnieuw aangeboden.
+10. Wis het optionele schema met **Wis herhaalplanning eigen zinnen**.
+    Je zelfgeschreven zinnen blijven dan gewoon bestaan.
 
 De planning heeft geen achtergrondtimer of pushmelding. Ze wordt pas zichtbaar
 als je Tuddy zelf opent. De klok van het toestel bepaalt de lokale datum.
