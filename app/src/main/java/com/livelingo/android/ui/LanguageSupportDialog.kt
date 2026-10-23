@@ -36,6 +36,11 @@ import com.livelingo.android.TargetCatalog
 import com.livelingo.android.UnavailableTextLanguageCatalog
 import com.livelingo.android.SessionCorrectionLanguageCatalog
 
+private val permissiveModelLicensePattern = Regex(
+    """(?:^|[^a-z0-9])(?:apache[- ]2\\.0|mit|bsd[- ](?:2|3)-clause|cc0[- ]1\\.0|isc)(?:$|[^a-z0-9])""",
+    RegexOption.IGNORE_CASE
+)
+
 /**
  * User-facing capability inventory. It intentionally separates target text
  * translation, device-provided speech candidates, and unavailable language
@@ -95,8 +100,7 @@ internal fun LanguageSupportDialog(
                 "cc-by-2.0", "cc-by 2.0", "cc-by-sa", "cc-by-nd",
                 "creative commons attribution", "attribution required", "naamsvermelding vereist"
             ).any { phrase -> evidence.contains(phrase) } -> "Naamsvermelding/extra voorwaarden"
-            listOf("apache-2.0", "apache 2.0", "mit", "bsd-2-clause", "bsd-3-clause", "cc0-1.0", "isc")
-                .any { phrase -> declared.contains(phrase) } -> "Permissief volgens modelkaart"
+            permissiveModelLicensePattern.containsMatchIn(declared) -> "Permissief volgens modelkaart"
             else -> "Overig/onbekend"
         }
     }
