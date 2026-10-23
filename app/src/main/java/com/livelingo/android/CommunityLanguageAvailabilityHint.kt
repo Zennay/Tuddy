@@ -35,7 +35,7 @@ internal object CommunityLanguageAvailabilityHint {
         val words = normalized.split(Regex("[^\\p{L}\\p{N}-]+"))
             .filter { it.isNotBlank() }
         return if (words.any {
-                it in setOf("kurdish", "koerdisch", "kurdisch", "kurdi", "کردی")
+                it in setOf("kurdish", "koerdisch", "kurdisch", "kurdi", "کردی", "کوردی", "کوردیی")
             }) listOf("kmr", "ckb") else emptyList()
     }
 
@@ -46,7 +46,7 @@ internal object CommunityLanguageAvailabilityHint {
             .filter { it.isNotBlank() }
         return when {
             words.any { it in setOf("kurmanji", "kurmani", "kurmanci", "kmr", "کورمانجی", "كورمانجي") } -> "kmr"
-            words.any { it in setOf("sorani", "ckb", "سۆرانی", "کوردی", "کوردیی", "کردی") } ||
+            words.any { it in setOf("sorani", "ckb", "سۆرانی") } ||
                 normalized.contains("central kurdish") -> "ckb"
             words.any { it in setOf("pashto", "pasjtoe", "pushto", "ps", "پښتو", "پشتو") } -> "ps"
             else -> null
