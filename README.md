@@ -23,6 +23,12 @@ Dezelfde twee-taals voorleesknoppen zijn beschikbaar bij de door de
 gebruiker geschreven **Mijn gesprekskaart**-zinnen voor Kurmanji, Sorani en
 Pasjtoe, met dezelfde lokale-stemcontrole. Die kaarten zijn niet automatisch
 vertaald of door moedertaalsprekers beoordeeld.
+In hetzelfde scherm is voor **afgeronde tweetalige captions** ook
+**⧉ Kopieer deze tweetalige caption** beschikbaar. Dat kopieert alleen na
+jouw tik de geschoonde brontekst en lokale vertaling naar het Android-
+systeemklembord en toont direct de privacywaarschuwing dat andere apps dit
+klembord kunnen lezen. Zie [de leesmodus-kopieerfunctie](docs/FOCUS_TRANSCRIPT_COPY.md).
+
 Zie [de offline tweetalige voorleesmodus](docs/BILINGUAL_CAPTION_REPLAY.md).
 
 ---
