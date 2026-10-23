@@ -161,6 +161,7 @@ internal fun FullscreenCaptionCard(
     var side by remember { mutableStateOf(CaptionCardSide.BOTH) }
     var large by remember { mutableStateOf(true) }
     var audioNotice by remember { mutableStateOf("") }
+    var speechPace by remember { mutableStateOf(LocalSpeechPace.NORMAL) }
     var activeSpeechText by remember { mutableStateOf<String?>(null) }
     var activeSpeechLabel by remember { mutableStateOf("") }
     var activeSpeechLanguage by remember { mutableStateOf("") }
@@ -218,7 +219,7 @@ internal fun FullscreenCaptionCard(
         speaker.speakSequence(
             lines = listOf(safe),
             languageTag = languageTag,
-            pace = LocalSpeechPace.NORMAL,
+            pace = speechPace,
             onProgress = { completed, total ->
                 audioNotice = "Lokaal voorlezen: $completed/$total regels."
             },
@@ -238,6 +239,63 @@ internal fun FullscreenCaptionCard(
                 activeSpeechRange = start to endExclusive
             }
         )
+    }
+
+    /**
+     * Read both finished sides sequentially, with a newly checked locally
+     * installed voice for each language. Never mix their word ranges or imply
+     * an aligned recording. A failed first voice does not start the second.
+     */
+    fun pronounceBilingual(
+        firstText: String, firstLanguage: String, firstLabel: String,
+        secondText: String, secondLanguage: String, secondLabel: String
+    ) {
+        val first = firstText.replace('\n', ' ').replace('\r', ' ').trim()
+        val second = secondText.replace('\n', ' ').replace('\r', ' ').trim()
+        if (listOf(first, second).any {
+                it.isBlank() || it.length > 400 || it.any { ch -> ch.isISOControl() }
+            }) {
+            speaker.stop()
+            activeSpeechText = null
+            activeSpeechRange = null
+            audioNotice = "Voor tweetalig voorlezen zijn twee afgeronde zinnen tot 400 tekens nodig."
+            return
+        }
+        fun playPart(text: String, language: String, label: String, last: Boolean) {
+            activeSpeechText = text
+            activeSpeechLabel = label
+            activeSpeechLanguage = language
+            activeSpeechRange = null
+            audioNotice = "Lokale stem voor $label controleren…"
+            speaker.speakSequence(
+                lines = listOf(text),
+                languageTag = language,
+                pace = speechPace,
+                onProgress = { completed, total ->
+                    audioNotice = "$label lokaal voorgelezen: $completed/$total"
+                },
+                feedback = { audioNotice = it },
+                onFinished = { completed ->
+                    if (completed && !last) {
+                        playPart(second, secondLanguage, secondLabel, true)
+                    } else {
+                        activeSpeechText = null
+                        activeSpeechLabel = ""
+                        activeSpeechLanguage = ""
+                        activeSpeechRange = null
+                        if (completed) audioNotice = "Beide zinnen lokaal voorgelezen."
+                    }
+                },
+                onLineStarted = {
+                    activeSpeechRange = null
+                    audioNotice = "Nu voorgelezen: $label. Geen woorduitlijning."
+                },
+                onWordRange = { _, start, endExclusive ->
+                    activeSpeechRange = start to endExclusive
+                }
+            )
+        }
+        playPart(first, firstLanguage, firstLabel, false)
     }
 
     // Manual position and voice controls are independent of the microphone:
@@ -324,6 +382,19 @@ internal fun FullscreenCaptionCard(
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         TextButton(
+                            enabled = activeSpeechText == null,
+                            modifier = Modifier.weight(1f),
+                            onClick = { speechPace = LocalSpeechPace.NORMAL }
+                        ) { Text(if (speechPace == LocalSpeechPace.NORMAL) "Normaal ✓" else "Normaal") }
+                        TextButton(
+                            enabled = activeSpeechText == null,
+                            modifier = Modifier.weight(1f),
+                            onClick = { speechPace = LocalSpeechPace.SLOW }
+                        ) { Text(if (speechPace == LocalSpeechPace.SLOW) "Rustig ✓" else "Rustig") }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TextButton(
                             enabled = activeSpeechText == null &&
                                 card.original.isNotBlank() && card.original.length <= 400,
                             modifier = Modifier.weight(1f),
@@ -340,6 +411,29 @@ internal fun FullscreenCaptionCard(
                                 pronounceCaption(translation.orEmpty(), card.targetCode, "Vertaling")
                             }
                         ) { Text("🔊 Vertaling") }
+                    }
+                    if (card.status == "Lokaal vertaald" && translation != null &&
+                        card.sourceCode != card.targetCode
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            OutlinedButton(
+                                enabled = activeSpeechText == null,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    pronounceBilingual(card.original, card.sourceCode, "Origineel",
+                                        translation, card.targetCode, "Vertaling")
+                                }
+                            ) { Text("🔊 Origineel → vertaling") }
+                            OutlinedButton(
+                                enabled = activeSpeechText == null,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    pronounceBilingual(translation, card.targetCode, "Vertaling",
+                                        card.original, card.sourceCode, "Origineel")
+                                }
+                            ) { Text("🔊 Vertaling → origineel") }
+                        }
                     }
                     activeSpeechText?.let { text ->
                         CaptionAudioFollowCard(
@@ -454,8 +548,10 @@ internal fun FullscreenCaptionCard(
                         Text(audioNotice, style = MaterialTheme.typography.bodySmall)
                     }
                     Text(
-                        "Uitspraak alleen na tik met lokaal gemelde geïnstalleerde " +
-                            "Android-stem; geen stemdownload of audio-woordtiming.",
+                        "Enkel of tweetalig voorlezen alleen na tik met lokaal gemelde " +
+                            "geïnstalleerde Android-stem per taal. De tekstfocus is een " +
+                            "indicatief TTS-woordbereik, geen herkennings- of vertaaltiming. " +
+                            "Geen stemdownload of online fallback.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Column(
