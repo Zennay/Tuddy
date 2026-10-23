@@ -10,6 +10,20 @@ horizontaal schuifbaar op kleine schermen. Alles blijft uitsluitend jouw
 eigen opgeslagen tekst; er wordt niets automatisch vertaald of online gezocht.
 Zie [offline zoeken in eigen zinnen](docs/OFFLINE_PERSONAL_PHRASE_FINDER.md).
 
+## Van basiswoord naar eigen offline zin
+
+In het offline voorbeeldscherm voor Kurmanji, Sorani en Pasjtoe kun je nu
+**Bewaar als eigen zin…** kiezen bij een van de vijf vaste voorbeeldwoorden.
+Tuddy opent dan een bewerkbaar concept met het doelwoord en de Nederlandse of
+Engelse betekenis. Niets wordt opgeslagen totdat je beide velden hebt
+nagelezen, zo nodig aangepast en expliciet hebt bevestigd. De kaart komt
+uitsluitend in **Mijn eigen offline zinnen** op dit toestel terecht; een
+bestaande kaart wordt niet overschreven en er gaat niets naar het netwerk.
+
+De vijf voorbeelden zijn geen volledige vertaalmodellen en zijn niet
+onafhankelijk door moedertaalsprekers geverifieerd. Een bewaarde kaart is
+jouw eigen gecontroleerde notitie, geen bewijs dat de vertaling juist is.
+
 ---
 ## Offline tweetalig voorlezen in groot beeld
 
