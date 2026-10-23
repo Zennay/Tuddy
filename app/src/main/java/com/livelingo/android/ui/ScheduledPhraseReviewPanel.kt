@@ -55,6 +55,7 @@ internal fun ScheduledPhraseReviewPanel(
     var languageFilter by remember { mutableStateOf<String?>(null) }
     var topicFilter by remember { mutableStateOf<String?>(null) }
     var reviewedPhrases by remember { mutableStateOf(setOf<PersonalPhrase>()) }
+    var skippedPhrases by remember { mutableStateOf(setOf<PersonalPhrase>()) }
     var index by remember { mutableIntStateOf(0) }
     var revealed by remember { mutableStateOf(false) }
     var reverse by remember { mutableStateOf(false) }
@@ -93,7 +94,7 @@ internal fun ScheduledPhraseReviewPanel(
     // Remove a self-rated card from the live queue. This lets users switch
     // filters mid-session without seeing a card they already rated again.
     val due = remember(matchingDue, reviewedPhrases) {
-        matchingDue.filterNot { it.phrase in reviewedPhrases }
+        matchingDue.filterNot { it.phrase in reviewedPhrases || it.phrase in skippedPhrases }
     }
     val current = due.getOrNull(index)
     val langNames = mapOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
@@ -157,6 +158,9 @@ internal fun ScheduledPhraseReviewPanel(
                         when {
                             allDue.isEmpty() -> "Vandaag zijn er geen eigen zinnen aan de beurt."
                             matchingDue.isEmpty() -> "Geen zinnen in deze selectie zijn vandaag aan de beurt."
+                            matchingDue.any { it.phrase in skippedPhrases } ->
+                                "Alle zinnen in deze selectie zijn bekeken of overgeslagen. " +
+                                    "Overgeslagen zinnen blijven gepland."
                             else -> "Je hebt alle " + matchingDue.size +
                                 " zinnen in deze selectie bekeken."
                         },
@@ -270,11 +274,28 @@ internal fun ScheduledPhraseReviewPanel(
                             "Nog oefenen: morgen. Ik wist het: later na 2, 4, 7, 14 of 30 dagen.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        TextButton(onClick = {
+                            skippedPhrases = skippedPhrases + phrase
+                            revealed = false
+                            typedAnswer = ""
+                            notice = ""
+                        }) { Text("Sla over zonder beoordeling") }
                     } else {
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { revealed = true }
-                        ) { Text("Toon mijn betekenis") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    skippedPhrases = skippedPhrases + phrase
+                                    revealed = false
+                                    typedAnswer = ""
+                                    notice = ""
+                                }
+                            ) { Text("Sla over") }
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                onClick = { revealed = true }
+                            ) { Text("Toon mijn betekenis") }
+                        }
                     }
                 }
                 if (notice.isNotBlank()) Text(
