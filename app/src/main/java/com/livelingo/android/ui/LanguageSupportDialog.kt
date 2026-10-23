@@ -153,6 +153,7 @@ internal fun LanguageSupportDialog(
                     appendLine("- ${candidate.category}: ${candidate.title}")
                     appendLine("  Modelkaart: ${candidate.url}")
                     appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
+                    appendLine("  Licentie-/toegangssignaal (heuristiek): ${candidateAccessClass(candidate.declaredLicense, candidate.limitation)}")
                     appendLine("  Omvang: ${candidate.footprint}")
                     if (candidate.directionEvidence.isNotBlank()) {
                         appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
@@ -548,7 +549,7 @@ internal fun LanguageSupportDialog(
                             }
                         }
                         Text(
-                            "Dit filter classificeert alleen tekst uit de modelkaart/catalogus. Expliciet vermelde licentieconflicten vallen niet onder ‘Permissief vermeld’, ook als één bron Apache of MIT noemt. Geen enkel label is een automatische vrijgave.",
+                            "Dit filter leest zowel het licentieveld als de vermelde beperkingen. Onopgeloste licentie-/provenanceconflicten gaan vóór permissieve labels; CC-BY en extra voorwaarden krijgen een apart signaal. Dit blijft tekstuele triage, geen juridische of distributiegoedkeuring.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
