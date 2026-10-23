@@ -161,6 +161,14 @@ internal fun LanguageSupportDialog(
                                 candidateAccessClass(candidate.declaredLicense, candidate.limitation)
                         )
                         appendLine("  Omvang: ${candidate.footprint}")
+                        appendLine(
+                            "  Vastgezette modelrevision: " +
+                                candidate.snapshotRevision.ifBlank { "Niet vastgelegd" }
+                        )
+                        appendLine(
+                            "  Gewicht/export SHA-256: " +
+                                candidate.weightsSha256.ifBlank { "Niet vastgelegd" }
+                        )
                         if (candidate.directionEvidence.isNotBlank()) {
                             appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
                         }
@@ -609,6 +617,14 @@ internal fun LanguageSupportDialog(
                                     Text("Licentie volgens modelkaart: " + candidate.declaredLicense +
                                         ". Omvang: " + candidate.footprint + ".",
                                         style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        "Vastgezette revision: " +
+                                            candidate.snapshotRevision.ifBlank { "niet vastgelegd" } +
+                                            " · gewicht/export SHA-256: " +
+                                            candidate.weightsSha256.ifBlank { "niet vastgelegd" },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                     Text(
                                         "Classificatie: " + candidateAccessClass(
                                             candidate.declaredLicense, candidate.limitation
