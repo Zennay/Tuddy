@@ -37,7 +37,7 @@ import com.livelingo.android.UnavailableTextLanguageCatalog
 import com.livelingo.android.SessionCorrectionLanguageCatalog
 
 private val permissiveModelLicensePattern = Regex(
-    """(?:^|[^a-z0-9])(?:apache[- ]2\\.0|mit|bsd[- ](?:2|3)-clause|cc0[- ]1\\.0|isc)(?:$|[^a-z0-9])""",
+    """(?:^|[^a-z0-9])(?:apache[- ]2[.]0|mit|bsd[- ](?:2|3)-clause|cc0[- ]1[.]0|isc)(?:$|[^a-z0-9])""",
     RegexOption.IGNORE_CASE
 )
 
