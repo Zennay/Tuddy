@@ -1,4 +1,4 @@
-> **Current hosted debug-APK handoff — main push after PR #453 (23 October 2026):** app-code `main` is commit [`1c07c42682723b3af5c509b986c5e7cd2e2edeba`](https://github.com/Zennay/Tuddy/commit/1c07c42682723b3af5c509b986c5e7cd2e2edeba), Git tree `3efbc8f462fcfb75f01fe48902e1e4f82269a7a7`. Successful main-push Android workflow [#39894283372](https://github.com/Zennay/Tuddy/actions/runs/39894283372) passed its `build` job; `source-head` was skipped because this was a push event. Artifact [Tuddy-debug-apk #12476147324](https://github.com/Zennay/Tuddy/actions/runs/39894283372/artifacts/12476147324) expires **6 November 2026 03:21:09 UTC**. The manifest source SHA is exactly `1c07c42682723b3af5c509b986c5e7cd2e2edeba`, ref `refs/heads/main`, tree `3efbc8f462fcfb75f01fe48902e1e4f82269a7a7`. ZIP size 43,411,751 bytes; **ZIP SHA-256** `4b88f99c695419ce9e8703c8e761e4221708d46765bb413d94d73bc424b6292c`, matching GitHub metadata and downloaded bytes. APK `app-debug.apk` is 105,265,498 bytes; **APK SHA-256** `991df5cc9748b4c1a75f6302e1ac55f37e9b23075f518b9515acc50345754f13`, matching the sidecar and extracted APK bytes. This is the exact current-main hosted debug APK, not proof of physical installation or airplane-mode acceptance and not a signed release. Refresh if a later app-code PR changes main before device testing.
+> **Current hosted debug-APK handoff — main-push build after PR #455 (23 October 2026):** app-code `main` is commit [`323c25fcaf3f6d497055b758c4353760d963d082`](https://github.com/Zennay/Tuddy/commit/323c25fcaf3f6d497055b758c4353760d963d082), Git tree `f7f6d8335673b98b761121975b694f713a31b629`. Successful main-push Android workflow [#39902855671](https://github.com/Zennay/Tuddy/actions/runs/39902855671) built this exact source commit with `event_name=push` and ref `refs/heads/main`; the `build` job succeeded and `source-head` was skipped because this was a push event. Artifact [Tuddy-debug-apk #12479836748](https://github.com/Zennay/Tuddy/actions/runs/39902855671/artifacts/12479836748) expires **6 November 2026 04:58:36 UTC**. Artifact ZIP size 43,422,998 bytes; **ZIP SHA-256** `7ea2bfc8c2ac1636cf12e4cedfb5db98e1db402587ef64c18ae0e829df559a95`, matching GitHub metadata and downloaded bytes. APK `app-debug.apk` is 105,298,266 bytes; **APK SHA-256** `93d39a000bd3a6278ba2ce7dde7b1fcd2f8db430e98e6da9408271ecac13f0a9`, matching the sidecar and extracted bytes. The manifest source SHA is exactly `323c25fcaf3f6d497055b758c4353760d963d082`, ref `refs/heads/main`, tree `f7f6d8335673b98b761121975b694f713a31b629`. This is the exact current app-code main **debug APK**, not proof of physical installation or airplane-mode acceptance and not a signed release. Refresh if a later app-code PR changes main before device testing.
 
 ---
 
@@ -71,32 +71,32 @@ cannot authorize a device-ready, offline-speech, or production-release claim.
 
 ## 1. Exact build identity and installation receipt
 
-Current app-code `main` is `1c07c42682723b3af5c509b986c5e7cd2e2edeba`, Git tree `3efbc8f462fcfb75f01fe48902e1e4f82269a7a7`. The successful main-push Android workflow built this exact source commit and tree. This guide refresh is documentation-only and does not alter app source. This is build provenance only, **not** a signed release, physical installation, airplane-mode demonstration or language-model acceptance.
+Current app-code `main` is `323c25fcaf3f6d497055b758c4353760d963d082`, Git tree `f7f6d8335673b98b761121975b694f713a31b629`. The successful main-push Android workflow built this exact source commit and tree. This guide refresh is documentation-only and does not alter app source. This is build provenance only, **not** a signed release, physical installation, airplane-mode demonstration or language-model acceptance.
 
 | Field | Immutable evidence |
 |---|---|
-| App-code merge (PR #453) | [`1c07c42682723b3af5c509b986c5e7cd2e2edeba`](https://github.com/Zennay/Tuddy/commit/1c07c42682723b3af5c509b986c5e7cd2e2edeba) — `merged=true` |
-| Hosted Android run | [#39894283372](https://github.com/Zennay/Tuddy/actions/runs/39894283372) — main-push `build` succeeded (`source-head` skipped on push event) |
-| Exact build checkout/source identity | `1c07c42682723b3af5c509b986c5e7cd2e2edeba` (`event_name=push`, `ref=refs/heads/main`) |
-| App-code tree | `3efbc8f462fcfb75f01fe48902e1e4f82269a7a7` — exact current main tree |
-| Artifact | [Tuddy-debug-apk #12476147324](https://github.com/Zennay/Tuddy/actions/runs/39894283372/artifacts/12476147324), expires 6 November 2026 03:21:09 UTC |
-| APK filename / size | `app-debug.apk` / 105,265,498 bytes |
-| **APK SHA-256** | `991df5cc9748b4c1a75f6302e1ac55f37e9b23075f518b9515acc50345754f13` |
-| **Artifact ZIP SHA-256 (different file)** | `4b88f99c695419ce9e8703c8e761e4221708d46765bb413d94d73bc424b6292c` |
+| App-code merge (PR #455) | [`323c25fcaf3f6d497055b758c4353760d963d082`](https://github.com/Zennay/Tuddy/commit/323c25fcaf3f6d497055b758c4353760d963d082) — `merged=true` |
+| Hosted Android run | [#39902855671](https://github.com/Zennay/Tuddy/actions/runs/39902855671) — main-push `build` succeeded (`source-head` skipped on push event) |
+| Exact build checkout/source identity | `323c25fcaf3f6d497055b758c4353760d963d082` (`event_name=push`, `ref=refs/heads/main`) |
+| App-code tree | `f7f6d8335673b98b761121975b694f713a31b629` — exact current app-code main tree |
+| Artifact | [Tuddy-debug-apk #12479836748](https://github.com/Zennay/Tuddy/actions/runs/39902855671/artifacts/12479836748), expires 6 November 2026 04:58:36 UTC |
+| APK filename / size | `app-debug.apk` / 105,298,266 bytes |
+| **APK SHA-256** | `93d39a000bd3a6278ba2ce7dde7b1fcd2f8db430e98e6da9408271ecac13f0a9` |
+| **Artifact ZIP SHA-256 (different file)** | `7ea2bfc8c2ac1636cf12e4cedfb5db98e1db402587ef64c18ae0e829df559a95` |
 | Package-version | `com.livelingo.android` / `0.4.0` |
 | Physical installation and real airplane-mode session | **NOT PROVIDED** |
 
-The downloaded ZIP digest matches GitHub artifact metadata. The extracted APK digest matches its included `app-debug.apk.sha256` sidecar and the actual APK bytes. The manifest records the exact main commit, workflow run `39894283372`, event `push` and ref `refs/heads/main`. This is a hosted debug APK and does not prove physical/offline acceptance.
+The downloaded ZIP digest matches GitHub artifact metadata and the actual ZIP bytes. The extracted APK digest matches its included `app-debug.apk.sha256` sidecar and the actual APK bytes. The manifest records the exact main commit `323c25fcaf3f6d497055b758c4353760d963d082`, workflow run `39902855671`, event `push` and ref `refs/heads/main`. This is exact-current-app-code build evidence, not physical/offline acceptance.
 
 Verify the ZIP and APK from a Tuddy source checkout before any authorized device installation:
 
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \
   artifact.zip \
-  4b88f99c695419ce9e8703c8e761e4221708d46765bb413d94d73bc424b6292c \
-  991df5cc9748b4c1a75f6302e1ac55f37e9b23075f518b9515acc50345754f13 \
-  1c07c42682723b3af5c509b986c5e7cd2e2edeba \
-  39894283372
+  7ea2bfc8c2ac1636cf12e4cedfb5db98e1db402587ef64c18ae0e829df559a95 \
+  93d39a000bd3a6278ba2ce7dde7b1fcd2f8db430e98e6da9408271ecac13f0a9 \
+  323c25fcaf3f6d497055b758c4353760d963d082 \
+  39902855671
 ```
 
 ## Install the exact debug APK on an authorized handset
