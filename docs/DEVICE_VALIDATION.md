@@ -91,11 +91,11 @@ The downloaded ZIP digest matches GitHub artifact metadata and the actual ZIP by
 Verify the ZIP and APK from a Tuddy source checkout before any authorized device installation:
 
 ```sh
-bash scripts/verify-tuddy-apk-artifact.sh \\
-  artifact.zip \\
-  7ea2bfc8c2ac1636cf12e4cedfb5db98e1db402587ef64c18ae0e829df559a95 \\
-  93d39a000bd3a6278ba2ce7dde7b1fcd2f8db430e98e6da9408271ecac13f0a9 \\
-  323c25fcaf3f6d497055b758c4353760d963d082 \\
+bash scripts/verify-tuddy-apk-artifact.sh \
+  artifact.zip \
+  7ea2bfc8c2ac1636cf12e4cedfb5db98e1db402587ef64c18ae0e829df559a95 \
+  93d39a000bd3a6278ba2ce7dde7b1fcd2f8db430e98e6da9408271ecac13f0a9 \
+  323c25fcaf3f6d497055b758c4353760d963d082 \
   39902855671
 ```
 
