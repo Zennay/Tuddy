@@ -9,6 +9,11 @@ een compact lokaal studieoverzicht. Je hoeft niet eerst aparte beheermenu's te z
 - **Mijn eigen Kurmanji-, Sorani- en Pasjtoe-zinnen:** toont de eigen zinnen
   die volgens jouw vrijwillige schema klaarstaan. De knop opent de
   [zinsherhaling](PRIVATE_PHRASE_REVIEW_SCHEDULE.md).
+- **Gericht zinnen herhalen:** in de zinsherhaling kun je de kaarten van vandaag
+  filteren op taal en op je eigen thema's, inclusief zinnen zonder thema.
+  De aantallen tonen hoeveel kaarten vandaag voor elke selectie klaarstaan.
+  Een kaart die je al hebt beoordeeld, verschijnt niet opnieuw als je tijdens
+  dezelfde sessie van taal of thema wisselt.
 - **Volgende datum:** als er vandaag niets klaarstaat, verschijnt de vroegste
   volgende geplande datum, als die bestaat.
 - **Beheer:** elk onderdeel linkt naar de bestaande eigen woorden- of
