@@ -320,6 +320,13 @@ class MainActivity : ComponentActivity() {
     private var pendingPersonalCsv by mutableStateOf<IncomingPersonalCsvDocument?>(null)
     private var nextPersonalCsvRequest = 0L
 
+    private val quickTranslateLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        setResult(result.resultCode, result.data)
+        finish()
+    }
+
     /**
      * Keep the exported Android entrypoint narrowly scoped: ordinary selected
      * text is handed to a non-exported quick-translate Activity. Structured
@@ -334,7 +341,7 @@ class MainActivity : ComponentActivity() {
         sourceIntent.removeExtra(Intent.EXTRA_PROCESS_TEXT)
         sourceIntent.removeExtra(Intent.EXTRA_TEXT)
         setIntent(sourceIntent)
-        startActivity(Intent(this, QuickTranslateActivity::class.java).apply {
+        quickTranslateLauncher.launch(Intent(this, QuickTranslateActivity::class.java).apply {
             action = Intent.ACTION_PROCESS_TEXT
             type = "text/plain"
             putExtra(Intent.EXTRA_PROCESS_TEXT, selected)
@@ -346,7 +353,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null && routePlainTextSelection(intent)) {
-            finish()
             return
         }
         PrivateScreenShield.restore(this)
@@ -389,7 +395,6 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (routePlainTextSelection(intent)) {
-            finish()
             return
         }
         pendingPersonalCsv = ExternalPersonalCsvIntent.read(
