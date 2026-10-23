@@ -100,13 +100,17 @@ internal fun MixedDailyReviewPanel(
         })
     }
     var started by remember { mutableStateOf(false) }
-    val selectedCards = mixed?.filter { card ->
+    var cardLimit by remember { mutableStateOf<Int?>(null) }
+    val matchingCards = mixed?.filter { card ->
         when (card) {
             is MixedStudyCard.Basis -> "basis" in selectedLanes
             is MixedStudyCard.Phrase -> "phrase" in selectedLanes
             is MixedStudyCard.Own -> "own" in selectedLanes
         }
     }
+    val selectedCards = if (cardLimit == null) matchingCards
+        else matchingCards?.take(cardLimit!!)
+    val notInThisRound = (matchingCards?.size ?: 0) - (selectedCards?.size ?: 0)
     val activeCards = replayCards ?: selectedCards
     val card = if (started) activeCards?.getOrNull(index) else null
     val rtlLanguages = setOf("ckb", "ps", "ar", "fa", "ur", "he", "sd", "ug")
@@ -188,7 +192,21 @@ internal fun MixedDailyReviewPanel(
                             label = { Text("$label ($count)") }
                         )
                     }
-                    Text("${selectedCards?.size ?: 0} kaarten geselecteerd",
+                    Text("Kies hoeveel kaarten je nu wilt doen",
+                        style = MaterialTheme.typography.titleSmall)
+                    listOf<Pair<Int?, String>>(
+                        null to "Alle kaarten", 5 to "5 kaarten", 10 to "10 kaarten"
+                    ).forEach { (count, label) ->
+                        FilterChip(
+                            selected = cardLimit == count,
+                            onClick = { cardLimit = count },
+                            label = { Text(label) }
+                        )
+                    }
+                    Text("${selectedCards?.size ?: 0} kaarten in deze ronde" +
+                        if (notInThisRound > 0)
+                            " · $notInThisRound andere vandaag nog aan de beurt"
+                        else "",
                         style = MaterialTheme.typography.bodyMedium)
                     if (selectedCards.isNullOrEmpty()) {
                         Text("Kies minimaal één leergroep met kaarten aan de beurt. " +
@@ -217,6 +235,11 @@ internal fun MixedDailyReviewPanel(
                             "Je kunt alleen die kaarten nogmaals bekijken of de ronde sluiten.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (notInThisRound > 0) {
+                        Text("$notInThisRound andere kaarten uit je gekozen groepen " +
+                            "zijn buiten deze korte ronde gebleven en behouden hun planning.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                     if (skippedCards.isNotEmpty()) {
                         OutlinedButton(onClick = {
                             replayCards = skippedCards.toList()
