@@ -83,9 +83,22 @@ internal fun LanguageSupportDialog(
     fun candidateAccessClass(license: String, limitation: String): String {
         val evidence = "$license $limitation".lowercase()
         val declared = license.lowercase()
+        val rightsEvidence = listOf(
+            "trainingsdatarechten", "datasetrechten", "datasetherkomst", "rechtenherkomst",
+            "corpusrechten", "training data rights", "dataset rights", "dataset provenance",
+            "dataset origin", "training data provenance", "corpus rights", "rights provenance",
+            "data provenance"
+        ).any { phrase -> evidence.contains(phrase) }
+        val rightsUnverified = listOf(
+            "niet geverifieerd", "niet onafhankelijk geverifieerd",
+            "niet onafhankelijk gecontroleerd", "niet bevestigd", "niet vastgesteld",
+            "not verified", "not independently verified", "not independently checked",
+            "not confirmed", "not established", "not audited", "unverified", "unknown"
+        ).any { phrase -> evidence.contains(phrase) }
+        val unresolvedDataRights = rightsEvidence && rightsUnverified
         return when {
-            // Unresolved upstream rights override any permissive-looking model-card label.
-            listOf(
+            // Dataset/training-data rights or provenance explicitly marked unverified override a permissive model-card label.
+            unresolvedDataRights || listOf(
                 "conflict onopgelost", "licentieconflict", "licentiecompatibiliteit",
                 "provenance onopgelost", "licentieherkomst onopgelost",
                 "license conflict", "licence conflict", "unresolved license",
@@ -147,31 +160,47 @@ internal fun LanguageSupportDialog(
     val researchSummary = remember(
         normalizedQuery, taskFilteredCandidates, modelTaskFilter, modelAccessFilter
     ) {
-        val fullSummary = buildString {
-            appendLine("Tuddy — modelonderzoek")
-            appendLine("Zoekterm: ${query.ifBlank { "(geen)" }}.")
-            appendLine("Taakfilter: ${modelTaskFilter}; licentie-/toegangsfilter: ${modelAccessFilter}.")
-            appendLine("Aantal getoonde kandidaten: ${taskFilteredCandidates.values.sumOf { it.size }}.")
-            appendLine("Onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd; labels zijn geen distributiegoedkeuring.")
+        val candidateBlocks = buildList {
             taskFilteredCandidates.forEach { (item, candidates) ->
-                appendLine()
-                appendLine("${item.title} (${item.code})")
-                appendLine(item.reason)
                 candidates.forEach { candidate ->
-                    appendLine("- ${candidate.category}: ${candidate.title}")
-                    appendLine("  Modelkaart: ${candidate.url}")
-                    appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
-                    appendLine("  Licentie-/toegangssignaal (heuristiek): ${candidateAccessClass(candidate.declaredLicense, candidate.limitation)}")
-                    appendLine("  Omvang: ${candidate.footprint}")
-                    if (candidate.directionEvidence.isNotBlank()) {
-                        appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
-                    }
-                    appendLine("  Beperking: ${candidate.limitation}")
+                    add(buildString {
+                        appendLine()
+                        appendLine("${item.title} (${item.code}) — ${item.reason}")
+                        appendLine("- ${candidate.category}: ${candidate.title}")
+                        appendLine("  Modelkaart: ${candidate.url}")
+                        appendLine("  Licentie volgens modelkaart: ${candidate.declaredLicense}")
+                        appendLine(
+                            "  Licentie-/toegangssignaal (heuristiek): " +
+                                candidateAccessClass(candidate.declaredLicense, candidate.limitation)
+                        )
+                        appendLine("  Omvang: ${candidate.footprint}")
+                        appendLine(
+                            "  Vastgezette modelrevision: " +
+                                candidate.snapshotRevision.ifBlank { "Niet vastgelegd" }
+                        )
+                        appendLine(
+                            "  Gewicht/export SHA-256: " +
+                                candidate.weightsSha256.ifBlank { "Niet vastgelegd" }
+                        )
+                        if (candidate.directionEvidence.isNotBlank()) {
+                            appendLine("  Taalrichtingen/codes (onbevestigd): ${candidate.directionEvidence}")
+                        }
+                        appendLine("  Beperking: ${candidate.limitation}")
+                    })
                 }
             }
         }
-        if (fullSummary.length <= 16_000) fullSummary
-        else fullSummary.take(15_940) + "\n[Samenvatting afgekapt op 16.000 tekens.]"
+        val summaryHeader = buildString {
+            appendLine("Tuddy — modelonderzoek")
+            appendLine("Zoekterm niet opgenomen om onbedoelde persoonlijke tekst niet te delen.")
+            appendLine("Taakfilter: ${modelTaskFilter}; licentie-/toegangsfilter: ${modelAccessFilter}.")
+            appendLine("Aantal gefilterde kandidaten: ${candidateBlocks.size}.")
+            appendLine(
+                "Onderzoekskandidaten zijn niet geïntegreerd, gedownload of op toestel gevalideerd; " +
+                    "licentie-/toegangssignalen zijn heuristieken, geen distributiegoedkeuring."
+            )
+        }
+        ModelResearchSummary.render(summaryHeader, candidateBlocks)
     }
 
     AlertDialog(
@@ -602,6 +631,14 @@ internal fun LanguageSupportDialog(
                                         ". Omvang: " + candidate.footprint + ".",
                                         style = MaterialTheme.typography.bodySmall)
                                     Text(
+                                        "Vastgezette revision: " +
+                                            candidate.snapshotRevision.ifBlank { "niet vastgelegd" } +
+                                            " · gewicht/export SHA-256: " +
+                                            candidate.weightsSha256.ifBlank { "niet vastgelegd" },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
                                         "Classificatie: " + candidateAccessClass(
                                             candidate.declaredLicense, candidate.limitation
                                         ) + " · alleen op catalogustekst gebaseerd; geen vrijgave.",
@@ -666,10 +703,12 @@ internal fun LanguageSupportDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "Controleer de volledige selectie hieronder. Dit bevat alleen openbare " +
-                            "modelkaartmetadata, zoekterm en licentie-/beperkingsnotities; geen " +
-                            "gesprekken, audio, eigen zinnen of apparaatdiagnostiek. Een gekozen " +
-                            "ontvanger kan het rapport bewaren of verder delen.",
+                        "Controleer de exportpreview hieronder. Dit bevat alleen openbare " +
+                            "modelkaartmetadata en licentie-/beperkingsnotities; de zoekterm wordt " +
+                            "niet opgenomen. Alleen volledige kandidaatblokken worden opgenomen; eventuele " +
+                            "resterende blokken worden geteld en weggelaten. Geen gesprekken, audio, eigen " +
+                            "zinnen of apparaatdiagnostiek. " +
+                            "Een gekozen ontvanger kan het rapport bewaren of verder delen.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(sharePreview, style = MaterialTheme.typography.bodySmall)
