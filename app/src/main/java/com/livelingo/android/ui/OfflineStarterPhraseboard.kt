@@ -20,8 +20,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.model.SafeCommunityPhrasebook
 
 /**
@@ -41,6 +43,10 @@ internal fun OfflineStarterPhraseboard(
     var source by remember { mutableStateOf("nl") }
     var expandedIndex by remember { mutableStateOf<Int?>(null) }
     var personalLookupOpen by remember { mutableStateOf(false) }
+    var saveIndex by remember { mutableStateOf<Int?>(null) }
+    var saveNotice by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val phraseDeck = remember(context) { PrivatePhraseDeck(context) }
     val choices = listOf("kmr" to "Kurmanji", "ckb" to "Sorani", "ps" to "Pasjtoe")
     val starter = listOf(
         "hallo" to "hello",
@@ -87,6 +93,9 @@ internal fun OfflineStarterPhraseboard(
                 Text("Uitsluitend vijf vast opgenomen begrippen, niet vrije " +
                     "zinnen, spraakherkenning of een automatisch vertaalmodel.",
                     style = MaterialTheme.typography.bodySmall)
+                if (saveNotice.isNotBlank()) Text(saveNotice,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     choices.forEach { (code, label) ->
                         TextButton(onClick = { target = code }) {
@@ -116,6 +125,9 @@ internal fun OfflineStarterPhraseboard(
                         OutlinedButton(onClick = { expandedIndex = position }) {
                             Text("▣ Toon dit woord groot")
                         }
+                        OutlinedButton(onClick = { saveIndex = position; saveNotice = "" }) {
+                            Text("Bewaar als eigen zin…")
+                        }
                         HorizontalDivider()
                     }
                 }
@@ -140,4 +152,29 @@ internal fun OfflineStarterPhraseboard(
             TextButton(onClick = onDismiss) { Text("Sluiten") }
         }
     )
+
+    saveIndex?.let { position ->
+        starter.getOrNull(position)?.let { (dutch, english) ->
+            val sourcePhrase = if (source == "nl") dutch else english
+            val translated = SafeCommunityPhrasebook.translate(source, target, sourcePhrase).getOrNull()
+            if (translated != null) {
+                OfflineStarterPhraseSaveDialog(
+                    language = target,
+                    meaningLanguage = source,
+                    initialPhrase = translated,
+                    initialMeaning = sourcePhrase,
+                    onSaveNew = { selectedLanguage, selectedPhrase, selectedMeaningLanguage, selectedMeaning ->
+                        phraseDeck.saveNew(
+                            selectedLanguage, selectedPhrase, selectedMeaningLanguage, selectedMeaning
+                        )
+                    },
+                    onSaved = {
+                        saveIndex = null
+                        saveNotice = "Voorbeeld nagelezen en als eigen offline notitie bewaard."
+                    },
+                    onDismiss = { saveIndex = null }
+                )
+            }
+        }
+    }
 }
