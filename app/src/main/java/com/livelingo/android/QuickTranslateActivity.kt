@@ -107,25 +107,25 @@ internal class QuickTranslateActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 QuickTranslateScreen(
-                text = incomingText,
-                inputNotice = inputNotice,
-                readOnly = selectionReadOnly,
-                sourceCode = sourceCode,
-                targetCode = targetCode,
-                busy = busy,
-                detectingSource = detectingSource,
-                detectionNotice = detectionNotice,
-                status = status,
-                result = translationResult,
-                onSourceSelected = { code -> changePair(source = code) },
-                onTargetSelected = { code -> changePair(target = code) },
-                onSwapLanguages = { changePair(source = targetCode, target = sourceCode) },
-                onSuggestSource = { suggestSourceLanguage() },
-                onTranslate = { startTranslation() },
-                onCopy = { status = "Vertaling gekopieerd. Tuddy bewaart geen kopie." },
-                onReturnResult = { returnTranslationToCaller() },
-                onOpenTuddy = { openTuddy() },
-                onClose = { closeAndFinish() }
+                    text = incomingText,
+                    inputNotice = inputNotice,
+                    readOnly = selectionReadOnly,
+                    sourceCode = sourceCode,
+                    targetCode = targetCode,
+                    busy = busy,
+                    detectingSource = detectingSource,
+                    detectionNotice = detectionNotice,
+                    status = status,
+                    result = translationResult,
+                    onSourceSelected = { code -> changePair(source = code) },
+                    onTargetSelected = { code -> changePair(target = code) },
+                    onSwapLanguages = { changePair(source = targetCode, target = sourceCode) },
+                    onSuggestSource = { suggestSourceLanguage() },
+                    onTranslate = { startTranslation() },
+                    onCopy = { status = "Vertaling gekopieerd. Tuddy bewaart geen kopie." },
+                    onReturnResult = { returnTranslationToCaller() },
+                    onOpenTuddy = { openTuddy() },
+                    onClose = { closeAndFinish() }
                 )
             }
         }
