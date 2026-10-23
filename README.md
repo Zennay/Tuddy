@@ -3,6 +3,10 @@
 Open **Taalondersteuning → Controleer lokale stemmen** om reeds
 geïnstalleerde, niet-netwerkafhankelijke Android-stemvarianten te bekijken.
 De volledige lijst is doorzoekbaar op stemnaam, taal/regio en engine-ID.
+Voor een soepele weergave toont de lijst de eerste 20 treffers en biedt
+**Toon volgende stemmen** om steeds 20 meer te zien; de rest blijft
+vindbaar via zoeken. Filter op **Mijn voorkeursstemmen** om alleen de zelf
+gekozen lokale stemmen te bekijken.
 Tik op **Luister** om een vaste, bij de gekozen stemtaal passende korte
 voorbeeldzin te horen. Voor talen zonder ingebouwde voorbeeldzin gebruikt Tuddy
 alleen **“1, 2, 3.”**; bij het luisteren staat de exacte tekst in beeld.
