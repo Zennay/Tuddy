@@ -2,9 +2,12 @@
 
 De persoonlijke Kurmanji-, Sorani- en Pasjtoe-zoekkaart ondersteunt nu
 meerdere zoekwoorden over beide taalvelden, favorieten als filter en
-zichtbare 20-kaartenpagina's. Taalfilters zijn horizontaal schuifbaar op
-kleine schermen. Alles blijft uitsluitend jouw eigen opgeslagen tekst;
-er wordt niets automatisch vertaald of online gezocht.
+zichtbare 20-kaartenpagina's. In **Mijn eigen offline zinnen** kun je nu ook
+favorieten rechtstreeks per kaart markeren of verwijderen en de lijst tot
+favorieten beperken. De bestaande limiet blijft 12 favorieten; markeringen
+blijven lokaal en komen niet in CSV-export terecht. Taalfilters zijn
+horizontaal schuifbaar op kleine schermen. Alles blijft uitsluitend jouw
+eigen opgeslagen tekst; er wordt niets automatisch vertaald of online gezocht.
 Zie [offline zoeken in eigen zinnen](docs/OFFLINE_PERSONAL_PHRASE_FINDER.md).
 
 ---
