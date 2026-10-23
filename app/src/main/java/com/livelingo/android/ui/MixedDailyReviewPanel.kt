@@ -87,7 +87,10 @@ internal fun MixedDailyReviewPanel(
     var hard by remember { mutableIntStateOf(0) }
     var skipped by remember { mutableIntStateOf(0) }
     var notice by remember { mutableStateOf("") }
-    val card = mixed?.getOrNull(index)
+    var skippedCards by remember { mutableStateOf<List<MixedStudyCard>>(emptyList()) }
+    var replayCards by remember { mutableStateOf<List<MixedStudyCard>?>(null) }
+    val activeCards = replayCards ?: mixed
+    val card = activeCards?.getOrNull(index)
     val rtlLanguages = setOf("ckb", "ps", "ar", "fa", "ur", "he", "sd", "ug")
 
     fun rateCurrent(known: Boolean) {
@@ -147,14 +150,27 @@ internal fun MixedDailyReviewPanel(
                     )
                     Text(
                         "${remembered} zelf onthouden · ${hard} nog oefenen · " +
-                            "${skipped} zonder beoordeling overgeslagen.",
+                            "${skippedCards.size} kaarten nog overgeslagen " +
+                            "(${skipped} overslaacties).",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        "Overgeslagen kaarten blijven volgens hun bestaande " +
-                            "herhaalplanning aan de beurt. Je kunt deze ronde sluiten.",
+                        "Overgeslagen kaarten behouden hun oorspronkelijke herhaaldatum. " +
+                            "Je kunt alleen die kaarten nogmaals bekijken of de ronde sluiten.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                    if (skippedCards.isNotEmpty()) {
+                        OutlinedButton(onClick = {
+                            replayCards = skippedCards.toList()
+                            skippedCards = emptyList()
+                            index = 0
+                            revealed = false
+                            typedAnswer = ""
+                            notice = ""
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Herhaal ${skippedCards.size} overgeslagen kaarten")
+                        }
+                    }
                 } else {
                     val (language, prompt, answer, sourceLabel) = when (card) {
                         is MixedStudyCard.Basis -> listOf(
@@ -169,7 +185,7 @@ internal fun MixedDailyReviewPanel(
                             card.row.phrase.ownMeaning,
                             "Zelfgeschreven zin · niet geverifieerd")
                     }
-                    Text("Kaart ${index + 1} / ${mixed.size} · ${language.uppercase()}",
+                    Text("Kaart ${index + 1} / ${activeCards?.size ?: 0} · ${language.uppercase()}",
                         style = MaterialTheme.typography.labelMedium)
                     Text(sourceLabel, style = MaterialTheme.typography.bodySmall)
                     TextButton(onClick = {
@@ -247,6 +263,7 @@ internal fun MixedDailyReviewPanel(
                         }
                     }
                     TextButton(onClick = {
+                        skippedCards = skippedCards + card
                         skipped++
                         index++
                         revealed = false
