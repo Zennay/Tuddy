@@ -1,7 +1,5 @@
 package com.livelingo.android
 
-import kotlin.math.roundToInt
-
 /**
  * Non-authoritative Android speech-recognizer metadata for optional HUMAN
  * review, never a substitute for audio/model validation. Vendors can omit
@@ -34,7 +32,9 @@ internal object AndroidSpeechConfidencePolicy {
         val score = scores[index]
         if (!score.isFinite() || score < 0f || score > 1f) return null
         return AndroidSpeechConfidenceHint(
-            reportedPercent = (score * 100f).roundToInt().coerceIn(0, 100),
+            // Truncate instead of rounding: any value below 0.50 must not
+            // be displayed as "50%" next to a low-confidence warning.
+            reportedPercent = (score * 100f).toInt().coerceIn(0, 100),
             needsReview = score < LOW_SCORE_THRESHOLD
         )
     }
