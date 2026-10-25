@@ -14,42 +14,50 @@ package com.livelingo.android
  * This holds only anonymous slot IDs. No caption text, language or user
  * identity is stored. Call from Android's main thread.
  */
-internal class LocalMlKitWorkBudget(
-    private val onChanged: (Int) -> Unit = {}
-) {
+internal class LocalMlKitWorkBudget private constructor() {
+    // Process-scoped: an Activity can be recreated while previously submitted
+    // Android Tasks are still active. Recreating a screen must not reset the
+    // true number of device tasks admitted by Tuddy.
+    private val observers = mutableSetOf<(Int) -> Unit>()
+    fun subscribe(listener: (Int) -> Unit): () -> Unit {
+        observers.add(listener)
+        listener(active.size)
+        return { observers.remove(listener) }
+    }
+
+    private fun publish() {
+        val count = active.size
+        observers.toList().forEach { it(count) }
+    }
     private val active = mutableSetOf<Long>()
     private var nextToken = 0L
-    private var closed = false
-
+ 
     inner class Lease internal constructor(private val token: Long) {
         private var released = false
 
         fun release() {
             if (released) return
             released = true
-            if (active.remove(token)) onChanged(active.size)
+            if (active.remove(token)) publish()
         }
     }
 
     fun acquire(): Lease? {
-        if (closed || active.size >= MAX_SUBMITTED_TASKS) return null
+        if (active.size >= MAX_SUBMITTED_TASKS) return null
         val token = ++nextToken
         active.add(token)
-        onChanged(active.size)
+        publish()
         return Lease(token)
     }
 
     fun activeCount(): Int = active.size
 
-    /** End screen ownership; late ML Kit callbacks cannot re-open admission. */
-    fun close() {
-        if (closed) return
-        closed = true
-        active.clear()
-        onChanged(0)
-    }
+    // Intentionally no screen-level close(): only the real ML Kit Task
+    // callback releases a slot. Android process death ends this memory-only
+    // accounting and the old process's work together.
 
     companion object {
         const val MAX_SUBMITTED_TASKS = 3
+        val shared = LocalMlKitWorkBudget()
     }
 }
