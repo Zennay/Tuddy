@@ -39,8 +39,8 @@ de veilige standaardroute. Na controle kun je nu ook bewust kiezen voor
 **Vertaal apart · zonder gespreksgeschiedenis**. Dit opent de bestaande
 tijdelijke lokale Android-vertaler met alleen de begrensde tekst als
 bewerkingsvrije selectie; je live gespreksregels, transcriptcorrecties en
-gesprekstalen worden niet aangepast. Een andere taalrichting kun je in dat
-scherm zelf kiezen. Zonder die expliciete tik wordt er geen model geopend
+gesprekstalen worden niet aangepast. De momenteel in Tuddy gekozen bron- en
+doeltaal worden gecontroleerd overgenomen. Je kunt ze daarna handmatig wijzigen. Zonder die expliciete tik wordt er geen model geopend
 of zin vertaald.
 
 Na een lokale vertaling kun je **Kopieer vertaling** kiezen. Het Android-klembord
