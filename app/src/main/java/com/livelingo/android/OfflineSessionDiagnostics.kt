@@ -20,6 +20,7 @@ internal data class OfflineSessionDiagnostics(
     val localTranslations: Int = 0,
     val missingTextModels: Int = 0,
     val translationFailures: Int = 0,
+    val strictRadioInterruptions: Int = 0,
     val translationLatenciesMs: List<Long> = emptyList()
 ) {
     fun asReportLines(): List<String> = listOf(
@@ -32,6 +33,7 @@ internal data class OfflineSessionDiagnostics(
         "EN -> NL completed local text translations: $enNlLocalTranslations",
         "Retryable recognizer errors: $retryableSpeechErrors",
         "Terminal recognizer errors: $terminalSpeechErrors",
+        "Strict airplane-mode radio interruptions (not proof of isolation): $strictRadioInterruptions",
         "Completed local text translations of recognized speech: $localTranslations",
         "Recognized speech with missing text model: $missingTextModels",
         "Recognized speech translation failures: $translationFailures",
