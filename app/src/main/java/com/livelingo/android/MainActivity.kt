@@ -3,6 +3,8 @@ package com.livelingo.android
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.ComponentCallbacks2
+import android.content.res.Configuration
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -2403,6 +2405,14 @@ private fun TuddyScreen(
             return
         }
         error = ""
+        // Android can report low physical memory even on versions where
+        // deprecated RUNNING_CRITICAL trim callbacks are no longer sent.
+        if (LocalMemoryPressurePolicy.isSystemLowMemory(context)) {
+            stop()
+            error = "Android meldt kritiek geheugentekort. Microfoon niet gestart; " +
+                "de tijdelijke gespreksregels zijn behouden. Probeer later opnieuw."
+            return
+        }
         // The runtime permission dialog may return after the Activity has
         // stopped. The microphone must never start from that stale callback.
         if (!MicrophoneStartPolicy.mayStart(lifecycleOwner.lifecycle.currentState) ||
@@ -3883,6 +3893,40 @@ private fun TuddyScreen(
                 error = if (uri == null) "" else "Alleen Android-bestandskeuzes zijn toegestaan."
             }
         }
+    }
+
+    // Device memory-pressure handling never deletes a private conversation.
+    // Only idle translators are closed immediately; active native ML Kit
+    // leases remain valid and are released by their existing final callback.
+    fun relieveMemoryPressure(critical: Boolean) {
+        localTranslatorPool.invalidate()
+        if (critical && (listening || recognizer != null)) {
+            stop() // Cancels microphone, speech restarts and all device guards.
+            sessionDiagnostics = sessionDiagnostics.copy(
+                memorySafetyInterruptions = sessionDiagnostics.memorySafetyInterruptions + 1
+            )
+            error = "Android meldt kritiek geheugentekort. Luisteren veilig gestopt; " +
+                "je tijdelijke gesprek is behouden. Start later zelf opnieuw."
+        }
+    }
+
+    DisposableEffect(context) {
+        val app = context.applicationContext
+        val memoryObserver = object : ComponentCallbacks2 {
+            override fun onConfigurationChanged(newConfig: Configuration) = Unit
+            override fun onLowMemory() {
+                relieveMemoryPressure(critical = true)
+            }
+            override fun onTrimMemory(level: Int) {
+                if (LocalMemoryPressurePolicy.shouldTrimCachedModels(level)) {
+                    relieveMemoryPressure(
+                        critical = LocalMemoryPressurePolicy.needsUrgentStop(context, level)
+                    )
+                }
+            }
+        }
+        app.registerComponentCallbacks(memoryObserver)
+        onDispose { app.unregisterComponentCallbacks(memoryObserver) }
     }
 
     // Activity remaining composed in the background must NOT keep the mic open.
