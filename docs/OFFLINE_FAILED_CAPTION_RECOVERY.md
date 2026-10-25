@@ -8,6 +8,34 @@ vertaling mislukt. Tuddy bewaart dan de oorspronkelijke regel in het
 tijdelijke gesprek, met status **Model ontbreekt** of **Fout**. De gebruiker
 hoeft die oorspronkelijke zin niet opnieuw in te spreken.
 
+## Geen permanent vastgelopen vertaalregels
+
+De lokale tekstvertaling heeft nu één **30-seconden-bovengrens** vanaf
+het starten van een vertaalpoging. Die limiet geldt gezamenlijk voor
+eventuele teksttaaldetectie, controle van reeds geïnstalleerde ML Kit-
+modellen en de eigenlijke vertaaluitkomst. Een Android- of ML Kit-dienst
+die geen callback terugstuurt, mag een ondertitel niet voor altijd op
+**Vertalen…** laten staan.
+
+Bij het verstrijken verandert uitsluitend de nog ongewijzigde,
+tijdelijke regel naar **Fout** met een bericht dat de vertaling lokaal
+te lang duurde. Het is nadrukkelijk *geen bewering* dat het model
+ontbreekt of dat een vertaald resultaat inhoudelijk incorrect is.
+De regel houdt zijn oorspronkelijke tekst en taalrichting. Een laat
+aangeleverd resultaat van de oude poging wordt via de verhoogde
+revisie geweigerd; het kan een nieuwe poging of menselijke wijziging
+niet overschrijven. Een voltooid resultaat beëindigt meteen de
+timer. Wissen, uit de geschiedenis verwijderen, oude regels wegwerpen
+of de Activity verlaten ruimt de bijbehorende timers op.
+
+De bestaande **↻ Probeer opnieuw**-knop herstart bewust één mislukte
+regel, ook als je eerder de **oorspronkelijke tekst** zelf hebt
+gecorrigeerd. Handmatig vastgestelde vertalingen worden hiermee
+niet overschreven: alleen regels met status **Fout** of
+**Model ontbreekt**, waarvan de huidige versie op het scherm
+niet veranderd is, kunnen worden herstart. De herstelgroep voor
+niet-gecorrigeerde regels blijft daarnaast bestaan.
+
 ## Herstel vanuit het gewone gesprek
 
 1. De knop **Herstel N mislukte offline vertalingen…** verschijnt onder de
