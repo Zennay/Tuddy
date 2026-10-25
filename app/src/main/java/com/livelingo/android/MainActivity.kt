@@ -296,6 +296,18 @@ private data class PendingArchivePhraseBatchCapture(
     val rows: List<TranscriptExportRow>
 )
 
+/** UI stages describe Android callbacks, not independent network isolation. */
+private enum class LiveSpeechPhase(val label: String) {
+    OFF("Microfoon uit · huidige ondertitels blijven tijdelijk zichtbaar"),
+    STARTING("Offline spraakherkenning starten…"),
+    READY("Microfoon actief · spreek een zin"),
+    HEARING("Spraak ontvangen · luisteren naar je zin"),
+    PROCESSING("Zin afronden · Android verwerkt de spraak"),
+    TRANSLATING("Zin ontvangen · lokale tekstvertaling loopt apart"),
+    RETRYING("Geen bruikbaar spraakresultaat · lokaal opnieuw luisteren…"),
+    INTERRUPTED("Luisteren gestopt door een Android-spraakfout · bekijk de melding")
+}
+
 private data class Line(
     val id: Long,
     val original: String,
@@ -734,6 +746,7 @@ private fun TuddyScreen(
     var pendingSpeakerExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
+    var liveSpeechPhase by remember { mutableStateOf(LiveSpeechPhase.OFF) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
     var offlineModelStatus by remember { mutableStateOf("") }
     val offlinePreparationEpoch = remember { OfflinePreparationEpoch() }
@@ -1585,6 +1598,7 @@ private fun TuddyScreen(
         recognizer = null
         if (active != null) SpeechCleanupPolicy.release(active::cancel, active::destroy)
         listening = false
+        liveSpeechPhase = LiveSpeechPhase.OFF
         partial = ""
     }
 
@@ -1839,6 +1853,7 @@ private fun TuddyScreen(
             livePhraseBatchSelection = emptySet()
             livePhraseBatchSelectionMode = false
         }
+        liveSpeechPhase = LiveSpeechPhase.STARTING
         try {
             // Every start, including a rapid restart after Android's own end-of-speech,
             // must invalidate the previous recognizer's delayed callbacks.
@@ -1857,14 +1872,32 @@ private fun TuddyScreen(
                 Build.VERSION.SDK_INT, automaticSpeechSource, offlineAvailable)
             val allowedSpeechTags = spoken.map { it.speechCode }
             val token = generation
+            // A recognizer's session epoch alone cannot reject multiple
+            // final/error callbacks emitted by the *same* Android service.
+            val turnGate = SpeechTurnCompletionGate()
             speech.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) { if (voiceSessions.isCurrent(voiceToken)) listening = true }
-                override fun onBeginningOfSpeech() { if (voiceSessions.isCurrent(voiceToken)) listening = true }
+                override fun onReadyForSpeech(params: Bundle?) {
+                    if (voiceSessions.isCurrent(voiceToken) && turnGate.isAwaitingResult()) {
+                        listening = true
+                        liveSpeechPhase = LiveSpeechPhase.READY
+                    }
+                }
+                override fun onBeginningOfSpeech() {
+                    if (voiceSessions.isCurrent(voiceToken) && turnGate.isAwaitingResult()) {
+                        listening = true
+                        liveSpeechPhase = LiveSpeechPhase.HEARING
+                    }
+                }
                 override fun onRmsChanged(rmsdB: Float) = Unit
                 override fun onBufferReceived(buffer: ByteArray?) = Unit
-                override fun onEndOfSpeech() = Unit // keep user intent active for the next utterance
+                override fun onEndOfSpeech() {
+                    if (voiceSessions.isCurrent(voiceToken) && turnGate.isAwaitingResult()) {
+                        liveSpeechPhase = LiveSpeechPhase.PROCESSING
+                    }
+                } // User intent remains active until the next local turn.
                 override fun onLanguageDetection(results: Bundle) {
-                    if (!requestLanguageSwitch || !voiceSessions.isCurrent(voiceToken)) return
+                    if (!requestLanguageSwitch || !voiceSessions.isCurrent(voiceToken) ||
+                        !turnGate.isAwaitingResult()) return
                     val switchResult = results.getInt(SpeechRecognizer.LANGUAGE_SWITCH_RESULT, -1)
                     if (switchResult == SpeechRecognizer.LANGUAGE_SWITCH_RESULT_SKIPPED_NO_MODEL) {
                         error = "Automatisch wisselen vereist geïnstalleerde lokale spraakpakketten. Kies zo nodig handmatig."
@@ -1879,6 +1912,7 @@ private fun TuddyScreen(
                 }
                 override fun onError(code: Int) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
+                    if (!turnGate.acceptTerminalError()) return
                     clearInterim()
                     val retry = ContinuousSpeechRestartPolicy.delayForError(
                         code, SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
@@ -1886,9 +1920,11 @@ private fun TuddyScreen(
                         sessionDiagnostics = sessionDiagnostics.copy(
                             retryableSpeechErrors = sessionDiagnostics.retryableSpeechErrors + 1
                         )
+                        liveSpeechPhase = LiveSpeechPhase.RETRYING
                         scheduleRestart(voiceToken, retry) { start(forceRestart = true) }
                     } else {
                         stop() // never retry permissions, unsupported languages or unknown errors
+                        liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
                         sessionDiagnostics = sessionDiagnostics.copy(
                             terminalSpeechErrors = sessionDiagnostics.terminalSpeechErrors + 1
                         )
@@ -1897,9 +1933,12 @@ private fun TuddyScreen(
                 }
                 override fun onResults(results: Bundle?) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
+                    if (!turnGate.acceptFinalResult()) return
                     val sentence = SpeechHypothesisPolicy.select(
                         results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
                     clearInterim()
+                    liveSpeechPhase = if (sentence.isNotBlank())
+                        LiveSpeechPhase.TRANSLATING else LiveSpeechPhase.RETRYING
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
                         // Only the two direction-specific validation targets
@@ -1960,7 +1999,8 @@ private fun TuddyScreen(
                     }
                 }
                 override fun onPartialResults(results: Bundle?) {
-                    if (token == generation && voiceSessions.isCurrent(voiceToken)) {
+                    if (token == generation && voiceSessions.isCurrent(voiceToken) &&
+                        turnGate.isAwaitingResult()) {
                         val latest = SpeechHypothesisPolicy.select(
                             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
                         if (latest != partial) {
@@ -2022,6 +2062,7 @@ private fun TuddyScreen(
             listening = false
             partial = ""
             clearInterim()
+            liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
             error = SafeLocalFailureText.SPEECH_START
         }
     }
@@ -4415,6 +4456,7 @@ private fun TuddyScreen(
                 interimOriginal = partial,
                 interimTranslated = partialTranslation,
                 listening = listening,
+                speechPhaseStatus = liveSpeechPhase.label,
                 fontScale = captionSize.scale,
                 onStop = { stop() },
                 onClose = { focusMode = false },
@@ -7263,6 +7305,13 @@ private fun TuddyScreen(
                         Text(if (follow) "Pauzeer volgen" else "Volg live")
                     }
                 }
+                Text(
+                    liveSpeechPhase.label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (liveSpeechPhase == LiveSpeechPhase.INTERRUPTED)
+                        MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
