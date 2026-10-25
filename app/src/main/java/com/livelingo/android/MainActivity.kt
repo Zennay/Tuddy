@@ -1911,8 +1911,8 @@ private fun TuddyScreen(
                         selectedSource, allowedSpeechTags)
                 }
                 override fun onError(code: Int) {
-                    if (!voiceSessions.isCurrent(voiceToken) ||
-                        !turnGate.acceptTerminalError()) return
+                    if (!voiceSessions.isCurrent(voiceToken)) return
+                    if (!turnGate.acceptTerminalError()) return
                     clearInterim()
                     val retry = ContinuousSpeechRestartPolicy.delayForError(
                         code, SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
@@ -1932,8 +1932,8 @@ private fun TuddyScreen(
                     }
                 }
                 override fun onResults(results: Bundle?) {
-                    if (!voiceSessions.isCurrent(voiceToken) ||
-                        !turnGate.acceptFinalResult()) return
+                    if (!voiceSessions.isCurrent(voiceToken)) return
+                    if (!turnGate.acceptFinalResult()) return
                     val sentence = SpeechHypothesisPolicy.select(
                         results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
                     clearInterim()
