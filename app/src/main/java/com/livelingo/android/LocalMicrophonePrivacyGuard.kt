@@ -50,9 +50,8 @@ internal class LocalMicrophonePrivacyGuard(context: Context) {
         ) {
             return "Android meldt een actieve oproep- of communicatiemodus."
         }
-        if (state.second != AudioManager.MODE_NORMAL &&
-            state.second != AudioManager.MODE_RINGTONE
-        ) {
+        // Ringing as well as calls/VoIP should suspend any live capture.
+        if (state.second != AudioManager.MODE_NORMAL) {
             return "Android meldt een onbekende audio-/oproepmodus."
         }
         return null
