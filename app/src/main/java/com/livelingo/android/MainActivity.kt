@@ -1397,9 +1397,14 @@ private fun TuddyScreen(
                                         // still fence stale translation results.
                                         try {
                                             task.addOnCompleteListener { completed ->
+                                                // Android/ML Kit may supply an
+                                                // oversized, malformed or
+                                                // control-filled result. A
+                                                // completed Task is not proof
+                                                // of valid caption text.
                                                 val output = if (completed.isSuccessful) {
                                                     runCatching { completed.result }.getOrNull()
-                                                        ?.takeIf { it.isNotBlank() }
+                                                        ?.let(LocalTextBoundaryPolicy::captionTranslation)
                                                 } else null
                                                 try {
                                                     translator.close()
@@ -1408,7 +1413,11 @@ private fun TuddyScreen(
                                                 }
                                                 updateLine(
                                                     id,
-                                                    output ?: SafeLocalFailureText.TRANSLATION,
+                                                    output ?: if (completed.isSuccessful)
+                                                        "Lokale vertaler gaf ongeldige of te lange " +
+                                                            "tekst terug. Het origineel blijft staan; " +
+                                                            "probeer bewust opnieuw. Geen online fallback."
+                                                    else SafeLocalFailureText.TRANSLATION,
                                                     if (output != null) "Lokaal vertaald" else "Fout",
                                                     token, revision
                                                 )
