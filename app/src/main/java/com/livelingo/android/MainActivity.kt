@@ -2672,11 +2672,17 @@ private fun TuddyScreen(
                         } else {
                             // Preserve the normal, previously verified live
                             // caption path and its bounded retention order.
-                            lines.add(Line(
-                                id, sentence, "Vertalen…", "Bezig",
-                                observedSource, selectedTarget,
-                                lowAndroidConfidencePercent = lowAndroidScore
-                            ))
+                            // Preserve the established live-caption admission
+                            // and retention ordering before attaching metadata.
+                            lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
+                            if (lowAndroidScore != null) {
+                                val captionIndex = lines.lastIndex
+                                if (captionIndex >= 0 && lines[captionIndex].id == id) {
+                                    lines[captionIndex] = lines[captionIndex].copy(
+                                        lowAndroidConfidencePercent = lowAndroidScore
+                                    )
+                                }
+                            }
                         }
                         val suggestions = OfflineSpeechCorrectionChoices.fromDeviceResults(
                             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION),
