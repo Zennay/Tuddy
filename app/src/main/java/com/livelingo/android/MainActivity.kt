@@ -1492,7 +1492,18 @@ private fun TuddyScreen(
         // classifier looking at ASR text cannot prove which speech model
         // listened: guessing again here silently mistranslates short speech.
         // For explicitly typed input the source is already user-reviewed.
-        translateResolved(text, id, sourceCode, targetCode, token, revision)
+        // Explicitly pass even the Android-confirmed BCP-47 source through
+        // ML Kit's supported TEXT catalog: never let a community preview,
+        // unexpected provider tag or unlicensed speech language become a
+        // downloadable/online translator source.
+        val catalogSource = TranslateLanguage.fromLanguageTag(sourceCode)
+            ?.takeIf { it in TargetCatalog.codes }
+        if (catalogSource == null) {
+            updateLine(id, "Deze brontaal is niet beschikbaar voor lokale tekstvertaling.",
+                "Fout", token, revision)
+            return
+        }
+        translateResolved(text, id, catalogSource, targetCode, token, revision)
     }
 
     /**
