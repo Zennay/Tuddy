@@ -185,6 +185,40 @@ Android-vliegtuigmodus of offline spraakpakketten. De keuze leeft
 alleen tijdens deze app-sessie, slaat geen tekst op en maakt geen
 cloudfallback of download mogelijk.
 
+## Menselijke review bij door Android laag beoordeelde spraak
+
+Androids on-device SpeechRecognizer kan naast de herkende tekst ook
+optionele `CONFIDENCE_SCORES` teruggeven. Tuddy koppelt uitsluitend
+een **geldige score op dezelfde positie als de daadwerkelijk gekozen
+herkenningshypothese** aan de tijdelijke gespreksregel. Een ontbrekende
+score, een Android-onbekendwaarde (-1), een niet-eindig getal of een
+score buiten 0–1 wordt niet verzonnen of gebruikt.
+
+Een door Android gerapporteerde score onder **0,50** toont een
+zichtbare waarschuwing in de continue transcriptweergave, met een
+rechtstreekse **Controleer deze herkende zin**-actie. Wanneer luisteren
+gestopt is, opent deze actie de bestaande handmatige correctie, waarna
+alle normale revisie- en vertaalbeveiligingen blijven gelden. Na een
+eigen tekstcorrectie krijgt de menselijke invoer voorrang op de
+oude apparaatwaarschuwing. Ook bij pauze van lokale vertaling blijft
+de herkenningswaarschuwing bij de originele zin aanwezig.
+
+In **Eén zin opnemen** verschijnt dezelfde waarschuwing al in het
+privéreviewvenster, vóór de gebruiker de herkenningssuggestie
+goedkeurt of verwerpt. Het scherm behoudt de bewerkbare originele
+tekst, alternatieve Android-hypothesen en expliciete bevestiging.
+Een niet-gerapporteerde score wordt niet als positief beoordeeld.
+
+**Belangrijk:** Android/leveranciersscores zijn niet noodzakelijk
+gekalibreerd en geen vastgestelde kans dat een zin klopt. Hoge scores
+bewijzen niets; lage scores kunnen correct gesproken woorden betreffen.
+Tuddy verandert geen bronzin automatisch, weigert geen audio,
+markeert geen voltooide vertalingen als gevalideerd en verandert
+de modellen niet op basis van een score. De metadata blijven
+uitsluitend bij RAM-gespreksregels; export en gedeelde tekst nemen
+deze scores niet op. Werkelijke spraakkwaliteit vereist menselijke
+toestelproeven en onafhankelijke taalreview.
+
 ## Gates
 
 Deze mijlpaal vereist de bestaande Android GitHub-build en source-head
