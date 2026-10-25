@@ -18,6 +18,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
@@ -71,6 +73,10 @@ internal fun FocusTranscriptDialog(
     val listState = rememberLazyListState()
     val context = LocalContext.current
     var followLive by remember { mutableStateOf(true) }
+    // RAM-only focused reading: never persist a text selection or auto-advance
+    // to a newly arriving caption while the user is reading a prior line.
+    var stepReading by remember { mutableStateOf(false) }
+    var stepCaptionId by remember { mutableStateOf<Long?>(null) }
     var speakerFilter by remember { mutableStateOf<String?>(null) }
     var captionQuery by remember { mutableStateOf("") }
     var onlyPinned by remember { mutableStateOf(false) }
@@ -87,7 +93,12 @@ internal fun FocusTranscriptDialog(
     )
     val displayedCaptions = if (onlyPinned && !archiveMode)
         matchedCaptions.filter { it.id in pinnedCaptionIds } else matchedCaptions
-    val showInterim = !archiveMode && speakerFilter == null &&
+    val focusedIndex = displayedCaptions.indexOfFirst { it.id == stepCaptionId }
+        .takeIf { it >= 0 } ?: displayedCaptions.lastIndex
+    val renderedCaptions = if (stepReading)
+        displayedCaptions.getOrNull(focusedIndex)?.let { listOf(it) }.orEmpty()
+    else displayedCaptions
+    val showInterim = !stepReading && !archiveMode && speakerFilter == null &&
         captionQuery.isBlank() && !onlyPinned
     val manualScroll = remember {
         object : NestedScrollConnection {
@@ -100,14 +111,22 @@ internal fun FocusTranscriptDialog(
         }
     }
 
-    LaunchedEffect(captionQuery, speakerFilter, onlyPinned) {
-        if (captionQuery.isNotBlank() || onlyPinned) listState.scrollToItem(0)
+    LaunchedEffect(captionQuery, speakerFilter, onlyPinned, stepReading) {
+        if (stepReading) {
+            // A changed filter never silently reselects an unrelated hidden
+            // caption; the final *visible* caption becomes the new starting point.
+            stepCaptionId = displayedCaptions.lastOrNull()?.id
+            listState.scrollToItem(0)
+        } else if (captionQuery.isNotBlank() || onlyPinned) listState.scrollToItem(0)
+    }
+    LaunchedEffect(stepReading, stepCaptionId) {
+        if (stepReading) listState.scrollToItem(0)
     }
 
     LaunchedEffect(speakerFilter, displayedCaptions.size,
         displayedCaptions.lastOrNull()?.translated,
-        interimOriginal, interimTranslated, followLive) {
-        if (followLive && (displayedCaptions.isNotEmpty() ||
+        interimOriginal, interimTranslated, followLive, stepReading) {
+        if (!stepReading && followLive && (displayedCaptions.isNotEmpty() ||
                 (showInterim && interimOriginal.isNotBlank()))) {
             val index = if (showInterim && interimOriginal.isNotBlank()) displayedCaptions.size
                 else (displayedCaptions.size - 1).coerceAtLeast(0)
@@ -157,9 +176,63 @@ internal fun FocusTranscriptDialog(
                             }
                             followLive = true
                         },
-                        enabled = !followLive
+                        enabled = !followLive && !stepReading
                     ) { Text(if (archiveMode) "↓ Laatste archiefregel" else
                         if (followLive) "Live ✓" else "Volg live") }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            stepReading = !stepReading
+                            if (stepReading) {
+                                followLive = false
+                                stepCaptionId = displayedCaptions.lastOrNull()?.id
+                            } else stepCaptionId = null
+                        }
+                    ) {
+                        Text(if (stepReading) "Toon alle gespreksregels"
+                            else "Lees één zin tegelijk")
+                    }
+                }
+                if (stepReading) {
+                    Text(
+                        "Rustige tekstweergave zonder interactieve woordkaarten of " +
+                            "automatische sprongen. Je microfooninstelling verandert niet.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(
+                            enabled = focusedIndex > 0,
+                            onClick = {
+                                stepCaptionId = displayedCaptions.getOrNull(focusedIndex - 1)?.id
+                                followLive = false
+                            }
+                        ) { Text("← Vorige zin") }
+                        Text(
+                            if (focusedIndex >= 0)
+                                "${focusedIndex + 1} van ${displayedCaptions.size}"
+                            else "0 van 0",
+                            modifier = Modifier.weight(1f)
+                                .semantics { heading() },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        TextButton(
+                            enabled = focusedIndex >= 0 &&
+                                focusedIndex < displayedCaptions.lastIndex,
+                            onClick = {
+                                stepCaptionId = displayedCaptions.getOrNull(focusedIndex + 1)?.id
+                                followLive = false
+                            }
+                        ) { Text("Volgende zin →") }
+                    }
                 }
                 if (!archiveMode && uncertainSpeechCount > 0 &&
                     onReviewUncertainSpeech != null) {
@@ -356,7 +429,10 @@ internal fun FocusTranscriptDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Text(
-                    "Tik in een afgeronde zin of vertaling op een woord voor een lokale woordkaart. " +
+                    if (stepReading)
+                        "Eén tweetalige gespreksregel in leesvolgorde. " +
+                            "Gebruik Vorige/Volgende; er wordt geen spraak automatisch afgespeeld."
+                    else "Tik in een afgeronde zin of vertaling op een woord voor een lokale woordkaart. " +
                         "Zoekmarkering blijft zichtbaar. Geen online woordenboek of automatische betekenis.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -368,7 +444,7 @@ internal fun FocusTranscriptDialog(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
-                    if (displayedCaptions.isEmpty() && (!showInterim || interimOriginal.isBlank())) {
+                    if (renderedCaptions.isEmpty() && (!showInterim || interimOriginal.isBlank())) {
                         item(key = "empty") {
                             Text(
                                 if (archiveMode) "Geen regels in deze archiefselectie. Sluit en wijzig de zoekterm."
@@ -384,8 +460,8 @@ internal fun FocusTranscriptDialog(
                             )
                         }
                     }
-                    items(displayedCaptions, key = { it.id }) { line ->
-                        val highlightLatestFinal = listening && followLive && !archiveMode &&
+                    items(renderedCaptions, key = { it.id }) { line ->
+                        val highlightLatestFinal = !stepReading && listening && followLive && !archiveMode &&
                             captionQuery.isBlank() && speakerFilter == null && !onlyPinned &&
                             interimOriginal.isBlank() && line.original.isNotBlank() &&
                             line.id == displayedCaptions.lastOrNull()?.id
@@ -495,7 +571,37 @@ internal fun FocusTranscriptDialog(
                                             textDirection = TextDirection.ContentOrRtl
                                         ))
                                 }
-                                if (showColumns) {
+                                if (stepReading) {
+                                    // Plain text gives TalkBack one stable original and one
+                                    // stable translated span instead of dozens of tappable words.
+                                    Text(
+                                        "Origineel · ${line.sourceCode.uppercase()}",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        modifier = Modifier.semantics { heading() }
+                                    )
+                                    Text(
+                                        line.original,
+                                        style = MaterialTheme.typography.headlineSmall.copy(
+                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
+                                            textDirection = TextDirection.ContentOrRtl
+                                        )
+                                    )
+                                    Text(
+                                        "Vertaling · ${line.targetCode.uppercase()}",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        modifier = Modifier.semantics { heading() }
+                                    )
+                                    Text(
+                                        if (line.status in setOf("Lokaal", "Lokaal vertaald"))
+                                            line.translated
+                                        else "Nog geen afgeronde lokale vertaling: ${line.status}",
+                                        style = MaterialTheme.typography.headlineSmall.copy(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
+                                            textDirection = TextDirection.ContentOrRtl
+                                        )
+                                    )
+                                } else if (showColumns) {
                                     BilingualCaptionColumns(
                                         original = line.original,
                                         translation = line.translated,
