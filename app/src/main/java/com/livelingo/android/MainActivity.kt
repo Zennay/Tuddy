@@ -3435,6 +3435,24 @@ private fun TuddyScreen(
                     }
                 }
             }
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                // ON_PAUSE happens when focus moves to a different app in
+                // Android split-screen even if Tuddy remains STARTED/visible.
+                // Never continue on-device capture or local TTS in that state.
+                val wasCapturing = listening || recognizer != null
+                val hadPrivateDraft = pendingSingleSpeechReview != null
+                pendingSingleSpeechReview = null
+                if (wasCapturing) {
+                    stop() // Cancels microphone, restart, one-shot and observers.
+                } else {
+                    captionSpeaker.stop()
+                }
+                if (wasCapturing || hadPrivateDraft) {
+                    error = "Tuddy verloor de Android-focus: microfoon gestopt en " +
+                        "onbevestigde één-zinsherkenning gewist. " +
+                        "Tik opnieuw op Luister wanneer Tuddy actief is."
+                }
+            }
             if (event == Lifecycle.Event.ON_STOP) pendingSingleSpeechReview = null
             if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) closeSpeechCatalog()
