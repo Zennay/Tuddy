@@ -27,6 +27,9 @@ import android.os.Looper
 internal class LocalPlaybackDeviceSession(context: Context) {
     private val appContext = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
+    // Native headset/media pause or stop controls are only live for an
+    // explicitly requested local TTS utterance, never in the background.
+    private val mediaControls = PrivatePlaybackMediaControls(appContext)
     private val manager: AudioManager? =
         appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
 
@@ -106,6 +109,14 @@ internal class LocalPlaybackDeviceSession(context: Context) {
                 return false
             }
             everHadHeadset = everHadHeadset || nowConnected
+            // Focus and route must already be safe before advertising a
+            // cancellable media session. No media PLAY/RESUME is published.
+            if (!mediaControls.open {
+                    interrupt("Voorlezen gestopt via Android-mediabediening of headsetknop.")
+                }) {
+                end() // No audio may begin if the stop route is unavailable.
+                return false
+            }
             return true
         } catch (_: RuntimeException) {
             end()
@@ -134,6 +145,7 @@ internal class LocalPlaybackDeviceSession(context: Context) {
     }
 
     fun end() {
+        mediaControls.close() // Destroy media callbacks before ending focus.
         active = false
         interruption = null
         everHadHeadset = false
