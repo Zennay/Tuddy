@@ -94,6 +94,17 @@ Tuddy-gesprek. Er is geen nieuwe machtiging, stemdownload, online-TTS
 of modelondersteuning nodig. Zie
 [ANDROID_INSTALLED_VOICE_PICKER.md](ANDROID_INSTALLED_VOICE_PICKER.md).
 
+## Origineel en vertaling na elkaar beluisteren
+
+Na een **voltooide** lokale vertaling biedt het bestaande
+voorleesmenu nu ook **Origineel → vertaling · normaal** en
+**Origineel → vertaling · langzaam** aan. Tuddy controleert
+vooraf beide geïnstalleerde, niet-netwerkafhankelijke Android-stemmen,
+gebruikt eenmalig audiofocus en spreekt pas de eerste zin als
+beide stemmen beschikbaar zijn. Na de tweede zin, een hoofdtelefoon-
+of focusonderbreking, Stop of achtergrond wordt TTS beëindigd.
+Er wordt niets automatisch gedeeld of teruggeschreven naar de bronapp.
+
 ## Privacy en grenzen
 
 De functie verwerkt uitsluitend geselecteerde `text/plain`-tekst, begrensd
