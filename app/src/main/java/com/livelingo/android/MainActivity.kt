@@ -76,6 +76,7 @@ import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.LiveMicrophonePermissionControls
 import com.livelingo.android.ui.PrivateConversationCurtainDialog
+import com.livelingo.android.ui.PrivateIdleCurtainControls
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
 import com.livelingo.android.ui.FocusCaptionLine
@@ -386,6 +387,26 @@ private data class PendingLauncherShortcut(
 )
 
 class MainActivity : ComponentActivity() {
+    // The timer receives only foreground user-interaction events, never text.
+    private val idleCurtain = PrivateIdleConversationCurtain(this)
+
+    internal fun setIdleCurtainCallback(callback: (() -> Unit)?) {
+        if (callback == null) idleCurtain.detach() else idleCurtain.attach(callback)
+    }
+
+    internal fun changeIdleCurtainMinutes(minutes: Int): Boolean =
+        idleCurtain.changeMinutes(minutes)
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        idleCurtain.onUserInteraction()
+    }
+
+    override fun onPause() {
+        idleCurtain.onBackground()
+        super.onPause()
+    }
+
     // Lives only in Activity memory; no savedInstanceState or external text logs.
     private var pendingExternalText by mutableStateOf<IncomingSharedText?>(null)
     private var pendingViewedSubtitle by mutableStateOf<IncomingViewedSubtitleDocument?>(null)
@@ -440,6 +461,7 @@ class MainActivity : ComponentActivity() {
         // A quick-translation Activity can change this shared preference.
         // Restore the actual window flag before the first resumed frame.
         PrivateScreenShield.restore(this)
+        idleCurtain.onForeground()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -546,6 +568,10 @@ private fun TuddyScreen(
         mutableStateOf(PrivateScreenShield.enabled(context))
     }
     var privateScreenShieldNotice by remember { mutableStateOf("") }
+    var idleCurtainMinutes by remember(context) {
+        mutableIntStateOf(PrivateIdleConversationCurtain.readMinutes(context))
+    }
+    var idleCurtainNotice by remember { mutableStateOf("") }
     val lifecycleOwner = LocalLifecycleOwner.current
     val colors = darkColorScheme(
         primary = androidx.compose.ui.graphics.Color(0xFFAB9BFF),
@@ -2240,6 +2266,19 @@ private fun TuddyScreen(
         focusMode = false
         liveTableOpen = false
         privateCurtainOpen = true
+    }
+
+    // Only the currently visible, uncovered Tuddy screen owns the callback.
+    // Pausing the Activity cancels its timer; returning cannot replay a stale
+    // hidden-screen deadline. Revealing the neutral cover arms a new interval.
+    DisposableEffect(screenActivity, privateCurtainOpen, idleCurtainMinutes) {
+        val activity = screenActivity as? MainActivity
+        if (!privateCurtainOpen && idleCurtainMinutes > 0) {
+            activity?.setIdleCurtainCallback { coverPrivateConversation() }
+        } else {
+            activity?.setIdleCurtainCallback(null)
+        }
+        onDispose { activity?.setIdleCurtainCallback(null) }
     }
 
     fun closeSpeechCatalog() {
@@ -9425,6 +9464,23 @@ private fun TuddyScreen(
                 )
                 if (privateScreenShieldNotice.isNotBlank())
                     Text(privateScreenShieldNotice, style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider()
+                PrivateIdleCurtainControls(
+                    minutes = idleCurtainMinutes,
+                    notice = idleCurtainNotice,
+                    onChange = { minutes ->
+                        val updated = (screenActivity as? MainActivity)
+                            ?.changeIdleCurtainMinutes(minutes) == true
+                        if (updated) idleCurtainMinutes = minutes
+                        idleCurtainNotice = if (updated)
+                            if (minutes == 0)
+                                "Automatisch afdekken uitgeschakeld."
+                            else
+                                "Na $minutes minuten zonder bediening wordt het " +
+                                    "gesprek neutraal afgedekt; luisteren en audio stoppen."
+                        else "De privacykeuze kon niet worden opgeslagen."
+                    }
+                )
                 HorizontalDivider()
                 Text("Privacy · maximale microfoonsessieduur",
                     style = MaterialTheme.typography.titleSmall)
