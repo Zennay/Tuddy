@@ -6843,7 +6843,7 @@ private fun TuddyScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text("Tuddy", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                Text("Gesprekken begrijpen, ook zonder internet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Luister, lees mee en vertaal lokaal", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Kies je spreektaal en vertaling. Een taalkeuze installeert geen offline model.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -7077,7 +7077,7 @@ private fun TuddyScreen(
                         error = ""
                     }) { Text("Wis gesprek") }
                     TextButton(onClick = { follow = !follow }) {
-                        Text(if (follow) "Live ✓" else "Volg live")
+                        Text(if (follow) "Pauzeer volgen" else "Volg live")
                     }
                 }
                 Row(
@@ -7152,7 +7152,7 @@ private fun TuddyScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(if (advancedActionsOpen) "Verberg extra functies"
-                        else "Meer functies · oefenen, importeren en instellingen")
+                        else "Meer functies · instellingen, oefenen en bestanden")
                 }
                 if (advancedActionsOpen) {
                     Column(
