@@ -11,9 +11,11 @@ zijn aandacht elders heeft.
 
 ## Gedeelde controle in de echte app
 
-De bestaande `MicrophoneStartPolicy` eist nu expliciet
-`Lifecycle.State.RESUMED` bij alle spraakstarts. Dit geldt ook voor
-automatische herkenningsherstarts en terugkerende
+De bestaande algemene `MicrophoneStartPolicy` houdt zijn
+compatibele `STARTED`-controle voor de levenscyclus. De daadwerkelijke
+microfoonstart in `MainActivity` vereist **daarbovenop expliciet**
+`Lifecycle.State.RESUMED`. Dat geldt zowel voor de eerste
+herkenningsstart als voor automatische herstarts en terugkerende
 `RECORD_AUDIO`-toestemmingscallbacks. De app zet geen Android-
 toestemming zelfstandig aan en start **nooit** automatisch opnieuw
 wanneer het scherm terugkomt.
