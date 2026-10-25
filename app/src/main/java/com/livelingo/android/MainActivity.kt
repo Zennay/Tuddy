@@ -86,6 +86,8 @@ import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.FailedCaptionPair
 import com.livelingo.android.ui.OfflineFailedCaptionsDialog
+import com.livelingo.android.ui.UncertainSpeechReviewDialog
+import com.livelingo.android.ui.UncertainSpeechReviewItem
 import com.livelingo.android.ui.PausedCaptionChoice
 import com.livelingo.android.ui.PausedCaptionReviewDialog
 import com.livelingo.android.ui.SingleSentenceSpeechReviewDialog
@@ -949,6 +951,10 @@ private fun TuddyScreen(
     var pendingTranslationCancelNotice by remember { mutableStateOf("") }
     // Only RAM-only retries; never mutate a completed or human-corrected row.
     var failedCaptionRecoveryOpen by remember { mutableStateOf(false) }
+    // Explicit, session-only triage. Acknowledging a machine warning only
+    // removes it from this review queue; it NEVER verifies spoken words.
+    var uncertainSpeechReviewOpen by remember { mutableStateOf(false) }
+    var seenUncertainSpeechIds by remember { mutableStateOf(setOf<Long>()) }
     var failedCaptionRecoveryBusy by remember { mutableStateOf(false) }
     var failedCaptionRecoveryNotice by remember { mutableStateOf("") }
     var failedCaptionRecoveryRevision by remember { mutableIntStateOf(0) }
@@ -4084,6 +4090,8 @@ private fun TuddyScreen(
             screenLockGateArmed = false
             pendingSpeechSettingsReturnTag = null
             generation++
+            uncertainSpeechReviewOpen = false
+            seenUncertainSpeechIds = emptySet()
             pendingManualCaptionUndo = null
             pendingTranslationCancelSelection = null
             pausedCaptionReviewEpoch++
@@ -4484,11 +4492,69 @@ private fun TuddyScreen(
         }.sortedWith(compareByDescending<FailedCaptionPair> { it.count }
             .thenBy { it.source }.thenBy { it.target })
 
+    val unreviewedSpeechRows = lines.filter { row ->
+        row.lowAndroidConfidencePercent != null && !row.userCorrected &&
+            row.id !in seenUncertainSpeechIds && row.original.isNotBlank()
+    }
+    val uncertainSpeechChoices = unreviewedSpeechRows.takeLast(30).asReversed().map { row ->
+        UncertainSpeechReviewItem(
+            id = row.id,
+            original = row.original,
+            sourceCode = row.sourceCode,
+            targetCode = row.targetCode,
+            confidencePercent = row.lowAndroidConfidencePercent!!,
+            translationRevision = row.translationRevision,
+            conversationGeneration = generation
+        )
+    }
+
     LaunchedEffect(listening) {
-        if (listening) voicePickerLanguageTag = null
+        if (listening) {
+            voicePickerLanguageTag = null
+            uncertainSpeechReviewOpen = false
+        }
     }
 
     MaterialTheme(colorScheme = colors) {
+        if (uncertainSpeechReviewOpen && !listening) {
+            UncertainSpeechReviewDialog(
+                candidates = uncertainSpeechChoices,
+                totalRemaining = unreviewedSpeechRows.size,
+                onSeen = { reviewed ->
+                    val current = lines.firstOrNull { it.id == reviewed.id }
+                    if (!listening && current != null &&
+                        reviewed.conversationGeneration == generation &&
+                        current.original == reviewed.original &&
+                        current.sourceCode == reviewed.sourceCode &&
+                        current.targetCode == reviewed.targetCode &&
+                        current.translationRevision == reviewed.translationRevision &&
+                        current.lowAndroidConfidencePercent == reviewed.confidencePercent &&
+                        !current.userCorrected) {
+                        // Bound memory by currently retained conversation rows.
+                        val retainedIds = lines.map { it.id }.toSet()
+                        seenUncertainSpeechIds =
+                            (seenUncertainSpeechIds + reviewed.id).intersect(retainedIds)
+                    }
+                },
+                onCorrect = { reviewed ->
+                    val current = lines.firstOrNull { it.id == reviewed.id }
+                    if (!listening && current != null &&
+                        reviewed.conversationGeneration == generation &&
+                        current.original == reviewed.original &&
+                        current.sourceCode == reviewed.sourceCode &&
+                        current.targetCode == reviewed.targetCode &&
+                        current.translationRevision == reviewed.translationRevision &&
+                        current.lowAndroidConfidencePercent == reviewed.confidencePercent &&
+                        !current.userCorrected) {
+                        uncertainSpeechReviewOpen = false
+                        editingCaptionId = current.id
+                        captionCorrectionDraft = current.original
+                        correctionNotice = ""
+                    }
+                },
+                onDismiss = { uncertainSpeechReviewOpen = false }
+            )
+        }
         pendingSingleSpeechReview?.let { review ->
             SingleSentenceSpeechReviewDialog(
                 original = review.original,
@@ -5518,6 +5584,13 @@ private fun TuddyScreen(
                 captureMode = captureMode.label,
                 translationPaused = speechTranslationPaused,
                 pendingTranslationCount = lines.count { it.status == "Bezig" },
+                uncertainSpeechCount = unreviewedSpeechRows.size,
+                onReviewUncertainSpeech = {
+                    if (!listening && unreviewedSpeechRows.isNotEmpty()) {
+                        focusMode = false
+                        uncertainSpeechReviewOpen = true
+                    }
+                },
                 onToggleTranslationPaused = {
                     setSpeechTranslationPaused(!speechTranslationPaused)
                 },
@@ -6906,6 +6979,13 @@ private fun TuddyScreen(
                                     if (line.lowAndroidConfidencePercent != null &&
                                         !line.userCorrected) {
                                         Text(
+                                            if (line.id in seenUncertainSpeechIds)
+                                                "Door jou bekeken in deze sessie; " +
+                                                "de Android-zekerheid blijft ongeverifieerd."
+                                            else "Nog niet bekeken in de controlelijst.",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                        Text(
                                             "⚠ Android meldde lage spraakzekerheid (" +
                                                 "${line.lowAndroidConfidencePercent}%). " +
                                                 "Dit is geen gekalibreerde kans op een fout.",
@@ -8146,6 +8226,8 @@ private fun TuddyScreen(
         // explicit confirmation: a single mis-tap should not destroy live work.
         val clearCurrentConversation: () -> Unit = {
                         generation++
+                        uncertainSpeechReviewOpen = false
+                        seenUncertainSpeechIds = emptySet()
                         pendingManualCaptionUndo = null
                         pendingTranslationCancelSelection = null
                         pendingTranslationCancelNotice = ""
@@ -9656,6 +9738,15 @@ private fun TuddyScreen(
                     ) {
                         Text("✓ Kies overgeslagen zinnen om lokaal te vertalen " +
                             "(${lines.count { it.status == "Gepauzeerd" }})")
+                    }
+                }
+                if (unreviewedSpeechRows.isNotEmpty()) {
+                    OutlinedButton(
+                        enabled = !listening,
+                        onClick = { uncertainSpeechReviewOpen = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("⚠ Controleer ${unreviewedSpeechRows.size} onzekere spraakzinnen…")
                     }
                 }
                 if (failedCaptionPairs.isNotEmpty()) {

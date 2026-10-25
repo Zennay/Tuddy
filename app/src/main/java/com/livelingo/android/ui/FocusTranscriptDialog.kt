@@ -49,6 +49,8 @@ internal fun FocusTranscriptDialog(
     captureMode: String = "Doorlopend",
     translationPaused: Boolean = false,
     pendingTranslationCount: Int = 0,
+    uncertainSpeechCount: Int = 0,
+    onReviewUncertainSpeech: (() -> Unit)? = null,
     onToggleTranslationPaused: (() -> Unit)? = null,
     onToggleCaptureMode: (() -> Unit)? = null,
     fontScale: Float,
@@ -157,6 +159,21 @@ internal fun FocusTranscriptDialog(
                         enabled = !followLive
                     ) { Text(if (archiveMode) "↓ Laatste archiefregel" else
                         if (followLive) "Live ✓" else "Volg live") }
+                }
+                if (!archiveMode && uncertainSpeechCount > 0 &&
+                    onReviewUncertainSpeech != null) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !listening,
+                        onClick = onReviewUncertainSpeech
+                    ) {
+                        Text("⚠ ${uncertainSpeechCount} onzekere spraakzinnen controleren")
+                    }
+                    Text(
+                        "Androids zekerheidsmelding is geen vastgestelde fout; " +
+                            "alleen jij kunt de uitspraak controleren.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
                 if (!archiveMode && onToggleTranslationPaused != null) {
                     OutlinedButton(
