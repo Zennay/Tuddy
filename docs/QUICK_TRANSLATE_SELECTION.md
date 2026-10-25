@@ -181,6 +181,35 @@ meer aan en sluit de native client pas wanneer die taak klaar is;
 de bestaande procesbrede werkbeperking blijft daarom gereserveerd
 tot Android zijn afronding meldt.
 
+## Menselijke correctie vóór uitvoer naar een andere app
+
+Na succesvolle lokale ML Kit-vertaling zie je **Controleer of pas
+vertaling handmatig aan**. Daarmee kun je het volledige resultaat
+eerst lezen en in het tijdelijke invoerveld verbeteren, ook wanneer
+de oorspronkelijke selectie alleen-lezen is.
+
+- Tijdens het bewerken blijven voorlezen, klembord, Android-delen en
+  vervangen in de oorspronkelijke app uitgeschakeld. De oorspronkelijke
+  ML Kit-uitkomst blijft apart **alleen in het werkgeheugen** beschikbaar.
+- **Neem correctie over** accepteert uitsluitend niet-lege tekst van
+  maximaal **8.000 UTF-16-eenheden**, met geldige Unicode en zonder
+  verborgen besturingstekens. Er wordt nooit stilzwijgend een lange
+  correctie afgekapt. De gecorrigeerde versie wordt de tekst voor
+  de bestaande uitvoeracties, pas als de gebruiker die daarna
+  afzonderlijk aanklikt.
+- **Annuleer** laat de al beschikbare vertaling onveranderd.
+  **Herstel oorspronkelijke ML Kit-vertaling** maakt een handmatige
+  wijziging ongedaan zonder opnieuw te vertalen of modellen te downloaden.
+- Een handmatige correctie is **geen linguïstische goedkeuring**
+  door Tuddy. Bij een andere bron/doeltaal of nieuwe vertaalpoging,
+  schermverlaten, Android-focusverlies en Activity-vernietiging
+  verdwijnen concept, correctie en herstelkopie uit de schermstatus.
+  Geen voorkeur, conversatiearchief, analytische gebeurtenis of
+  extern netwerkverzoek wordt hiervoor aangemaakt.
+- Een alleen-lezen Android-bronapp kan nog steeds niet via
+  `ACTION_PROCESS_TEXT` worden overschreven; kopiëren of delen blijven
+  afzonderlijke, bewuste keuzes met de gebruikelijke Android-privacyrisico's.
+
 ## Privacy en grenzen
 
 De functie verwerkt uitsluitend geselecteerde `text/plain`-tekst, begrensd
