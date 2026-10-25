@@ -3424,6 +3424,7 @@ private fun TuddyScreen(
                 // device preference; refresh after returning to the app.
                 headphonesOnlyPlayback =
                     PrivatePlaybackRoutingPreference.headphonesOnly(context)
+                clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(context)
                 val requestedTag = pendingSpeechSettingsReturnTag
                 if (requestedTag != null) {
                     pendingSpeechSettingsReturnTag = null
