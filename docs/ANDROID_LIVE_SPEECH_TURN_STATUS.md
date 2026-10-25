@@ -44,6 +44,41 @@ lifecycle gereset. Gewone uitval blijft zonder cloudfallback; alleen
 de bestaande beperkte retry voor `NO_MATCH` en `SPEECH_TIMEOUT`
 mag de microfoon opnieuw starten.
 
+## Herstel als Android geen enkel eindcallback terugstuurt
+
+Sommige vendorimplementaties van Androids **on-device** spraakherkenner
+kunnen tijdens een luisterronde volledig blijven hangen: geen
+`onResults`, geen `onError` en geen volgende gespreksregel. Een normale
+stilte leidt doorgaans tot een Android `NO_MATCH` of
+`SPEECH_TIMEOUT`; deze aparte bescherming is alleen voor
+**uitblijvende terminale callbacks**.
+
+- Tuddy geeft iedere *nieuwe* herkenner een eigen **60-secondenlimiet**,
+  onafhankelijk van tussenteksten. Een herhaalde partial-callback mag
+  niet eindeloos de microfoon openhouden.
+- Een normaal eindresultaat of echte terminale fout annuleert de timer
+  direct. Bestaande privacy-, toestemmings-, radio- en levenscyclusregels
+  blijven de beslissende gates.
+- Blijft het toestel zonder terminaal antwoord, dan wordt die oude
+  herkenningsronde afgesloten en maximaal **twee keer** automatisch
+  met een frisse on-device herkenner geprobeerd. De vorige
+  `VoiceSessionGeneration` en de per-turn `SpeechTurnCompletionGate`
+  voorkomen dat late callbacks van de oude ronde alsnog tekst toevoegen.
+- Na de **derde** vastgelopen ronde wordt de microfoon volledig gestopt,
+  met uitleg om het lokale spraakpakket te controleren en zelf opnieuw
+  op Luister te tikken. Er komt geen onbeperkte herstartlus en
+  geen cloudspraakfallback.
+- De reeds ingestelde maximale microfoonsessieduur wordt **niet
+  verlengd** door deze herstart. Stop, scherm verlaten en achtergrond
+  wissen de timer; de oorspronkelijke ondertitels blijven in de
+  tijdelijke gespreksgeschiedenis.
+- De teller voor vastgelopen rondes blijft alleen tijdelijk in het
+  bestaande privacyvriendelijke sessierapport, zonder spraakinhoud,
+  persoonlijke apparaatlog of externe diagnostiek.
+
+Ook deze app-logica is geen vervanging voor een geautoriseerde,
+**fysieke Android 12+-vliegtuigmodustest** met werkelijke resultaten.
+
 ## Gates
 
 Deze mijlpaal vereist de bestaande Android GitHub-build en source-head
