@@ -877,6 +877,11 @@ private fun TuddyScreen(
     var launcherShortcutNotice by remember { mutableStateOf("") }
     var voicePickerLanguageTag by remember { mutableStateOf<String?>(null) }
     var confirmClearConversation by remember { mutableStateOf(false) }
+    // Only IDs and row revisions, never private caption text, are held for confirmation.
+    var pendingTranslationCancelSelection by remember {
+        mutableStateOf<List<Pair<Long, Int>>?>(null)
+    }
+    var pendingTranslationCancelNotice by remember { mutableStateOf("") }
     // Only RAM-only retries; never mutate a completed or human-corrected row.
     var failedCaptionRecoveryOpen by remember { mutableStateOf(false) }
     var failedCaptionRecoveryBusy by remember { mutableStateOf(false) }
@@ -1162,6 +1167,41 @@ private fun TuddyScreen(
                 }
             }
         }
+    }
+
+    /**
+     * User-requested withdrawal of still-pending local text translations.
+     * Do not cancel completed rows, change the microphone setting, or
+     * confuse a user's cancellation with a model error.
+     *
+     * Invalidate ALL selected revisions before freeing any queue slots, so
+     * a promoted request cannot restart a caption the user just withdrew.
+     * Previously submitted Android ML Kit tasks may finish internally.
+     */
+    fun cancelPendingTranslations(selection: List<Pair<Long, Int>>): Int {
+        if (selection.isEmpty() ||
+            selection.size > CaptionRetentionPolicy.MAX_CAPTIONS ||
+            selection.map { it.first }.toSet().size != selection.size) return 0
+        val valid = selection.mapNotNull { (id, revision) ->
+            val index = lines.indexOfFirst { it.id == id }
+            val row = lines.getOrNull(index)
+            if (row == null || row.status != "Bezig" ||
+                row.translationRevision != revision) null else index to row
+        }
+        valid.forEach { (index, row) ->
+            lines[index] = row.copy(
+                translated = "Vertaling op jouw verzoek gestopt. " +
+                    "Originele zin bewaard; tik ↻ Probeer opnieuw.",
+                status = "Fout",
+                translationRevision = row.translationRevision + 1
+            )
+        }
+        valid.forEach { (_, row) ->
+            translationDeadline.cancel(row.id)
+            captionTranslationQueue.cancel(row.id)
+            speechTranslationStarted.remove(row.id)
+        }
+        return valid.size
     }
 
     /**
@@ -3732,6 +3772,7 @@ private fun TuddyScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             pendingSpeechSettingsReturnTag = null
             generation++
+            pendingTranslationCancelSelection = null
             pausedCaptionReviewEpoch++
             pausedCaptionReviewOpen = false
             pausedCaptionReviewBusy = false
@@ -7752,6 +7793,8 @@ private fun TuddyScreen(
         // explicit confirmation: a single mis-tap should not destroy live work.
         val clearCurrentConversation: () -> Unit = {
                         generation++
+                        pendingTranslationCancelSelection = null
+                        pendingTranslationCancelNotice = ""
                         pausedCaptionReviewEpoch++
                         pausedCaptionReviewOpen = false
                         pausedCaptionReviewBusy = false
@@ -7834,6 +7877,43 @@ private fun TuddyScreen(
                         starterPhraseboardOpen = false
                         previewResult = null
                         error = ""
+        }
+        if (pendingTranslationCancelSelection != null) {
+            val snapshots = pendingTranslationCancelSelection.orEmpty()
+            val remaining = snapshots.count { (id, revision) ->
+                lines.any { it.id == id && it.translationRevision == revision &&
+                    it.status == "Bezig" }
+            }
+            AlertDialog(
+                onDismissRequest = { pendingTranslationCancelSelection = null },
+                title = { Text("Lopende lokale vertalingen stoppen?") },
+                text = {
+                    Text("Alleen $remaining nog lopende vertaling(en) uit deze " +
+                        "selectie stoppen. Originele zinnen en taalrichtingen " +
+                        "blijven bewaard. Reeds gestarte ML Kit-taken kunnen " +
+                        "intern afronden; hun resultaten verschijnen niet meer. " +
+                        "Dit stopt je microfoon of toekomstige vertalingen niet. " +
+                        "Opnieuw vertalen gebeurt alleen na jouw nieuwe keuze.")
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = remaining > 0,
+                        onClick = {
+                            val count = cancelPendingTranslations(snapshots)
+                            pendingTranslationCancelSelection = null
+                            pendingTranslationCancelNotice =
+                                "$count lopende vertaling(en) gestopt; " +
+                                "originele zinnen behouden. Oud ML Kit-werk " +
+                                "kan nog intern afronden."
+                        }
+                    ) { Text("Stop $remaining vertaling(en)") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingTranslationCancelSelection = null }) {
+                        Text("Laat doorlopen")
+                    }
+                }
+            )
         }
         if (confirmClearConversation) {
             AlertDialog(
@@ -9207,6 +9287,22 @@ private fun TuddyScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            pendingTranslationCancelSelection = lines
+                                .filter { it.status == "Bezig" }
+                                .take(CaptionRetentionPolicy.MAX_CAPTIONS)
+                                .map { it.id to it.translationRevision }
+                        }
+                    ) { Text("■ Stop de $pendingLocalCaptions lopende vertaling(en)…") }
+                }
+                if (pendingTranslationCancelNotice.isNotBlank()) {
+                    Text(
+                        pendingTranslationCancelNotice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -9531,6 +9627,24 @@ private fun TuddyScreen(
                                             capturedPhraseNotice = ""
                                         }
                                     ) { Text("＋ Maak eigen Kurdische/Pasjtoe-kaart") }
+                                    if (line.status == "Bezig") {
+                                        TextButton(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            onClick = {
+                                                val idx = lines.indexOfFirst { it.id == line.id }
+                                                if (idx >= 0 && lines[idx] == line) {
+                                                    val count = cancelPendingTranslations(
+                                                        listOf(line.id to line.translationRevision)
+                                                    )
+                                                    if (count > 0) {
+                                                        correctionNotice =
+                                                            "Vertaling van deze zin gestopt. " +
+                                                            "Origineel bewaard; microfoon ongewijzigd."
+                                                    }
+                                                }
+                                            }
+                                        ) { Text("■ Stop alleen deze vertaling") }
+                                    }
                                     if (line.status in setOf("Fout", "Model ontbreekt", "Gepauzeerd")) {
                                         TextButton(
                                             modifier = Modifier.fillMaxWidth(),
