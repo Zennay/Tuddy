@@ -1212,8 +1212,7 @@ private fun TuddyScreen(
                                         }
                                         .addOnFailureListener {
                                             translator.close()
-                                            updateLine(id,
-                                                SafeLocalFailureText.TRANSLATION,
+                                            updateLine(id, SafeLocalFailureText.TRANSLATION,
                                                 "Fout", token, revision)
                                         }
                                 } catch (_: Exception) {
