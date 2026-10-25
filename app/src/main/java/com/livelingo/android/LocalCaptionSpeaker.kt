@@ -34,11 +34,13 @@ internal class LocalCaptionSpeaker(context: Context) {
     // Shared with normal/slow pronunciation and subtitle-sequence playback,
     // including the Android selected-text quick translator.
     private val playbackSession = LocalPlaybackDeviceSession(appContext)
+    private val playbackDeadline = LocalSpeechPlaybackDeadline()
     private var engine: TextToSpeech? = null
     private var generation = 0L
 
     fun stop() {
         generation++
+        playbackDeadline.clear() // No watchdog outlives Stop, background or playback replacement.
         playbackSession.end() // Release audio focus and device/noisy listeners.
         val old = engine
         engine = null
@@ -70,10 +72,17 @@ internal class LocalCaptionSpeaker(context: Context) {
             return
         }
         val version = generation
+        playbackDeadline.awaitEngine {
+            if (generation == version) {
+                stop()
+                callback(emptyList(), "Android reageerde niet bij het uitlezen van lokale stemmen.")
+            }
+        }
         try {
             engine = TextToSpeech(appContext, TextToSpeech.OnInitListener { result ->
                 main.post {
                     if (generation != version) return@post
+                    playbackDeadline.clear()
                     val tts = engine
                     if (result != TextToSpeech.SUCCESS || tts == null) {
                         stop()
@@ -225,6 +234,7 @@ internal class LocalCaptionSpeaker(context: Context) {
             engine = TextToSpeech(appContext, TextToSpeech.OnInitListener { result ->
                 main.post {
                     if (generation != version) return@post
+                    playbackDeadline.clear()
                     val tts = engine
                     if (result != TextToSpeech.SUCCESS || tts == null) {
                         fail("Geen bruikbare lokale Android-spraakstem. Er is niets online afgespeeld.")
@@ -383,6 +393,7 @@ internal class LocalCaptionSpeaker(context: Context) {
             engine = TextToSpeech(appContext, TextToSpeech.OnInitListener { result ->
                 main.post {
                     if (generation != version) return@post
+                    playbackDeadline.clear()
                     val tts = engine
                     if (result != TextToSpeech.SUCCESS || tts == null) {
                         fail("Android heeft geen bruikbare lokale voorleesdienst. Niets afgespeeld.")
@@ -498,6 +509,7 @@ internal class LocalCaptionSpeaker(context: Context) {
             engine = TextToSpeech(appContext, TextToSpeech.OnInitListener { result ->
                 main.post {
                     if (generation != version) return@post
+                    playbackDeadline.clear()
                     val tts = engine
                     if (result != TextToSpeech.SUCCESS || tts == null) {
                         stop()
