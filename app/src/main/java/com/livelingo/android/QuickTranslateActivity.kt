@@ -128,6 +128,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
     private var detectingSource by mutableStateOf(false)
     private var detectionNotice by mutableStateOf("")
+    // Never apply local language detection silently to a private selection.
+    private var suggestedSourceCode by mutableStateOf<String?>(null)
     private var status by mutableStateOf("")
     private var playbackNotice by mutableStateOf("")
     private var headphonesOnlyPlayback by mutableStateOf(false)
@@ -209,6 +211,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     busy = busy,
                     detectingSource = detectingSource,
                     detectionNotice = detectionNotice,
+                    suggestedSourceCode = suggestedSourceCode,
                     status = status,
                     playbackNotice = playbackNotice,
                     headphonesOnly = headphonesOnlyPlayback,
@@ -384,6 +387,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         detector.close()
         detectingSource = false
         detectionNotice = ""
+        suggestedSourceCode = null
         cancelOperation()
         sourceCode = source ?: sourceCode
         targetCode = target ?: targetCode
@@ -395,8 +399,10 @@ internal class QuickTranslateActivity : ComponentActivity() {
         if (busy || detectingSource || inputNotice.isNotBlank()) return
         stopPlayback()
         val sample = incomingText.replace('\n', ' ').trim().take(1200)
-        if (sample.length < 8) {
-            detectionNotice = "Er staat te weinig tekst in deze selectie om lokaal een brontaal voor te stellen."
+        suggestedSourceCode = null
+        if (sample.codePointCount(0, sample.length) < 20) {
+            detectionNotice = "Voor een betrouwbaar lokaal brontaalvoorstel zijn minimaal 20 tekens nodig. " +
+                "Kies bij korte teksten de taal zelf."
             return
         }
         detector.close()
@@ -422,9 +428,13 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     "Het lokale voorstel '$detected' valt buiten de tekstvertaalcatalogus. Kies handmatig."
                 }
             } else {
-                changePair(source = supported)
+                suggestedSourceCode = supported.takeIf { it != sourceCode }
                 val label = TargetCatalog.targets.firstOrNull { it.code == supported }?.title ?: supported
-                detectionNotice = "Brontaalvoorstel: $label ($supported). Controleer zelf; er is nog niets vertaald."
+                detectionNotice = if (suggestedSourceCode == null)
+                    "De lokale brontaalinschatting is $label; dit is al je gekozen brontaal."
+                else "Lokaal brontaalvoorstel: $label ($supported). " +
+                    "Controleer de suggestie en tik op Gebruik brontaal om je taalkeuze te wijzigen. " +
+                    "De geselecteerde taal is nog niet aangepast of vertaald."
             }
             detector.close()
         }
@@ -613,6 +623,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         translationResult = null
         discardReview()
         detectionNotice = ""
+        suggestedSourceCode = null
         status = "Actie geannuleerd. Er is niets teruggestuurd, gedeeld of opgeslagen."
     }
 
@@ -846,6 +857,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         detector.close()
         detectingSource = false
         detectionNotice = ""
+        suggestedSourceCode = null
         cancelOperation() // Also invalidates translation callbacks and stops TTS.
         if (!isFinishing) {
             incomingText = ""
@@ -864,6 +876,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         detector.close()
         detectingSource = false
         detectionNotice = ""
+        suggestedSourceCode = null
         cancelOperation()
         if (!isFinishing) {
             incomingText = ""
@@ -897,6 +910,7 @@ private fun QuickTranslateScreen(
     busy: Boolean,
     detectingSource: Boolean,
     detectionNotice: String,
+    suggestedSourceCode: String?,
     status: String,
     playbackNotice: String,
     headphonesOnly: Boolean,
@@ -1040,13 +1054,23 @@ private fun QuickTranslateScreen(
         ) { Text("⇄ Wissel talen") }
         OutlinedButton(
             onClick = onSuggestSource,
-            enabled = text.length >= 8 && inputNotice.isBlank() && !busy && !detectingSource,
+            enabled = text.codePointCount(0, text.length) >= 20 &&
+                inputNotice.isBlank() && !busy && !detectingSource,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(if (detectingSource) "Brontaal lokaal voorstellen…" else "Stel brontaal lokaal voor")
         }
         if (detectionNotice.isNotBlank()) {
             Text(detectionNotice, style = MaterialTheme.typography.bodySmall)
+        }
+        if (suggestedSourceCode != null && !busy && !detectingSource) {
+            OutlinedButton(
+                onClick = { onSourceSelected(suggestedSourceCode) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Gebruik voorgestelde brontaal · " +
+                    suggestedSourceCode.uppercase(Locale.ROOT))
+            }
         }
         if (sourceCode == targetCode) {
             Text("Kies twee verschillende talen.", color = MaterialTheme.colorScheme.error)
