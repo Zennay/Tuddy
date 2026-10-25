@@ -2,8 +2,6 @@ package com.livelingo.android
 
 import android.Manifest
 import android.app.Activity
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -13,7 +11,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.os.PersistableBundle
 import android.provider.Settings
 import android.view.WindowManager
 import android.speech.RecognitionListener
@@ -862,6 +859,10 @@ private fun TuddyScreen(
     var speechCatalogEpoch by remember { mutableIntStateOf(0) }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
+    var clipboardExpirySeconds by remember(context) {
+        mutableIntStateOf(PrivateClipboardExpiry.selectedSeconds(context))
+    }
+    var clipboardExpiryNotice by remember { mutableStateOf("") }
     // Conversation-first: advanced app features are opt-in, never removed.
     var advancedActionsOpen by remember { mutableStateOf(false) }
     var launcherShortcutNotice by remember { mutableStateOf("") }
@@ -1535,13 +1536,9 @@ private fun TuddyScreen(
     fun copyOfflineReadinessReport(): Boolean = runCatching {
         val report = offlineReadinessReportSnapshot()
             ?.toString(Charsets.UTF_8) ?: return@runCatching false
-        val board = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Tuddy offline readiness (no transcript/audio)", report)
-        clip.description.extras = PersistableBundle().apply {
-            putBoolean("android.content.extra.IS_SENSITIVE", true)
-        }
-        board.setPrimaryClip(clip)
-        true
+        PrivateClipboardExpiry.copy(
+            context, "Tuddy offline readiness (no transcript/audio)", report
+        )
     }.getOrDefault(false)
 
     fun checkTextPair() {
@@ -2020,13 +2017,9 @@ private fun TuddyScreen(
             appendLine("Speech transcript or audio: not included")
             appendLine("Device-reported only; not an airplane-mode acceptance record.")
         }
-        val board = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Tuddy speech packs (no transcripts)", snapshot)
-        clip.description.extras = PersistableBundle().apply {
-            putBoolean("android.content.extra.IS_SENSITIVE", true)
-        }
-        board.setPrimaryClip(clip)
-        true
+        PrivateClipboardExpiry.copy(
+            context, "Tuddy speech packs (no transcripts)", snapshot
+        )
     }.getOrDefault(false)
 
     fun selectBrowserSpeechSource(tag: String) {
@@ -3431,6 +3424,7 @@ private fun TuddyScreen(
                 // device preference; refresh after returning to the app.
                 headphonesOnlyPlayback =
                     PrivatePlaybackRoutingPreference.headphonesOnly(context)
+                clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(context)
                 val requestedTag = pendingSpeechSettingsReturnTag
                 if (requestedTag != null) {
                     pendingSpeechSettingsReturnTag = null
@@ -5652,18 +5646,11 @@ private fun TuddyScreen(
                                 archiveExcerptNotice = "Archief gewijzigd of gesloten. Kies opnieuw."
                             } else {
                                 val copied = runCatching {
-                                    val board = context.getSystemService(
-                                        Context.CLIPBOARD_SERVICE
-                                    ) as ClipboardManager
-                                    val clip = ClipData.newPlainText(
+                                    PrivateClipboardExpiry.copy(
+                                        context,
                                         "Tuddy privéarchief — niet gecontroleerd",
                                         excerptRequest.third
                                     )
-                                    clip.description.extras = PersistableBundle().apply {
-                                        putBoolean("android.content.extra.IS_SENSITIVE", true)
-                                    }
-                                    board.setPrimaryClip(clip)
-                                    true
                                 }.getOrDefault(false)
                                 archiveExcerptNotice = if (copied)
                                     "Fragment gekopieerd; Android-klembord is buiten Tuddy zichtbaar."
@@ -7966,6 +7953,40 @@ private fun TuddyScreen(
                     Text(if (showSettings) "Verberg taal- en modelinstellingen" else "Taal- en modelinstellingen")
                 }
                 Text(
+                    "Android-klembord · optioneel automatisch legen",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                TextButton(
+                    onClick = {
+                        val next = when (clipboardExpirySeconds) {
+                            0 -> 60
+                            60 -> 300
+                            else -> 0
+                        }
+                        val saved = PrivateClipboardExpiry.changeSeconds(context, next)
+                        clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(context)
+                        clipboardExpiryNotice = if (saved)
+                            "Geldt voor volgende kopieeracties. Android kan legen op " +
+                                "de achtergrond blokkeren."
+                        else "Klembordinstelling kon niet worden bewaard."
+                    }
+                ) {
+                    Text("Klembordtimer: " + when (clipboardExpirySeconds) {
+                        60 -> "1 minuut"
+                        300 -> "5 minuten"
+                        else -> "uit"
+                    } + " · wijzig")
+                }
+                Text(
+                    "Kopiëren deelt tekst direct met Android en andere apps. " +
+                        "Tuddy wist alleen de nog ongewijzigde eigen kopie, " +
+                        "zo mogelijk zolang de app actief is. Geen garantie.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (clipboardExpiryNotice.isNotBlank()) {
+                    Text(clipboardExpiryNotice, style = MaterialTheme.typography.bodySmall)
+                }
+                Text(
                     "Android-voorleesstem kiezen · afzonderlijk van spraakherkenning",
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -9368,15 +9389,9 @@ private fun TuddyScreen(
                                         copyStatus = "Deze regel kan niet veilig worden gekopieerd."
                                     } else {
                                         val copied = runCatching {
-                                            val clipboard = context.getSystemService(
-                                                Context.CLIPBOARD_SERVICE
-                                            ) as ClipboardManager
-                                            val clip = ClipData.newPlainText("Tuddy privézin", payload)
-                                            clip.description.extras = PersistableBundle().apply {
-                                                putBoolean("android.content.extra.IS_SENSITIVE", true)
-                                            }
-                                            clipboard.setPrimaryClip(clip)
-                                            true
+                                            PrivateClipboardExpiry.copy(
+                                                context, "Tuddy privézin", payload
+                                            )
                                         }.getOrDefault(false)
                                         copyStatus = if (copied) {
                                             "Zin gekopieerd. Het Android-klembord is buiten Tuddy zichtbaar."
