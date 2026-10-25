@@ -84,6 +84,8 @@ import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.FailedCaptionPair
 import com.livelingo.android.ui.OfflineFailedCaptionsDialog
+import com.livelingo.android.ui.PausedCaptionChoice
+import com.livelingo.android.ui.PausedCaptionReviewDialog
 import com.livelingo.android.ui.SingleSentenceSpeechReviewDialog
 import com.livelingo.android.ui.SpeechPackBrowserDialog
 import com.livelingo.android.ui.SpeechPackBrowserOption
@@ -880,6 +882,11 @@ private fun TuddyScreen(
     var failedCaptionRecoveryBusy by remember { mutableStateOf(false) }
     var failedCaptionRecoveryNotice by remember { mutableStateOf("") }
     var failedCaptionRecoveryRevision by remember { mutableIntStateOf(0) }
+    // Review is ephemeral and only ever translates explicitly selected rows.
+    var pausedCaptionReviewOpen by remember { mutableStateOf(false) }
+    var pausedCaptionReviewBusy by remember { mutableStateOf(false) }
+    var pausedCaptionReviewNotice by remember { mutableStateOf("") }
+    var pausedCaptionReviewEpoch by remember { mutableIntStateOf(0) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
     // Ephemeral user opt-in: no microphone startup when Android still reports
     // a usable connection. Never persist or mistake this for real device proof.
@@ -1345,6 +1352,75 @@ private fun TuddyScreen(
                 ?.takeIf { it in TargetCatalog.codes }
             translateResolved(text, id, detected ?: sourceCode,
                 targetCode, token, revision)
+        }
+    }
+
+    /**
+     * Explicitly translate selected speech captions withheld by transcript-
+     * only mode. This does not resume automatic translation or download data.
+     */
+    fun translateReviewedPausedCaptions(selectedIds: List<Long>) {
+        if (!pausedCaptionReviewOpen || pausedCaptionReviewBusy ||
+            listening || modelStorageBusy || preparingOfflineModel ||
+            selectedIds.isEmpty() || selectedIds.size > 6 ||
+            selectedIds.toSet().size != selectedIds.size) return
+        val snapshots = selectedIds.mapNotNull { id ->
+            lines.firstOrNull { it.id == id }
+        }
+        val pair = snapshots.firstOrNull()?.let { it.sourceCode to it.targetCode }
+        if (pair == null || snapshots.size != selectedIds.size ||
+            pair.first !in TargetCatalog.codes || pair.second !in TargetCatalog.codes ||
+            snapshots.any { row ->
+                row.status != "Gepauzeerd" ||
+                    row.sourceCode != pair.first || row.targetCode != pair.second ||
+                    row.original.isBlank() ||
+                    row.original.length > OfflineTypedCaptionPolicy.MAX_INPUT_UNITS
+            }) {
+            pausedCaptionReviewNotice =
+                "De selectie is gewijzigd of bevat een ongeschikte zin. Controleer opnieuw."
+            return
+        }
+        val token = generation
+        val epoch = ++pausedCaptionReviewEpoch
+        pausedCaptionReviewBusy = true
+        pausedCaptionReviewNotice =
+            "Geïnstalleerde lokale tekstmodellen voor ${pair.first} → ${pair.second} controleren…"
+        OfflineTextModelInventory().check(pair.first, pair.second, TargetCatalog.codes) { receipt ->
+            if (token != generation || epoch != pausedCaptionReviewEpoch ||
+                !pausedCaptionReviewOpen || listening ||
+                !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                if (epoch == pausedCaptionReviewEpoch) pausedCaptionReviewBusy = false
+                return@check
+            }
+            if (receipt.stage == OfflineTextStage.CHECKING) return@check
+            pausedCaptionReviewBusy = false
+            if (receipt.stage != OfflineTextStage.READY) {
+                pausedCaptionReviewNotice = receipt.detail +
+                    " Geen download gestart. Bereid het taalpaar bewust voor " +
+                    "via Offline startcheck voordat je opnieuw kiest."
+                return@check
+            }
+            var submitted = 0
+            snapshots.forEach { snapshot ->
+                val index = lines.indexOfFirst { it.id == snapshot.id }
+                if (index >= 0 && lines[index] == snapshot &&
+                    snapshot.status == "Gepauzeerd") {
+                    lines[index] = snapshot.copy(
+                        translated = "Vertalen…", status = "Bezig",
+                        translationRevision = snapshot.translationRevision + 1
+                    )
+                    translate(
+                        snapshot.original, snapshot.id, snapshot.targetCode,
+                        snapshot.sourceCode, token, explicitlyChosenSource = true
+                    )
+                    submitted++
+                }
+            }
+            pausedCaptionReviewNotice = if (submitted == 0)
+                "Deze zinnen zijn inmiddels gewijzigd; niets overschreven."
+            else "$submitted geselecteerde zin(nen) lokaal aangevraagd. " +
+                "Controleer de uitkomst in het gesprek. Live vertalen blijft " +
+                if (speechTranslationPaused) "gepauzeerd." else "volgens jouw instelling actief."
         }
     }
 
@@ -3656,6 +3732,9 @@ private fun TuddyScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             pendingSpeechSettingsReturnTag = null
             generation++
+            pausedCaptionReviewEpoch++
+            pausedCaptionReviewOpen = false
+            pausedCaptionReviewBusy = false
             pendingSingleSpeechReview = null
             translationDeadline.clear()
             captionTranslationQueue.clear()
@@ -4019,6 +4098,17 @@ private fun TuddyScreen(
         }
     }
 
+    // Only display recent RAM-only paused captions; older rows retain their
+    // existing per-line explicit translation button.
+    val pausedCaptionChoices = lines.filter { row ->
+        row.status == "Gepauzeerd" && row.original.isNotBlank() &&
+            row.original.length <= OfflineTypedCaptionPolicy.MAX_INPUT_UNITS &&
+            row.sourceCode in TargetCatalog.codes &&
+            row.targetCode in TargetCatalog.codes
+    }.takeLast(48).map { row ->
+        PausedCaptionChoice(row.id, row.original, row.sourceCode, row.targetCode)
+    }
+
     val failedCaptionPairs = lines.filter { row ->
         row.status in setOf("Model ontbreekt", "Fout") &&
             !row.userCorrected && row.original.isNotBlank() &&
@@ -4071,6 +4161,21 @@ private fun TuddyScreen(
                     onDismiss = { voicePickerLanguageTag = null }
                 )
             }
+        }
+        if (pausedCaptionReviewOpen) {
+            PausedCaptionReviewDialog(
+                choices = pausedCaptionChoices,
+                checking = pausedCaptionReviewBusy || listening ||
+                    modelStorageBusy || preparingOfflineModel,
+                notice = pausedCaptionReviewNotice,
+                onTranslateSelected = ::translateReviewedPausedCaptions,
+                onDismiss = {
+                    pausedCaptionReviewOpen = false
+                    pausedCaptionReviewEpoch++
+                    pausedCaptionReviewBusy = false
+                    pausedCaptionReviewNotice = ""
+                }
+            )
         }
         if (failedCaptionRecoveryOpen) {
             OfflineFailedCaptionsDialog(
@@ -7647,6 +7752,9 @@ private fun TuddyScreen(
         // explicit confirmation: a single mis-tap should not destroy live work.
         val clearCurrentConversation: () -> Unit = {
                         generation++
+                        pausedCaptionReviewEpoch++
+                        pausedCaptionReviewOpen = false
+                        pausedCaptionReviewBusy = false
                         pendingSingleSpeechReview = null
                         translationDeadline.clear()
             captionTranslationQueue.clear()
@@ -9037,6 +9145,19 @@ private fun TuddyScreen(
                     Text(savedWordNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                    }
+                }
+                if (pausedCaptionChoices.isNotEmpty()) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !listening && !modelStorageBusy && !preparingOfflineModel,
+                        onClick = {
+                            pausedCaptionReviewOpen = true
+                            pausedCaptionReviewNotice = ""
+                        }
+                    ) {
+                        Text("✓ Kies overgeslagen zinnen om lokaal te vertalen " +
+                            "(${lines.count { it.status == "Gepauzeerd" }})")
                     }
                 }
                 if (failedCaptionPairs.isNotEmpty()) {
