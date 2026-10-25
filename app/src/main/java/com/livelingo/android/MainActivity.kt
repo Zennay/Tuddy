@@ -1177,7 +1177,15 @@ private fun TuddyScreen(
         pendingInterim = null
         partialTranslation = ""
         partialRevision++
-        val pending = lines.indices.filter { lines[it].status == "Bezig" }
+        // Only speech-origin jobs are paused. Explicit typed translations
+        // must not be canceled by a control scoped to live speech.
+        val pending = lines.indices.filter {
+            lines[it].status == "Bezig" &&
+                lines[it].id in speechTranslationStarted
+        }
+        // Invalidate every eligible row before releasing queue slots, so
+        // draining cannot dispatch another translation for a paused caption.
+        val pendingIds = pending.map { lines[it].id }
         pending.forEach { index ->
             val row = lines[index]
             lines[index] = row.copy(
@@ -1185,13 +1193,15 @@ private fun TuddyScreen(
                 status = "Gepauzeerd",
                 translationRevision = row.translationRevision + 1
             )
-            speechTranslationStarted.remove(row.id)
         }
-        // No pending job may start after this point. Existing ML Kit tasks can
-        // still finish privately, but are fenced by the changed row revisions.
-        captionTranslationQueue.clear()
-        translationDeadline.clear()
-        captionPairReadiness.invalidate()
+        pendingIds.forEach { id ->
+            speechTranslationStarted.remove(id)
+            translationDeadline.cancel(id)
+            captionTranslationQueue.cancel(id)
+        }
+        // Do not invalidate shared installed-model inventories: those may
+        // also serve a separate, explicitly submitted typed translation.
+        // Late speech ML Kit callbacks fail the changed per-row revision gate.
         translationPauseNotice =
             "Alleen origineel: ${pending.size} wachtende vertaling(en) niet meer " +
             "weergegeven. De microfoon blijft ${if (listening) "aan" else "uit"}. " +
