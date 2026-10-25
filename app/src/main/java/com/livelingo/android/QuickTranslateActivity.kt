@@ -134,6 +134,13 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var privateScreenShieldOn by mutableStateOf(false)
     private var privateScreenShieldNotice by mutableStateOf("")
     private var translationResult by mutableStateOf<String?>(null)
+    // Original ML Kit output is retained only while this Activity stays in
+    // the foreground. A corrected draft is never persisted or sent silently.
+    private var machineTranslationResult by mutableStateOf<String?>(null)
+    private var reviewingTranslation by mutableStateOf(false)
+    private var reviewDraft by mutableStateOf("")
+    private var manuallyAdjustedTranslation by mutableStateOf(false)
+    private var reviewNotice by mutableStateOf("")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -208,6 +215,15 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     privateScreenShieldOn = privateScreenShieldOn,
                     privateScreenShieldNotice = privateScreenShieldNotice,
                     result = translationResult,
+                    reviewingTranslation = reviewingTranslation,
+                    reviewDraft = reviewDraft,
+                    reviewNotice = reviewNotice,
+                    manuallyAdjustedTranslation = manuallyAdjustedTranslation,
+                    onBeginReview = { beginReviewTranslation() },
+                    onReviewDraftChange = { updateReviewDraft(it) },
+                    onSaveReview = { saveReviewedTranslation() },
+                    onCancelReview = { cancelReviewTranslation() },
+                    onRestoreMachineTranslation = { restoreMachineTranslation() },
                     onSourceSelected = { code -> changePair(source = code) },
                     onTargetSelected = { code -> changePair(target = code) },
                     onSwapLanguages = { changePair(source = targetCode, target = sourceCode) },
@@ -285,7 +301,75 @@ internal class QuickTranslateActivity : ComponentActivity() {
         return source to target
     }
 
+    private fun discardReview() {
+        reviewingTranslation = false
+        reviewDraft = ""
+        reviewNotice = ""
+        manuallyAdjustedTranslation = false
+        machineTranslationResult = null
+    }
+
+    private fun beginReviewTranslation() {
+        val completed = translationResult ?: return
+        if (busy || detectingSource || isFinishing) return
+        stopPlayback()
+        reviewDraft = completed
+        reviewNotice = ""
+        reviewingTranslation = true
+    }
+
+    private fun updateReviewDraft(text: String) {
+        if (!reviewingTranslation) return
+        // Keep an extra UTF-16 unit for a visible validation error, never
+        // silently truncate a correction to a different intended sentence.
+        if (text.length > LocalTranslationReviewPolicy.MAX_EDIT_BUFFER_UNITS) {
+            reviewNotice = "Maximaal 8.000 tekens. Er is niets opgeslagen."
+            return
+        }
+        reviewDraft = text
+        reviewNotice = ""
+    }
+
+    private fun saveReviewedTranslation() {
+        if (!reviewingTranslation || busy || detectingSource || isFinishing ||
+            translationResult == null || machineTranslationResult == null) return
+        val normalized = LocalTranslationReviewPolicy.normalize(reviewDraft)
+        if (normalized == null) {
+            reviewNotice = "Controleer de aangepaste tekst: maximaal 8.000 tekens, " +
+                "niet leeg, zonder ongeldige Unicode of verborgen controletekens."
+            return
+        }
+        stopPlayback()
+        translationResult = normalized
+        manuallyAdjustedTranslation = normalized != machineTranslationResult
+        reviewingTranslation = false
+        reviewDraft = ""
+        reviewNotice = if (manuallyAdjustedTranslation)
+            "Je eigen tekst is lokaal overgenomen; niet door Tuddy geverifieerd. " +
+                "Alleen een volgende bewuste actie kan deze tekst extern delen."
+        else "De oorspronkelijke lokale ML Kit-vertaling is ongewijzigd gebleven."
+    }
+
+    private fun cancelReviewTranslation() {
+        if (!reviewingTranslation) return
+        reviewDraft = ""
+        reviewingTranslation = false
+        reviewNotice = "Wijziging geannuleerd; de vorige vertaling blijft beschikbaar."
+    }
+
+    private fun restoreMachineTranslation() {
+        val original = machineTranslationResult ?: return
+        if (busy || detectingSource || isFinishing) return
+        stopPlayback()
+        translationResult = original
+        manuallyAdjustedTranslation = false
+        reviewingTranslation = false
+        reviewDraft = ""
+        reviewNotice = "Oorspronkelijke lokale ML Kit-uitkomst hersteld. Niet automatisch gedeeld."
+    }
+
     private fun changePair(source: String? = null, target: String? = null) {
+        discardReview()
         detectorRevision++
         clearDetectionTimeout()
         detector.close()
@@ -355,6 +439,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
             return
         }
         cancelOperation()
+        discardReview()
         val token = generation
         busy = true
         translationResult = null
@@ -493,6 +578,11 @@ internal class QuickTranslateActivity : ComponentActivity() {
         closeActiveTranslator()
         busy = false
         translationResult = result
+        machineTranslationResult = result
+        reviewingTranslation = false
+        reviewDraft = ""
+        reviewNotice = ""
+        manuallyAdjustedTranslation = false
         status = message
         generation++
     }
@@ -515,6 +605,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         clearDetectionTimeout()
         cancelOperation()
         translationResult = null
+        discardReview()
         detectionNotice = ""
         status = "Actie geannuleerd. Er is niets teruggestuurd, gedeeld of opgeslagen."
     }
@@ -533,7 +624,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun speakSelection(text: String, language: String, pace: LocalSpeechPace) {
-        if (busy || detectingSource || inputNotice.isNotBlank() || isFinishing) return
+        if (busy || detectingSource || reviewingTranslation ||
+            inputNotice.isNotBlank() || isFinishing) return
         stopPlayback()
         // Validate ALL text before speaking the first word. A corrupt or
         // oversized selection cannot be spoken partially or via online TTS.
@@ -578,8 +670,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     private fun speakBilingualSelection(pace: LocalSpeechPace) {
         val translated = translationResult ?: return
-        if (busy || detectingSource || inputNotice.isNotBlank() ||
-            isFinishing || incomingText.isBlank()) return
+        if (busy || detectingSource || reviewingTranslation ||
+            inputNotice.isNotBlank() || isFinishing || incomingText.isBlank()) return
         stopPlayback()
         val speaker = localSpeaker ?: LocalCaptionSpeaker(this).also { localSpeaker = it }
         speaker.speakBilingualPair(
@@ -596,7 +688,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun copyTranslation() {
-        val result = translationResult ?: return
+        if (busy || reviewingTranslation || isFinishing) return
+        val result = translationResult
+            ?.takeIf { LocalTranslationReviewPolicy.normalize(it) == it } ?: return
         val copied = PrivateClipboardExpiry.copy(
             this, "Tuddy · privévertaling", result
         )
@@ -608,8 +702,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun shareTranslation() {
-        val result = translationResult ?: return
-        if (busy || isFinishing) return
+        if (busy || reviewingTranslation || isFinishing) return
+        val result = translationResult
+            ?.takeIf { LocalTranslationReviewPolicy.normalize(it) == it } ?: return
         // This only runs after a separate in-app confirmation. Android's
         // receiver may store/sync text, so never share silently.
         val send = Intent(Intent.ACTION_SEND).apply {
@@ -624,8 +719,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun returnTranslationToCaller() {
-        val result = translationResult ?: return
-        if (selectionReadOnly) return
+        if (busy || reviewingTranslation || isFinishing || selectionReadOnly) return
+        val result = translationResult
+            ?.takeIf { LocalTranslationReviewPolicy.normalize(it) == it } ?: return
         setResult(RESULT_OK, Intent().putExtra(Intent.EXTRA_PROCESS_TEXT, result))
         closeAndFinish()
     }
@@ -640,6 +736,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         cancelOperation()
         incomingText = ""
         translationResult = null
+        discardReview()
         finish()
     }
 
@@ -656,6 +753,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         if (!isFinishing) {
             incomingText = ""
             translationResult = null
+            discardReview()
             inputNotice = "Android heeft de focus verplaatst. De privéselectie is gewist; " +
                 "selecteer je tekst opnieuw om lokaal te vertalen."
             status = "Er is niets automatisch gedeeld of teruggestuurd."
@@ -673,6 +771,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         if (!isFinishing) {
             incomingText = ""
             translationResult = null
+            discardReview()
             status = "De selectie is gewist toen Tuddy naar de achtergrond ging. Selecteer de tekst opnieuw."
         }
         super.onStop()
@@ -685,6 +784,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         cancelOperation()
         incomingText = ""
         translationResult = null
+        discardReview()
         super.onDestroy()
     }
 }
@@ -706,6 +806,15 @@ private fun QuickTranslateScreen(
     privateScreenShieldOn: Boolean,
     privateScreenShieldNotice: String,
     result: String?,
+    reviewingTranslation: Boolean,
+    reviewDraft: String,
+    reviewNotice: String,
+    manuallyAdjustedTranslation: Boolean,
+    onBeginReview: () -> Unit,
+    onReviewDraftChange: (String) -> Unit,
+    onSaveReview: () -> Unit,
+    onCancelReview: () -> Unit,
+    onRestoreMachineTranslation: () -> Unit,
     onSourceSelected: (String) -> Unit,
     onTargetSelected: (String) -> Unit,
     onSwapLanguages: () -> Unit,
@@ -867,7 +976,8 @@ private fun QuickTranslateScreen(
         LocalCaptionPlaybackMenu(
             hasCompletedTranslation = result != null,
             bilingualAvailable = text.length <= 400 && (result?.length ?: 0) <= 400,
-            enabled = text.isNotBlank() && inputNotice.isBlank() && !busy && !detectingSource,
+            enabled = text.isNotBlank() && inputNotice.isBlank() &&
+                !busy && !detectingSource && !reviewingTranslation,
             headphonesOnly = headphonesOnly,
             onHeadphonesOnlyChange = onHeadphonesOnlyChange,
             onPlayOriginal = onPlayOriginal,
@@ -906,7 +1016,11 @@ private fun QuickTranslateScreen(
         )
         if (result != null) {
             HorizontalDivider()
-            Text("Lokale vertaling", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (manuallyAdjustedTranslation)
+                    "Handmatig aangepaste vertaling" else "Lokale vertaling",
+                style = MaterialTheme.typography.titleMedium
+            )
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.secondaryContainer,
@@ -919,6 +1033,53 @@ private fun QuickTranslateScreen(
                         textDirection = TextDirection.ContentOrRtl
                     )
                 )
+            }
+            if (reviewingTranslation) {
+                OutlinedTextField(
+                    value = reviewDraft,
+                    onValueChange = onReviewDraftChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Je eigen correctie · tijdelijk op dit toestel") },
+                    minLines = 4,
+                    maxLines = 12,
+                    supportingText = {
+                        Text("${reviewDraft.length} / 8.000 tekens. " +
+                            "De originele ML Kit-vertaling blijft herstelbaar.")
+                    }
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onSaveReview,
+                        enabled = LocalTranslationReviewPolicy.normalize(reviewDraft) != null,
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Neem correctie over") }
+                    OutlinedButton(onClick = onCancelReview, modifier = Modifier.weight(1f)) {
+                        Text("Annuleer")
+                    }
+                }
+                Text(
+                    "Kopiëren, voorlezen, extern delen en terugplaatsen zijn " +
+                        "geblokkeerd totdat je de correctie hebt overgenomen.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } else {
+                OutlinedButton(onClick = onBeginReview, modifier = Modifier.fillMaxWidth()) {
+                    Text("Controleer of pas vertaling handmatig aan")
+                }
+                if (manuallyAdjustedTranslation) {
+                    Text(
+                        "Door jou aangepast · geen automatische taal- of kwaliteitscontrole. " +
+                            "De tekst is nog nergens extern verstuurd.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    TextButton(
+                        onClick = onRestoreMachineTranslation,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Herstel oorspronkelijke ML Kit-vertaling") }
+                }
+            }
+            if (reviewNotice.isNotBlank()) {
+                Text(reviewNotice, style = MaterialTheme.typography.bodySmall)
             }
             TextButton(
                 onClick = {
@@ -945,14 +1106,20 @@ private fun QuickTranslateScreen(
             )
             OutlinedButton(
                 onClick = onCopy,
+                enabled = !reviewingTranslation,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Kopieer vertaling") }
             OutlinedButton(
                 onClick = { confirmExternalShare = true },
+                enabled = !reviewingTranslation,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Deel vertaling via Android…") }
             if (!readOnly) {
-                Button(onClick = onReturnResult, modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onReturnResult,
+                    enabled = !reviewingTranslation,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("Vervang geselecteerde tekst in de andere app")
                 }
             } else {
@@ -970,7 +1137,7 @@ private fun QuickTranslateScreen(
         }
     }
 
-    if (confirmExternalShare && result != null) {
+    if (confirmExternalShare && result != null && !reviewingTranslation) {
         AlertDialog(
             onDismissRequest = { confirmExternalShare = false },
             title = { Text("Vertaling buiten Tuddy delen?") },
