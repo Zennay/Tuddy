@@ -399,12 +399,21 @@ class MainActivity : ComponentActivity() {
         return true
     }
 
+    override fun onResume() {
+        super.onResume()
+        // A quick-translation Activity can change this shared preference.
+        // Restore the actual window flag before the first resumed frame.
+        PrivateScreenShield.restore(this)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Apply the user's Android screenshot/recents preference *before*
+        // routing selected private text to the separate quick translator.
+        PrivateScreenShield.restore(this)
         if (savedInstanceState == null && routePlainTextSelection(intent)) {
             return
         }
-        PrivateScreenShield.restore(this)
         if (savedInstanceState == null) receiveLauncherShortcut(intent)
         else TuddyLauncherShortcuts.clearReceivedRoute(intent)
         // Publishing launcher metadata does not start a microphone, share any
@@ -3826,6 +3835,11 @@ private fun TuddyScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START) {
+                // Quick Translate can alter the same screen-shield setting.
+                // Refresh the checkbox when coming back without rebuilding
+                // the entire RAM-only conversation or reopening the mic.
+                privateScreenShieldOn = PrivateScreenShield.enabled(context)
+                screenActivity?.let(PrivateScreenShield::restore)
                 // The separate Android selected-text screen shares this
                 // device preference; refresh after returning to the app.
                 headphonesOnlyPlayback =
