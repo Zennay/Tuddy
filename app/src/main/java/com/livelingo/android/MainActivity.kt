@@ -87,6 +87,7 @@ import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.FailedCaptionPair
 import com.livelingo.android.ui.OfflineFailedCaptionsDialog
+import com.livelingo.android.ui.SingleSentenceSpeechReviewDialog
 import com.livelingo.android.ui.SpeechPackBrowserDialog
 import com.livelingo.android.ui.SpeechPackBrowserOption
 import com.livelingo.android.ui.LanguageSupportDialog
@@ -304,12 +305,21 @@ private enum class LiveSpeechPhase(val label: String) {
     HEARING("Spraak ontvangen · luisteren naar je zin"),
     PROCESSING("Zin afronden · Android verwerkt de spraak"),
     TRANSLATING("Zin ontvangen · lokale tekstvertaling loopt apart"),
-    SINGLE_FINISHED("Eén zin ontvangen · microfoon gestopt; lokale vertaling loopt apart"),
+    SINGLE_FINISHED("Eén zin herkend · microfoon gestopt; controleer of verwerp de zin"),
     SINGLE_EMPTY("Geen zin herkend · microfoon gestopt; tik voor een nieuwe zin"),
     RETRYING("Geen bruikbaar spraakresultaat · lokaal opnieuw luisteren…"),
     STALLED("Android-spraakdienst antwoordt niet · sessie veilig herstellen…"),
     INTERRUPTED("Luisteren gestopt door een Android-spraakfout · bekijk de melding")
 }
+
+/** One Android recognition result, awaiting human approval in RAM only. */
+private data class PendingSingleSpeechReview(
+    val original: String,
+    val sourceCode: String,
+    val targetCode: String,
+    val alternatives: List<String>,
+    val generation: Int
+)
 
 private data class Line(
     val id: Long,
@@ -759,6 +769,9 @@ private fun TuddyScreen(
     var pendingSpeakerExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
+    var pendingSingleSpeechReview by remember {
+        mutableStateOf<PendingSingleSpeechReview?>(null)
+    }
     val captureModePrefs = remember(context) { LocalSpeechCaptureModePreferences(context) }
     var captureMode by remember { mutableStateOf(captureModePrefs.selected()) }
     var captureModeNotice by remember { mutableStateOf("") }
@@ -1968,6 +1981,10 @@ private fun TuddyScreen(
     }
 
     fun start(forceRestart: Boolean = false) {
+        if (pendingSingleSpeechReview != null) {
+            error = "Bevestig of gooi eerst het herkende zinsvoorstel weg."
+            return
+        }
         error = ""
         // The runtime permission dialog may return after the Activity has
         // stopped. The microphone must never start from that stale callback.
@@ -2159,6 +2176,34 @@ private fun TuddyScreen(
                     val sentence = SpeechHypothesisPolicy.select(
                         results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
                     clearInterim()
+                    if (captureMode == LocalSpeechCaptureMode.SINGLE_SENTENCE &&
+                        sentence.isNotBlank() && token == generation) {
+                        // One-shot mode never publishes a machine hypothesis
+                        // directly. The microphone stops before the user
+                        // chooses an alternative, edits or discards the text.
+                        val nlEn = observedSource == "nl" && selectedTarget == "en"
+                        val enNl = observedSource == "en" && selectedTarget == "nl"
+                        sessionDiagnostics = sessionDiagnostics.copy(
+                            finalUtterances = sessionDiagnostics.finalUtterances + 1,
+                            nlEnFinalUtterances = sessionDiagnostics.nlEnFinalUtterances +
+                                (if (nlEn) 1 else 0),
+                            enNlFinalUtterances = sessionDiagnostics.enNlFinalUtterances +
+                                (if (enNl) 1 else 0)
+                        )
+                        pendingSingleSpeechReview = PendingSingleSpeechReview(
+                            original = sentence,
+                            sourceCode = observedSource,
+                            targetCode = selectedTarget,
+                            alternatives = OfflineSpeechCorrectionChoices.fromDeviceResults(
+                                results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION),
+                                sentence
+                            ),
+                            generation = token
+                        )
+                        stop()
+                        liveSpeechPhase = LiveSpeechPhase.SINGLE_FINISHED
+                        return
+                    }
                     liveSpeechPhase = if (sentence.isNotBlank())
                         LiveSpeechPhase.TRANSLATING else LiveSpeechPhase.RETRYING
                     if (sentence.isNotBlank() && token == generation) {
@@ -2252,6 +2297,9 @@ private fun TuddyScreen(
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, source.speechCode)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                // Android can return several unverified local hypotheses;
+                // user review admits no more than three bounded alternatives.
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 8)
                 putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
                 if (requestLanguageSwitch) {
                     putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_DETECTION, true)
@@ -2398,13 +2446,31 @@ private fun TuddyScreen(
      * Shared RAM-only insertion for all user-typed turns. The selected TEXT
      * language pair does not change the microphone's speech-pack selection.
      */
-    fun appendTypedTurn(rawText: String, sourceCode: String, targetCode: String): Boolean {
+    fun appendTypedTurn(
+        rawText: String, sourceCode: String, targetCode: String,
+        reviewedSpeech: PendingSingleSpeechReview? = null
+    ): Boolean {
         val sentence = OfflineTypedCaptionPolicy.normalize(rawText) ?: return false
         if (listening || sourceCode !in TargetCatalog.codes ||
             targetCode !in TargetCatalog.codes) return false
+        if (reviewedSpeech != null &&
+            (reviewedSpeech.generation != generation ||
+                reviewedSpeech.sourceCode != sourceCode ||
+                reviewedSpeech.targetCode != targetCode ||
+                pendingSingleSpeechReview != reviewedSpeech)) return false
         val id = System.nanoTime()
         val token = generation
-        lines.add(Line(id, sentence, "Vertalen…", "Bezig", sourceCode, targetCode))
+        val speechCorrected = reviewedSpeech != null && sentence != reviewedSpeech.original
+        lines.add(Line(id, sentence, "Vertalen…", "Bezig", sourceCode, targetCode,
+            userCorrected = speechCorrected))
+        if (reviewedSpeech != null) {
+            // Only a deliberately approved speech caption enters the live
+            // translation counter; recognized but discarded drafts do not.
+            speechTranslationStarted[id] = SystemClock.elapsedRealtime()
+            if (!speechCorrected && reviewedSpeech.alternatives.isNotEmpty()) {
+                offlineSpeechChoices[id] = reviewedSpeech.alternatives
+            }
+        }
         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
             val removed = lines.removeAt(0)
             translationDeadline.cancel(removed.id)
@@ -3295,6 +3361,7 @@ private fun TuddyScreen(
                     }
                 }
             }
+            if (event == Lifecycle.Event.ON_STOP) pendingSingleSpeechReview = null
             if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) closeSpeechCatalog()
             if (event == Lifecycle.Event.ON_STOP) {
@@ -3373,6 +3440,7 @@ private fun TuddyScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             pendingSpeechSettingsReturnTag = null
             generation++
+            pendingSingleSpeechReview = null
             translationDeadline.clear()
             modelStorage.invalidate()
             starterPhraseboardOpen = false
@@ -3754,6 +3822,29 @@ private fun TuddyScreen(
     }
 
     MaterialTheme(colorScheme = colors) {
+        pendingSingleSpeechReview?.let { review ->
+            SingleSentenceSpeechReviewDialog(
+                original = review.original,
+                sourceCode = review.sourceCode,
+                targetCode = review.targetCode,
+                alternatives = review.alternatives,
+                onConfirm = { approved ->
+                    if (appendTypedTurn(
+                            approved, review.sourceCode, review.targetCode,
+                            reviewedSpeech = review
+                        )
+                    ) {
+                        pendingSingleSpeechReview = null
+                        liveSpeechPhase = LiveSpeechPhase.OFF
+                        true
+                    } else false
+                },
+                onDiscard = {
+                    pendingSingleSpeechReview = null
+                    liveSpeechPhase = LiveSpeechPhase.OFF
+                }
+            )
+        }
         voicePickerLanguageTag?.let { languageTag ->
             if (!listening) {
                 InstalledLocalVoicePickerDialog(
@@ -7338,6 +7429,7 @@ private fun TuddyScreen(
         // explicit confirmation: a single mis-tap should not destroy live work.
         val clearCurrentConversation: () -> Unit = {
                         generation++
+                        pendingSingleSpeechReview = null
                         translationDeadline.clear()
                         // A conscious conversation wipe also discards snapshots
                         // held solely for a pending external document picker.
