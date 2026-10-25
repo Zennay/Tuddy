@@ -68,6 +68,38 @@ revisiecontroles geweigerd. In-flight controle en planning bevatten
 alleen tijdelijke appgegevens; er wordt geen gesprek naar schijf
 geschreven.
 
+## Eerder overgeslagen zinnen bewust in een kleine batch vertalen
+
+Als **Pauzeer live vertalen · houd origineel** actief is, herkent Tuddy
+uitspraken verder lokaal en bewaart de oorspronkelijke zinnen tijdelijk
+met status **Gepauzeerd**. Hervatten van de live-vertaling zet oude
+zinnen niet automatisch door naar ML Kit.
+
+Met **Kies overgeslagen zinnen om lokaal te vertalen** kun je, terwijl
+de microfoon uit is, zelf kiezen welke oorspronkelijke zinnen opnieuw
+worden aangeboden. De lijst toont maximaal de laatste 48 **geschikte,
+nog gepauzeerde** gespreksregels; oudere regels houden hun reeds
+bestaande individuele **Vertaal deze zin alsnog**-actie. Selecteer
+hoogstens zes zinnen uit **één oorspronkelijke taalrichting**.
+Een gemengde selectie wordt niet toegestaan.
+
+Tuddy controleert na jouw bevestiging eerst uitsluitend de **al
+geïnstalleerde lokale ML Kit-tekstmodellen** voor dat taalpaar.
+Een ontbrekend of onbekend model start nooit vanzelf een download:
+de zinnen blijven Gepauzeerd en je kunt bewust via Offline startcheck
+modellen voorbereiden. Na bevestigde modelbeschikbaarheid worden
+alleen de nog exact ongewijzigde, eerder geselecteerde regels
+aangeboden aan de bestaande lokale vertaalpipeline. Elke geselecteerde
+regel krijgt een nieuwe revisie, zodat late eerdere callbacks en
+latere correcties niet kunnen worden overschreven.
+
+Deze actie start **geen microfoon**, schakelt de globale
+vertaalpauze **niet** uit, vertaalt geen niet-geselecteerde regels,
+en bewaart geen lijst of tekst op schijf. Een verzoek om zes
+vertalingen is geen bewijs dat ze alle zes al zijn geslaagd.
+Zonder fysiek Android-toestel is hiermee geen luchtmodus-,
+modelkwaliteits- of onafhankelijk gebruikersbewijs geleverd.
+
 ## Herstel vanuit het gewone gesprek
 
 1. De knop **Herstel N mislukte offline vertalingen…** verschijnt onder de
