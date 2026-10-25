@@ -70,8 +70,24 @@ internal class PrivateSubtitleTranslationController {
     ) {
         cancel()
         val token = generation
+        // The *user's first* "Controleer lokale modellen" action must not
+        // remain on CHECKING forever either. This is independent of the
+        // second mandatory preflight immediately before batch translation.
+        if (!armDeadline(
+                token,
+                "Android antwoordde niet binnen 30 seconden op de controle " +
+                    "van reeds geïnstalleerde modellen. Tik bewust opnieuw.",
+                { _, error ->
+                    onReceipt(OfflineTextReceipt(
+                        source, target, OfflineTextStage.UNKNOWN,
+                        error ?: "Lokale modelcontrole is afgebroken."
+                    ))
+                }
+            )) return
         inventory.check(source, target, TargetCatalog.codes) { receipt ->
-            if (token == generation) onReceipt(receipt)
+            if (token != generation) return@check
+            if (receipt.stage != OfflineTextStage.CHECKING) cancelDeadline()
+            onReceipt(receipt)
         }
     }
 
@@ -165,6 +181,7 @@ internal class PrivateSubtitleTranslationController {
                 val input = cues[index].text.replace('\n', ' ').trim()
                 val sourceRow = sourceRowNumbers[index]
                 if (input.isBlank()) {
+                    onSourceRowProblem(sourceRow)
                     complete(
                         token, null,
                         "Regel $sourceRow is leeg. Het concept is ongewijzigd.",
