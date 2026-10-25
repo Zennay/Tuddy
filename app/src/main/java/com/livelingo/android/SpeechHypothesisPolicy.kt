@@ -9,15 +9,14 @@ package com.livelingo.android
  */
 internal object SpeechHypothesisPolicy {
     private const val MAX_ALTERNATIVES = 8
-    private const val MAX_CAPTION_CHARS = 1500
 
     fun select(candidates: List<String?>?): String {
         if (candidates == null) return ""
         for (candidate in candidates.take(MAX_ALTERNATIVES)) {
-            val text = candidate?.trim() ?: continue
-            if (text.isNotBlank() && text.length <= MAX_CAPTION_CHARS) {
-                return text
-            }
+            // Untrusted recognizer text must be bounded, printable and
+            // valid Unicode before any interim caption, TTS or export path.
+            val text = candidate?.let(LocalTextBoundaryPolicy::speechHypothesis)
+            if (text != null) return text
         }
         // A provider returning only blank/oversized/corrupt alternatives
         // must not produce an invented subtitle or unbounded RAM history.
