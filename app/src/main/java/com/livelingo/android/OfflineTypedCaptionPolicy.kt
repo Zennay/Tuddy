@@ -9,9 +9,8 @@ internal object OfflineTypedCaptionPolicy {
     const val MAX_INPUT_UNITS = 1500
 
     fun normalize(raw: String): String? {
-        if (raw.length > MAX_INPUT_UNITS ||
-            raw.any { Character.isISOControl(it) && it != '\n' && it != '\t' }) return null
-        val clean = raw.trim()
-        return clean.takeIf { it.isNotEmpty() && it.length <= MAX_INPUT_UNITS }
+        // The same Unicode boundary applies to manually typed captions as
+        // to Android speech and device-local ML Kit results. Never truncate.
+        return LocalTextBoundaryPolicy.typedCaption(raw)
     }
 }
