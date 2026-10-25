@@ -46,28 +46,6 @@ internal fun OfflineFailedCaptionsDialog(
     // Consent is specific to exactly one visible failed source -> target pair.
     // Dismissing this warning never triggers a network/model request.
     var preparationApproval by remember { mutableStateOf<Pair<String, String>?>(null) }
-    preparationApproval?.let { pair ->
-        AlertDialog(
-            onDismissRequest = { preparationApproval = null },
-            title = { Text("Alleen ${pair.first.uppercase()} → ${pair.second.uppercase()} voorbereiden?") },
-            text = {
-                Text("Tuddy controleert eerst de geïnstalleerde lokale tekstmodellen. " +
-                    "Alleen als dit taalpaar ontbreekt, mag ML Kit na je bevestiging " +
-                    "de benodigde modellen via wifi downloaden. Android kan een eenmaal " +
-                    "gestarte download ook na sluiten van het scherm afronden. " +
-                    "Er wordt niet automatisch vertaald of iets geüpload.")
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    preparationApproval = null
-                    onPreparePair(pair.first, pair.second)
-                }) { Text("Bevestig wifi-modelvoorbereiding") }
-            },
-            dismissButton = {
-                TextButton(onClick = { preparationApproval = null }) { Text("Annuleren") }
-            }
-        )
-    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Mislukte vertalingen herstellen") },
@@ -133,4 +111,28 @@ internal fun OfflineFailedCaptionsDialog(
             TextButton(onClick = onDismiss) { Text("Sluiten") }
         }
     )
+    // Emit confirmation last so Android stacks it above the recovery panel.
+    preparationApproval?.let { pair ->
+        AlertDialog(
+            onDismissRequest = { preparationApproval = null },
+            title = { Text("Alleen ${pair.first.uppercase()} → ${pair.second.uppercase()} voorbereiden?") },
+            text = {
+                Text("Tuddy controleert eerst de geïnstalleerde lokale tekstmodellen. " +
+                    "Alleen als dit taalpaar ontbreekt, mag ML Kit na je bevestiging " +
+                    "de benodigde modellen via wifi downloaden. Android kan een eenmaal " +
+                    "gestarte download ook na sluiten van het scherm afronden. " +
+                    "Er wordt niet automatisch vertaald of iets geüpload.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    preparationApproval = null
+                    onPreparePair(pair.first, pair.second)
+                }) { Text("Bevestig wifi-modelvoorbereiding") }
+            },
+            dismissButton = {
+                TextButton(onClick = { preparationApproval = null }) { Text("Annuleren") }
+            }
+        )
+    }
+
 }
