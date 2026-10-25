@@ -125,8 +125,8 @@ internal fun FocusTranscriptDialog(
 
     LaunchedEffect(speakerFilter, displayedCaptions.size,
         displayedCaptions.lastOrNull()?.translated,
-        interimOriginal, interimTranslated, followLive) {
-        if (followLive && (displayedCaptions.isNotEmpty() ||
+        interimOriginal, interimTranslated, followLive, stepReading) {
+        if (!stepReading && followLive && (displayedCaptions.isNotEmpty() ||
                 (showInterim && interimOriginal.isNotBlank()))) {
             val index = if (showInterim && interimOriginal.isNotBlank()) displayedCaptions.size
                 else (displayedCaptions.size - 1).coerceAtLeast(0)
@@ -176,7 +176,7 @@ internal fun FocusTranscriptDialog(
                             }
                             followLive = true
                         },
-                        enabled = !followLive
+                        enabled = !followLive && !stepReading
                     ) { Text(if (archiveMode) "↓ Laatste archiefregel" else
                         if (followLive) "Live ✓" else "Volg live") }
                 }
