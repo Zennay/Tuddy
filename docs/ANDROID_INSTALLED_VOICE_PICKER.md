@@ -164,6 +164,33 @@ De waarneembare Android-audiofocus- en headsetstatus blijft
 best-effort en bewijst geen fysieke audio-outputroute. Er zijn
 geen nieuwe permissies, audio-opnames of cloud-Fallbacks.
 
+## Voorlezen kan niet onbeperkt blijven hangen
+
+Androids Text-to-Speech-dienst kan soms geen start- of
+voltooiingscallback geven. Tuddy begrenst daarom elke expliciete lokale
+spraakactie: de engine krijgt maximaal **15 seconden** om zich aan te
+melden. Daarna wordt geen audio gestart en worden de lokale stem en
+audiofocus vrijgegeven. Elke daadwerkelijk aangevraagde voorleeszin
+krijgt een eigen, naar tekstlengte en gekozen tempo begrensde tijd
+(minimaal **20 seconden**, maximaal **100 seconden**). Komt er geen
+Android-`onDone` of `onError`, dan stopt Tuddy de hele huidige
+uitspraak en eventuele resterende ondertitelregels zonder een nieuwe
+of online TTS-actie te starten.
+
+Deze deadlines gelden ook voor het voorbeeld in de geïnstalleerde
+stemkiezer, het tweetalig achtereenvolgens voorlezen en de
+Android-geselecteerde tekstvertaling. Bij succesvol afronden,
+een bewuste Stop, focusverlies, headsetverwijdering of
+achtergrond/lifecycle-wijziging worden lopende timers meteen
+geannuleerd. Reacties van een eerdere TTS-engine kunnen niet aan
+een nieuwe afspeelsessie worden toegeschreven.
+
+Een timeout betekent uitsluitend dat Android zijn voortgang niet
+tijdig meldde. Het is **geen bewijs** dat iets wel of niet hoorbaar
+was of dat een Android-stem fysiek zonder netwerk werkte.
+Luister zelf op een echt toestel na of zinnen volledig worden
+uitgesproken; een lange of trage zin kan voortijdig stoppen.
+
 ## Grenzen voor acceptatie
 
 Een door de Android-TTS-engine als lokaal gemelde stem geeft **geen**
