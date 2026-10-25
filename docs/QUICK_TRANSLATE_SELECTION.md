@@ -34,6 +34,28 @@ Tuddy hergebruikt de bestaande `LocalCaptionSpeaker` en accepteert uitsluitend e
 
 Ook het lokale brontaalvoorstel is nu tegen verouderde asynchrone callbacks beschermd: als de selectiepagina afsluit, de gebruiker tussentijds talen wisselt of de app naar de achtergrond gaat, kan een late herkenningsuitkomst de nieuwere selectie niet terugzetten.
 
+## Vanuit Android Delen en naar andere apps terug
+
+Ook via **Delen → Tuddy** kun je na de bestaande controle van een gewone
+platte tekst kiezen voor **Vertaal apart · zonder gespreksgeschiedenis**.
+Dit opent dezelfde lokale geselecteerde-tekstvertaler als Android
+**Tekst verwerken**, maar in alleen-lezenmodus: de oorspronkelijke app
+wordt niet heimelijk aangepast en geen gespreksregel wordt aangemaakt.
+
+Na een geslaagde vertaling zijn er drie afzonderlijke mogelijkheden:
+**Kopieer vertaling** gebruikt het met Androids *gevoelige inhoud*-vlag
+gemarkeerde klembord (geen automatische inhoudsvoorvertoning op
+ondersteunde Android-versies, maar andere apps kunnen inhoud nog lezen);
+**Deel vertaling via Android…** toont eerst een privacybevestiging
+en opent alleen met instemming Androids standaarddeelmenu;
+**Vervang geselecteerde tekst** is uitsluitend beschikbaar bij
+daadwerkelijk bewerkbare selecties die de bronapp als zodanig markeert.
+Het delen naar een externe app kan daar opslag of netwerkgebruik
+veroorzaken, onafhankelijk van Tuddy's eigen lokale vertaling.
+Bij het verlaten van de snelle vertaler wordt het tijdelijke scherm
+gewist. Bijlagen, ondertitels, back-ups en andere gestructureerde
+gedeelde tekst blijven van de gewone vertaalactie gescheiden.
+
 ## Privacy en grenzen
 
 De functie verwerkt uitsluitend geselecteerde `text/plain`-tekst, begrensd
