@@ -24,6 +24,7 @@ internal fun LocalCaptionPlaybackMenu(
     onHeadphonesOnlyChange: (Boolean) -> Unit,
     onPlayOriginal: (LocalSpeechPace) -> Unit,
     onPlayTranslation: (LocalSpeechPace) -> Unit,
+    onPlayBilingual: (LocalSpeechPace) -> Unit,
     onStop: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -80,6 +81,20 @@ internal fun LocalCaptionPlaybackMenu(
                     onClick = {
                         expanded = false
                         onPlayTranslation(LocalSpeechPace.SLOW)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Origineel → vertaling · normaal") },
+                    onClick = {
+                        expanded = false
+                        onPlayBilingual(LocalSpeechPace.NORMAL)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Origineel → vertaling · langzaam") },
+                    onClick = {
+                        expanded = false
+                        onPlayBilingual(LocalSpeechPace.SLOW)
                     }
                 )
             }
