@@ -84,6 +84,8 @@ import com.livelingo.android.ui.OfflinePersonalPhraseTurnsDialog
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
+import com.livelingo.android.ui.FailedCaptionPair
+import com.livelingo.android.ui.OfflineFailedCaptionsDialog
 import com.livelingo.android.ui.SpeechPackBrowserDialog
 import com.livelingo.android.ui.SpeechPackBrowserOption
 import com.livelingo.android.ui.LanguageSupportDialog
@@ -784,6 +786,11 @@ private fun TuddyScreen(
     // Conversation-first: advanced app features are opt-in, never removed.
     var advancedActionsOpen by remember { mutableStateOf(false) }
     var confirmClearConversation by remember { mutableStateOf(false) }
+    // Only RAM-only retries; never mutate a completed or human-corrected row.
+    var failedCaptionRecoveryOpen by remember { mutableStateOf(false) }
+    var failedCaptionRecoveryBusy by remember { mutableStateOf(false) }
+    var failedCaptionRecoveryNotice by remember { mutableStateOf("") }
+    var failedCaptionRecoveryRevision by remember { mutableIntStateOf(0) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
     // Ephemeral user opt-in: no microphone startup when Android still reports
     // a usable connection. Never persist or mistake this for real device proof.
@@ -1099,6 +1106,69 @@ private fun TuddyScreen(
                 ?.takeIf { it in TargetCatalog.codes }
             translateResolved(text, id, detected ?: sourceCode,
                 targetCode, token, revision)
+        }
+    }
+
+    /**
+     * User-triggered repair for the current RAM-only conversation. Inspect one
+     * exact language pair before changing any row, never download models here.
+     * A revision and whole-row equality check fence late callbacks and edits.
+     */
+    fun recoverFailedCaptionPair(from: String, to: String) {
+        if (!failedCaptionRecoveryOpen || failedCaptionRecoveryBusy ||
+            listening || modelStorageBusy || preparingOfflineModel ||
+            from !in TargetCatalog.codes || to !in TargetCatalog.codes ||
+            from == to) return
+        val eligible = lines.filter { row ->
+            row.sourceCode == from && row.targetCode == to &&
+                row.status in setOf("Model ontbreekt", "Fout") &&
+                !row.userCorrected && row.original.isNotBlank() &&
+                row.original.length <= OfflineTypedCaptionPolicy.MAX_INPUT_UNITS
+        }.take(6)
+        if (eligible.isEmpty()) {
+            failedCaptionRecoveryNotice = "Geen herstelbare regels meer voor $from → $to."
+            return
+        }
+        val token = generation
+        val revision = ++failedCaptionRecoveryRevision
+        failedCaptionRecoveryBusy = true
+        failedCaptionRecoveryNotice =
+            "Geïnstalleerde lokale tekstmodellen voor $from → $to controleren…"
+        val inventory = OfflineTextModelInventory()
+        inventory.check(from, to, TargetCatalog.codes) { receipt ->
+            if (token != generation || revision != failedCaptionRecoveryRevision ||
+                !failedCaptionRecoveryOpen || listening ||
+                !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                if (revision == failedCaptionRecoveryRevision) failedCaptionRecoveryBusy = false
+                return@check
+            }
+            if (receipt.stage == OfflineTextStage.CHECKING) return@check
+            failedCaptionRecoveryBusy = false
+            if (receipt.stage != OfflineTextStage.READY) {
+                failedCaptionRecoveryNotice =
+                    receipt.detail + " Geen download gestart. " +
+                    "Open Offline startcheck om tekstmodellen bewust via wifi voor te bereiden."
+                return@check
+            }
+            var started = 0
+            eligible.forEach { snapshot ->
+                val index = lines.indexOfFirst { it.id == snapshot.id }
+                if (index >= 0 && lines[index] == snapshot &&
+                    !snapshot.userCorrected &&
+                    snapshot.status in setOf("Model ontbreekt", "Fout")) {
+                    lines[index] = snapshot.copy(
+                        translated = "Vertalen…", status = "Bezig",
+                        translationRevision = snapshot.translationRevision + 1
+                    )
+                    translate(snapshot.original, snapshot.id, snapshot.targetCode,
+                        snapshot.sourceCode, token, explicitlyChosenSource = true)
+                    started++
+                }
+            }
+            failedCaptionRecoveryNotice = if (started == 0)
+                "De regels zijn intussen gewijzigd; niets overschreven."
+            else "$started regels opnieuw lokaal aangevraagd voor $from → $to. " +
+                "Controleer de resultaten in het gesprek. Geen online fallback."
         }
     }
 
@@ -3337,7 +3407,38 @@ private fun TuddyScreen(
         }
     }
 
+    val failedCaptionPairs = lines.filter { row ->
+        row.status in setOf("Model ontbreekt", "Fout") &&
+            !row.userCorrected && row.original.isNotBlank() &&
+            row.original.length <= OfflineTypedCaptionPolicy.MAX_INPUT_UNITS &&
+            row.sourceCode in TargetCatalog.codes &&
+            row.targetCode in TargetCatalog.codes &&
+            row.sourceCode != row.targetCode
+    }.groupBy { it.sourceCode to it.targetCode }
+        .map { (pair, rows) ->
+            FailedCaptionPair(
+                pair.first, pair.second,
+                rows.count { it.status == "Model ontbreekt" },
+                rows.count { it.status == "Fout" }
+            )
+        }.sortedWith(compareByDescending<FailedCaptionPair> { it.count }
+            .thenBy { it.source }.thenBy { it.target })
+
     MaterialTheme(colorScheme = colors) {
+        if (failedCaptionRecoveryOpen) {
+            OfflineFailedCaptionsDialog(
+                pairs = failedCaptionPairs,
+                checking = failedCaptionRecoveryBusy,
+                notice = failedCaptionRecoveryNotice,
+                onRetryPair = ::recoverFailedCaptionPair,
+                onDismiss = {
+                    failedCaptionRecoveryOpen = false
+                    failedCaptionRecoveryRevision++
+                    failedCaptionRecoveryBusy = false
+                    failedCaptionRecoveryNotice = ""
+                }
+            )
+        }
         if (languageSupportOpen) {
             LanguageSupportDialog(
                 spokenCandidates = spoken.map { it.label + " (" + it.speechCode + ")" },
@@ -3511,7 +3612,7 @@ private fun TuddyScreen(
                     else {
                         val candidates = lines.filter {
                             it.sourceCode == from && it.targetCode == to &&
-                                it.status == "Model ontbreekt"
+                                it.status == "Model ontbreekt" && !it.userCorrected
                         }.take(12)
                         candidates.forEach { row ->
                             val index = lines.indexOfFirst { it.id == row.id }
@@ -8144,6 +8245,19 @@ private fun TuddyScreen(
                 }
                     }
                 }
+                if (failedCaptionPairs.isNotEmpty()) {
+                    OutlinedButton(
+                        enabled = !listening && !modelStorageBusy && !preparingOfflineModel,
+                        onClick = {
+                            failedCaptionRecoveryOpen = true
+                            failedCaptionRecoveryNotice = ""
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("↻ Herstel ${failedCaptionPairs.sumOf { it.count }} " +
+                            "mislukte offline vertalingen…")
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = {
@@ -8475,6 +8589,9 @@ private fun TuddyScreen(
                                                 val index = lines.indexOfFirst { it.id == line.id }
                                                 if (index >= 0) {
                                                     val old = lines[index]
+                                                    if (old.status !in setOf("Fout", "Model ontbreekt") ||
+                                                        old.userCorrected || old != line ||
+                                                        listening) return@TextButton
                                                     captionSpeaker.stop()
                                                     pendingCaptionShare = null
                                                     pendingTranscriptExport = null
