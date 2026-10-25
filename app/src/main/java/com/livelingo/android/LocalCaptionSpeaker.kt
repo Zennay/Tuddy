@@ -432,7 +432,9 @@ internal class LocalCaptionSpeaker(context: Context) {
                             }
                             override fun onError(utteranceId: String?) {
                                 main.post {
-                                    if (generation == version) {
+                                    if (generation == version &&
+                                        utteranceId ==
+                                            "tuddy-offline-bilingual-$version-$currentPart") {
                                         fail("Android stopte het tweetalige voorlezen. " +
                                             "Geen online fallback.")
                                     }
