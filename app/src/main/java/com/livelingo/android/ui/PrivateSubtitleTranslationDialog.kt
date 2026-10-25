@@ -55,6 +55,9 @@ internal fun PrivateSubtitleTranslationDialog(
     var checking by remember { mutableStateOf(false) }
     var translating by remember { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(0) }
+    // The exact source document row that was rejected or timed out.
+    // No partial translated text is committed on a batch failure.
+    var failedSourceRow by remember(cues) { mutableIntStateOf(0) }
     var translatedCues by remember { mutableStateOf<List<PrivateSubtitleCue>?>(null) }
     var translatedIndices by remember(cues) { mutableStateOf<List<Int>>(emptyList()) }
     var previewPage by remember(cues) { mutableIntStateOf(0) }
@@ -83,6 +86,7 @@ internal fun PrivateSubtitleTranslationDialog(
         checking = false
         translating = false
         progress = 0
+        failedSourceRow = 0
         translatedCues = null
         translatedIndices = emptyList()
         bilingualOutput = false
@@ -111,6 +115,7 @@ internal fun PrivateSubtitleTranslationDialog(
         translatedCues = null
         translatedIndices = emptyList()
         progress = 0
+        failedSourceRow = 0
         receipt = null
         message = ""
         controller.check(sourceCode, targetCode) { status ->
@@ -180,6 +185,7 @@ internal fun PrivateSubtitleTranslationDialog(
         translating = true
         checking = false
         progress = 0
+        failedSourceRow = 0
         previewPage = 0
         message = "Lokale modelstatus wordt opnieuw gecontroleerd…"
         controller.translate(
@@ -221,7 +227,8 @@ internal fun PrivateSubtitleTranslationDialog(
                     }
                 }
             },
-            sourceRowNumbers = indices.map { it + 1 }
+            sourceRowNumbers = indices.map { it + 1 },
+            onSourceRowProblem = { failedSourceRow = it }
         )
     }
 
@@ -403,8 +410,37 @@ internal fun PrivateSubtitleTranslationDialog(
                 if (translating) {
                     Text(
                         "Lokaal vertalen: $progress / ${validSelectedIndices.size} geselecteerde regels. " +
+                            "Per regel maximaal 30 seconden; wachten op Androids lokale " +
+                            "modelcontrole heeft eveneens een 30-secondenlimiet. " +
+                            "Een vastgelopen regel annuleert de hele voorvertoning. " +
                             "Er wordt pas iets toegepast als alle geselecteerde regels slagen.",
                         style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                if (!translating && !checking && preview == null &&
+                    failedSourceRow in 1..cues.size) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            val row = failedSourceRow
+                            controller.cancel()
+                            cueSelectionExpression = row.toString()
+                            receipt = null
+                            progress = 0
+                            failedSourceRow = 0
+                            translatedIndices = emptyList()
+                            translatedCues = null
+                            message = "Alle eerdere vertaalresultaten zijn verworpen. " +
+                                "Alleen regel $row is geselecteerd. Controleer eerst de " +
+                                "lokale modellen en probeer deze regel bewust opnieuw."
+                        }
+                    ) {
+                        Text("Bekijk alleen mislukte regel $failedSourceRow")
+                    }
+                    Text(
+                        "Andere originele tijdgecodeerde regels blijven ongewijzigd. " +
+                            "De vorige batch heeft niets toegepast.",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
                 if (preview != null) {
@@ -543,6 +579,7 @@ internal fun PrivateSubtitleTranslationDialog(
                     receipt = null
                     translatedCues = null
                     translatedIndices = emptyList()
+                    failedSourceRow = 0
                     message = "Geannuleerd. Het tijdelijke ondertitelconcept is ongewijzigd."
                 } else {
                     closeDialog()
