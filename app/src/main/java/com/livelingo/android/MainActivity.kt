@@ -781,6 +781,9 @@ private fun TuddyScreen(
     var speechCatalogEpoch by remember { mutableIntStateOf(0) }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
+    // Conversation-first: advanced app features are opt-in, never removed.
+    var advancedActionsOpen by remember { mutableStateOf(false) }
+    var confirmClearConversation by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
     // Ephemeral user opt-in: no microphone startup when Android still reports
     // a usable connection. Never persist or mistake this for real device proof.
@@ -6835,58 +6838,9 @@ private fun TuddyScreen(
                 }
             }
         }
-        Surface(Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Text("Tuddy", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                Text("Gesprekken begrijpen, ook zonder internet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Spreektaal: ${source.label}  ·  Vertaling: ${target.label}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary)
-                val currentSpeechReady = offlineAvailable &&
-                    speechPackReceipt.tag == source.speechCode &&
-                    speechPackReceipt.stage == SpeechPackStage.READY
-                val currentTextReady = textReceipt.source == source.translateCode &&
-                    textReceipt.target == target.translateCode &&
-                    textReceipt.stage == OfflineTextStage.READY
-                OutlinedButton(
-                    onClick = {
-                        offlineReadinessOpen = true
-                        showSettings = false
-                        conversationToolsOpen = false
-                        favoritesOpen = false
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (currentSpeechReady && currentTextReady)
-                        "Offline startcheck · beide modellen aanwezig"
-                    else "Offline startcheck · controleer spraak én tekst")
-                }
-                Text(
-                    if (requireOfflineRadioBeforeListening)
-                        "Strikte vliegtuigmodus is aan voor deze sessie. " +
-                            "Luisteren stopt bij nieuwe of onduidelijke verbindingen."
-                    else "Strikte vliegtuigmodus staat uit. Schakel hem " +
-                        "desgewenst in via Offline startcheck.",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (requireOfflineRadioBeforeListening)
-                        MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val canStart = offlineAvailable && !listening
-                    Button(
-                        onClick = {
-                            if (listening) stop()
-                            else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
-                                == PackageManager.PERMISSION_GRANTED) start()
-                            else microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
-                        },
-                        enabled = offlineAvailable && !modelStorageBusy,
-                    ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
-                    OutlinedButton(onClick = {
+        // Keep the original comprehensive RAM-only clear behavior, but require
+        // explicit confirmation: a single mis-tap should not destroy live work.
+        val clearCurrentConversation: () -> Unit = {
                         generation++
                         // A conscious conversation wipe also discards snapshots
                         // held solely for a pending external document picker.
@@ -6964,488 +6918,38 @@ private fun TuddyScreen(
                         starterPhraseboardOpen = false
                         previewResult = null
                         error = ""
-                    }) { Text("Wis gesprek") }
-                    TextButton(onClick = { follow = !follow }) {
-                        Text(if (follow) "Live ✓" else "Volg live")
-                    }
+        }
+        if (confirmClearConversation) {
+            AlertDialog(
+                onDismissRequest = { confirmClearConversation = false },
+                title = { Text("Gesprek wissen?") },
+                text = {
+                    Text("Alle huidige ondertitels, tijdelijke correcties en markeringen verdwijnen. " +
+                        "Dit kan niet ongedaan worden gemaakt. " +
+                        "Je bewust opgeslagen privéwoorden en zinnen blijven staan; " +
+                        "eerder gedeelde of geëxporteerde kopieën worden niet teruggehaald.")
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmClearConversation = false
+                        clearCurrentConversation()
+                    }) { Text("Wis gesprek definitief") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmClearConversation = false }) { Text("Behoud gesprek") }
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(onClick = { focusMode = true }) { Text("⛶ Leesmodus") }
-                    OutlinedButton(
-                        enabled = lines.any {
-                            it.status == "Lokaal vertaald" &&
-                                it.original.isNotBlank() && it.translated.isNotBlank()
-                        },
-                        onClick = {
-                            stop() // table presentation never keeps the mic active
-                            captionSpeaker.stop()
-                            focusMode = false
-                            liveTableOpen = true
-                        }
-                    ) { Text("↕ Tafelmodus") }
-                    OutlinedButton(
-                        enabled = reverseDirection != null && !modelStorageBusy,
-                        onClick = {
-                            val reversed = reverseDirection
-                            val previousSource = source
-                            val nextSource = reversed?.let { next ->
-                                spoken.firstOrNull { it.speechCode == next.sourceSpeechTag }
-                            }
-                            if (reversed != null && nextSource != null) {
-                                stop()
-                                modelStorage.invalidate()
-                                installedTextModels = null
-                                pendingBulkModelDeletion = null
-                                selectedModelCleanupCodes = emptySet()
-                                pendingCaptionShare = null
-                                pendingSpeakerExport = null
-                                pendingTranscriptExport = null
-                                source = nextSource
-                                target = LanguageChoice(
-                                    previousSource.label, reversed.targetTextCode,
-                                    reversed.targetTextCode
-                                )
-                                val persisted = runCatching {
-                                    languageSettings.edit()
-                                        .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, nextSource.speechCode)
-                                        .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, reversed.targetTextCode)
-                                        .commit()
-                                }.getOrDefault(false)
-                                textReceipt = OfflineTextReceipt(
-                                    nextSource.translateCode, reversed.targetTextCode,
-                                    OfflineTextStage.UNCHECKED,
-                                    "Gespreksrichting gewijzigd: controleer beide tekstmodellen."
-                                )
-                                speechPackReceipt = SpeechPackReceipt(
-                                    nextSource.speechCode, SpeechPackStage.UNCHECKED,
-                                    "Nieuwe spreekrichting: controleer het lokale Android-spraakpakket."
-                                )
-                                offlineModelStatus = ""
-                                error = ""
-                                showSettings = true
-                                conversationToolsOpen = false
-                                directionNotice = "Richting: ${nextSource.label} → ${previousSource.label}. " +
-                                    "Microfoon gestopt. Controleer spraak- en tekstmodellen, " +
-                                    "tik daarna opnieuw op Luister." +
-                                    if (persisted) "" else " Deze keuze geldt alleen voor deze sessie."
-                            }
-                        }
-                    ) { Text("⇄ Wissel richting") }
-                }
-                TextButton(
-                    onClick = { quickTypedOpen = true },
-                    enabled = !listening,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("✍ Typ zin · zonder microfoon") }
-                TextButton(
-                    enabled = !listening,
-                    onClick = {
-                        if (!listening) {
-                            quickTypedOpen = false
-                            twoWayTypedOpen = true
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("⇄ Tweeweg-tekstgesprek · zonder microfoon") }
-                TextButton(
-                    enabled = !listening,
-                    onClick = { offlinePersonalTurnsOpen = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("⇄ Offline gesprek met mijn eigen Kurmanji/Sorani/Pasjtoe-zinnen") }
-                TextButton(
-                    onClick = {
-                        if (listening) stop()
-                        starterPhraseboardOpen = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("🌍 5 basiswoorden · Kurmanji, Sorani, Pasjtoe") }
-                TextButton(
-                    onClick = {
-                        if (listening) stop()
-                        quickPhrasePickerOpen = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("▣ Mijn gesprekskaarten · direct zoeken en tonen") }
-                TextButton(
-                    onClick = {
-                        if (listening) stop()
-                        flashcardsOpen = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("🧠 Oefenkaarten · mijn opgeslagen woorden en zinnen") }
-                OutlinedButton(
-                    enabled = !listening && lines.any { line ->
-                        line.status == "Lokaal vertaald" &&
-                            line.original.isNotBlank() && line.translated.isNotBlank() &&
-                            line.original != line.translated &&
-                            line.original.length <= 400 && line.translated.length <= 400
-                    },
-                    onClick = {
-                        captionSpeaker.stop()
-                        sessionCaptionStudyStartId = null
-                        sessionCaptionStudyOpen = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("🧠 Oefen dit gesprek · tijdelijke tweetalige kaarten") }
-                TextButton(
-                    onClick = {
-                        if (listening) stop()
-                        ownWordsOpen = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("✎ Mijn eigen woorden · offline betekenissen") }
-                OutlinedButton(onClick = {
-                    favoritesOpen = !favoritesOpen
-                    if (favoritesOpen) {
-                        showSettings = false
-                        conversationToolsOpen = false
-                    }
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (favoritesOpen) "Verberg favoriete taalparen"
-                        else "☆ Favoriete taalparen (${favoritePairs.size})")
-                }
-                if (favoritesOpen) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 236.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("Bewaar maximaal drie taalrichtingen. Een favoriet " +
-                            "installeert geen spraak- of tekstmodel op je telefoon.",
-                            style = MaterialTheme.typography.bodySmall)
-                        val active = FavoriteLanguagePair(source.speechCode, target.translateCode)
-                        Button(
-                            enabled = active !in favoritePairs &&
-                                favoritePairs.size < PrivateLanguagePairFavorites.MAX_PAIRS,
-                            onClick = {
-                                val saved = favoriteStorage.save(active, allowedSpeechTags)
-                                favoritePairs = favoriteStorage.entries(allowedSpeechTags)
-                                favoritesNotice = if (saved)
-                                    "Dit taalpaar is als privéfavoriet opgeslagen."
-                                else "Opslaan mislukt of maximum bereikt. Verwijder eventueel een favoriet."
-                            }
-                        ) { Text("☆ Bewaar huidig taalpaar") }
-                        favoritePairs.forEach { pair ->
-                            val from = spoken.firstOrNull { it.speechCode == pair.speechTag }
-                            val to = TargetCatalog.targets.firstOrNull { it.code == pair.targetCode }
-                            if (from != null && to != null) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("${from.label} → ${to.title}",
-                                        style = MaterialTheme.typography.bodySmall)
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TextButton(
-                                            enabled = !modelStorageBusy && !preparingOfflineModel,
-                                            onClick = { chooseFavoritePair(pair) }
-                                        ) { Text("Kies") }
-                                        TextButton(onClick = {
-                                            val removed = favoriteStorage.remove(pair, allowedSpeechTags)
-                                            if (removed) favoritePairs =
-                                                favoriteStorage.entries(allowedSpeechTags)
-                                            favoritesNotice = if (removed) "Favoriet verwijderd."
-                                                else "Verwijderen mislukt; probeer opnieuw."
-                                        }) { Text("Verwijder") }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                if (favoritesNotice.isNotBlank()) {
-                    Text(favoritesNotice, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary)
-                }
-                if (directionNotice.isNotBlank()) {
-                    Text(directionNotice, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary)
-                }
-                OutlinedButton(
-                    onClick = {
-                        conversationToolsOpen = !conversationToolsOpen
-                        if (conversationToolsOpen) {
-                            showSettings = false
-                            favoritesOpen = false
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (conversationToolsOpen) "Verberg gesprekstools"
-                        else "Gesprekstools · export, sprekers en archief")
-                }
-                if (conversationToolsOpen) {
-                    translationMemoryRevision // Reflect the count after opt-in or deletion.
-                    OutlinedButton(
-                        onClick = { translationMemoryOpen = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Tijdelijke vertaalcorrecties · " +
-                            translationMemory.entries().size + " onthouden")
-                    }
-                    Column(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 256.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
-                            "De labels zijn geen stemherkenning, worden niet geëxporteerd en " +
-                            "verdwijnen wanneer deze gesprekssessie wordt gewist.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val countA = lines.count { manuallyAssignedSpeakers[it.id] == "A" }
-                        val countB = lines.count { manuallyAssignedSpeakers[it.id] == "B" }
-                        TextButton(enabled = countA > 0, onClick = { jumpToSpeaker("A") }) {
-                            Text("Volgende A ($countA)")
-                        }
-                        TextButton(enabled = countB > 0, onClick = { jumpToSpeaker("B") }) {
-                            Text("Volgende B ($countB)")
-                        }
-                    }
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        enabled = lines.isNotEmpty() && !listening,
-                        onClick = {
-                            exportStatus = ""
-                            val snapshot = PrivateTranscriptExport.snapshot(
-                                lines.map { line ->
-                                    TranscriptExportRow(
-                                        line.original, line.translated, line.status,
-                                        line.sourceCode, line.targetCode,
-                                    line.recordedAtMillis
-                                    )
-                                }
-                            )
-                            if (snapshot == null) {
-                                error = "Kan dit gesprek niet veilig exporteren. Wis ongeldige tekst en probeer opnieuw."
-                            } else {
-                                pendingTranscriptExport = generation to snapshot
-                                saveTranscript.launch("Tuddy-gesprek.txt")
-                            }
-                        }
-                    ) { Text("Bewaar gesprek…") }
-                    Text(
-                        "Alleen op verzoek. Externe opslag kan synchroniseren.",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    TextButton(
-                        enabled = lines.isNotEmpty() && !listening,
-                        onClick = {
-                            exportStatus = ""
-                            val snapshot = PrivateTranscriptJsonExport.snapshot(
-                                lines.map { line ->
-                                    TranscriptExportRow(
-                                        line.original, line.translated, line.status,
-                                        line.sourceCode, line.targetCode, line.recordedAtMillis
-                                    )
-                                }
-                            )
-                            if (snapshot == null) {
-                                error = "Kan dit gesprek niet veilig als JSON exporteren."
-                            } else {
-                                pendingTranscriptExport = generation to snapshot
-                                saveTranscriptJson.launch("Tuddy-gesprek.json")
-                            }
-                        }
-                    ) { Text("Bewaar JSON…") }
-                    Text(
-                        "Voor eigen archief of verwerking; onvoltooide vertalingen blijven leeg.",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedButton(
-                        enabled = !listening && lines.any {
-                            it.status == "Lokaal" || it.status == "Lokaal vertaald"
-                        },
-                        onClick = { subtitleConsentOpen = true }
-                    ) { Text("Bewaar ondertitelconcept (SRT/WebVTT)…") }
-                    OutlinedButton(
-                        enabled = !listening && lines.isNotEmpty(),
-                        onClick = {
-                            printableOnlyFinished = true
-                            printableLiveConsentOpen = true
-                        }
-                    ) { Text("▤ Afdrukbaar gesprek (HTML)…") }
-                    Text(
-                        "Tweetalige zinnen; geschatte tijden uit spraakafloop, " +
-                            "niet gesynchroniseerd met audio.",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    TextButton(
-                        enabled = !listening,
-                        onClick = {
-                            pendingArchiveGeneration = generation
-                            openTranscriptArchive.launch(arrayOf("application/json", "text/plain"))
-                        }
-                    ) { Text("Open JSON-archief…") }
-                    TextButton(enabled = !listening, onClick = {
-                        pendingSubtitleOpenGeneration = generation
-                        subtitleFileCues = null
-                        // Android document providers inconsistently report
-                        // Text subtitle files including SBV can use unexpected provider MIME types.
-                        // Let the user intentionally choose a file; the strict
-                        // bounded parser remains the only acceptance gate.
-                        openSubtitleFile.launch(arrayOf("*/*"))
-                    }) { Text("Open ondertitelbestand…") }
-                    Text(
-                        "Bekijk een bewaard gesprek zonder je live gesprek te vervangen.",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !listening,
-                    onClick = { subtitlePasteOpen = true }
-                ) { Text("Plak of importeer ondertiteltekst…") }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedButton(
-                        enabled = !listening && lines.any {
-                            (it.status == "Lokaal vertaald" || it.status == "Lokaal") &&
-                                (manuallyAssignedSpeakers[it.id] == "A" ||
-                                    manuallyAssignedSpeakers[it.id] == "B")
-                        },
-                        onClick = {
-                            val snapshot = captureSpeakerTranscript()
-                            if (snapshot == null) {
-                                exportStatus = "Geen afgerond gesprek met veilige sprekerlabels om te bewaren."
-                            } else {
-                                exportStatus = ""
-                                pendingSpeakerExport = generation to snapshot
-                            }
-                        }
-                    ) { Text("Bewaar gesprek met sprekerlabels…") }
-                    Text(
-                        "Afzonderlijke toestemming · alleen afgeronde zinnen · TXT",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                    }
-                }
-                if (exportStatus.isNotBlank()) Text(
-                    exportStatus,
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                if (pronunciationNotice.isNotBlank()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(pronunciationNotice, modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        TextButton(onClick = {
-                            captionSpeaker.stop()
-                            pronunciationNotice = "Voorlezen gestopt."
-                        }) { Text("Stop stem") }
-                    }
-                }
-                OutlinedButton(
-                    onClick = {
-                        if (listening) stop()
-                        dailyStudyHubOpen = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("🧠 Vandaag offline oefenen · woorden en eigen zinnen")
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(onClick = { savedWordsOpen = true }) {
-                        Text("Mijn woorden ($savedWordCount)")
-                    }
-                    Text(
-                        if (savedVocabulary.reviewsEnabled())
-                            "Zelf bewaarde basiswoorden · offline · $scheduledReviewDueCount vandaag"
-                        else "Zelf bewaarde basiswoorden · offline",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                if (savedWordNotice.isNotBlank()) {
-                    Text(savedWordNotice, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                OutlinedButton(
-                    onClick = {
-                        showSettings = !showSettings
-                        if (showSettings) {
-                            conversationToolsOpen = false
-                            favoritesOpen = false
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (showSettings) "Verberg taal- en modelinstellingen" else "Taal- en modelinstellingen")
-                }
-                // Settings used to occupy the full unscrollable outer Column on
-                // phones, starving the weighted transcript of its available height.
-                // Keep listening/clear/follow controls pinned above a separately
-                // scrollable, bounded setup area; default to the actual conversation.
-                if (showSettings) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
-                            .weight(0.48f, fill = false)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                Text("Ondertitelgrootte", style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    CaptionSize.entries.forEach { option ->
-                        TextButton(onClick = {
-                            captionSize = option
-                            val saved = runCatching {
-                                captionPrefs.edit()
-                                    .putString(CaptionDisplayPreferences.SIZE_KEY, option.name)
-                                    .commit()
-                            }.getOrDefault(false)
-                            captionSizeMessage = if (saved) "" else
-                                "Grootte geldt nu alleen voor deze sessie."
-                        }) {
-                            Text(if (captionSize == option) "${option.label} ✓" else option.label)
-                        }
-                    }
-                }
-                if (captionSizeMessage.isNotBlank()) {
-                    Text(captionSizeMessage, style = MaterialTheme.typography.bodySmall)
-                }
-                Text(
-                    "Alleen de presentatie verandert; het gesprek en de vertaling blijven gelijk.",
-                    style = MaterialTheme.typography.bodySmall
-                )
+            )
+        }
+        Surface(Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Tuddy", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                Text("Luister, lees mee en vertaal lokaal", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Kies je spreektaal en vertaling. Een taalkeuze installeert geen offline model.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.weight(1f)) {
                         OutlinedButton(onClick = { sourceOpen = true }, enabled = !modelStorageBusy, modifier = Modifier.fillMaxWidth()) {
@@ -7554,6 +7058,188 @@ private fun TuddyScreen(
                         }
                     }
                 }
+                val currentSpeechReady = offlineAvailable &&
+                    speechPackReceipt.tag == source.speechCode &&
+                    speechPackReceipt.stage == SpeechPackStage.READY
+                val currentTextReady = textReceipt.source == source.translateCode &&
+                    textReceipt.target == target.translateCode &&
+                    textReceipt.stage == OfflineTextStage.READY
+                OutlinedButton(
+                    onClick = {
+                        offlineReadinessOpen = true
+                        advancedActionsOpen = false
+                        showSettings = false
+                        conversationToolsOpen = false
+                        favoritesOpen = false
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (currentSpeechReady && currentTextReady)
+                        "Offline startcheck · beide modellen aanwezig"
+                    else "Offline startcheck · controleer spraak én tekst")
+                }
+                Text(
+                    if (requireOfflineRadioBeforeListening)
+                        "Strikte vliegtuigmodus is aan voor deze sessie. " +
+                            "Luisteren stopt bij nieuwe of onduidelijke verbindingen."
+                    else "Strikte vliegtuigmodus staat uit. Schakel hem " +
+                        "desgewenst in via Offline startcheck.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (requireOfflineRadioBeforeListening)
+                        MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val canStart = offlineAvailable && !listening
+                    Button(
+                        onClick = {
+                            if (listening) stop()
+                            else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                                == PackageManager.PERMISSION_GRANTED) start()
+                            else microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+                        },
+                        enabled = offlineAvailable && !modelStorageBusy,
+                    ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
+                    OutlinedButton(onClick = { confirmClearConversation = true }) {
+                        Text("Wis gesprek")
+                    }
+                    TextButton(onClick = { follow = !follow }) {
+                        Text(if (follow) "Pauzeer volgen" else "Volg live")
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(onClick = { focusMode = true }) { Text("⛶ Leesmodus") }
+                    OutlinedButton(
+                        enabled = reverseDirection != null && !modelStorageBusy,
+                        onClick = {
+                            val reversed = reverseDirection
+                            val previousSource = source
+                            val nextSource = reversed?.let { next ->
+                                spoken.firstOrNull { it.speechCode == next.sourceSpeechTag }
+                            }
+                            if (reversed != null && nextSource != null) {
+                                stop()
+                                modelStorage.invalidate()
+                                installedTextModels = null
+                                pendingBulkModelDeletion = null
+                                selectedModelCleanupCodes = emptySet()
+                                pendingCaptionShare = null
+                                pendingSpeakerExport = null
+                                pendingTranscriptExport = null
+                                source = nextSource
+                                target = LanguageChoice(
+                                    previousSource.label, reversed.targetTextCode,
+                                    reversed.targetTextCode
+                                )
+                                val persisted = runCatching {
+                                    languageSettings.edit()
+                                        .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, nextSource.speechCode)
+                                        .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, reversed.targetTextCode)
+                                        .commit()
+                                }.getOrDefault(false)
+                                textReceipt = OfflineTextReceipt(
+                                    nextSource.translateCode, reversed.targetTextCode,
+                                    OfflineTextStage.UNCHECKED,
+                                    "Gespreksrichting gewijzigd: controleer beide tekstmodellen."
+                                )
+                                speechPackReceipt = SpeechPackReceipt(
+                                    nextSource.speechCode, SpeechPackStage.UNCHECKED,
+                                    "Nieuwe spreekrichting: controleer het lokale Android-spraakpakket."
+                                )
+                                offlineModelStatus = ""
+                                error = ""
+                                showSettings = true
+                                conversationToolsOpen = false
+                                directionNotice = "Richting: ${nextSource.label} → ${previousSource.label}. " +
+                                    "Microfoon gestopt. Controleer spraak- en tekstmodellen, " +
+                                    "tik daarna opnieuw op Luister." +
+                                    if (persisted) "" else " Deze keuze geldt alleen voor deze sessie."
+                            }
+                        }
+                    ) { Text("⇄ Wissel richting") }
+                }
+                TextButton(
+                    onClick = { quickTypedOpen = true },
+                    enabled = !listening,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("✍ Typ zin · zonder microfoon") }
+                OutlinedButton(
+                    onClick = {
+                        advancedActionsOpen = !advancedActionsOpen
+                        if (!advancedActionsOpen) {
+                            showSettings = false
+                            favoritesOpen = false
+                            conversationToolsOpen = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (advancedActionsOpen) "Verberg extra functies"
+                        else "Meer functies · instellingen, oefenen en bestanden")
+                }
+                if (advancedActionsOpen) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Extra functies · alleen op jouw verzoek. " +
+                                "Je live gesprek blijft hieronder zichtbaar.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                OutlinedButton(
+                    onClick = {
+                        showSettings = !showSettings
+                        if (showSettings) {
+                            conversationToolsOpen = false
+                            favoritesOpen = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (showSettings) "Verberg taal- en modelinstellingen" else "Taal- en modelinstellingen")
+                }
+                // Settings used to occupy the full unscrollable outer Column on
+                // phones, starving the weighted transcript of its available height.
+                // Keep listening/clear/follow controls pinned above a separately
+                // scrollable, bounded setup area; default to the actual conversation.
+                if (showSettings) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(max = 420.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                Text("Ondertitelgrootte", style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    CaptionSize.entries.forEach { option ->
+                        TextButton(onClick = {
+                            captionSize = option
+                            val saved = runCatching {
+                                captionPrefs.edit()
+                                    .putString(CaptionDisplayPreferences.SIZE_KEY, option.name)
+                                    .commit()
+                            }.getOrDefault(false)
+                            captionSizeMessage = if (saved) "" else
+                                "Grootte geldt nu alleen voor deze sessie."
+                        }) {
+                            Text(if (captionSize == option) "${option.label} ✓" else option.label)
+                        }
+                    }
+                }
+                if (captionSizeMessage.isNotBlank()) {
+                    Text(captionSizeMessage, style = MaterialTheme.typography.bodySmall)
+                }
+                Text(
+                    "Alleen de presentatie verandert; het gesprek en de vertaling blijven gelijk.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 OutlinedButton(
                     onClick = { languageSupportOpen = true },
                     modifier = Modifier.fillMaxWidth()
@@ -8045,6 +7731,378 @@ private fun TuddyScreen(
                 }
                     }
                 }
+                    OutlinedButton(
+                        enabled = lines.any {
+                            it.status == "Lokaal vertaald" &&
+                                it.original.isNotBlank() && it.translated.isNotBlank()
+                        },
+                        onClick = {
+                            stop() // table presentation never keeps the mic active
+                            captionSpeaker.stop()
+                            focusMode = false
+                            liveTableOpen = true
+                        }
+                    ) { Text("↕ Tafelmodus") }
+                TextButton(
+                    enabled = !listening,
+                    onClick = {
+                        if (!listening) {
+                            quickTypedOpen = false
+                            twoWayTypedOpen = true
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("⇄ Tweeweg-tekstgesprek · zonder microfoon") }
+                TextButton(
+                    enabled = !listening,
+                    onClick = { offlinePersonalTurnsOpen = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("⇄ Offline gesprek met mijn eigen Kurmanji/Sorani/Pasjtoe-zinnen") }
+                TextButton(
+                    onClick = {
+                        if (listening) stop()
+                        starterPhraseboardOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🌍 5 basiswoorden · Kurmanji, Sorani, Pasjtoe") }
+                TextButton(
+                    onClick = {
+                        if (listening) stop()
+                        quickPhrasePickerOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("▣ Mijn gesprekskaarten · direct zoeken en tonen") }
+                TextButton(
+                    onClick = {
+                        if (listening) stop()
+                        flashcardsOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🧠 Oefenkaarten · mijn opgeslagen woorden en zinnen") }
+                OutlinedButton(
+                    enabled = !listening && lines.any { line ->
+                        line.status == "Lokaal vertaald" &&
+                            line.original.isNotBlank() && line.translated.isNotBlank() &&
+                            line.original != line.translated &&
+                            line.original.length <= 400 && line.translated.length <= 400
+                    },
+                    onClick = {
+                        captionSpeaker.stop()
+                        sessionCaptionStudyStartId = null
+                        sessionCaptionStudyOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🧠 Oefen dit gesprek · tijdelijke tweetalige kaarten") }
+                TextButton(
+                    onClick = {
+                        if (listening) stop()
+                        ownWordsOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("✎ Mijn eigen woorden · offline betekenissen") }
+                OutlinedButton(onClick = {
+                    favoritesOpen = !favoritesOpen
+                    if (favoritesOpen) {
+                        showSettings = false
+                        conversationToolsOpen = false
+                    }
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (favoritesOpen) "Verberg favoriete taalparen"
+                        else "☆ Favoriete taalparen (${favoritePairs.size})")
+                }
+                if (favoritesOpen) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 236.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Bewaar maximaal drie taalrichtingen. Een favoriet " +
+                            "installeert geen spraak- of tekstmodel op je telefoon.",
+                            style = MaterialTheme.typography.bodySmall)
+                        val active = FavoriteLanguagePair(source.speechCode, target.translateCode)
+                        Button(
+                            enabled = active !in favoritePairs &&
+                                favoritePairs.size < PrivateLanguagePairFavorites.MAX_PAIRS,
+                            onClick = {
+                                val saved = favoriteStorage.save(active, allowedSpeechTags)
+                                favoritePairs = favoriteStorage.entries(allowedSpeechTags)
+                                favoritesNotice = if (saved)
+                                    "Dit taalpaar is als privéfavoriet opgeslagen."
+                                else "Opslaan mislukt of maximum bereikt. Verwijder eventueel een favoriet."
+                            }
+                        ) { Text("☆ Bewaar huidig taalpaar") }
+                        favoritePairs.forEach { pair ->
+                            val from = spoken.firstOrNull { it.speechCode == pair.speechTag }
+                            val to = TargetCatalog.targets.firstOrNull { it.code == pair.targetCode }
+                            if (from != null && to != null) {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("${from.label} → ${to.title}",
+                                        style = MaterialTheme.typography.bodySmall)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(
+                                            enabled = !modelStorageBusy && !preparingOfflineModel,
+                                            onClick = { chooseFavoritePair(pair) }
+                                        ) { Text("Kies") }
+                                        TextButton(onClick = {
+                                            val removed = favoriteStorage.remove(pair, allowedSpeechTags)
+                                            if (removed) favoritePairs =
+                                                favoriteStorage.entries(allowedSpeechTags)
+                                            favoritesNotice = if (removed) "Favoriet verwijderd."
+                                                else "Verwijderen mislukt; probeer opnieuw."
+                                        }) { Text("Verwijder") }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (favoritesNotice.isNotBlank()) {
+                    Text(favoritesNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                if (directionNotice.isNotBlank()) {
+                    Text(directionNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                OutlinedButton(
+                    onClick = {
+                        conversationToolsOpen = !conversationToolsOpen
+                        if (conversationToolsOpen) {
+                            showSettings = false
+                            favoritesOpen = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (conversationToolsOpen) "Verberg gesprekstools"
+                        else "Gesprekstools · export, sprekers en archief")
+                }
+                if (conversationToolsOpen) {
+                    translationMemoryRevision // Reflect the count after opt-in or deletion.
+                    OutlinedButton(
+                        onClick = { translationMemoryOpen = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Tijdelijke vertaalcorrecties · " +
+                            translationMemory.entries().size + " onthouden")
+                    }
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 256.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
+                            "De labels zijn geen stemherkenning, worden niet geëxporteerd en " +
+                            "verdwijnen wanneer deze gesprekssessie wordt gewist.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val countA = lines.count { manuallyAssignedSpeakers[it.id] == "A" }
+                        val countB = lines.count { manuallyAssignedSpeakers[it.id] == "B" }
+                        TextButton(enabled = countA > 0, onClick = { jumpToSpeaker("A") }) {
+                            Text("Volgende A ($countA)")
+                        }
+                        TextButton(enabled = countB > 0, onClick = { jumpToSpeaker("B") }) {
+                            Text("Volgende B ($countB)")
+                        }
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        enabled = lines.isNotEmpty() && !listening,
+                        onClick = {
+                            exportStatus = ""
+                            val snapshot = PrivateTranscriptExport.snapshot(
+                                lines.map { line ->
+                                    TranscriptExportRow(
+                                        line.original, line.translated, line.status,
+                                        line.sourceCode, line.targetCode,
+                                    line.recordedAtMillis
+                                    )
+                                }
+                            )
+                            if (snapshot == null) {
+                                error = "Kan dit gesprek niet veilig exporteren. Wis ongeldige tekst en probeer opnieuw."
+                            } else {
+                                pendingTranscriptExport = generation to snapshot
+                                saveTranscript.launch("Tuddy-gesprek.txt")
+                            }
+                        }
+                    ) { Text("Bewaar gesprek…") }
+                    Text(
+                        "Alleen op verzoek. Externe opslag kan synchroniseren.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TextButton(
+                        enabled = lines.isNotEmpty() && !listening,
+                        onClick = {
+                            exportStatus = ""
+                            val snapshot = PrivateTranscriptJsonExport.snapshot(
+                                lines.map { line ->
+                                    TranscriptExportRow(
+                                        line.original, line.translated, line.status,
+                                        line.sourceCode, line.targetCode, line.recordedAtMillis
+                                    )
+                                }
+                            )
+                            if (snapshot == null) {
+                                error = "Kan dit gesprek niet veilig als JSON exporteren."
+                            } else {
+                                pendingTranscriptExport = generation to snapshot
+                                saveTranscriptJson.launch("Tuddy-gesprek.json")
+                            }
+                        }
+                    ) { Text("Bewaar JSON…") }
+                    Text(
+                        "Voor eigen archief of verwerking; onvoltooide vertalingen blijven leeg.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        enabled = !listening && lines.any {
+                            it.status == "Lokaal" || it.status == "Lokaal vertaald"
+                        },
+                        onClick = { subtitleConsentOpen = true }
+                    ) { Text("Bewaar ondertitelconcept (SRT/WebVTT)…") }
+                    OutlinedButton(
+                        enabled = !listening && lines.isNotEmpty(),
+                        onClick = {
+                            printableOnlyFinished = true
+                            printableLiveConsentOpen = true
+                        }
+                    ) { Text("▤ Afdrukbaar gesprek (HTML)…") }
+                    Text(
+                        "Tweetalige zinnen; geschatte tijden uit spraakafloop, " +
+                            "niet gesynchroniseerd met audio.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TextButton(
+                        enabled = !listening,
+                        onClick = {
+                            pendingArchiveGeneration = generation
+                            openTranscriptArchive.launch(arrayOf("application/json", "text/plain"))
+                        }
+                    ) { Text("Open JSON-archief…") }
+                    TextButton(enabled = !listening, onClick = {
+                        pendingSubtitleOpenGeneration = generation
+                        subtitleFileCues = null
+                        // Android document providers inconsistently report
+                        // Text subtitle files including SBV can use unexpected provider MIME types.
+                        // Let the user intentionally choose a file; the strict
+                        // bounded parser remains the only acceptance gate.
+                        openSubtitleFile.launch(arrayOf("*/*"))
+                    }) { Text("Open ondertitelbestand…") }
+                    Text(
+                        "Bekijk een bewaard gesprek zonder je live gesprek te vervangen.",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !listening,
+                    onClick = { subtitlePasteOpen = true }
+                ) { Text("Plak of importeer ondertiteltekst…") }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        enabled = !listening && lines.any {
+                            (it.status == "Lokaal vertaald" || it.status == "Lokaal") &&
+                                (manuallyAssignedSpeakers[it.id] == "A" ||
+                                    manuallyAssignedSpeakers[it.id] == "B")
+                        },
+                        onClick = {
+                            val snapshot = captureSpeakerTranscript()
+                            if (snapshot == null) {
+                                exportStatus = "Geen afgerond gesprek met veilige sprekerlabels om te bewaren."
+                            } else {
+                                exportStatus = ""
+                                pendingSpeakerExport = generation to snapshot
+                            }
+                        }
+                    ) { Text("Bewaar gesprek met sprekerlabels…") }
+                    Text(
+                        "Afzonderlijke toestemming · alleen afgeronde zinnen · TXT",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                    }
+                }
+                if (exportStatus.isNotBlank()) Text(
+                    exportStatus,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (pronunciationNotice.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(pronunciationNotice, modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick = {
+                            captionSpeaker.stop()
+                            pronunciationNotice = "Voorlezen gestopt."
+                        }) { Text("Stop stem") }
+                    }
+                }
+                OutlinedButton(
+                    onClick = {
+                        if (listening) stop()
+                        dailyStudyHubOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("🧠 Vandaag offline oefenen · woorden en eigen zinnen")
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(onClick = { savedWordsOpen = true }) {
+                        Text("Mijn woorden ($savedWordCount)")
+                    }
+                    Text(
+                        if (savedVocabulary.reviewsEnabled())
+                            "Zelf bewaarde basiswoorden · offline · $scheduledReviewDueCount vandaag"
+                        else "Zelf bewaarde basiswoorden · offline",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (savedWordNotice.isNotBlank()) {
+                    Text(savedWordNotice, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = {
@@ -8179,9 +8237,9 @@ private fun TuddyScreen(
                     if (lines.isEmpty() && partial.isBlank()) {
                         item(key = "empty-conversation") {
                             Text(
-                                "Nog geen ondertitels. Tik op Luister voor offline spraak " +
-                                    "of open Taal- en modelinstellingen om een zin te typen. " +
-                                    "Je gesprek blijft op dit apparaat in tijdelijk geheugen.",
+                                "Nog geen ondertitels. Kies hierboven de spreek- en vertaaltaal. " +
+                                    "Tik op Luister voor lokale spraak of Typ zin zonder microfoon. " +
+                                    "Alle gespreksregels blijven alleen tijdelijk op dit toestel.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
