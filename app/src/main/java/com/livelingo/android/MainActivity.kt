@@ -8762,15 +8762,9 @@ private fun TuddyScreen(
                 if (captureModeNotice.isNotBlank()) {
                     Text(captureModeNotice, style = MaterialTheme.typography.labelSmall)
                 }
-                if (captureMode == LocalSpeechCaptureMode.CONTINUOUS) {
-                    Text(
-                        "Bij ${ContinuousSpeechRestartPolicy.MAX_QUIET_TURNS} stille " +
-                            "herkenningspogingen op rij stopt de microfoon vanzelf. " +
-                            "Echte uitgesproken zinnen zetten deze teller terug.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                com.livelingo.android.ui.ContinuousSpeechQuietBudgetHint(
+                    showHint = captureMode == LocalSpeechCaptureMode.CONTINUOUS
+                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
