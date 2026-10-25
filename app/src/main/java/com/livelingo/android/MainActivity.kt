@@ -351,6 +351,22 @@ private data class PendingManualCaptionUndo(
     val suggestionsAfter: List<SessionTranslationCorrection>? = null
 )
 
+/** Does not accept a stale row, deleted caption or older conversation epoch. */
+private fun canUndoManualCorrection(
+    pending: PendingManualCaptionUndo, current: Line?, generation: Int
+): Boolean =
+    pending.conversationGeneration == generation &&
+        current != null &&
+        current.id == pending.after.id &&
+        current.original == pending.after.original &&
+        current.sourceCode == pending.after.sourceCode &&
+        current.targetCode == pending.after.targetCode &&
+        current.translationRevision == pending.after.translationRevision &&
+        current.userCorrected == pending.after.userCorrected &&
+        (pending.kind == ManualCaptionUndoKind.ORIGINAL ||
+            (current.translated == pending.after.translated &&
+                current.status == pending.after.status))
+
 private data class PendingLivePhraseBatchCapture(
     val generation: Int,
     val lines: List<Line>
@@ -7812,6 +7828,9 @@ private fun TuddyScreen(
                                 copyStatus = ""
                             }
                             lines.removeAt(index)
+                            if (pendingManualCaptionUndo?.after?.id == id) {
+                                pendingManualCaptionUndo = null
+                            }
                             translationDeadline.cancel(deleteRequest.first)
                             captionTranslationQueue.cancel(deleteRequest.first)
                             offlineSpeechChoices.remove(deleteRequest.first)
@@ -9720,6 +9739,79 @@ private fun TuddyScreen(
                 if (correctionNotice.isNotBlank()) {
                     Text(correctionNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
+                }
+                pendingManualCaptionUndo?.let { undo ->
+                    val current = lines.firstOrNull { it.id == undo.after.id }
+                    val valid = !listening &&
+                        canUndoManualCorrection(undo, current, generation)
+                    TextButton(
+                        enabled = valid,
+                        onClick = {
+                            val selected = pendingManualCaptionUndo ?: return@TextButton
+                            val index = lines.indexOfFirst { it.id == selected.after.id }
+                            val actual = lines.getOrNull(index)
+                            if (listening || !canUndoManualCorrection(
+                                    selected, actual, generation
+                                )) {
+                                pendingManualCaptionUndo = null
+                                correctionNotice =
+                                    "De ondertitel is inmiddels gewijzigd. Herstellen is niet veilig."
+                                return@TextButton
+                            }
+                            // Invalidate the old local translation and external
+                            // drafts before restoring an earlier human decision.
+                            val restoredRevision = actual!!.translationRevision + 1
+                            captionSpeaker.stop()
+                            translationDeadline.cancel(actual.id)
+                            captionTranslationQueue.cancel(actual.id)
+                            pendingCaptionShare = null
+                            pendingTranscriptExport = null
+                            pendingSpeakerExport = null
+                            pendingPinnedExport = null
+                            exportStatus = ""
+                            pendingManualCaptionUndo = null
+                            if (selected.kind == ManualCaptionUndoKind.ORIGINAL) {
+                                val restored = selected.before.copy(
+                                    translationRevision = restoredRevision,
+                                    translated = "Vertalen…",
+                                    status = "Bezig"
+                                )
+                                lines[index] = restored
+                                translate(
+                                    restored.original, restored.id,
+                                    restored.targetCode, restored.sourceCode,
+                                    generation, explicitlyChosenSource = true
+                                )
+                                correctionNotice =
+                                    "Vorige oorspronkelijke zin hersteld; vertaling opnieuw lokaal aangevraagd."
+                            } else {
+                                lines[index] = selected.before.copy(
+                                    translationRevision = restoredRevision
+                                )
+                                val rememberedAfter = selected.suggestionsAfter
+                                val rememberedBefore = selected.suggestionsBefore
+                                val memoryRestored =
+                                    rememberedAfter != null && rememberedBefore != null &&
+                                    translationMemory.entries() == rememberedAfter &&
+                                    translationMemory.replaceAll(rememberedBefore)
+                                if (memoryRestored) translationMemoryRevision++
+                                correctionNotice = if (rememberedAfter != null && !memoryRestored)
+                                    "Vorige vertaling hersteld. Nieuwere tijdelijke voorstellen zijn niet overschreven."
+                                else "Vorige handmatige vertaling hersteld in dit gesprek."
+                            }
+                        }
+                    ) {
+                        Text(if (undo.kind == ManualCaptionUndoKind.ORIGINAL)
+                            "↶ Herstel vorige oorspronkelijke zin"
+                        else "↶ Herstel vorige vertaling")
+                    }
+                    Text(
+                        if (undo.kind == ManualCaptionUndoKind.ORIGINAL)
+                            "Herstellen vraagt opnieuw een lokale vertaling; er wordt niets online opgezocht."
+                        else "Herstellen wijzigt alleen deze tijdelijke zin en de exacte oude sessiesuggestie.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 if (capturedPhraseNotice.isNotBlank()) {
                     Text(capturedPhraseNotice, style = MaterialTheme.typography.bodySmall,
