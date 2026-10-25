@@ -76,7 +76,7 @@ import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.LiveMicrophonePermissionControls
 import com.livelingo.android.ui.PrivateConversationCurtainDialog
-import com.livelingo.android.ui.PrivateIdleCurtainControls
+import com.livelingo.android.ui.PrivateProtectionSettingsPanel
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
 import com.livelingo.android.ui.FocusCaptionLine
@@ -9427,57 +9427,30 @@ private fun TuddyScreen(
                 if (hapticNotice.isNotBlank())
                     Text(hapticNotice, style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
-                Text("Privacy · privéweergave",
-                    style = MaterialTheme.typography.titleSmall)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        if (privateScreenShieldOn) "Screenshots en schermopname blokkeren · aan"
-                        else "Screenshots en schermopname blokkeren · uit",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Switch(
-                        checked = privateScreenShieldOn,
-                        enabled = screenActivity != null,
-                        onCheckedChange = { requested ->
-                            val updated = screenActivity?.let {
-                                PrivateScreenShield.change(it, requested)
-                            } == true
-                            if (updated) privateScreenShieldOn = requested
-                            privateScreenShieldNotice = if (updated)
-                                if (requested) "Android-privéweergave ingeschakeld."
-                                else "Android-privéweergave uitgeschakeld."
-                            else "Schermbescherming kon niet worden gewijzigd."
-                        }
-                    )
-                }
-                Text(
-                    "Android probeert screenshots, schermopnames en recente-appsvoorbeelden " +
-                        "te blokkeren zolang dit aanstaat. Dit kan ook zelf screenshots " +
-                        "maken verhinderen; externe camera's blijven mogelijk. " +
-                        "Er wordt geen gesprekstekst voor opgeslagen.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                if (privateScreenShieldNotice.isNotBlank())
-                    Text(privateScreenShieldNotice, style = MaterialTheme.typography.bodySmall)
-                HorizontalDivider()
-                PrivateIdleCurtainControls(
-                    minutes = idleCurtainMinutes,
-                    notice = idleCurtainNotice,
-                    onChange = { minutes ->
+                PrivateProtectionSettingsPanel(
+                    shieldEnabled = privateScreenShieldOn,
+                    shieldAvailable = screenActivity != null,
+                    shieldNotice = privateScreenShieldNotice,
+                    idleMinutes = idleCurtainMinutes,
+                    idleNotice = idleCurtainNotice,
+                    onShieldChange = { requested ->
+                        val updated = screenActivity?.let {
+                            PrivateScreenShield.change(it, requested)
+                        } == true
+                        if (updated) privateScreenShieldOn = requested
+                        privateScreenShieldNotice = if (updated)
+                            if (requested) "Android-privéweergave ingeschakeld."
+                            else "Android-privéweergave uitgeschakeld."
+                        else "Schermbescherming kon niet worden gewijzigd."
+                    },
+                    onIdleChange = { minutes ->
                         val updated = (screenActivity as? MainActivity)
                             ?.changeIdleCurtainMinutes(minutes) == true
                         if (updated) idleCurtainMinutes = minutes
                         idleCurtainNotice = if (updated)
-                            if (minutes == 0)
-                                "Automatisch afdekken uitgeschakeld."
-                            else
-                                "Na $minutes minuten zonder bediening wordt het " +
-                                    "gesprek neutraal afgedekt; luisteren en audio stoppen."
+                            if (minutes == 0) "Automatisch afdekken uitgeschakeld."
+                            else "Na $minutes minuten zonder bediening wordt het " +
+                                "gesprek afgedekt; microfoon en audio stoppen."
                         else "De privacykeuze kon niet worden opgeslagen."
                     }
                 )
