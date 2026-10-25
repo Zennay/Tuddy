@@ -191,6 +191,30 @@ was of dat een Android-stem fysiek zonder netwerk werkte.
 Luister zelf op een echt toestel na of zinnen volledig worden
 uitgesproken; een lange of trage zin kan voortijdig stoppen.
 
+## Headset- en Android-mediaknoppen stoppen privévoorlezen
+
+Als je expliciet voor **lokaal voorlezen** kiest, start Tuddy naast
+de tijdelijke audiofocus een korte Android-mediasessie die uitsluitend
+**Pauze** en **Stop** aanbiedt. De pauze-/stopknop van een aangesloten
+headset, en compatibele Android-mediabediening, kunnen zo een lopend
+voorleesfragment beëindigen. Het beëindigen sluit de voorleesengine
+en geeft de audiofocus en audio-uitvoerbewaking vrij, ook als de
+volgende zin van een ondertitelreeks nog niet aan bod was.
+
+De mediasessie bevat **geen titel, gesproken zin, transcript,
+vertaling, contact, artwork, opnamedata of appbrongegevens**.
+Er wordt geen blijvende mediaservice, notificatie of achtergrondtaak
+aangemaakt. Media **Play**, **Resume** of headsetbediening wanneer
+Tuddy niet bewust aan het voorlezen is, kan nooit lokale privétekst
+opnieuw afspelen en kan nooit de microfoon activeren. Voor herstart
+moet je zelf opnieuw op een voorleesknop in Tuddy tikken.
+
+Deze bediening wordt door Android geleverd en kan per headset,
+launcher en versie anders werken. Dat het systeem een headsetknop
+kan afleveren is geen bewijs dat audio fysiek uitsluitend via die
+headset is afgespeeld. De bestaande hoofdtelefoon-only-optie en
+audiofocus/routecontroles blijven de eigenlijke voorzorgsgrenzen.
+
 ## Grenzen voor acceptatie
 
 Een door de Android-TTS-engine als lokaal gemelde stem geeft **geen**
