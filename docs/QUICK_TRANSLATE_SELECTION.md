@@ -26,6 +26,32 @@ controleer eerst de bron- en doeltaal (of vraag een optioneel lokaal brontaalvoo
   blijven via de bestaande strikte import-/ondertitelpreview lopen; ze worden
   niet als een gewone zin vertaald.
 
+## Verwerking annuleren en opnieuw proberen
+
+Een Android-dienst kan uitzonderlijk geen voltooiingscallback teruggeven.
+Daarom heeft **Stel brontaal lokaal voor** een grens van **12 seconden**
+en **Vertaal lokaal** een grens van **30 seconden**, inclusief de
+controle van al aanwezige tekstmodellen en de daadwerkelijke lokale
+ML Kit-vertaalaanvraag. Als het apparaat niet reageert, verdwijnt de
+voortgangsindicator en verschijnt een begrijpelijke fout zonder
+een verzonnen vertaling.
+
+Tijdens beide acties staat nu **Annuleer lokale verwerking** onder de
+voortgangsindicator. Annuleren maakt de bestaande detector- en
+vertaalcallbackrevisies ongeldig, stopt de actieve lokale clients en
+ruimt de Android-timers op. Het resultaat is dan **niet** teruggezet
+in de oorspronkelijke app, op het klembord geplaatst of gedeeld.
+De oorspronkelijke geselecteerde tekst blijft alleen in de open
+tijdelijke weergave staan, zodat je bewust van taal kunt wisselen
+of op **Vertaal lokaal** kunt tikken om opnieuw te proberen.
+
+Een callback die ná annulering, timeout, taalwisseling of verlaten
+van de Activity binnenkomt mag nooit alsnog een vertaling tonen.
+De tijdslimiet stopt de **app-interactie**; hij bewijst niet dat
+de onderliggende Android/ML Kit-provider elk intern werk meteen
+heeft gestopt. Het scherm downloadt nooit automatisch modellen
+en gebruikt geen online fallback.
+
 ## Brontekst en vertaling lokaal laten voorlezen
 
 Vanuit hetzelfde snelle Android-selectiescherm kun je **🔊 Lokaal voorlezen · kies tempo** openen. Kies **Origineel · normaal/langzaam** voordat of nadat je vertaalt; na een echt voltooide lokale vertaling kun je ook **Vertaling · normaal/langzaam** kiezen. **■ Stop voorlezen** stopt de Android-stem onmiddellijk. Vertalen, een nieuwe taalrichting kiezen, het scherm sluiten of naar de achtergrond gaan stopt de vorige stem eveneens.
