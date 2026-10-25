@@ -318,7 +318,8 @@ private data class PendingSingleSpeechReview(
     val sourceCode: String,
     val targetCode: String,
     val alternatives: List<String>,
-    val generation: Int
+    val generation: Int,
+    val lowAndroidConfidencePercent: Int? = null
 )
 
 private data class Line(
@@ -332,7 +333,10 @@ private data class Line(
     val translationRevision: Int = 0,
     val userCorrected: Boolean = false,
     // Human-authored session-only meaning: never overwrite model result or exports.
-    val personalMeaning: String? = null
+    val personalMeaning: String? = null,
+    // Android's optional uncalibrated score, only retained when LOW.
+    // Human corrections remain authoritative, and nothing persists.
+    val lowAndroidConfidencePercent: Int? = null
 )
 
 private data class PendingLivePhraseBatchCapture(
@@ -2595,8 +2599,16 @@ private fun TuddyScreen(
                     if (!turnGate.acceptFinalResult()) return
                     speechTurnDeadline.cancel()
                     consecutiveSpeechStalls = 0
-                    val sentence = SpeechHypothesisPolicy.select(
-                        results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
+                    val hypotheses = results?.getStringArrayList(
+                        SpeechRecognizer.RESULTS_RECOGNITION
+                    )
+                    val sentence = SpeechHypothesisPolicy.select(hypotheses)
+                    val speechConfidence = AndroidSpeechConfidencePolicy.forSelectedHypothesis(
+                        hypotheses, results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES),
+                        sentence
+                    )
+                    val lowAndroidScore = speechConfidence
+                        ?.takeIf { it.needsReview }?.reportedPercent
                     clearInterim()
                     if (captureMode == LocalSpeechCaptureMode.SINGLE_SENTENCE &&
                         sentence.isNotBlank() && token == generation) {
@@ -2620,7 +2632,8 @@ private fun TuddyScreen(
                                 results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION),
                                 sentence
                             ),
-                            generation = token
+                            generation = token,
+                            lowAndroidConfidencePercent = lowAndroidScore
                         )
                         stop()
                         liveSpeechPhase = LiveSpeechPhase.SINGLE_FINISHED
@@ -2653,12 +2666,23 @@ private fun TuddyScreen(
                             // speech turn; preserve the original language tags.
                             lines.add(Line(
                                 id, sentence, "Alleen origineel · bewust niet vertaald",
-                                "Gepauzeerd", observedSource, selectedTarget
+                                "Gepauzeerd", observedSource, selectedTarget,
+                                lowAndroidConfidencePercent = lowAndroidScore
                             ))
                         } else {
                             // Preserve the normal, previously verified live
                             // caption path and its bounded retention order.
+                            // Preserve the established live-caption admission
+                            // and retention ordering before attaching metadata.
                             lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
+                            if (lowAndroidScore != null) {
+                                val captionIndex = lines.lastIndex
+                                if (captionIndex >= 0 && lines[captionIndex].id == id) {
+                                    lines[captionIndex] = lines[captionIndex].copy(
+                                        lowAndroidConfidencePercent = lowAndroidScore
+                                    )
+                                }
+                            }
                         }
                         val suggestions = OfflineSpeechCorrectionChoices.fromDeviceResults(
                             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION),
@@ -4327,6 +4351,7 @@ private fun TuddyScreen(
                 sourceCode = review.sourceCode,
                 targetCode = review.targetCode,
                 alternatives = review.alternatives,
+                lowAndroidConfidencePercent = review.lowAndroidConfidencePercent,
                 onConfirm = { approved, chosenSource, chosenTarget ->
                     if (appendTypedTurn(
                             approved, chosenSource, chosenTarget,
@@ -6720,6 +6745,24 @@ private fun TuddyScreen(
                                             fontSize = MaterialTheme.typography.bodyMedium.fontSize *
                                                 captionSize.scale
                                         ))
+                                    if (line.lowAndroidConfidencePercent != null &&
+                                        !line.userCorrected) {
+                                        Text(
+                                            "⚠ Android meldde lage spraakzekerheid (" +
+                                                "${line.lowAndroidConfidencePercent}%). " +
+                                                "Dit is geen gekalibreerde kans op een fout.",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                        TextButton(
+                                            enabled = !listening,
+                                            onClick = {
+                                                editingCaptionId = line.id
+                                                captionCorrectionDraft = line.original
+                                                correctionNotice = ""
+                                            }
+                                        ) { Text("✎ Controleer deze herkende zin") }
+                                    }
                                     if (line.status == "Lokaal vertaald" ||
                                         line.status == "Lokaal") {
                                         Text(line.translated,
