@@ -127,6 +127,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var headphonesOnlyPlayback by mutableStateOf(false)
     private var clipboardExpirySeconds by mutableStateOf(0)
     private var privateScreenShieldOn by mutableStateOf(false)
+    private var privateScreenShieldNotice by mutableStateOf("")
     private var translationResult by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -200,6 +201,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     headphonesOnly = headphonesOnlyPlayback,
                     clipboardExpirySeconds = clipboardExpirySeconds,
                     privateScreenShieldOn = privateScreenShieldOn,
+                    privateScreenShieldNotice = privateScreenShieldNotice,
                     result = translationResult,
                     onSourceSelected = { code -> changePair(source = code) },
                     onTargetSelected = { code -> changePair(target = code) },
@@ -234,7 +236,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
                         // cross-screen preference; failure leaves it unchanged.
                         val saved = PrivateScreenShield.change(this, requested)
                         privateScreenShieldOn = PrivateScreenShield.enabled(this)
-                        status = if (!saved) {
+                        privateScreenShieldNotice = if (!saved) {
                             "Android-schermbeveiliging kon niet worden gewijzigd."
                         } else if (privateScreenShieldOn) {
                             "Privéweergave aan: screenshots, schermopname en appvoorbeelden " +
@@ -619,6 +621,7 @@ private fun QuickTranslateScreen(
     headphonesOnly: Boolean,
     clipboardExpirySeconds: Int,
     privateScreenShieldOn: Boolean,
+    privateScreenShieldNotice: String,
     result: String?,
     onSourceSelected: (String) -> Unit,
     onTargetSelected: (String) -> Unit,
@@ -676,6 +679,9 @@ private fun QuickTranslateScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (privateScreenShieldNotice.isNotBlank()) {
+            Text(privateScreenShieldNotice, style = MaterialTheme.typography.bodySmall)
+        }
         Text(
             "Alleen lokale ML Kit-tekstvertaling. Controleer zelf de taalrichting. " +
                 "Geen microfoon, automatische download, opslag of online fallback.",
