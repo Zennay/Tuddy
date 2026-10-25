@@ -6,6 +6,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
 import android.os.PersistableBundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +65,56 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var detectorRevision = 0L
     private var localSpeaker: LocalCaptionSpeaker? = null
     private var activeTranslator: Translator? = null
+    // Private Android selection stays in RAM only, and the initiating app
+    // receives no text until a separate explicit user decision.
+    private val timeoutHandler = Handler(Looper.getMainLooper())
+    private var translationTimeout: Runnable? = null
+    private var detectionTimeout: Runnable? = null
+
+    private fun clearTranslationTimeout() {
+        translationTimeout?.let(timeoutHandler::removeCallbacks)
+        translationTimeout = null
+    }
+
+    private fun clearDetectionTimeout() {
+        detectionTimeout?.let(timeoutHandler::removeCallbacks)
+        detectionTimeout = null
+    }
+
+    private fun armTranslationTimeout(token: Long): Boolean {
+        clearTranslationTimeout()
+        val timeout = Runnable {
+            translationTimeout = null
+            if (token == generation && busy && !isFinishing) {
+                complete(token, null,
+                    "De lokale vertaling antwoordde niet binnen 30 seconden. " +
+                        "Probeer opnieuw of beheer de offline modellen in Tuddy. " +
+                        "Er is niets naar de bronapp teruggestuurd.")
+            }
+        }
+        translationTimeout = timeout
+        val accepted = timeoutHandler.postDelayed(timeout, TRANSLATION_DEADLINE_MS)
+        if (!accepted) clearTranslationTimeout()
+        return accepted
+    }
+
+    private fun armDetectionTimeout(requestRevision: Long): Boolean {
+        clearDetectionTimeout()
+        val timeout = Runnable {
+            detectionTimeout = null
+            if (requestRevision == detectorRevision && detectingSource && !isFinishing) {
+                detectorRevision++
+                detector.close()
+                detectingSource = false
+                detectionNotice = "De lokale brontaalherkenning antwoordde niet binnen 12 seconden. " +
+                    "Kies de brontaal handmatig of probeer opnieuw."
+            }
+        }
+        detectionTimeout = timeout
+        val accepted = timeoutHandler.postDelayed(timeout, DETECTION_DEADLINE_MS)
+        if (!accepted) clearDetectionTimeout()
+        return accepted
+    }
 
     private var incomingText by mutableStateOf("")
     private var inputNotice by mutableStateOf("")
@@ -144,6 +196,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     onSwapLanguages = { changePair(source = targetCode, target = sourceCode) },
                     onSuggestSource = { suggestSourceLanguage() },
                     onTranslate = { startTranslation() },
+                    onCancel = { cancelByUser() },
                     onPlayOriginal = { pace -> speakSelection(incomingText, sourceCode, pace) },
                     onPlayTranslation = { pace ->
                         translationResult?.let { speakSelection(it, targetCode, pace) }
@@ -169,6 +222,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     private fun changePair(source: String? = null, target: String? = null) {
         detectorRevision++
+        clearDetectionTimeout()
         detector.close()
         detectingSource = false
         detectionNotice = ""
@@ -191,8 +245,16 @@ internal class QuickTranslateActivity : ComponentActivity() {
         val requestRevision = ++detectorRevision
         detectingSource = true
         detectionNotice = "Brontaalvoorstel lokaal berekenen…"
+        if (!armDetectionTimeout(requestRevision)) {
+            detectorRevision++
+            detector.close()
+            detectingSource = false
+            detectionNotice = "Lokale brontaalherkenning kon niet veilig starten."
+            return
+        }
         detector.identify(sample) { detected ->
             if (isFinishing || requestRevision != detectorRevision) return@identify
+            clearDetectionTimeout()
             detectingSource = false
             val supported = detected?.takeIf { it in TargetCatalog.codes }
             if (supported == null) {
@@ -226,6 +288,10 @@ internal class QuickTranslateActivity : ComponentActivity() {
         busy = true
         translationResult = null
         status = "Controleer of de gekozen tekstmodellen lokaal aanwezig zijn…"
+        if (!armTranslationTimeout(token)) {
+            complete(token, null, "Lokale vertaling kon niet veilig worden gestart.")
+            return
+        }
 
         inventory.check(sourceCode, targetCode, TargetCatalog.codes) { receipt ->
             if (token != generation || isFinishing) return@check
@@ -293,6 +359,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     private fun complete(token: Long, result: String?, message: String) {
         if (token != generation || isFinishing) return
+        clearTranslationTimeout()
         closeActiveTranslator()
         busy = false
         translationResult = result
@@ -302,10 +369,24 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     private fun cancelOperation() {
         stopPlayback()
+        clearTranslationTimeout()
+        clearDetectionTimeout()
         generation++
         inventory.invalidate()
         closeActiveTranslator()
         busy = false
+    }
+
+    private fun cancelByUser() {
+        if (!busy && !detectingSource) return
+        detectorRevision++
+        detector.close()
+        detectingSource = false
+        clearDetectionTimeout()
+        cancelOperation()
+        translationResult = null
+        detectionNotice = ""
+        status = "Actie geannuleerd. Er is niets teruggestuurd, gedeeld of opgeslagen."
     }
 
     private fun closeActiveTranslator() {
@@ -388,6 +469,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     override fun onStop() {
         detectorRevision++
+        clearDetectionTimeout()
         detector.close()
         detectingSource = false
         detectionNotice = ""
@@ -400,8 +482,14 @@ internal class QuickTranslateActivity : ComponentActivity() {
         super.onStop()
     }
 
+    private companion object {
+        const val TRANSLATION_DEADLINE_MS = 30_000L
+        const val DETECTION_DEADLINE_MS = 12_000L
+    }
+
     override fun onDestroy() {
         detectorRevision++
+        clearDetectionTimeout()
         detector.close()
         cancelOperation()
         incomingText = ""
@@ -428,6 +516,7 @@ private fun QuickTranslateScreen(
     onSwapLanguages: () -> Unit,
     onSuggestSource: () -> Unit,
     onTranslate: () -> Unit,
+    onCancel: () -> Unit,
     onPlayOriginal: (LocalSpeechPace) -> Unit,
     onPlayTranslation: (LocalSpeechPace) -> Unit,
     onStopPlayback: () -> Unit,
@@ -517,7 +606,12 @@ private fun QuickTranslateScreen(
                 sourceCode != targetCode,
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (busy) "Lokaal controleren/vertalen…" else "Vertaal lokaal") }
-        if (busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        if (busy || detectingSource) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
+                Text("Annuleer lokale verwerking")
+            }
+        }
         if (status.isNotBlank()) {
             Text(status, style = MaterialTheme.typography.bodySmall)
             if (result == null && !busy &&
