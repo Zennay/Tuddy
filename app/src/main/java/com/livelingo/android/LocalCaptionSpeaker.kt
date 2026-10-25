@@ -31,11 +31,15 @@ internal enum class LocalSpeechPace(val rate: Float) {
 internal class LocalCaptionSpeaker(context: Context) {
     private val appContext = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
+    // Shared with normal/slow pronunciation and subtitle-sequence playback,
+    // including the Android selected-text quick translator.
+    private val playbackSession = LocalPlaybackDeviceSession(appContext)
     private var engine: TextToSpeech? = null
     private var generation = 0L
 
     fun stop() {
         generation++
+        playbackSession.end() // Release audio focus and device/noisy listeners.
         val old = engine
         engine = null
         if (old != null) {
@@ -194,6 +198,12 @@ internal class LocalCaptionSpeaker(context: Context) {
             onFinished(false)
         }
 
+        if (!playbackSession.begin { reason -> fail(reason) }) {
+            fail("Android kon de audiofocus of huidige uitvoer niet veilig bewaken. " +
+                "Er is niets afgespeeld.")
+            return
+        }
+
         fun speakAt(tts: TextToSpeech, index: Int) {
             if (generation != version) return
             sequenceIndex = index
@@ -224,6 +234,8 @@ internal class LocalCaptionSpeaker(context: Context) {
                         val chosen = chooseInstalledVoice(tts, locale, languageTag)
                         if (chosen == null ||
                             tts.setVoice(chosen) != TextToSpeech.SUCCESS ||
+                            tts.setAudioAttributes(LocalPlaybackDeviceSession.SPEECH_AUDIO_ATTRIBUTES) !=
+                                TextToSpeech.SUCCESS ||
                             tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS
                         ) {
                             fail("Geen geïnstalleerde lokale stem voor deze taal. Geen online fallback.")
@@ -319,6 +331,17 @@ internal class LocalCaptionSpeaker(context: Context) {
             return
         }
         val version = generation
+        if (!playbackSession.begin { reason ->
+                if (generation == version) {
+                    stop()
+                    feedback(reason)
+                }
+            }) {
+            stop()
+            feedback("Android kon de audiofocus of huidige uitvoer niet veilig bewaken. " +
+                "Er is niets afgespeeld.")
+            return
+        }
         feedback("Geïnstalleerde lokale Android-stem controleren…")
         try {
             engine = TextToSpeech(appContext, TextToSpeech.OnInitListener { result ->
@@ -334,11 +357,40 @@ internal class LocalCaptionSpeaker(context: Context) {
                         val chosen = chooseInstalledVoice(tts, locale, languageTag)
                         if (chosen == null ||
                             tts.setVoice(chosen) != TextToSpeech.SUCCESS ||
-                            tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS ||
-                            tts.speak(safe, TextToSpeech.QUEUE_FLUSH, null,
-                                "tuddy-offline-caption-$version") != TextToSpeech.SUCCESS) {
+                            tts.setAudioAttributes(LocalPlaybackDeviceSession.SPEECH_AUDIO_ATTRIBUTES) !=
+                                TextToSpeech.SUCCESS ||
+                            tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS) {
                             stop()
                             feedback("Geen geïnstalleerde lokale stem voor deze taal. Geen online fallback.")
+                            return@post
+                        }
+                        // A finished one-line playback must release focus and
+                        // device listeners without requiring a manual Stop tap.
+                        // Late callbacks from an old TextToSpeech engine are
+                        // fenced by the same generation used on background.
+                        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                            override fun onStart(utteranceId: String?) = Unit
+                            override fun onDone(utteranceId: String?) {
+                                main.post {
+                                    if (generation == version) {
+                                        stop()
+                                        feedback("Lokaal voorlezen voltooid; audiofocus vrijgegeven.")
+                                    }
+                                }
+                            }
+                            override fun onError(utteranceId: String?) {
+                                main.post {
+                                    if (generation == version) {
+                                        stop()
+                                        feedback("Android stopte het lokale voorlezen. Geen online fallback.")
+                                    }
+                                }
+                            }
+                        })
+                        if (tts.speak(safe, TextToSpeech.QUEUE_FLUSH, null,
+                                "tuddy-offline-caption-$version") != TextToSpeech.SUCCESS) {
+                            stop()
+                            feedback("Lokale stem kon niet starten. Geen online fallback.")
                         } else {
                             feedback(
                                 if (pace == LocalSpeechPace.SLOW)

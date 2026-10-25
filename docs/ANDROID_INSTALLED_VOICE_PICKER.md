@@ -41,6 +41,40 @@ Het venster vraagt nooit zelf een stem- of modeldownload aan.
 Een taal zonder geschikte lokale stem blijft tekst-only. Tekstvertaling
 en Android-spraakherkenning worden door deze instelling niet geactiveerd.
 
+## Android-audiofocus en bescherming bij wisselende headset
+
+Wanneer je bewust een oorspronkelijke zin, vertaling, stemvoorbeeld of
+meerdere ondertitelregels lokaal laat voorlezen, vraagt Tuddy eerst
+**tijdelijke Android-audiofocus** aan. Weigert Android dat verzoek of
+kan de app de uitvoerapparaten niet inspecteren, dan start er geen
+spraakuitvoer. De TTS-engine gebruikt dezelfde Android-muziek-/
+spraak-audioattributen als de aangevraagde audiofocus.
+
+Android geeft soms de focus aan een oproep of andere app. Bij verlies
+van focus stopt Tuddy de actuele voorleesactie, in plaats van door
+andere audio heen te blijven spreken. Tijdens het voorlezen kijkt Tuddy
+ook of Android een bekabelde, Bluetooth-, USB- of gehoorapparaat-headset
+als aangesloten meldt. Wordt de gebruikte headset losgekoppeld of
+meldt Android dat audio mogelijk naar de luidspreker overschakelt,
+dan stopt het voorlezen automatisch. Een hoofdtelefoon die pas
+*nadat* je op Play hebt gedrukt wordt aangesloten, valt ook onder
+die bescherming. Android-notificaties kunnen vertraagd aankomen.
+
+Een bewust op Play gestarte voorleesactie **zonder aangesloten headset**
+blijft mogelijk: Tuddy kiest niet zelf stilzwijgend een andere
+geluidsuitvoer. De Android-systeemroutering bepaalt nog steeds welk
+fysiek apparaat audio afspeelt. Deze bescherming is dus **geen
+waterdicht bewijs dat er nooit geluid uit de luidspreker komt**.
+Voor privémateriaal blijft zelf controleren van de route belangrijk.
+
+De listeners bestaan uitsluitend zolang er echt een door de gebruiker
+gestarte TTS-sessie actief is. **Stop**, scherm verlaten, een andere
+voorleesactie, een audiofocusonderbreking of de laatste uitgesproken
+zin geven de audiofocus en Android-listeners weer vrij. Deze werkwijze
+geldt gedeeld voor het gesprek, de snelle Android-tekstvertaler,
+stemvoorbeelden en de bestaande ondertitelreeksweergave, zonder
+extra Android-permissies en zonder audio-opname, log of upload.
+
 ## Grenzen voor acceptatie
 
 Een door de Android-TTS-engine als lokaal gemelde stem geeft **geen**
