@@ -74,6 +74,7 @@ import com.livelingo.android.ui.SubtitlePasteFormat
 import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
+import com.livelingo.android.ui.PrivateConversationCurtainDialog
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
 import com.livelingo.android.ui.FocusCaptionLine
@@ -1042,6 +1043,8 @@ private fun TuddyScreen(
     var pendingStudyErase by remember { mutableStateOf(false) }
     var studyEraseNotice by remember { mutableStateOf("") }
     var focusMode by remember { mutableStateOf(false) }
+    // RAM-only neutral privacy cover; never serialize session content.
+    var privateCurtainOpen by remember { mutableStateOf(false) }
     var liveTableOpen by remember { mutableStateOf(false) }
     var sessionCaptionStudyOpen by remember { mutableStateOf(false) }
     var sessionCaptionStudyStartId by remember { mutableStateOf<Long?>(null) }
@@ -2217,6 +2220,15 @@ private fun TuddyScreen(
         partial = ""
     }
 
+    fun coverPrivateConversation() {
+        // Stop capture, pending restarts and local TTS before presenting the
+        // neutral cover. The private conversation stays in RAM, not on disk.
+        stop()
+        focusMode = false
+        liveTableOpen = false
+        privateCurtainOpen = true
+    }
+
     fun closeSpeechCatalog() {
         speechCatalogTimeoutHandler.removeCallbacksAndMessages(null)
         speechCatalogEpoch++
@@ -2411,6 +2423,7 @@ private fun TuddyScreen(
     }
 
     fun start(forceRestart: Boolean = false) {
+        if (privateCurtainOpen) return // Never restart the microphone under the cover.
         if (pendingSingleSpeechReview != null) {
             error = "Bevestig of gooi eerst het herkende zinsvoorstel weg."
             return
@@ -4542,6 +4555,11 @@ private fun TuddyScreen(
     BackHandler(enabled = screenActivity != null) { requestPrivateExit() }
 
     MaterialTheme(colorScheme = colors) {
+        if (privateCurtainOpen) {
+            PrivateConversationCurtainDialog(
+                onReveal = { privateCurtainOpen = false }
+            )
+        }
         if (uncertainSpeechReviewOpen && !listening) {
             UncertainSpeechReviewDialog(
                 candidates = uncertainSpeechChoices,
@@ -5593,7 +5611,8 @@ private fun TuddyScreen(
                         target = line.targetCode
                     )
                 },
-                onBack = { liveTableOpen = false }
+                onBack = { liveTableOpen = false },
+                onCover = { coverPrivateConversation() }
             )
         }
         if (focusMode) {
@@ -5635,6 +5654,7 @@ private fun TuddyScreen(
                 fontScale = captionSize.scale,
                 onStop = { stop() },
                 onClose = { focusMode = false },
+                onCover = { coverPrivateConversation() },
                 canStartOffline = offlineAvailable && !modelStorageBusy,
                 onStart = {
                     if (ContextCompat.checkSelfPermission(context,
@@ -8608,6 +8628,10 @@ private fun TuddyScreen(
                         Text(if (follow) "Pauzeer volgen" else "Volg live")
                     }
                 }
+                OutlinedButton(
+                    onClick = { coverPrivateConversation() },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🔒 Gesprek afdekken · stop microfoon en audio") }
                 Text(
                     liveSpeechPhase.label,
                     style = MaterialTheme.typography.bodySmall,
