@@ -97,6 +97,7 @@ private fun FaceToFaceSpeechText(
 internal fun FaceToFaceConversationDialog(
     lines: List<TypedConversationLine>,
     onBack: () -> Unit,
+    onCover: (() -> Unit)? = null,
     onSubmitTurn: ((String, String, String) -> Boolean)? = null,
     initialSource: String = "nl",
     initialTarget: String = "en"
@@ -279,6 +280,15 @@ internal fun FaceToFaceConversationDialog(
                         TextButton(onClick = {
                             followNewest = true
                         }) { Text("↓ Nieuwste") }
+                        if (onCover != null) {
+                            TextButton(onClick = {
+                                speaker.stop()
+                                activeSpeechText = null
+                                activeSpeechSide = null
+                                activeSpeechRange = null
+                                onCover()
+                            }) { Text("🔒 Afdekken") }
+                        }
                         TextButton(onClick = onBack) { Text("Terug") }
                     }
                     if (selected != null) {

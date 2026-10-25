@@ -59,6 +59,7 @@ internal fun FocusTranscriptDialog(
     fontScale: Float,
     onStop: () -> Unit,
     onClose: () -> Unit,
+    onCover: (() -> Unit)? = null,
     onStart: (() -> Unit)? = null,
     canStartOffline: Boolean = false,
     archiveMode: Boolean = false,
@@ -153,6 +154,12 @@ internal fun FocusTranscriptDialog(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     TextButton(onClick = onClose) { Text("Sluiten") }
+                }
+                if (onCover != null && !archiveMode) {
+                    OutlinedButton(
+                        onClick = onCover,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("🔒 Gesprek nu afdekken · microfoon stoppen") }
                 }
                 Text(
                     if (archiveMode) "■ Privé-JSON-archief · microfoon uit · alleen lezen"
