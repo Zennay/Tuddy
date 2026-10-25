@@ -521,6 +521,9 @@ private fun TuddyScreen(
     var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
     var pendingPinnedExport by remember { mutableStateOf<PendingPinnedCaptionExport?>(null) }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
+    // Session-only: if strict airplane-mode is opted into, keep observing
+    // Android radio/network changes during each active recognizer turn.
+    val strictRadioMonitor = remember(context) { StrictOfflineRadioSessionMonitor(context) }
     var pronunciationNotice by remember { mutableStateOf("") }
     val captionHaptics = remember(context) { CaptionHapticCues(context) }
     var hapticAlertsOn by remember(context) { mutableStateOf(captionHaptics.enabled()) }
@@ -1260,6 +1263,8 @@ private fun TuddyScreen(
             appendLine("Android API: ${Build.VERSION.SDK_INT}")
             appendLine("Airplane mode: $airplaneMode")
             appendLine("Strict offline radio-only microphone start (session): $requireOfflineRadioBeforeListening")
+            appendLine("Strict radio change observer currently active: ${strictRadioMonitor.isActive()}")
+            appendLine("Strict radio interruptions (RAM-only): ${sessionDiagnostics.strictRadioInterruptions}")
             OfflineRadioSnapshot.capture(context).reportLines().forEach {
                 appendLine(it)
             }
@@ -1579,6 +1584,7 @@ private fun TuddyScreen(
     }
 
     fun stop() {
+        strictRadioMonitor.disarm() // No radio observers after Stop/background.
         microphoneLimit.cancel() // No timeout can outlive Stop or background.
         captionSpeaker.stop() // No device speech output after Stop/background/clear.
         offlinePreparationEpoch.invalidate() // A stale model receipt never applies after Stop/background.
@@ -1836,8 +1842,7 @@ private fun TuddyScreen(
         if (listening && !forceRestart) return
         if (requireOfflineRadioBeforeListening) {
             val radio = OfflineRadioSnapshot.capture(context)
-            if (radio.airplaneModeOn != true || radio.wifiEnabled != false ||
-                radio.networkReadFailed || radio.visibleTransports.isNotEmpty()) {
+            if (!StrictOfflineRadioSessionMonitor.strictlyOffline(radio)) {
                 // Also tear down the previous recognizer during automatic restart:
                 // a stale live service must not survive a newly observed link.
                 stop()
@@ -1865,6 +1870,28 @@ private fun TuddyScreen(
             if (previous != null) SpeechCleanupPolicy.release(previous::cancel, previous::destroy)
             val speech = SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
             recognizer = speech
+            if (requireOfflineRadioBeforeListening &&
+                !strictRadioMonitor.arm { observed ->
+                    // A newer radio or transport observation invalidates the
+                    // active recognizer AND any pending continuous restart.
+                    stop()
+                    sessionDiagnostics = sessionDiagnostics.copy(
+                        strictRadioInterruptions =
+                            sessionDiagnostics.strictRadioInterruptions + 1
+                    )
+                    error = "Strikte offline luistersessie afgebroken: Android meldt " +
+                        "een gewijzigde radio of netwerkverbinding. " +
+                        "Controleer vliegtuigmodus en wifi opnieuw. " +
+                        "Dit bewijst geen volledige netwerkisolatie."
+                    offlineReadinessOpen = true
+                }) {
+                stop()
+                error = "Offline luisteren niet gestart: radiobewaking kon niet veilig " +
+                    "worden ingeschakeld of Android meldt een verbinding. " +
+                    "Controleer vliegtuigmodus en wifi in de Offline startcheck."
+                offlineReadinessOpen = true
+                return
+            }
             val selectedTarget = target.translateCode
             val selectedSource = source.translateCode
             var observedSource = selectedSource
@@ -2053,6 +2080,7 @@ private fun TuddyScreen(
             // startListening may throw after a recognizer was allocated.
             // Do not leave that session eligible for callbacks or reuse.
             microphoneLimit.cancel()
+            strictRadioMonitor.disarm()
             voiceSessions.invalidate()
             pendingRestart?.let(restartHandler::removeCallbacks)
             pendingRestart = null
