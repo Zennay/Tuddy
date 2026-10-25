@@ -900,6 +900,10 @@ private fun TuddyScreen(
     }
     var speechPowerNotice by remember { mutableStateOf("") }
     var consecutiveSpeechStalls by remember { mutableIntStateOf(0) }
+    // Distinct from provider no-callback stalls: count valid but *silent*
+    // terminal turns across automatic continuous recognizer restarts.
+    // Successful real sentences or a new explicit user tap clear the budget.
+    var consecutiveQuietTurns by remember { mutableIntStateOf(0) }
     var microphoneLimitMinutes by remember(context) {
         mutableIntStateOf(microphoneLimit.selectedMinutes())
     }
@@ -2517,6 +2521,7 @@ private fun TuddyScreen(
         }
         if (!forceRestart) {
             consecutiveSpeechStalls = 0
+            consecutiveQuietTurns = 0
             pendingLivePhraseBatchCapture = null
             livePhraseBatchSelection = emptySet()
             livePhraseBatchSelectionMode = false
@@ -2679,11 +2684,26 @@ private fun TuddyScreen(
                         error = "Geen herkenbare zin ontvangen. Microfoon gestopt; " +
                             "tik opnieuw op Luister voor een nieuwe poging."
                     } else if (retry != null) {
+                        consecutiveQuietTurns++
                         sessionDiagnostics = sessionDiagnostics.copy(
                             retryableSpeechErrors = sessionDiagnostics.retryableSpeechErrors + 1
                         )
-                        liveSpeechPhase = LiveSpeechPhase.RETRYING
-                        scheduleRestart(voiceToken, retry) { start(forceRestart = true) }
+                        if (ContinuousSpeechRestartPolicy.quietRetryExhausted(consecutiveQuietTurns)) {
+                            // Stop also releases current Android recorder, all
+                            // observers, recognizer callbacks and queued restarts.
+                            stop()
+                            liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                            sessionDiagnostics = sessionDiagnostics.copy(
+                                quietBudgetStops = sessionDiagnostics.quietBudgetStops + 1
+                            )
+                            error = "Na ${ContinuousSpeechRestartPolicy.MAX_QUIET_TURNS} " +
+                                "stille spraakpogingen is de microfoon automatisch gestopt. " +
+                                "Het gesprek blijft bewaard. Tik opnieuw op Luister " +
+                                "als je verder wilt."
+                        } else {
+                            liveSpeechPhase = LiveSpeechPhase.RETRYING
+                            scheduleRestart(voiceToken, retry) { start(forceRestart = true) }
+                        }
                     } else {
                         stop() // never retry permissions, unsupported languages or unknown errors
                         liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
@@ -2702,6 +2722,27 @@ private fun TuddyScreen(
                         SpeechRecognizer.RESULTS_RECOGNITION
                     )
                     val sentence = SpeechHypothesisPolicy.select(hypotheses)
+                    if (captureMode == LocalSpeechCaptureMode.CONTINUOUS) {
+                        if (sentence.isBlank()) {
+                            consecutiveQuietTurns++
+                            if (ContinuousSpeechRestartPolicy.quietRetryExhausted(consecutiveQuietTurns)) {
+                                // Empty successful recognizer results have the
+                                // same silent-restart cost as NO_MATCH errors.
+                                stop()
+                                liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                                sessionDiagnostics = sessionDiagnostics.copy(
+                                    quietBudgetStops = sessionDiagnostics.quietBudgetStops + 1
+                                )
+                                error = "Android herkende ${ContinuousSpeechRestartPolicy.MAX_QUIET_TURNS} " +
+                                    "keer achter elkaar geen zin. De microfoon is gestopt " +
+                                    "zonder een lege ondertitel toe te voegen. " +
+                                    "Tik zelf op Luister om verder te gaan."
+                                return
+                            }
+                        } else {
+                            consecutiveQuietTurns = 0
+                        }
+                    }
                     val speechConfidence = AndroidSpeechConfidencePolicy.forSelectedHypothesis(
                         hypotheses, results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES),
                         sentence
@@ -8720,6 +8761,15 @@ private fun TuddyScreen(
                 }
                 if (captureModeNotice.isNotBlank()) {
                     Text(captureModeNotice, style = MaterialTheme.typography.labelSmall)
+                }
+                if (captureMode == LocalSpeechCaptureMode.CONTINUOUS) {
+                    Text(
+                        "Bij ${ContinuousSpeechRestartPolicy.MAX_QUIET_TURNS} stille " +
+                            "herkenningspogingen op rij stopt de microfoon vanzelf. " +
+                            "Echte uitgesproken zinnen zetten deze teller terug.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
