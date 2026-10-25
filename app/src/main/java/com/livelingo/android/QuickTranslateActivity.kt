@@ -484,6 +484,26 @@ internal class QuickTranslateActivity : ComponentActivity() {
         finish()
     }
 
+    override fun onPause() {
+        // A selected-text screen can remain STARTED but visible in split-screen
+        // after another application takes focus. Redact ephemeral private text
+        // immediately, not only on the later ON_STOP transition.
+        detectorRevision++
+        clearDetectionTimeout()
+        detector.close()
+        detectingSource = false
+        detectionNotice = ""
+        cancelOperation() // Also invalidates translation callbacks and stops TTS.
+        if (!isFinishing) {
+            incomingText = ""
+            translationResult = null
+            inputNotice = "Android heeft de focus verplaatst. De privéselectie is gewist; " +
+                "selecteer je tekst opnieuw om lokaal te vertalen."
+            status = "Er is niets automatisch gedeeld of teruggestuurd."
+        }
+        super.onPause()
+    }
+
     override fun onStop() {
         detectorRevision++
         clearDetectionTimeout()
