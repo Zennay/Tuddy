@@ -305,6 +305,7 @@ private enum class LiveSpeechPhase(val label: String) {
     PROCESSING("Zin afronden · Android verwerkt de spraak"),
     TRANSLATING("Zin ontvangen · lokale tekstvertaling loopt apart"),
     RETRYING("Geen bruikbaar spraakresultaat · lokaal opnieuw luisteren…"),
+    STALLED("Android-spraakdienst antwoordt niet · sessie veilig herstellen…"),
     INTERRUPTED("Luisteren gestopt door een Android-spraakfout · bekijk de melding")
 }
 
@@ -761,6 +762,10 @@ private fun TuddyScreen(
     var offlineModelStatus by remember { mutableStateOf("") }
     val offlinePreparationEpoch = remember { OfflinePreparationEpoch() }
     val microphoneLimit = remember(context) { MicrophoneSessionLimit(context) }
+    // One temporary cap per Android on-device recognizer instance; a vendor
+    // that never calls onResults/onError must not hold the microphone forever.
+    val speechTurnDeadline = remember { OfflineSpeechTurnDeadline() }
+    var consecutiveSpeechStalls by remember { mutableIntStateOf(0) }
     var microphoneLimitMinutes by remember(context) {
         mutableIntStateOf(microphoneLimit.selectedMinutes())
     }
@@ -1729,6 +1734,7 @@ private fun TuddyScreen(
     }
 
     fun stop() {
+        speechTurnDeadline.cancel() // Old provider cannot outlive Stop/background.
         strictRadioMonitor.disarm() // No radio observers after Stop/background.
         microphoneLimit.cancel() // No timeout can outlive Stop or background.
         captionSpeaker.stop() // No device speech output after Stop/background/clear.
@@ -1999,6 +2005,7 @@ private fun TuddyScreen(
             }
         }
         if (!forceRestart) {
+            consecutiveSpeechStalls = 0
             pendingLivePhraseBatchCapture = null
             livePhraseBatchSelection = emptySet()
             livePhraseBatchSelectionMode = false
@@ -2008,6 +2015,7 @@ private fun TuddyScreen(
             // Every start, including a rapid restart after Android's own end-of-speech,
             // must invalidate the previous recognizer's delayed callbacks.
             val voiceToken = voiceSessions.begin()
+            speechTurnDeadline.cancel() // Each new recognizer has its own deadline.
             // Android final/end-of-speech requires a fresh recognizer.
             // Release both its microphone capture and service before restart.
             val previous = recognizer
@@ -2085,6 +2093,8 @@ private fun TuddyScreen(
                 override fun onError(code: Int) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
                     if (!turnGate.acceptTerminalError()) return
+                    speechTurnDeadline.cancel()
+                    consecutiveSpeechStalls = 0
                     clearInterim()
                     val retry = ContinuousSpeechRestartPolicy.delayForError(
                         code, SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
@@ -2106,6 +2116,8 @@ private fun TuddyScreen(
                 override fun onResults(results: Bundle?) {
                     if (!voiceSessions.isCurrent(voiceToken)) return
                     if (!turnGate.acceptFinalResult()) return
+                    speechTurnDeadline.cancel()
+                    consecutiveSpeechStalls = 0
                     val sentence = SpeechHypothesisPolicy.select(
                         results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
                     clearInterim()
@@ -2202,6 +2214,43 @@ private fun TuddyScreen(
                         ArrayList(allowedSpeechTags))
                 }
             }
+            // Arm BEFORE the vendor's startListening callback can arrive.
+            // A stuck recognizer gets at most two automatic recoveries; a
+            // third unanswered turn stops the microphone for explicit user
+            // intervention, preserving existing completed conversation rows.
+            if (!speechTurnDeadline.arm {
+                if (voiceSessions.isCurrent(voiceToken) && listening &&
+                    turnGate.acceptTerminalError()) {
+                    clearInterim()
+                    consecutiveSpeechStalls++
+                    sessionDiagnostics = sessionDiagnostics.copy(
+                        stalledSpeechTurns = sessionDiagnostics.stalledSpeechTurns + 1
+                    )
+                    if (consecutiveSpeechStalls <=
+                        OfflineSpeechTurnDeadline.MAX_AUTOMATIC_STALL_RETRIES) {
+                        liveSpeechPhase = LiveSpeechPhase.STALLED
+                        error = "Android reageerde 60 seconden niet op de lokale " +
+                            "spraakherkenning. Beperkte herstart " +
+                            "$consecutiveSpeechStalls/${OfflineSpeechTurnDeadline.MAX_AUTOMATIC_STALL_RETRIES}; " +
+                            "geen cloudfallback."
+                        scheduleRestart(voiceToken,
+                            ContinuousSpeechRestartPolicy.QUIET_RETRY_MS) {
+                            start(forceRestart = true)
+                        }
+                    } else {
+                        stop()
+                        liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                        error = "Androids lokale spraakdienst antwoordde drie keer " +
+                            "niet. Microfoon gestopt; controleer het spraakpakket " +
+                            "en tik zelf opnieuw op Luister."
+                    }
+                }
+            }) {
+                stop()
+                error = "Lokale spraakherkenning kon niet veilig worden bewaakt. " +
+                    "Microfoon niet gestart."
+                return
+            }
             speech.startListening(intent)
             listening = true
             if (!forceRestart) {
@@ -2226,6 +2275,7 @@ private fun TuddyScreen(
             // startListening may throw after a recognizer was allocated.
             // Do not leave that session eligible for callbacks or reuse.
             microphoneLimit.cancel()
+            speechTurnDeadline.cancel()
             strictRadioMonitor.disarm()
             voiceSessions.invalidate()
             pendingRestart?.let(restartHandler::removeCallbacks)
