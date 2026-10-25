@@ -277,6 +277,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     },
                     onCopy = { copyTranslation() },
                     onShare = { shareTranslation() },
+                    onCopyBilingual = { copyBilingualHandoff() },
+                    onShareBilingual = { shareBilingualHandoff() },
                     onReturnResult = { returnTranslationToCaller() },
                     onOpenTuddy = { openTuddy() },
                     onClose = { closeAndFinish() }
@@ -701,6 +703,41 @@ internal class QuickTranslateActivity : ComponentActivity() {
         }
     }
 
+    private fun bilingualHandoffText(): String? {
+        if (busy || detectingSource || reviewingTranslation ||
+            isFinishing || inputNotice.isNotBlank()) return null
+        val translation = translationResult ?: return null
+        return PrivateBilingualHandoffPolicy.format(
+            incomingText, translation, sourceCode, targetCode, manuallyAdjustedTranslation
+        )
+    }
+
+    private fun copyBilingualHandoff() {
+        val text = bilingualHandoffText() ?: return
+        val copied = PrivateClipboardExpiry.copy(
+            this, "Tuddy · bron en lokale vertaling", text
+        )
+        status = if (copied)
+            "De gecontroleerde bron + vertaling staan op het Android-klembord. " +
+                "Andere apps kunnen beide teksten lezen."
+        else "Bron + vertaling kopiëren is mislukt; er is niets op het klembord gezet."
+    }
+
+    private fun shareBilingualHandoff() {
+        // Only called from the explicit, exact-payload preview. The chooser
+        // may open another app, which can store or synchronize BOTH texts.
+        val text = bilingualHandoffText() ?: return
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        runCatching {
+            startActivity(Intent.createChooser(send, "Deel bron en vertaling met…"))
+        }.onFailure {
+            status = "Android kon het deelmenu niet openen. Er is niets automatisch gedeeld."
+        }
+    }
+
     private fun shareTranslation() {
         if (busy || reviewingTranslation || isFinishing) return
         val result = translationResult
@@ -830,6 +867,8 @@ private fun QuickTranslateScreen(
     onPrivateScreenShieldChange: (Boolean) -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit,
+    onCopyBilingual: () -> Unit,
+    onShareBilingual: () -> Unit,
     onReturnResult: () -> Unit,
     onOpenTuddy: () -> Unit,
     onClose: () -> Unit
@@ -838,6 +877,12 @@ private fun QuickTranslateScreen(
     var targetPicker by remember { mutableStateOf(false) }
     var localVoicePickerCode by remember { mutableStateOf<String?>(null) }
     var confirmExternalShare by remember { mutableStateOf(false) }
+    var previewBilingualHandoff by remember { mutableStateOf(false) }
+    val bilingualHandoff = if (!busy && !detectingSource && !reviewingTranslation &&
+        result != null && inputNotice.isBlank()
+    ) PrivateBilingualHandoffPolicy.format(
+        text, result, sourceCode, targetCode, manuallyAdjustedTranslation
+    ) else null
     val sourceLabel = TargetCatalog.targets.firstOrNull { it.code == sourceCode }?.title ?: sourceCode
     val targetLabel = TargetCatalog.targets.firstOrNull { it.code == targetCode }?.title ?: targetCode
 
@@ -1114,6 +1159,20 @@ private fun QuickTranslateScreen(
                 enabled = !reviewingTranslation,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Deel vertaling via Android…") }
+            if (bilingualHandoff != null) {
+                HorizontalDivider()
+                Text(
+                    "Bron én vertaling samen overdragen? Bekijk eerst de exacte " +
+                        "tekst, talen en herkomst. De gewone kopieer- en deelknoppen " +
+                        "hierboven bevatten alleen de vertaling.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedButton(
+                    onClick = { previewBilingualHandoff = true },
+                    enabled = !reviewingTranslation,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Bekijk bron + vertaling vóór kopiëren/delen…") }
+            }
             if (!readOnly) {
                 Button(
                     onClick = onReturnResult,
@@ -1135,6 +1194,56 @@ private fun QuickTranslateScreen(
         TextButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) {
             Text("Sluiten")
         }
+    }
+
+    if (previewBilingualHandoff && bilingualHandoff != null) {
+        AlertDialog(
+            onDismissRequest = { previewBilingualHandoff = false },
+            title = { Text("Bekijk je tweetalige overdracht") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Je ziet hieronder precies welke bron en vertaling je kunt " +
+                            "kopiëren of via Android delen. De ontvangende app kan beide " +
+                            "teksten bewaren of online verwerken. Er gebeurt niets " +
+                            "automatisch. De knop 'Vervang geselecteerde tekst' " +
+                            "blijft alleen de vertaling teruggeven.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(
+                            bilingualHandoff,
+                            modifier = Modifier.padding(12.dp)
+                                .verticalScroll(rememberScrollState()),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = TextDirection.ContentOrRtl
+                            )
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = {
+                        previewBilingualHandoff = false
+                        onCopyBilingual()
+                    }) { Text("Kopieer beide") }
+                    TextButton(onClick = {
+                        previewBilingualHandoff = false
+                        onShareBilingual()
+                    }) { Text("Deel beide via Android…") }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { previewBilingualHandoff = false }) {
+                    Text("Niets overdragen")
+                }
+            }
+        )
     }
 
     if (confirmExternalShare && result != null && !reviewingTranslation) {
