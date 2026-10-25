@@ -488,6 +488,10 @@ private fun TuddyScreen(
     val localTranslatorPool = remember { LocalTranslatorPool() }
     val captionPairReadiness = remember { OfflinePairReadinessBroker() }
     val captionTranslationQueue = remember { OfflineCaptionTranslationQueue() }
+    // Process-wide admission persists across Activity recreation while
+    // already-submitted ML Kit Tasks can still be running on that process.
+    val physicalMlKitBudget = LocalMlKitWorkBudget.shared
+    var physicalMlKitTasks by remember { mutableIntStateOf(physicalMlKitBudget.activeCount()) }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
         mutableStateOf(PrivateScreenShield.enabled(context))
@@ -1309,34 +1313,67 @@ private fun TuddyScreen(
                             lines.none { it.id == id && it.status == "Bezig" }) {
                             captionTranslationQueue.finished(id, revision)
                         } else {
-                            val translator = try {
-                                localTranslatorPool.acquire(from, targetCode)
-                            } catch (_: Exception) {
-                                updateLine(id, SafeLocalFailureText.TRANSLATION,
-                                    "Fout", token, revision)
-                                null
-                            }
-                            if (translator != null) {
-                                try {
-                                    translator.translate(text)
-                                        .addOnSuccessListener { output ->
-                                            // Release the completed lease BEFORE
-                                            // promoting the next FIFO request.
-                                            translator.close()
-                                            updateLine(id, output, "Lokaal vertaald",
-                                                token, revision)
-                                        }
-                                        .addOnFailureListener {
-                                            // Preserve the established fixed local error
-                                            // boundary, never expose a provider message.
-                                            updateLine(id, SafeLocalFailureText.TRANSLATION,
-                                                "Fout", token, revision)
-                                            translator.close()
-                                        }
+                            val deviceSlot = physicalMlKitBudget.acquire()
+                            if (deviceSlot == null) {
+                                updateLine(
+                                    id,
+                                    "Android verwerkt al ${LocalMlKitWorkBudget.MAX_SUBMITTED_TASKS} " +
+                                        "lokale modeltaken. Wacht op afronding of open Tuddy " +
+                                        "opnieuw als een model niet reageert; geen online fallback.",
+                                    "Fout", token, revision
+                                )
+                            } else {
+                                // Never release the physical slot on UI timeout,
+                                // row cancellation or retry: the old ML Kit task
+                                // may still be consuming memory and CPU.
+                                val translator = try {
+                                    localTranslatorPool.acquire(from, targetCode)
                                 } catch (_: Exception) {
-                                    translator.close()
+                                    deviceSlot.release() // Nothing was submitted.
                                     updateLine(id, SafeLocalFailureText.TRANSLATION,
                                         "Fout", token, revision)
+                                    null
+                                }
+                                if (translator != null) {
+                                    val task = try {
+                                        translator.translate(text)
+                                    } catch (_: Exception) {
+                                        translator.close()
+                                        deviceSlot.release() // No task was returned.
+                                        updateLine(id, SafeLocalFailureText.TRANSLATION,
+                                            "Fout", token, revision)
+                                        null
+                                    }
+                                    if (task != null) {
+                                        // Exactly ONE provider terminal callback
+                                        // settles the physical slot. UI revisions
+                                        // still fence stale translation results.
+                                        try {
+                                            task.addOnCompleteListener { completed ->
+                                                val output = if (completed.isSuccessful) {
+                                                    runCatching { completed.result }.getOrNull()
+                                                        ?.takeIf { it.isNotBlank() }
+                                                } else null
+                                                try {
+                                                    translator.close()
+                                                } finally {
+                                                    deviceSlot.release()
+                                                }
+                                                updateLine(
+                                                    id,
+                                                    output ?: SafeLocalFailureText.TRANSLATION,
+                                                    if (output != null) "Lokaal vertaald" else "Fout",
+                                                    token, revision
+                                                )
+                                            }
+                                        } catch (_: Exception) {
+                                            // A Task may already be executing if
+                                            // listener registration fails. Do NOT
+                                            // falsely free its physical slot.
+                                            updateLine(id, SafeLocalFailureText.TRANSLATION,
+                                                "Fout", token, revision)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1749,6 +1786,9 @@ private fun TuddyScreen(
             appendLine("Text model detail: ${textReceipt.detail}")
             appendLine("Listening at export: $listening")
             appendLine("Session counters: RAM only; not physical validation")
+            appendLine("Physical in-flight ML Kit translations: $physicalMlKitTasks / " +
+                LocalMlKitWorkBudget.MAX_SUBMITTED_TASKS +
+                " (includes any cancelled or expired tasks awaiting provider callback)")
             sessionDiagnostics.asReportLines().forEach { appendLine(it) }
             appendLine("Transcript/audio included: no")
         }
@@ -1999,6 +2039,10 @@ private fun TuddyScreen(
                 partialTranslation = text
                 return@Runnable
             }
+            // Preview speech is optional. When all physical slots are used by
+            // submitted ML Kit tasks, skip this ephemeral suggestion rather
+            // than displacing a final subtitle or creating a fourth task.
+            val deviceSlot = physicalMlKitBudget.acquire() ?: return@Runnable
             interimTranslationBusy = true
             val translator = try {
                 Translation.getClient(TranslatorOptions.Builder()
@@ -2006,31 +2050,45 @@ private fun TuddyScreen(
                     .setTargetLanguage(targetCode)
                     .build())
             } catch (_: Exception) {
+                deviceSlot.release()
+                interimTranslationBusy = false // A failed client must not freeze previews.
                 return@Runnable
             }
-            interimTranslationBusy = true
-            try {
+            val submitted = try {
                 // Do not call downloadModelIfNeeded: no per-word model traffic.
                 translator.translate(text)
-                    .addOnSuccessListener { translated ->
-                        if (InterimTranslationPolicy.mayPublish(
-                                revision, partialRevision, token, generation,
-                                voiceSessions.isCurrent(voiceToken), listening) &&
-                            !speechTranslationPaused) {
-                            partialTranslation = translated
-                        }
-                        translator.close()
-                        interimTranslationBusy = false
-                    }
-                    .addOnFailureListener {
-                        // A missing local model leaves the preview untranslated.
-                        // Never display raw ML Kit error text or attempt cloud STT.
-                        translator.close()
-                        interimTranslationBusy = false
-                    }
             } catch (_: Exception) {
-                translator.close()
+                runCatching { translator.close() }
+                deviceSlot.release() // Submission failed before Task existed.
                 interimTranslationBusy = false
+                null
+            }
+            if (submitted != null) {
+                try {
+                    submitted.addOnCompleteListener { completed ->
+                        val output = if (completed.isSuccessful) {
+                            runCatching { completed.result }.getOrNull()
+                        } else null
+                        if (output != null &&
+                            InterimTranslationPolicy.mayPublish(
+                                revision, partialRevision, token, generation,
+                                voiceSessions.isCurrent(voiceToken), listening
+                            ) && !speechTranslationPaused) {
+                            partialTranslation = output
+                        }
+                        try {
+                            runCatching { translator.close() }
+                        } finally {
+                            deviceSlot.release()
+                            interimTranslationBusy = false
+                        }
+                    }
+                } catch (_: Exception) {
+                    // The ML Kit task may still run without a listener.
+                    // Keep the physical slot reserved, preventing runaway
+                    // repeated preview submissions; clear only the UI latch.
+                    interimTranslationBusy = false
+                }
             }
         }
         pendingInterim = task
@@ -3935,6 +3993,11 @@ private fun TuddyScreen(
             localTranslatorPool.close()
             captionSpeaker.close()
         }
+    }
+
+    DisposableEffect(physicalMlKitBudget) {
+        val unsubscribe = physicalMlKitBudget.subscribe { physicalMlKitTasks = it }
+        onDispose { unsubscribe() }
     }
 
     // Android window flag is present ONLY during a consented listening session.
@@ -9417,6 +9480,15 @@ private fun TuddyScreen(
                 if (translationPauseNotice.isNotBlank()) {
                     Text(
                         translationPauseNotice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (physicalMlKitTasks > 0) {
+                    Text(
+                        "Lokale modeltaken op dit toestel: $physicalMlKitTasks/" +
+                            LocalMlKitWorkBudget.MAX_SUBMITTED_TASKS +
+                            " actief (ook na annuleren tot ML Kit echt afrondt)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

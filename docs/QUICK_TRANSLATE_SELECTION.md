@@ -82,6 +82,18 @@ Bij het verlaten van de snelle vertaler wordt het tijdelijke scherm
 gewist. Bijlagen, ondertitels, back-ups en andere gestructureerde
 gedeelde tekst blijven van de gewone vertaalactie gescheiden.
 
+## Gedeelde capaciteit voor lokale tekstvertaling
+
+De snelle Android-tekstselectie gebruikt dezelfde procesbrede grens
+van maximaal **drie nog actieve ML Kit-tekstvertaaltaken** als het
+gewone gesprek en de tijdelijke live-voorbeelden. Een vertaling kan
+nog intern op Android draaien nadat je het venster sluit of annuleert.
+Zo'n ingediende taak blijft meetellen tot een echte modelcallback.
+Wanneer die grens vol is, toont de snelle vertaler een duidelijke
+lokale foutmelding in plaats van nieuwe rekenbelasting of een
+online fallback te starten. Niets wordt automatisch gedeeld of
+naar de oorspronkelijke app teruggestuurd.
+
 ## Zelf een geïnstalleerde voorleesstem kiezen
 
 Met **Stem bron kiezen** en **Stem vertaling kiezen** kun je op dit

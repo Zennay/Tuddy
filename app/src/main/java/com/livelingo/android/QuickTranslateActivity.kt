@@ -352,26 +352,49 @@ internal class QuickTranslateActivity : ComponentActivity() {
             }
 
             activeTranslator = client
-            try {
+            // The main app's actual ML Kit Tasks may still be running after
+            // cancellation or Activity recreation. Share their process-wide
+            // 3-task device admission boundary with Android text selection.
+            val deviceSlot = LocalMlKitWorkBudget.shared.acquire()
+            if (deviceSlot == null) {
+                complete(token, null,
+                    "Android verwerkt al drie lokale vertalingen. Wacht tot het " +
+                        "toestel ze afrondt; geen online fallback of verborgen download.")
+                return@check
+            }
+            val task = try {
                 client.translate(incomingText)
-                    .addOnSuccessListener { raw ->
-                        if (token != generation || isFinishing) return@addOnSuccessListener
-                        val normalized = normalizeTranslation(raw)
-                        if (normalized == null) {
-                            complete(token, null,
-                                "Het lokale resultaat was leeg of overschreed de veilige tekstgrenzen.")
-                        } else {
-                            complete(token, normalized,
-                                "Lokale vertaling klaar. Er is nog niets naar de andere app teruggestuurd.")
-                        }
-                    }
-                    .addOnFailureListener {
-                        if (token == generation) complete(token, null,
-                            "Lokale vertaling mislukt. Geen online fallback en geen resultaat teruggestuurd.")
-                    }
             } catch (_: Exception) {
+                deviceSlot.release() // No Task was actually submitted.
                 complete(token, null,
                     "De lokale vertaling kon niet starten. Er is niets teruggestuurd.")
+                null
+            }
+            if (task != null) {
+                try {
+                    task.addOnCompleteListener { finished ->
+                        // Always release physical admission even if this screen
+                        // was cancelled, timed out, or returned to its caller.
+                        deviceSlot.release()
+                        if (token != generation || isFinishing) return@addOnCompleteListener
+                        val raw = if (finished.isSuccessful) {
+                            runCatching { finished.result }.getOrNull()
+                        } else null
+                        val normalized = raw?.let(::normalizeTranslation)
+                        complete(token, normalized,
+                            if (normalized == null)
+                                "Lokale vertaling mislukt of gaf geen bruikbaar resultaat. " +
+                                    "Geen online fallback en niets teruggestuurd."
+                            else "Lokale vertaling klaar. Er is nog niets " +
+                                "naar de andere app teruggestuurd.")
+                    }
+                } catch (_: Exception) {
+                    // The provider may still be running this submitted task.
+                    // Keep its physical slot reserved until process exit.
+                    complete(token, null,
+                        "Android kon de lokale vertaling niet volgen. " +
+                            "Probeer later opnieuw; niets is teruggestuurd.")
+                }
             }
         }
     }
