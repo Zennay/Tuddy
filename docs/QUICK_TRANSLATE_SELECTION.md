@@ -114,6 +114,44 @@ Bij het verlaten van de snelle vertaler wordt het tijdelijke scherm
 gewist. Bijlagen, ondertitels, back-ups en andere gestructureerde
 gedeelde tekst blijven van de gewone vertaalactie gescheiden.
 
+## Expliciete tweetalige overdracht van bron en vertaling
+
+Na een **voltooide** lokale ML Kit-vertaling, of na het bewust overnemen
+van je eigen handmatige correctie, verschijnt **Bekijk bron + vertaling
+vóór kopiëren/delen…**. De bestaande knoppen **Kopieer vertaling** en
+**Deel vertaling via Android…** bevatten nog steeds uitsluitend de
+vertaalde tekst. Ook **Vervang geselecteerde tekst in de andere app**
+geeft **alleen** de vertaling terug: de bronapp ontvangt geen extra
+bronzin of privémetadata via die actie.
+
+Het tweetalige voorbeeld bevat de bron en de voltooide vertaling, met
+de geselecteerde taalnamen en taalcodes. Bij het resultaat staat
+expliciet **Lokaal door ML Kit vertaald; niet onafhankelijk
+geverifieerd** of **Door gebruiker aangepast; niet onafhankelijk
+geverifieerd**. De tweede aanduiding claimt dus niet dat Tuddy de
+handmatige correctie of taalkwaliteit heeft beoordeeld. Alle
+tekst staat uitsluitend tijdelijk in de huidige Activity.
+
+Het voorbeeld is precies de te kopiëren of te delen tekst (afgezien
+van Androids eigen eventuele opmaak). Pas na bekijken en bewust kiezen
+van **Kopieer beide** gebruikt Tuddy het bestaande gevoelige Android-
+klembord met de optionele vervaltimer; andere apps kunnen meteen
+**zowel bron als vertaling** lezen. **Deel beide via Android…** opent
+het standaarddeelmenu alleen na die aparte keuze. De ontvangende app
+kan beide teksten bewaren of online verwerken; Tuddy kan die kopie
+niet terughalen. **Niets overdragen** sluit het voorbeeld zonder
+iets extern te doen.
+
+Beide teksten moeten binnen de bestaande grenzen vallen: maximaal
+8.000 UTF-16-tekens per veld, geldige Unicode en geen onveilige
+controletekens. De totale gemarkeerde tweetalige tekst is bovendien
+begrensd op 17.000 tekens. Als de combinatie ongeldig of te groot is,
+biedt Tuddy geen tweetalige overdracht aan; de bestaande
+vertaling-only acties blijven onafhankelijk. Er wordt geen extra
+ML Kit-model gedownload, geen tekst weggeschreven, geen microfoon
+geopend en geen extra share- of clipboardactie gestart zonder een
+expliciete keuze.
+
 ## Gedeelde capaciteit voor lokale tekstvertaling
 
 De snelle Android-tekstselectie gebruikt dezelfde procesbrede grens
