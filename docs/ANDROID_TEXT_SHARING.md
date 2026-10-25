@@ -32,6 +32,28 @@ gewone zinnen vertaald. Ongeldige of te lange tekst wordt geweigerd. De selectie
 en vertaling worden niet opgeslagen en verdwijnen wanneer de snelle vertaal-
 weergave naar de achtergrond gaat of wordt gesloten.
  
+## Snelle vertaling zonder gespreksgeschiedenis
+
+Bij een gewone `text/plain`-deelactie blijft **Gedeelde tekst · eerst controleren**
+de veilige standaardroute. Na controle kun je nu ook bewust kiezen voor
+**Vertaal apart · zonder gespreksgeschiedenis**. Dit opent de bestaande
+tijdelijke lokale Android-vertaler met alleen de begrensde tekst als
+bewerkingsvrije selectie; je live gespreksregels, transcriptcorrecties en
+gesprekstalen worden niet aangepast. Een andere taalrichting kun je in dat
+scherm zelf kiezen. Zonder die expliciete tik wordt er geen model geopend
+of zin vertaald.
+
+Na een lokale vertaling kun je **Kopieer vertaling** kiezen. Het Android-klembord
+wordt voor ondersteunde systeemversies als gevoelige inhoud gemarkeerd, zodat
+Android de automatische inhoudsvoorvertoning kan onderdrukken. Andere apps
+kunnen gekopieerde inhoud nog steeds lezen. **Deel vertaling via Android…**
+vraagt eerst afzonderlijk akkoord en opent pas daarna Androids
+deelmenu; de ontvangende app kan de tekst opslaan of online verwerken.
+Bij het verlaten van het tijdelijke scherm verdwijnen de tekst en het
+vertaalresultaat uit de actieve Tuddy-weergave. Bestandsbijlagen,
+ondertitels en bekende privéback-ups blijven via hun bestaande strikte
+preview lopen, niet via deze snelle vertaling.
+
 ## Gedeelde getimede ondertitels (SRT/VTT/LRC/CSV/TSV)
 
 Een volledig, geldig `text/plain`-ondertitelblok dat expliciet via
