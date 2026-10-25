@@ -781,6 +781,8 @@ private fun TuddyScreen(
     var speechCatalogEpoch by remember { mutableIntStateOf(0) }
     var follow by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
+    // Conversation-first: advanced app features are opt-in, never removed.
+    var advancedActionsOpen by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
     // Ephemeral user opt-in: no microphone startup when Android still reports
     // a usable connection. Never persist or mistake this for real device proof.
@@ -6838,13 +6840,121 @@ private fun TuddyScreen(
         Surface(Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text("Tuddy", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text("Gesprekken begrijpen, ook zonder internet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Spreektaal: ${source.label}  ·  Vertaling: ${target.label}",
+                Text("Kies je spreektaal en vertaling. Een taalkeuze installeert geen offline model.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.weight(1f)) {
+                        OutlinedButton(onClick = { sourceOpen = true }, enabled = !modelStorageBusy, modifier = Modifier.fillMaxWidth()) {
+                            Text("Van: ${source.label}", maxLines = 1)
+                        }
+                        DropdownMenu(expanded = sourceOpen, onDismissRequest = { sourceOpen = false }) {
+                            Text(
+                                "Kiezen is niet hetzelfde als een geïnstalleerd offline spraakpakket.",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OutlinedTextField(
+                                value = sourceQuery,
+                                onValueChange = { sourceQuery = it },
+                                label = { Text("Zoek spreektaal") },
+                                modifier = Modifier.width(310.dp).padding(horizontal = 10.dp),
+                                singleLine = true
+                            )
+                            val matchingSpoken = searchSpokenLanguages(sourceQuery)
+                            if (matchingSpoken.isEmpty()) {
+                                Text(
+                                    "Geen spreektaal gevonden.",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            matchingSpoken.forEach {
+                                DropdownMenuItem(text = { Text(it.label) }, onClick = {
+                                    selectBrowserSpeechSource(it.speechCode)
+                                    offlineReadinessOpen = false
+                                })
+                            }
+                        }
+                    }
+                    Box(Modifier.weight(1f)) {
+                        OutlinedButton(onClick = { targetOpen = true }, enabled = !modelStorageBusy, modifier = Modifier.fillMaxWidth()) {
+                            Text("Naar: ${target.label}", maxLines = 1)
+                        }
+                        DropdownMenu(expanded = targetOpen, onDismissRequest = { targetOpen = false }) {
+                            Text("59 vertaaltalen · offline na modelvoorbereiding", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                            OutlinedTextField(
+                                value = targetQuery,
+                                onValueChange = { targetQuery = it },
+                                label = { Text("Zoek taal") },
+                                modifier = Modifier.width(310.dp).padding(horizontal = 10.dp),
+                                singleLine = true
+                            )
+                            val matchingTargets = TargetCatalog.search(targetQuery).take(35)
+                            if (matchingTargets.isEmpty()) {
+                                val previewSuggestions = CommunityLanguageAvailabilityHint.targetsForQuery(targetQuery)
+                                Text(
+                                    CommunityLanguageAvailabilityHint.forQuery(targetQuery)
+                                        ?: "Geen vertaaltaal gevonden.",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                previewSuggestions.forEach { previewSuggestion ->
+                                    val previewLabel = when (previewSuggestion) {
+                                        "kmr" -> "Kurmanji"
+                                        "ckb" -> "Sorani"
+                                        else -> "Pasjtoe"
+                                    }
+                                    DropdownMenuItem(
+                                        text = { Text("Open 5 basisuitdrukkingen · $previewLabel") },
+                                        onClick = {
+                                            if (listening) stop()
+                                            previewTarget = previewSuggestion
+                                            starterPhraseboardTarget = previewSuggestion
+                                            previewResult = null
+                                            targetQuery = ""
+                                            targetOpen = false
+                                            starterPhraseboardOpen = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Zoek mijn eigen offline zinnen · $previewLabel") },
+                                        onClick = {
+                                            if (listening) stop()
+                                            previewTarget = previewSuggestion
+                                            previewResult = null
+                                            targetQuery = ""
+                                            targetOpen = false
+                                            quickPhrasePickerOpen = true
+                                        }
+                                    )
+                                }
+                            }
+                            matchingTargets.forEach { choice ->
+                                DropdownMenuItem(text = { Text(choice.title) }, onClick = {
+                                    stop()
+                                    modelStorage.invalidate()
+                                    installedTextModels = null
+                                    pendingBulkModelDeletion = null
+                                    selectedModelCleanupCodes = emptySet()
+                                    target = LanguageChoice(choice.title, choice.code, choice.code)
+                                    languageSettings.edit()
+                                        .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, choice.code)
+                                        .apply()
+                                    offlineModelStatus = ""
+                                    textReceipt = OfflineTextReceipt(source.translateCode, choice.code,
+                                        OfflineTextStage.UNCHECKED, "Vertaaltaal veranderd: controleer tekstmodel opnieuw.")
+                                    targetQuery = ""
+                                    targetOpen = false
+                                })
+                            }
+                        }
+                    }
+                }
                 val currentSpeechReady = offlineAvailable &&
                     speechPackReceipt.tag == source.speechCode &&
                     speechPackReceipt.stage == SpeechPackStage.READY
@@ -6854,6 +6964,7 @@ private fun TuddyScreen(
                 OutlinedButton(
                     onClick = {
                         offlineReadinessOpen = true
+                        advancedActionsOpen = false
                         showSettings = false
                         conversationToolsOpen = false
                         favoritesOpen = false
@@ -6976,18 +7087,6 @@ private fun TuddyScreen(
                 ) {
                     OutlinedButton(onClick = { focusMode = true }) { Text("⛶ Leesmodus") }
                     OutlinedButton(
-                        enabled = lines.any {
-                            it.status == "Lokaal vertaald" &&
-                                it.original.isNotBlank() && it.translated.isNotBlank()
-                        },
-                        onClick = {
-                            stop() // table presentation never keeps the mic active
-                            captionSpeaker.stop()
-                            focusMode = false
-                            liveTableOpen = true
-                        }
-                    ) { Text("↕ Tafelmodus") }
-                    OutlinedButton(
                         enabled = reverseDirection != null && !modelStorageBusy,
                         onClick = {
                             val reversed = reverseDirection
@@ -7041,6 +7140,44 @@ private fun TuddyScreen(
                     enabled = !listening,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("✍ Typ zin · zonder microfoon") }
+                OutlinedButton(
+                    onClick = {
+                        advancedActionsOpen = !advancedActionsOpen
+                        if (!advancedActionsOpen) {
+                            showSettings = false
+                            favoritesOpen = false
+                            conversationToolsOpen = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (advancedActionsOpen) "Verberg extra functies"
+                        else "Meer functies · oefenen, importeren en instellingen")
+                }
+                if (advancedActionsOpen) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Extra functies · alleen op jouw verzoek. " +
+                                "Je live gesprek blijft hieronder zichtbaar.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    OutlinedButton(
+                        enabled = lines.any {
+                            it.status == "Lokaal vertaald" &&
+                                it.original.isNotBlank() && it.translated.isNotBlank()
+                        },
+                        onClick = {
+                            stop() // table presentation never keeps the mic active
+                            captionSpeaker.stop()
+                            focusMode = false
+                            liveTableOpen = true
+                        }
+                    ) { Text("↕ Tafelmodus") }
                 TextButton(
                     enabled = !listening,
                     onClick = {
@@ -7418,7 +7555,7 @@ private fun TuddyScreen(
                 if (showSettings) {
                     Column(
                         modifier = Modifier.fillMaxWidth()
-                            .weight(0.48f, fill = false)
+                            .heightIn(max = 420.dp)
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
@@ -7446,114 +7583,6 @@ private fun TuddyScreen(
                     "Alleen de presentatie verandert; het gesprek en de vertaling blijven gelijk.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { sourceOpen = true }, enabled = !modelStorageBusy, modifier = Modifier.fillMaxWidth()) {
-                            Text("Van: ${source.label}", maxLines = 1)
-                        }
-                        DropdownMenu(expanded = sourceOpen, onDismissRequest = { sourceOpen = false }) {
-                            Text(
-                                "Kiezen is niet hetzelfde als een geïnstalleerd offline spraakpakket.",
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            OutlinedTextField(
-                                value = sourceQuery,
-                                onValueChange = { sourceQuery = it },
-                                label = { Text("Zoek spreektaal") },
-                                modifier = Modifier.width(310.dp).padding(horizontal = 10.dp),
-                                singleLine = true
-                            )
-                            val matchingSpoken = searchSpokenLanguages(sourceQuery)
-                            if (matchingSpoken.isEmpty()) {
-                                Text(
-                                    "Geen spreektaal gevonden.",
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            matchingSpoken.forEach {
-                                DropdownMenuItem(text = { Text(it.label) }, onClick = {
-                                    selectBrowserSpeechSource(it.speechCode)
-                                    offlineReadinessOpen = false
-                                })
-                            }
-                        }
-                    }
-                    Box(Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { targetOpen = true }, enabled = !modelStorageBusy, modifier = Modifier.fillMaxWidth()) {
-                            Text("Naar: ${target.label}", maxLines = 1)
-                        }
-                        DropdownMenu(expanded = targetOpen, onDismissRequest = { targetOpen = false }) {
-                            Text("59 vertaaltalen · offline na modelvoorbereiding", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
-                            OutlinedTextField(
-                                value = targetQuery,
-                                onValueChange = { targetQuery = it },
-                                label = { Text("Zoek taal") },
-                                modifier = Modifier.width(310.dp).padding(horizontal = 10.dp),
-                                singleLine = true
-                            )
-                            val matchingTargets = TargetCatalog.search(targetQuery).take(35)
-                            if (matchingTargets.isEmpty()) {
-                                val previewSuggestions = CommunityLanguageAvailabilityHint.targetsForQuery(targetQuery)
-                                Text(
-                                    CommunityLanguageAvailabilityHint.forQuery(targetQuery)
-                                        ?: "Geen vertaaltaal gevonden.",
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                previewSuggestions.forEach { previewSuggestion ->
-                                    val previewLabel = when (previewSuggestion) {
-                                        "kmr" -> "Kurmanji"
-                                        "ckb" -> "Sorani"
-                                        else -> "Pasjtoe"
-                                    }
-                                    DropdownMenuItem(
-                                        text = { Text("Open 5 basisuitdrukkingen · $previewLabel") },
-                                        onClick = {
-                                            if (listening) stop()
-                                            previewTarget = previewSuggestion
-                                            starterPhraseboardTarget = previewSuggestion
-                                            previewResult = null
-                                            targetQuery = ""
-                                            targetOpen = false
-                                            starterPhraseboardOpen = true
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Zoek mijn eigen offline zinnen · $previewLabel") },
-                                        onClick = {
-                                            if (listening) stop()
-                                            previewTarget = previewSuggestion
-                                            previewResult = null
-                                            targetQuery = ""
-                                            targetOpen = false
-                                            quickPhrasePickerOpen = true
-                                        }
-                                    )
-                                }
-                            }
-                            matchingTargets.forEach { choice ->
-                                DropdownMenuItem(text = { Text(choice.title) }, onClick = {
-                                    stop()
-                                    modelStorage.invalidate()
-                                    installedTextModels = null
-                                    pendingBulkModelDeletion = null
-                                    selectedModelCleanupCodes = emptySet()
-                                    target = LanguageChoice(choice.title, choice.code, choice.code)
-                                    languageSettings.edit()
-                                        .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, choice.code)
-                                        .apply()
-                                    offlineModelStatus = ""
-                                    textReceipt = OfflineTextReceipt(source.translateCode, choice.code,
-                                        OfflineTextStage.UNCHECKED, "Vertaaltaal veranderd: controleer tekstmodel opnieuw.")
-                                    targetQuery = ""
-                                    targetOpen = false
-                                })
-                            }
-                        }
-                    }
-                }
                 OutlinedButton(
                     onClick = { languageSupportOpen = true },
                     modifier = Modifier.fillMaxWidth()
@@ -8045,6 +8074,8 @@ private fun TuddyScreen(
                 }
                     }
                 }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = {
@@ -8179,9 +8210,9 @@ private fun TuddyScreen(
                     if (lines.isEmpty() && partial.isBlank()) {
                         item(key = "empty-conversation") {
                             Text(
-                                "Nog geen ondertitels. Tik op Luister voor offline spraak " +
-                                    "of open Taal- en modelinstellingen om een zin te typen. " +
-                                    "Je gesprek blijft op dit apparaat in tijdelijk geheugen.",
+                                "Nog geen ondertitels. Kies hierboven de spreek- en vertaaltaal. " +
+                                    "Tik op Luister voor lokale spraak of Typ zin zonder microfoon. " +
+                                    "Alle gespreksregels blijven alleen tijdelijk op dit toestel.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
