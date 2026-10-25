@@ -110,10 +110,12 @@ overgedragen taak alsnog doorrekenen. De zichtbare status blijft
 terecht geannuleerd, maar het toestel heeft de oude berekening daarmee
 niet bewezen gestopt.
 
-Daarom geldt nu daarnaast één afzonderlijke toestelgebonden limiet:
+Daarom geldt nu daarnaast één afzonderlijke **procesbrede** limiet:
 **maximaal drie echt ingediende, nog niet door ML Kit afgeronde
-vertaaltaken**, ongeacht of ze voor een definitieve ondertitel of een
-tijdelijk live-voorbeeld zijn gestart. Een plek wordt pas vrijgegeven
+vertaaltaken**, samen voor definitieve ondertitels, tijdelijke
+live-voorbeelden en de snelle Android-tekstselectievertaler.
+Schermwissels en Activity-herstarts zetten die limiet niet terug op nul
+zolang hetzelfde app-proces nog draait. Een plek wordt pas vrijgegeven
 als ML Kit werkelijk een terminale callback afgeeft (of als het
 aanmaken van de taak mislukte voordat er iets was ingediend).
 Een geannuleerde, verlopen of gecorrigeerde zin geeft dus niet
