@@ -145,6 +145,43 @@ is, en maakt geen claim dat de vertaling al klaar is. Deze modus is
 bedoeld voor een korte bewuste invoer, niet als garantie over
 herkenningskwaliteit of echte vliegtuigmodusisolatie.
 
+## Transcript-only luisteren zonder live vertaling
+
+De gebruiker kan tijdens het doorlopende luisteren expliciet op
+**Pauzeer live vertalen · houd origineel** tikken. De Android on-device
+SpeechRecognizer blijft actief en legt nieuwe herkenningsregels alleen
+als tijdelijk origineel vast. De app verstuurt nieuwe gesproken zinnen
+dan **niet** naar de lokale ML Kit-tekstvertaler. Ook de voorlopige
+tussentekstvertaling is uitgeschakeld. Dat geldt ook voor een
+bewust beoordeelde **één-zin**-spraakopname: de originele tekst blijft
+zichtbaar maar wordt niet automatisch vertaald.
+
+Bij het pauzeren krijgen bestaande, nog wachtende regels expliciet de
+status **Gepauzeerd**. Hun oorspronkelijke tekst, taalrichting,
+correctie- en sprekerlabels blijven bewaard. Reeds gestarte ML Kit-
+modeltaken kunnen op de achtergrond nog intern afronden: Android biedt
+hier geen gegarandeerde afbreekmogelijkheid. Maar hun oude callbacks
+mogen die gepauzeerde regel niet meer wijzigen, omdat de app
+vertaalwachtrijen en deadlines leegt en de regelrevisie verhoogt.
+Dit is een **weergave- en nieuwe-vertaalaanvragen-stop**, geen
+onbewijsbare belofte dat eerdere lokale verwerking onmiddellijk stopt.
+
+Met **Hervat live vertalen** worden *alleen nieuw herkende* zinnen
+weer lokaal vertaald. Eerder overgeslagen zinnen worden niet stilzwijgend
+ingehaald; voor een expliciete hervertaling moet de microfoon gestopt
+zijn en kan de gebruiker bij de originele regel op
+**▶ Vertaal deze zin alsnog** tikken. De bestaande read-only
+modelbeschikbaarheidscontrole en begrensde vertaalwachtrij blijven voor
+die actie van kracht. Gewone handmatig getypte vertalingen blijven ook
+tijdens de pauze afzonderlijk mogelijk, want daarbij kiest de gebruiker
+zelf expliciet de vertaalactie.
+
+De pauzeknop is beschikbaar in het normale gesprek en de fullscreen
+leesmodus; hij start of stopt de microfoon niet en verandert geen
+Android-vliegtuigmodus of offline spraakpakketten. De keuze leeft
+alleen tijdens deze app-sessie, slaat geen tekst op en maakt geen
+cloudfallback of download mogelijk.
+
 ## Gates
 
 Deze mijlpaal vereist de bestaande Android GitHub-build en source-head
