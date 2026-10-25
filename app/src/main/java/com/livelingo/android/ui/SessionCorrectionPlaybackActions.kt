@@ -48,6 +48,12 @@ internal fun SessionCorrectionPlaybackActions(
         onPlayTranslation = { pace ->
             speaker.speak(entry.translation, entry.targetCode, pace) { notice = it }
         },
+        onPlayBilingual = { pace ->
+            speaker.speakBilingualPair(
+                entry.original, entry.translation,
+                entry.sourceCode, entry.targetCode, pace
+            ) { notice = it }
+        },
         onStop = {
             speaker.stop()
             notice = "Lokale voorlezing gestopt."
