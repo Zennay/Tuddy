@@ -173,7 +173,12 @@ internal class LocalCaptionSpeaker(context: Context) {
         onWordRange: (index: Int, start: Int, endExclusive: Int) -> Unit = { _, _, _ -> }
     ) {
         stop()
-        val safeLines = lines.map { it.replace('\n', ' ').replace('\r', ' ').trim() }
+        // Manually reviewed text can bypass ML Kit entirely. Enforce the
+        // same Unicode/text boundary before handing any such sentence to
+        // Android's TTS engine (which may otherwise speak malformed content).
+        val safeLines = lines.map {
+            LocalTextBoundaryPolicy.speechHypothesis(it).orEmpty()
+        }
         if (safeLines.isEmpty() || safeLines.size > MAX_SEQUENCE_LINES ||
             safeLines.any { line ->
                 line.isBlank() || line.length > MAX_LINE_CHARS ||
@@ -507,9 +512,8 @@ internal class LocalCaptionSpeaker(context: Context) {
         // An on-device translator may produce huge or control-filled results.
         // Admit short printable completed lines only; do not retry over a
         // network speech engine or publish provider errors.
-        val safe = translated.trim()
-        if (safe.isEmpty() || safe.length > 400 ||
-            safe.any { it == '\u0000' || it == '\r' || it == '\n' || it.isISOControl() } ||
+        val safe = LocalTextBoundaryPolicy.speechHypothesis(translated)
+        if (safe == null || safe.length > 400 ||
             !Regex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$").matches(languageTag)) {
             feedback("Deze vertaling kan niet veilig worden voorgelezen.")
             return

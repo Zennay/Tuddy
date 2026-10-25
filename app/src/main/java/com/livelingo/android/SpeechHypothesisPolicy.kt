@@ -14,9 +14,11 @@ internal object SpeechHypothesisPolicy {
     fun select(candidates: List<String?>?): String {
         if (candidates == null) return ""
         for (candidate in candidates.take(MAX_ALTERNATIVES)) {
+            // Maintain the existing explicit first-good bounded hypothesis
+            // semantics; shared validation can only reject more bad text.
             val text = candidate?.trim() ?: continue
             if (text.isNotBlank() && text.length <= MAX_CAPTION_CHARS) {
-                return text
+                LocalTextBoundaryPolicy.speechHypothesis(text)?.let { return it }
             }
         }
         // A provider returning only blank/oversized/corrupt alternatives
