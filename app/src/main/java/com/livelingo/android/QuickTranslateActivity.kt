@@ -731,8 +731,11 @@ private fun QuickTranslateScreen(
             Text(privateScreenShieldNotice, style = MaterialTheme.typography.bodySmall)
         }
         Text(
-            "Alleen lokale ML Kit-tekstvertaling. Controleer zelf de taalrichting. " +
-                "Geen microfoon, automatische download, opslag of online fallback.",
+            "Alleen lokale ML Kit-tekstvertaling. Maximaal 8.000 tekens, " +
+                "langere selecties worden in opeenvolgende gedeelten vertaald. " +
+                "De complete vertaling verschijnt pas als alles geslaagd is. " +
+                "Controleer zelf de taalrichting. Geen microfoon, automatische download, " +
+                "opslag of online fallback.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -741,6 +744,14 @@ private fun QuickTranslateScreen(
         if (inputNotice.isNotBlank()) {
             Text(inputNotice, color = MaterialTheme.colorScheme.error)
         } else {
+            if (text.length > LocalSelectedParagraphPlan.MAX_SOURCE_UNITS) {
+                Text(
+                    "Deze selectie is langer dan 8.000 tekens. Selecteer een kleiner gedeelte; " +
+                        "Tuddy start geen gedeeltelijke vertaling.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surfaceVariant,
@@ -792,7 +803,9 @@ private fun QuickTranslateScreen(
         }
         Button(
             onClick = onTranslate,
-            enabled = text.isNotBlank() && inputNotice.isBlank() && !busy && !detectingSource &&
+            enabled = text.isNotBlank() &&
+                text.length <= LocalSelectedParagraphPlan.MAX_SOURCE_UNITS &&
+                inputNotice.isBlank() && !busy && !detectingSource &&
                 sourceCode != targetCode,
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (busy) "Lokaal controleren/vertalen…" else "Vertaal lokaal") }
