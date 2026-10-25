@@ -2268,19 +2268,6 @@ private fun TuddyScreen(
         privateCurtainOpen = true
     }
 
-    // Only the currently visible, uncovered Tuddy screen owns the callback.
-    // Pausing the Activity cancels its timer; returning cannot replay a stale
-    // hidden-screen deadline. Revealing the neutral cover arms a new interval.
-    DisposableEffect(screenActivity, privateCurtainOpen, idleCurtainMinutes) {
-        val activity = screenActivity as? MainActivity
-        if (!privateCurtainOpen && idleCurtainMinutes > 0) {
-            activity?.setIdleCurtainCallback { coverPrivateConversation() }
-        } else {
-            activity?.setIdleCurtainCallback(null)
-        }
-        onDispose { activity?.setIdleCurtainCallback(null) }
-    }
-
     fun closeSpeechCatalog() {
         speechCatalogTimeoutHandler.removeCallbacksAndMessages(null)
         speechCatalogEpoch++
@@ -4702,6 +4689,19 @@ private fun TuddyScreen(
     }
     // Back cannot open Tuddy's normal exit confirmation over the cover.
     BackHandler(enabled = privateCurtainOpen) { /* Reveal is always explicit. */ }
+
+    // Only the currently visible, uncovered Tuddy screen owns the callback.
+    // Pausing the Activity cancels its timer; returning cannot replay a stale
+    // hidden-screen deadline. Revealing the neutral cover arms a new interval.
+    DisposableEffect(screenActivity, privateCurtainOpen, idleCurtainMinutes) {
+        val activity = screenActivity as? MainActivity
+        if (!privateCurtainOpen && idleCurtainMinutes > 0) {
+            activity?.setIdleCurtainCallback { coverPrivateConversation() }
+        } else {
+            activity?.setIdleCurtainCallback(null)
+        }
+        onDispose { activity?.setIdleCurtainCallback(null) }
+    }
 
     MaterialTheme(colorScheme = colors) {
         if (uncertainSpeechReviewOpen && !listening) {
