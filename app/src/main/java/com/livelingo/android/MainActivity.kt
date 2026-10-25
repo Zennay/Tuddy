@@ -340,6 +340,11 @@ private data class PendingLivePhraseBatchCapture(
     val lines: List<Line>
 )
 
+private data class PendingLauncherShortcut(
+    val id: Long,
+    val destination: TuddyLauncherDestination
+)
+
 class MainActivity : ComponentActivity() {
     // Lives only in Activity memory; no savedInstanceState or external text logs.
     private var pendingExternalText by mutableStateOf<IncomingSharedText?>(null)
@@ -347,6 +352,18 @@ class MainActivity : ComponentActivity() {
     private var nextViewedSubtitleRequest = 0L
     private var pendingPersonalCsv by mutableStateOf<IncomingPersonalCsvDocument?>(null)
     private var nextPersonalCsvRequest = 0L
+    private var pendingLauncherShortcut by mutableStateOf<PendingLauncherShortcut?>(null)
+    private var nextLauncherShortcutId = 0L
+
+    private fun receiveLauncherShortcut(intent: Intent?) {
+        val destination = TuddyLauncherShortcuts.requestedDestination(intent)
+        TuddyLauncherShortcuts.clearReceivedRoute(intent)
+        if (destination != null) {
+            pendingLauncherShortcut = PendingLauncherShortcut(
+                ++nextLauncherShortcutId, destination
+            )
+        }
+    }
 
     private val quickTranslateLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -384,6 +401,11 @@ class MainActivity : ComponentActivity() {
             return
         }
         PrivateScreenShield.restore(this)
+        if (savedInstanceState == null) receiveLauncherShortcut(intent)
+        else TuddyLauncherShortcuts.clearReceivedRoute(intent)
+        // Publishing launcher metadata does not start a microphone, share any
+        // content or imply that the launcher actually exposes the shortcuts.
+        TuddyLauncherShortcuts.publish(this)
         // A configuration recreation must never re-import private text from
         // the original Intent after it was already dismissed or consumed.
         // A deliberate single-file share takes precedence over text/plain:
@@ -415,6 +437,10 @@ class MainActivity : ComponentActivity() {
                 incomingPersonalCsv = pendingPersonalCsv,
                 onPersonalCsvConsumed = { id ->
                     if (pendingPersonalCsv?.requestId == id) pendingPersonalCsv = null
+                },
+                incomingLauncherShortcut = pendingLauncherShortcut,
+                onLauncherShortcutConsumed = { id ->
+                    if (pendingLauncherShortcut?.id == id) pendingLauncherShortcut = null
                 }
             )
         }
@@ -425,6 +451,7 @@ class MainActivity : ComponentActivity() {
         if (routePlainTextSelection(intent)) {
             return
         }
+        receiveLauncherShortcut(intent)
         pendingPersonalCsv = ExternalPersonalCsvIntent.read(
             intent, ++nextPersonalCsvRequest
         )
@@ -449,7 +476,9 @@ private fun TuddyScreen(
     incomingViewedSubtitle: IncomingViewedSubtitleDocument?,
     onViewedSubtitleConsumed: (Long) -> Unit,
     incomingPersonalCsv: IncomingPersonalCsvDocument?,
-    onPersonalCsvConsumed: (Long) -> Unit
+    onPersonalCsvConsumed: (Long) -> Unit,
+    incomingLauncherShortcut: PendingLauncherShortcut?,
+    onLauncherShortcutConsumed: (Long) -> Unit
 ) {
     val context = LocalContext.current
     // Reuse ML Kit's bundled on-device language detector across live captions;
@@ -835,6 +864,7 @@ private fun TuddyScreen(
     var showSettings by remember { mutableStateOf(false) }
     // Conversation-first: advanced app features are opt-in, never removed.
     var advancedActionsOpen by remember { mutableStateOf(false) }
+    var launcherShortcutNotice by remember { mutableStateOf("") }
     var voicePickerLanguageTag by remember { mutableStateOf<String?>(null) }
     var confirmClearConversation by remember { mutableStateOf(false) }
     // Only RAM-only retries; never mutate a completed or human-corrected row.
@@ -855,6 +885,50 @@ private fun TuddyScreen(
         }
     }
     var offlineReportPickerOpen by remember { mutableStateOf(false) }
+    // Home-screen shortcuts open existing workflows only. They cannot start
+    // capture, approve text, download models or interrupt a running session.
+    LaunchedEffect(incomingLauncherShortcut?.id) {
+        val request = incomingLauncherShortcut ?: return@LaunchedEffect
+        when {
+            listening -> {
+                captureModeNotice = "Microfoon is al actief; stop bewust voordat je " +
+                    "een andere startschermactie opent."
+            }
+            pendingSingleSpeechReview != null -> {
+                captureModeNotice = "Controleer of verwerp eerst de vorige " +
+                    "één-zinsherkenning. Er is geen spraak of tekst weggegooid."
+            }
+            quickTypedOpen || twoWayTypedOpen ||
+                offlineReadinessOpen || offlineReportPickerOpen -> {
+                captureModeNotice = "Er staat al een tijdelijk tekstconcept, " +
+                    "tweeweg-gesprek of rapportactie open. Sluit dit bewust " +
+                    "voordat je een andere startschermactie gebruikt."
+            }
+            incomingExternalText != null || incomingViewedSubtitle != null ||
+                incomingPersonalCsv != null -> {
+                captureModeNotice = "Rond eerst de bestaande gedeelde tekst of " +
+                    "bestandsvoorvertoning af."
+            }
+            else -> when (request.destination) {
+                TuddyLauncherDestination.TYPE_TEXT -> {
+                    quickTypedOpen = true
+                    draftFromExternalShare = false
+                    // Never auto-fill from a clipboard or previous session.
+                    manualText = ""
+                }
+                TuddyLauncherDestination.OFFLINE_STARTCHECK -> {
+                    offlineReadinessOpen = true
+                }
+                TuddyLauncherDestination.ONE_SENTENCE -> {
+                    captureMode = LocalSpeechCaptureMode.SINGLE_SENTENCE
+                    captureModeNotice = "Eén zin klaargezet via het Android-startscherm. " +
+                        "Tik zelf op Luister voor één offline spraakpoging; " +
+                        "er is nog geen microfoon geopend."
+                }
+            }
+        }
+        onLauncherShortcutConsumed(request.id)
+    }
     // Only event counts and monotonic durations live in RAM, never speech/text.
     var sessionDiagnostics by remember { mutableStateOf(OfflineSessionDiagnostics()) }
     val speechTranslationStarted = remember { mutableMapOf<Long, Long>() }
@@ -7816,6 +7890,44 @@ private fun TuddyScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Text(
+                            "Android-startscherm · snelle toegang zonder automatisch luisteren",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        TuddyLauncherDestination.entries.forEach { shortcut ->
+                            OutlinedButton(
+                                enabled = !listening,
+                                onClick = {
+                                    val accepted = TuddyLauncherShortcuts.requestPin(
+                                        context, shortcut
+                                    )
+                                    launcherShortcutNotice = if (accepted)
+                                        "Android heeft het verzoek voor ${shortcut.shortcutId} " +
+                                            "ontvangen. Bevestig de snelkoppeling in de " +
+                                            "launcher; dit is nog geen bevestigde installatie."
+                                    else "De Android-launcher ondersteunt deze " +
+                                        "snelkoppeling niet of heeft het verzoek geweigerd."
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    when (shortcut) {
+                                        TuddyLauncherDestination.TYPE_TEXT ->
+                                            "Startscherm: lokaal typen toevoegen"
+                                        TuddyLauncherDestination.OFFLINE_STARTCHECK ->
+                                            "Startscherm: offline startcheck toevoegen"
+                                        TuddyLauncherDestination.ONE_SENTENCE ->
+                                            "Startscherm: één zin klaarzetten"
+                                    }
+                                )
+                            }
+                        }
+                        if (launcherShortcutNotice.isNotBlank()) {
+                            Text(
+                                launcherShortcutNotice,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                 OutlinedButton(
                     onClick = {
                         showSettings = !showSettings
