@@ -1,11 +1,8 @@
 package com.livelingo.android
 
 import android.content.Intent
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
-import android.os.PersistableBundle
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.ComponentActivity
@@ -127,11 +124,13 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var status by mutableStateOf("")
     private var playbackNotice by mutableStateOf("")
     private var headphonesOnlyPlayback by mutableStateOf(false)
+    private var clipboardExpirySeconds by mutableStateOf(0)
     private var translationResult by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         headphonesOnlyPlayback = PrivatePlaybackRoutingPreference.headphonesOnly(this)
+        clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(this)
 
         val acceptedAction = intent.action == Intent.ACTION_PROCESS_TEXT &&
             intent.type?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT) == "text/plain"
@@ -193,6 +192,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     status = status,
                     playbackNotice = playbackNotice,
                     headphonesOnly = headphonesOnlyPlayback,
+                    clipboardExpirySeconds = clipboardExpirySeconds,
                     result = translationResult,
                     onSourceSelected = { code -> changePair(source = code) },
                     onTargetSelected = { code -> changePair(target = code) },
@@ -218,6 +218,14 @@ internal class QuickTranslateActivity : ComponentActivity() {
                             "Alleen-hoofdtelefoonstand gekozen. Aangesloten Android-headset " +
                                 "vereist vóór elk lokaal voorlezen."
                         else "Hoofdtelefoonvereiste uit. Nieuwe afspeelactie kan luidspreker gebruiken."
+                    },
+                    onClipboardExpiryChange = { seconds ->
+                        val saved = PrivateClipboardExpiry.changeSeconds(this, seconds)
+                        clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(this)
+                        status = if (saved)
+                            "Klembordtimer gewijzigd voor volgende kopieeracties. " +
+                                "Wissen is afhankelijk van Android en of Tuddy nog actief is."
+                        else "Klembordtimer kon niet worden opgeslagen."
                     },
                     onCopy = { copyTranslation() },
                     onShare = { shareTranslation() },
@@ -430,17 +438,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     private fun copyTranslation() {
         val result = translationResult ?: return
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        val copied = clipboard != null && runCatching {
-            val clip = ClipData.newPlainText("Tuddy · privévertaling", result)
-            // On Android 13+ suppress the system's automatic clipboard preview.
-            // The text is still intentionally accessible to other apps after copying.
-            clip.description.extras = PersistableBundle().apply {
-                putBoolean("android.content.extra.IS_SENSITIVE", true)
-            }
-            clipboard.setPrimaryClip(clip)
-            true
-        }.getOrDefault(false)
+        val copied = PrivateClipboardExpiry.copy(
+            this, "Tuddy · privévertaling", result
+        )
         status = if (copied) {
             "Vertaling naar Android-klembord gekopieerd. Andere apps kunnen dit klembord lezen."
         } else {
@@ -548,6 +548,7 @@ private fun QuickTranslateScreen(
     status: String,
     playbackNotice: String,
     headphonesOnly: Boolean,
+    clipboardExpirySeconds: Int,
     result: String?,
     onSourceSelected: (String) -> Unit,
     onTargetSelected: (String) -> Unit,
@@ -559,6 +560,7 @@ private fun QuickTranslateScreen(
     onPlayTranslation: (LocalSpeechPace) -> Unit,
     onStopPlayback: () -> Unit,
     onHeadphonesOnlyChange: (Boolean) -> Unit,
+    onClipboardExpiryChange: (Int) -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit,
     onReturnResult: () -> Unit,
@@ -716,6 +718,29 @@ private fun QuickTranslateScreen(
                     )
                 )
             }
+            TextButton(
+                onClick = {
+                    val next = when (clipboardExpirySeconds) {
+                        0 -> 60
+                        60 -> 300
+                        else -> 0
+                    }
+                    onClipboardExpiryChange(next)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Klembordtimer: " + when (clipboardExpirySeconds) {
+                    60 -> "1 minuut"
+                    300 -> "5 minuten"
+                    else -> "uit"
+                } + " · wijzig")
+            }
+            Text(
+                "Na kopiëren kunnen andere apps tekst meteen lezen. " +
+                    "Automatisch legen is optioneel en werkt alleen zolang Android " +
+                    "Tuddy toestaat zijn eigen klembord te controleren.",
+                style = MaterialTheme.typography.bodySmall
+            )
             OutlinedButton(
                 onClick = onCopy,
                 modifier = Modifier.fillMaxWidth()
