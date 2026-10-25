@@ -25,6 +25,7 @@ internal data class OfflineSessionDiagnostics(
     val microphonePrivacyInterruptions: Int = 0,
     val powerSafetyInterruptions: Int = 0,
     val headsetMicInterruptions: Int = 0,
+    val memorySafetyInterruptions: Int = 0,
     val translationLatenciesMs: List<Long> = emptyList()
 ) {
     fun asReportLines(): List<String> = listOf(
@@ -42,6 +43,7 @@ internal data class OfflineSessionDiagnostics(
         "Android microphone permission/mute/call interruptions (RAM only): $microphonePrivacyInterruptions",
         "Android severe thermal/critical battery stops (RAM only): $powerSafetyInterruptions",
         "Android headset microphone loss interruptions (RAM only): $headsetMicInterruptions",
+        "Android critical-memory capture stops (RAM only): $memorySafetyInterruptions",
         "Completed local text translations of recognized speech: $localTranslations",
         "Recognized speech with missing text model: $missingTextModels",
         "Recognized speech translation failures: $translationFailures",
