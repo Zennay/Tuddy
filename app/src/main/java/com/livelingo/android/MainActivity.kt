@@ -2418,6 +2418,11 @@ private fun TuddyScreen(
             livePhraseBatchSelectionMode = false
         }
         liveSpeechPhase = LiveSpeechPhase.STARTING
+        // Capture and device TTS must never run simultaneously. Stop an
+        // explicit local caption/translation replay before Android receives
+        // a new microphone request; otherwise Tuddy could recognize its
+        // own synthetic voice as another live conversation turn.
+        captionSpeaker.stop()
         try {
             // Every start, including a rapid restart after Android's own end-of-speech,
             // must invalidate the previous recognizer's delayed callbacks.
