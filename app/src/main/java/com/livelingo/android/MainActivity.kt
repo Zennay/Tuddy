@@ -332,11 +332,11 @@ private data class Line(
     val recordedAtMillis: Long = System.currentTimeMillis(),
     val translationRevision: Int = 0,
     val userCorrected: Boolean = false,
+    // Human-authored session-only meaning: never overwrite model result or exports.
+    val personalMeaning: String? = null,
     // Android's optional uncalibrated score, only retained when LOW.
     // Human corrections remain authoritative, and nothing persists.
-    val lowAndroidConfidencePercent: Int? = null,
-    // Human-authored session-only meaning: never overwrite model result or exports.
-    val personalMeaning: String? = null
+    val lowAndroidConfidencePercent: Int? = null
 )
 
 private data class PendingLivePhraseBatchCapture(
