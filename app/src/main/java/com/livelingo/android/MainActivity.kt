@@ -4552,14 +4552,13 @@ private fun TuddyScreen(
     }
     // The Activity owns exit; native/Compose dialogs consume their own Back.
     // If the Context has no Activity, leave system Back handling untouched.
-    BackHandler(enabled = screenActivity != null) { requestPrivateExit() }
+    BackHandler(enabled = screenActivity != null && !privateCurtainOpen) {
+        requestPrivateExit()
+    }
+    // Back cannot open Tuddy's normal exit confirmation over the cover.
+    BackHandler(enabled = privateCurtainOpen) { /* Reveal is always explicit. */ }
 
     MaterialTheme(colorScheme = colors) {
-        if (privateCurtainOpen) {
-            PrivateConversationCurtainDialog(
-                onReveal = { privateCurtainOpen = false }
-            )
-        }
         if (uncertainSpeechReviewOpen && !listening) {
             UncertainSpeechReviewDialog(
                 candidates = uncertainSpeechChoices,
@@ -10573,6 +10572,15 @@ private fun TuddyScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+        // Compose dialogs are drawn in composition order. The neutral
+        // privacy cover MUST be the final modal: any already-open share,
+        // review, export, or settings dialog must remain UNDER the cover.
+        // Keep the underlying RAM-only session composed while covering.
+        if (privateCurtainOpen) {
+            PrivateConversationCurtainDialog(
+                onReveal = { privateCurtainOpen = false }
+            )
         }
     }
 }
