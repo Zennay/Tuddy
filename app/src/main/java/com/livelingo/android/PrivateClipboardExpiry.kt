@@ -49,7 +49,7 @@ internal object PrivateClipboardExpiry {
             Context.CLIPBOARD_SERVICE
         ) as? ClipboardManager ?: return false
 
-        val marker = "Tuddy temporary " + UUID.randomUUID().toString()
+        val marker = "Tuddy · " + label.take(60) + " · " + UUID.randomUUID().toString()
         val clip = ClipData.newPlainText(marker, text)
         clip.description.extras = PersistableBundle().apply {
             putBoolean("android.content.extra.IS_SENSITIVE", true)
