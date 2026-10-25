@@ -20,6 +20,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -944,6 +945,7 @@ private fun TuddyScreen(
     var launcherShortcutNotice by remember { mutableStateOf("") }
     var voicePickerLanguageTag by remember { mutableStateOf<String?>(null) }
     var confirmClearConversation by remember { mutableStateOf(false) }
+    var confirmPrivateExit by remember { mutableStateOf(false) }
     // Only IDs and row revisions, never private caption text, are held for confirmation.
     var pendingTranslationCancelSelection by remember {
         mutableStateOf<List<Pair<Long, Int>>?>(null)
@@ -4514,6 +4516,29 @@ private fun TuddyScreen(
             uncertainSpeechReviewOpen = false
         }
     }
+
+    // Android's system Back used to finish MainActivity immediately. Because
+    // transcripts/drafts intentionally exist only in RAM, this must be an
+    // explicit user decision, never a stealth export or automatic persistence.
+    val requestPrivateExit: () -> Unit = {
+        val hasTemporaryWork = lines.isNotEmpty() || manualText.isNotBlank() ||
+            partial.isNotBlank() || listening || pendingSingleSpeechReview != null ||
+            previewArchiveRows != null || subtitleFileCues != null ||
+            sharedTextToTwoWay != null || pendingManualSubtitleDocument != null ||
+            incomingExternalText != null
+        // Back never leaves a live microphone or local TTS voice active while
+        // a confirmation is visible; cancelling keeps retained RAM captions.
+        if (listening) stop()
+        captionSpeaker.stop()
+        if (hasTemporaryWork) confirmPrivateExit = true
+        else {
+            stop()
+            screenActivity?.finish()
+        }
+    }
+    // The Activity owns exit; native/Compose dialogs consume their own Back.
+    // If the Context has no Activity, leave system Back handling untouched.
+    BackHandler(enabled = screenActivity != null) { requestPrivateExit() }
 
     MaterialTheme(colorScheme = colors) {
         if (uncertainSpeechReviewOpen && !listening) {
@@ -8351,6 +8376,41 @@ private fun TuddyScreen(
                 }
             )
         }
+        if (confirmPrivateExit) {
+            AlertDialog(
+                onDismissRequest = { confirmPrivateExit = false },
+                title = { Text("Tuddy afsluiten?") },
+                text = {
+                    Text(
+                        "Je huidige gesprek, concepttekst en tijdelijke voorbeelden " +
+                            "staan alleen in het geheugen en verdwijnen als je de app afsluit. " +
+                            "Je bewust opgeslagen privéwoorden blijven behouden. " +
+                            "Tuddy bewaart of deelt je gesprek niet automatisch. " +
+                            "De microfoon en het voorlezen zijn alvast gestopt."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmPrivateExit = false
+                        stop()
+                        screenActivity?.finish()
+                    }) { Text("Sluit zonder bewaren") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmPrivateExit = false }) {
+                        Text("Blijf in Tuddy")
+                    }
+                },
+                neutralButton = {
+                    if (lines.isNotEmpty()) {
+                        TextButton(onClick = {
+                            confirmPrivateExit = false
+                            conversationToolsOpen = true
+                        }) { Text("Bekijk exportopties") }
+                    }
+                }
+            )
+        }
         if (confirmClearConversation) {
             AlertDialog(
                 onDismissRequest = { confirmClearConversation = false },
@@ -8377,7 +8437,15 @@ private fun TuddyScreen(
                 modifier = Modifier.fillMaxSize().padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Tuddy", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Tuddy", style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold)
+                    TextButton(onClick = { requestPrivateExit() }) { Text("Afsluiten") }
+                }
                 Text("Luister, lees mee en vertaal lokaal", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Kies je spreektaal en vertaling. Een taalkeuze installeert geen offline model.",
                     style = MaterialTheme.typography.bodySmall,
