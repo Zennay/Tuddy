@@ -4525,7 +4525,9 @@ private fun TuddyScreen(
             partial.isNotBlank() || listening || pendingSingleSpeechReview != null ||
             previewArchiveRows != null || subtitleFileCues != null ||
             sharedTextToTwoWay != null || pendingManualSubtitleDocument != null ||
-            incomingExternalText != null
+            pendingTranscriptExport != null || pendingPinnedExport != null ||
+            incomingExternalText != null || incomingViewedSubtitle != null ||
+            incomingPersonalCsv != null
         // Back never leaves a live microphone or local TTS voice active while
         // a confirmation is visible; cancelling keeps retained RAM captions.
         if (listening) stop()
