@@ -138,6 +138,10 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var privateScreenShieldOn by mutableStateOf(false)
     private var privateScreenShieldNotice by mutableStateOf("")
     private var translationResult by mutableStateOf<String?>(null)
+    // Not presented or exported until the ENTIRE selected-text translation
+    // succeeds. An incomplete local prefix is kept in foreground RAM only.
+    private var retryCheckpoint by
+        mutableStateOf<PrivateSelectedTranslationCheckpoint.State?>(null)
     // Original ML Kit output is retained only while this Activity stays in
     // the foreground. A corrected draft is never persisted or sent silently.
     private var machineTranslationResult by mutableStateOf<String?>(null)
@@ -220,6 +224,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     privateScreenShieldOn = privateScreenShieldOn,
                     privateScreenShieldNotice = privateScreenShieldNotice,
                     result = translationResult,
+                    resumePartNumber = retryCheckpoint?.completedChunks?.plus(1),
+                    resumeTotalParts = retryCheckpoint?.totalChunks ?: 0,
                     reviewingTranslation = reviewingTranslation,
                     reviewDraft = reviewDraft,
                     reviewNotice = reviewNotice,
@@ -234,6 +240,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     onSwapLanguages = { changePair(source = targetCode, target = sourceCode) },
                     onSuggestSource = { suggestSourceLanguage() },
                     onTranslate = { startTranslation() },
+                    onResumeFailedPart = { startTranslation(resume = true) },
                     onCancel = { cancelByUser() },
                     onPlayOriginal = { pace -> speakSelection(incomingText, sourceCode, pace) },
                     onPlayTranslation = { pace ->
@@ -446,7 +453,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         }
     }
 
-    private fun startTranslation() {
+    private fun startTranslation(resume: Boolean = false) {
         if (busy || detectingSource || inputNotice.isNotBlank() || incomingText.isBlank()) return
         if (sourceCode !in TargetCatalog.codes || targetCode !in TargetCatalog.codes) {
             status = "Kies een ondersteunde bron- en doeltaal."
@@ -463,12 +470,26 @@ internal class QuickTranslateActivity : ComponentActivity() {
                 "Te lange of ongeldige selecties worden niet gedeeltelijk vertaald."
             return
         }
+        val previous = if (resume) retryCheckpoint?.takeIf {
+            PrivateSelectedTranslationCheckpoint.isUsable(
+                it, incomingText, sourceCode, targetCode, planned
+            )
+        } else null
+        if (resume && previous == null) {
+            retryCheckpoint = null
+            status = "Het eerdere resultaat hoort niet meer bij deze selectie of taalrichting. " +
+                "Tik op Vertaal lokaal voor een nieuwe volledige poging."
+            return
+        }
         cancelOperation()
+        // Deliberate same-selection retry is the ONLY route allowed to retain
+        // a completed prefix after the old provider/client has been invalidated.
+        retryCheckpoint = previous
         discardReview()
         val token = generation
         busy = true
         translationResult = null
-        status = "Controleer of de gekozen tekstmodellen lokaal aanwezig zijn…"
+        status = "Geïnstalleerde lokale modellen opnieuw controleren…"
         if (!armTranslationTimeout(token)) {
             complete(token, null, "Lokale vertaling kon niet veilig worden gestart.")
             return
@@ -505,9 +526,12 @@ internal class QuickTranslateActivity : ComponentActivity() {
             }
 
             activeTranslator = client
-            // One local ML Kit task at a time; every chunk must succeed
-            // before the final text is revealed or can leave Tuddy.
-            translatePlannedPart(client, planned, token, 0, StringBuilder())
+            // Retry only the failed and remaining parts of the same exact
+            // selection. The private prefix is not shown or shared here.
+            translatePlannedPart(
+                client, planned, token, previous?.completedChunks ?: 0,
+                StringBuilder(previous?.translatedPrefix.orEmpty())
+            )
         }
     }
 
@@ -561,6 +585,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
                 }
                 if (assembled.length + chunks[index].separatorBefore.length +
                     output.length > MAX_RESULT_UNITS) {
+                    retryCheckpoint = null
                     complete(token, null, "De volledige lokale vertaling werd groter " +
                         "dan de veilige 8.000-tekensgrens. Er is niets gedeeld.")
                     return@addOnCompleteListener
@@ -571,6 +596,10 @@ internal class QuickTranslateActivity : ComponentActivity() {
                         "Alle ${chunks.size} tekstgedeelten lokaal vertaald. " +
                             "Er is nog niets naar een andere app gestuurd.")
                 } else {
+                    retryCheckpoint = PrivateSelectedTranslationCheckpoint.completed(
+                        incomingText, sourceCode, targetCode,
+                        chunks, index + 1, assembled.toString()
+                    )
                     translatePlannedPart(client, chunks, token, index + 1, assembled)
                 }
             }
@@ -600,6 +629,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         closeActiveTranslator()
         busy = false
         translationResult = result
+        if (result != null) retryCheckpoint = null
         machineTranslationResult = result
         reviewingTranslation = false
         reviewDraft = ""
@@ -616,6 +646,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         generation++
         inventory.invalidate()
         closeActiveTranslator()
+        retryCheckpoint = null
         busy = false
     }
 
@@ -924,6 +955,8 @@ private fun QuickTranslateScreen(
     privateScreenShieldOn: Boolean,
     privateScreenShieldNotice: String,
     result: String?,
+    resumePartNumber: Int?,
+    resumeTotalParts: Int,
     reviewingTranslation: Boolean,
     reviewDraft: String,
     reviewNotice: String,
@@ -938,6 +971,7 @@ private fun QuickTranslateScreen(
     onSwapLanguages: () -> Unit,
     onSuggestSource: () -> Unit,
     onTranslate: () -> Unit,
+    onResumeFailedPart: () -> Unit,
     onCancel: () -> Unit,
     onPlayOriginal: (LocalSpeechPace) -> Unit,
     onPlayTranslation: (LocalSpeechPace) -> Unit,
@@ -1089,6 +1123,22 @@ private fun QuickTranslateScreen(
                 sourceCode != targetCode,
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (busy) "Lokaal controleren/vertalen…" else "Vertaal lokaal") }
+        if (resumePartNumber != null && resumePartNumber in 2..resumeTotalParts &&
+            !busy && !detectingSource && result == null && inputNotice.isBlank()
+        ) {
+            OutlinedButton(
+                onClick = onResumeFailedPart,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Herstel vanaf gedeelte $resumePartNumber van $resumeTotalParts")
+            }
+            Text(
+                "Al vertaalde delen blijven tijdelijk privé in het geheugen. " +
+                    "Tuddy controleert de offline modellen opnieuw en deelt pas iets " +
+                    "wanneer alle gedeelten voltooid zijn.",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
         if (busy || detectingSource) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
