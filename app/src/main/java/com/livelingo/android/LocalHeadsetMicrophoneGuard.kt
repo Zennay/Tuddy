@@ -50,7 +50,7 @@ internal class LocalHeadsetMicrophoneGuard(context: Context) {
         if (!enabled()) return null
         val current = audio ?: return "Androids microfooningangen zijn niet beschikbaar."
         val hasInput = runCatching {
-            current.getDevices(AudioManager.GET_DEVICES_INPUT).any { device ->
+            current.getDevices(AudioManager.GET_DEVICES_INPUTS).any { device ->
                 device.isSource && device.type in HEADSET_INPUT_TYPES
             }
         }.getOrNull() ?: return "Android kon de aanwezige headsetmicrofoon niet controleren."
