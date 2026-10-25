@@ -521,6 +521,10 @@ private fun TuddyScreen(
     var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
     var pendingPinnedExport by remember { mutableStateOf<PendingPinnedCaptionExport?>(null) }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
+    // One bounded watchdog per pending RAM caption. It neither cancels the
+    // Android/ML Kit provider nor downloads models; a stale completion is
+    // rejected after a timeout by the existing per-row revision fence.
+    val translationDeadline = remember { OfflineCaptionTranslationDeadline() }
     // Session-only: if strict airplane-mode is opted into, keep observing
     // Android radio/network changes during each active recognizer turn.
     val strictRadioMonitor = remember(context) { StrictOfflineRadioSessionMonitor(context) }
@@ -1001,8 +1005,11 @@ private fun TuddyScreen(
     fun updateLine(id: Long, translation: String, status: String, token: Int, revision: Int) {
         if (!translationStillRelevant(id, token, revision)) return
         val index = lines.indexOfFirst { it.id == id }
-        if (index >= 0) {
+        if (index >= 0 && lines[index].status == "Bezig") {
             lines[index] = lines[index].copy(translated = translation, status = status)
+            if (status in setOf("Lokaal", "Lokaal vertaald", "Model ontbreekt", "Fout")) {
+                translationDeadline.finished(id, revision)
+            }
             // Only completed *speech-origin* translations count, never typed
             // turns, editing, pending interim text or superseded callbacks.
             if (status in setOf("Lokaal", "Lokaal vertaald", "Model ontbreekt", "Fout")) {
@@ -1109,8 +1116,33 @@ private fun TuddyScreen(
         text: String, id: Long, targetCode: String, sourceCode: String,
         token: Int, explicitlyChosenSource: Boolean = false
     ) {
-        val revision = lines.firstOrNull { it.id == id }?.translationRevision ?: return
-        if (!translationStillRelevant(id, token, revision)) return
+        val snapshot = lines.firstOrNull { it.id == id } ?: return
+        val revision = snapshot.translationRevision
+        if (snapshot.status != "Bezig" ||
+            !translationStillRelevant(id, token, revision)) return
+        // End-to-end cap across language identification, model inventory and
+        // the actual ML Kit translator. Otherwise a missing provider callback
+        // can leave a private subtitle permanently stuck on "Vertalen…".
+        translationDeadline.watch(id, revision) {
+            val pendingIndex = lines.indexOfFirst { it.id == id }
+            val current = lines.getOrNull(pendingIndex)
+            if (current != null && current.status == "Bezig" &&
+                current.translationRevision == revision &&
+                current.original == snapshot.original &&
+                translationStillRelevant(id, token, revision)) {
+                updateLine(
+                    id,
+                    "Lokale vertaling duurde te lang. Controleer het tekstmodel " +
+                        "en probeer deze zin bewust opnieuw; geen online fallback.",
+                    "Fout", token, revision
+                )
+                // Invalidate even a late success from the old ML Kit task.
+                val stillAt = lines.indexOfFirst { it.id == id }
+                if (stillAt >= 0 && lines[stillAt].translationRevision == revision) {
+                    lines[stillAt] = lines[stillAt].copy(translationRevision = revision + 1)
+                }
+            }
+        }
         if (explicitlyChosenSource) {
             translateResolved(text, id, sourceCode, targetCode, token, revision)
             return
@@ -1996,6 +2028,7 @@ private fun TuddyScreen(
                         // translationStillRelevant(lines.any { it.id == id }).
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             val removed = lines.removeAt(0)
+            translationDeadline.cancel(removed.id)
                             speechTranslationStarted.remove(removed.id)
                             offlineSpeechChoices.remove(removed.id)
                             captionPins = captionPins - removed.id
@@ -2159,6 +2192,7 @@ private fun TuddyScreen(
         lines.add(Line(id, sentence, "Vertalen…", "Bezig", sourceCode, targetCode))
         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
             val removed = lines.removeAt(0)
+            translationDeadline.cancel(removed.id)
             offlineSpeechChoices.remove(removed.id)
             manuallyAssignedSpeakers.remove(removed.id)
             captionPins = captionPins - removed.id
@@ -3120,6 +3154,7 @@ private fun TuddyScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             pendingSpeechSettingsReturnTag = null
             generation++
+            translationDeadline.clear()
             modelStorage.invalidate()
             starterPhraseboardOpen = false
             quickPhrasePickerOpen = false
@@ -7068,6 +7103,7 @@ private fun TuddyScreen(
         // explicit confirmation: a single mis-tap should not destroy live work.
         val clearCurrentConversation: () -> Unit = {
                         generation++
+                        translationDeadline.clear()
                         // A conscious conversation wipe also discards snapshots
                         // held solely for a pending external document picker.
                         pendingManualSubtitleDocument = null
@@ -7618,6 +7654,7 @@ private fun TuddyScreen(
                                 selectedSource, selectedTarget))
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                                 val removed = lines.removeAt(0)
+            translationDeadline.cancel(removed.id)
                                 offlineSpeechChoices.remove(removed.id)
                                 manuallyAssignedSpeakers.remove(removed.id)
                                 captionPins = captionPins - removed.id
@@ -8701,7 +8738,7 @@ private fun TuddyScreen(
                                                 if (index >= 0) {
                                                     val old = lines[index]
                                                     if (old.status !in setOf("Fout", "Model ontbreekt") ||
-                                                        old.userCorrected || old != line ||
+                                                        old != line ||
                                                         listening) return@TextButton
                                                     captionSpeaker.stop()
                                                     pendingCaptionShare = null
