@@ -348,7 +348,8 @@ private data class PendingManualCaptionUndo(
     val kind: ManualCaptionUndoKind,
     val conversationGeneration: Int,
     val suggestionsBefore: List<SessionTranslationCorrection>? = null,
-    val suggestionsAfter: List<SessionTranslationCorrection>? = null
+    val suggestionsAfter: List<SessionTranslationCorrection>? = null,
+    val speechAlternativesBefore: List<String>? = null
 )
 
 /** Does not accept a stale row, deleted caption or older conversation epoch. */
@@ -2736,6 +2737,9 @@ private fun TuddyScreen(
                         // translationStillRelevant(lines.any { it.id == id }).
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             val removed = lines.removeAt(0)
+            if (pendingManualCaptionUndo?.after?.id == removed.id) {
+                pendingManualCaptionUndo = null
+            }
             translationDeadline.cancel(removed.id)
             captionTranslationQueue.cancel(removed.id)
                             speechTranslationStarted.remove(removed.id)
@@ -2987,6 +2991,9 @@ private fun TuddyScreen(
         }
         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
             val removed = lines.removeAt(0)
+            if (pendingManualCaptionUndo?.after?.id == removed.id) {
+                pendingManualCaptionUndo = null
+            }
             translationDeadline.cancel(removed.id)
             captionTranslationQueue.cancel(removed.id)
             offlineSpeechChoices.remove(removed.id)
@@ -5876,7 +5883,8 @@ private fun TuddyScreen(
                                 pendingCaptionShare = null
                                 pendingTranscriptExport = null
                                 exportStatus = ""
-                                offlineSpeechChoices.remove(correctionId)
+                                val previousSpeechAlternatives =
+                                    offlineSpeechChoices.remove(correctionId)
                                 val next = previous.copy(
                                     original = corrected,
                                     translated = "Vertalen…",
@@ -5888,7 +5896,8 @@ private fun TuddyScreen(
                                 )
                                 lines[index] = next
                                 pendingManualCaptionUndo = PendingManualCaptionUndo(
-                                    previous, next, ManualCaptionUndoKind.ORIGINAL, generation
+                                    previous, next, ManualCaptionUndoKind.ORIGINAL, generation,
+                                    speechAlternativesBefore = previousSpeechAlternatives
                                 )
                                 translate(corrected, previous.id, previous.targetCode,
                                     previous.sourceCode, generation,
@@ -8739,6 +8748,9 @@ private fun TuddyScreen(
                                 selectedSource, selectedTarget))
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                                 val removed = lines.removeAt(0)
+            if (pendingManualCaptionUndo?.after?.id == removed.id) {
+                pendingManualCaptionUndo = null
+            }
             translationDeadline.cancel(removed.id)
             captionTranslationQueue.cancel(removed.id)
                                 offlineSpeechChoices.remove(removed.id)
@@ -9777,6 +9789,12 @@ private fun TuddyScreen(
                                     status = "Bezig"
                                 )
                                 lines[index] = restored
+                                selected.speechAlternativesBefore?.takeIf { it.isNotEmpty() }
+                                    ?.let { candidates ->
+                                        if (offlineSpeechChoices[restored.id] == null) {
+                                            offlineSpeechChoices[restored.id] = candidates
+                                        }
+                                    }
                                 translate(
                                     restored.original, restored.id,
                                     restored.targetCode, restored.sourceCode,
