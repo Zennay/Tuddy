@@ -302,6 +302,7 @@ private enum class LiveSpeechPhase(val label: String) {
     HEARING("Spraak ontvangen · luisteren naar je zin"),
     PROCESSING("Zin afronden · Android verwerkt de spraak"),
     TRANSLATING("Zin ontvangen · lokale tekstvertaling loopt apart"),
+    TRANSCRIPT_ONLY("Zin ontvangen · alleen origineel, vertaling gepauzeerd"),
     SINGLE_FINISHED("Eén zin herkend · microfoon gestopt; controleer of verwerp de zin"),
     SINGLE_EMPTY("Geen zin herkend · microfoon gestopt; tik voor een nieuwe zin"),
     RETRYING("Geen bruikbaar spraakresultaat · lokaal opnieuw luisteren…"),
@@ -797,6 +798,10 @@ private fun TuddyScreen(
     var pendingSpeakerExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
+    // Ephemeral user choice, never persisted; speech recognition keeps working,
+    // but ML Kit never receives newly recognized text while this is enabled.
+    var speechTranslationPaused by remember { mutableStateOf(false) }
+    var translationPauseNotice by remember { mutableStateOf("") }
     var pendingSingleSpeechReview by remember {
         mutableStateOf<PendingSingleSpeechReview?>(null)
     }
@@ -1150,6 +1155,57 @@ private fun TuddyScreen(
                 }
             }
         }
+    }
+
+    /**
+     * Transcript-only mode does not stop the microphone. Pending UI rows are
+     * invalidated before dropping queue/model listeners, preventing late
+     * local results from reviving a row the user chose to keep untranslated.
+     * Already dispatched Android/ML Kit work cannot be forcibly revoked:
+     * its output is ignored, not treated as a verified provider cancellation.
+     */
+    fun setSpeechTranslationPaused(paused: Boolean) {
+        if (speechTranslationPaused == paused) return
+        speechTranslationPaused = paused
+        if (!paused) {
+            translationPauseNotice =
+                "Live vertaling hervat voor nieuwe zinnen. Eerder overgeslagen regels " +
+                "kun je afzonderlijk bewust vertalen."
+            return
+        }
+        pendingInterim?.let(interimHandler::removeCallbacks)
+        pendingInterim = null
+        partialTranslation = ""
+        partialRevision++
+        // Only speech-origin jobs are paused. Explicit typed translations
+        // must not be canceled by a control scoped to live speech.
+        val pending = lines.indices.filter {
+            lines[it].status == "Bezig" &&
+                lines[it].id in speechTranslationStarted
+        }
+        // Invalidate every eligible row before releasing queue slots, so
+        // draining cannot dispatch another translation for a paused caption.
+        val pendingIds = pending.map { lines[it].id }
+        pending.forEach { index ->
+            val row = lines[index]
+            lines[index] = row.copy(
+                translated = "Alleen origineel · vertaling op jouw verzoek gepauzeerd",
+                status = "Gepauzeerd",
+                translationRevision = row.translationRevision + 1
+            )
+        }
+        pendingIds.forEach { id ->
+            speechTranslationStarted.remove(id)
+            translationDeadline.cancel(id)
+            captionTranslationQueue.cancel(id)
+        }
+        // Do not invalidate shared installed-model inventories: those may
+        // also serve a separate, explicitly submitted typed translation.
+        // Late speech ML Kit callbacks fail the changed per-row revision gate.
+        translationPauseNotice =
+            "Alleen origineel: ${pending.size} wachtende vertaling(en) niet meer " +
+            "weergegeven. De microfoon blijft ${if (listening) "aan" else "uit"}. " +
+            "Al gestarte lokale modeltaken kunnen intern afronden."
     }
 
     /**
@@ -1794,13 +1850,15 @@ private fun TuddyScreen(
         pendingInterim = null
         partialTranslation = ""
         val revision = ++partialRevision
-        if (!InterimTranslationPolicy.eligible(text, sourceCode, targetCode, listening)) return
+        if (speechTranslationPaused ||
+            !InterimTranslationPolicy.eligible(text, sourceCode, targetCode, listening)) return
         val task = Runnable {
             pendingInterim = null
             val stillCurrent = InterimTranslationPolicy.mayPublish(
                 revision, partialRevision, token, generation,
                 voiceSessions.isCurrent(voiceToken), listening)
             if (!stillCurrent || interimTranslationBusy) return@Runnable
+            if (speechTranslationPaused) return@Runnable
             if (sourceCode == targetCode) {
                 partialTranslation = text
                 return@Runnable
@@ -1821,7 +1879,8 @@ private fun TuddyScreen(
                     .addOnSuccessListener { translated ->
                         if (InterimTranslationPolicy.mayPublish(
                                 revision, partialRevision, token, generation,
-                                voiceSessions.isCurrent(voiceToken), listening)) {
+                                voiceSessions.isCurrent(voiceToken), listening) &&
+                            !speechTranslationPaused) {
                             partialTranslation = translated
                         }
                         translator.close()
@@ -2307,8 +2366,11 @@ private fun TuddyScreen(
                         liveSpeechPhase = LiveSpeechPhase.SINGLE_FINISHED
                         return
                     }
-                    liveSpeechPhase = if (sentence.isNotBlank())
-                        LiveSpeechPhase.TRANSLATING else LiveSpeechPhase.RETRYING
+                    liveSpeechPhase = when {
+                        sentence.isBlank() -> LiveSpeechPhase.RETRYING
+                        speechTranslationPaused -> LiveSpeechPhase.TRANSCRIPT_ONLY
+                        else -> LiveSpeechPhase.TRANSLATING
+                    }
                     if (sentence.isNotBlank() && token == generation) {
                         val id = System.nanoTime()
                         // Only the two direction-specific validation targets
@@ -2323,8 +2385,21 @@ private fun TuddyScreen(
                             enNlFinalUtterances = sessionDiagnostics.enNlFinalUtterances +
                                 (if (enNl) 1 else 0)
                         )
-                        speechTranslationStarted[id] = SystemClock.elapsedRealtime()
-                        lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
+                        if (!speechTranslationPaused) {
+                            speechTranslationStarted[id] = SystemClock.elapsedRealtime()
+                        }
+                        if (speechTranslationPaused) {
+                            // Do not start any local MT job for a transcript-only
+                            // speech turn; preserve the original language tags.
+                            lines.add(Line(
+                                id, sentence, "Alleen origineel · bewust niet vertaald",
+                                "Gepauzeerd", observedSource, selectedTarget
+                            ))
+                        } else {
+                            // Preserve the normal, previously verified live
+                            // caption path and its bounded retention order.
+                            lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
+                        }
                         val suggestions = OfflineSpeechCorrectionChoices.fromDeviceResults(
                             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION),
                             sentence
@@ -2362,7 +2437,9 @@ private fun TuddyScreen(
                                 meaningDraft = ""
                             }
                         }
-                        translate(sentence, id, selectedTarget, observedSource, token)
+                        if (!speechTranslationPaused) {
+                            translate(sentence, id, selectedTarget, observedSource, token)
+                        }
                     }
                     if (captureMode == LocalSpeechCaptureMode.SINGLE_SENTENCE) {
                         // Translation work started above is independent of the
@@ -2569,12 +2646,19 @@ private fun TuddyScreen(
                 sourceCode != reviewedSpeech.sourceCode ||
                 targetCode != reviewedSpeech.targetCode
             )
-        lines.add(Line(id, sentence, "Vertalen…", "Bezig", sourceCode, targetCode,
-            userCorrected = speechCorrected))
+        val transcriptOnly = reviewedSpeech != null && speechTranslationPaused
+        lines.add(Line(
+            id, sentence,
+            if (transcriptOnly) "Alleen origineel · bewust niet vertaald" else "Vertalen…",
+            if (transcriptOnly) "Gepauzeerd" else "Bezig",
+            sourceCode, targetCode, userCorrected = speechCorrected
+        ))
         if (reviewedSpeech != null) {
             // Only a deliberately approved speech caption enters the live
             // translation counter; recognized but discarded drafts do not.
-            speechTranslationStarted[id] = SystemClock.elapsedRealtime()
+            if (!transcriptOnly) {
+                speechTranslationStarted[id] = SystemClock.elapsedRealtime()
+            }
             if (!speechCorrected && reviewedSpeech.alternatives.isNotEmpty()) {
                 offlineSpeechChoices[id] = reviewedSpeech.alternatives
             }
@@ -2602,8 +2686,10 @@ private fun TuddyScreen(
         }
         // Short manually identified phrases must never be silently relabelled
         // as a different detected language before private local translation.
-        translate(sentence, id, targetCode, sourceCode, token,
-            explicitlyChosenSource = true)
+        if (!transcriptOnly) {
+            translate(sentence, id, targetCode, sourceCode, token,
+                explicitlyChosenSource = true)
+        }
         return true
     }
 
@@ -4966,6 +5052,11 @@ private fun TuddyScreen(
                 listening = listening,
                 speechPhaseStatus = liveSpeechPhase.label,
                 captureMode = captureMode.label,
+                translationPaused = speechTranslationPaused,
+                pendingTranslationCount = lines.count { it.status == "Bezig" },
+                onToggleTranslationPaused = {
+                    setSpeechTranslationPaused(!speechTranslationPaused)
+                },
                 onToggleCaptureMode = {
                     if (!listening && !modelStorageBusy) {
                         val next = if (captureMode == LocalSpeechCaptureMode.CONTINUOUS)
@@ -8961,6 +9052,32 @@ private fun TuddyScreen(
                             "mislukte offline vertalingen…")
                     }
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            setSpeechTranslationPaused(!speechTranslationPaused)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (speechTranslationPaused)
+                            "▶ Hervat live vertalen"
+                        else "■ Pauzeer live vertalen · houd origineel")
+                    }
+                    Text(if (speechTranslationPaused) "Alleen origineel"
+                        else "Live vertaling aan",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                if (translationPauseNotice.isNotBlank()) {
+                    Text(
+                        translationPauseNotice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 val pendingLocalCaptions = lines.count { it.status == "Bezig" }
                 if (pendingLocalCaptions > 0) {
                     Text(
@@ -9293,7 +9410,7 @@ private fun TuddyScreen(
                                             capturedPhraseNotice = ""
                                         }
                                     ) { Text("＋ Maak eigen Kurdische/Pasjtoe-kaart") }
-                                    if (line.status == "Fout" || line.status == "Model ontbreekt") {
+                                    if (line.status in setOf("Fout", "Model ontbreekt", "Gepauzeerd")) {
                                         TextButton(
                                             modifier = Modifier.fillMaxWidth(),
                                             enabled = !listening,
@@ -9301,8 +9418,9 @@ private fun TuddyScreen(
                                                 val index = lines.indexOfFirst { it.id == line.id }
                                                 if (index >= 0) {
                                                     val old = lines[index]
-                                                    if (old.status !in setOf("Fout", "Model ontbreekt") ||
-                                                        old != line ||
+                                                    if (old.status !in setOf(
+                                                            "Fout", "Model ontbreekt", "Gepauzeerd"
+                                                        ) || old != line ||
                                                         listening) return@TextButton
                                                     captionSpeaker.stop()
                                                     pendingCaptionShare = null
@@ -9319,7 +9437,10 @@ private fun TuddyScreen(
                                                     correctionNotice = "Lokale vertaling opnieuw aangevraagd."
                                                 }
                                             }
-                                        ) { Text("↻ Probeer opnieuw") }
+                                        ) { Text(
+                                            if (line.status == "Gepauzeerd") "▶ Vertaal deze zin alsnog"
+                                            else "↻ Probeer opnieuw"
+                                        ) }
                                     }
                                 TextButton(
                                     modifier = Modifier.fillMaxWidth(),

@@ -47,6 +47,9 @@ internal fun FocusTranscriptDialog(
     listening: Boolean,
     speechPhaseStatus: String = "",
     captureMode: String = "Doorlopend",
+    translationPaused: Boolean = false,
+    pendingTranslationCount: Int = 0,
+    onToggleTranslationPaused: (() -> Unit)? = null,
     onToggleCaptureMode: (() -> Unit)? = null,
     fontScale: Float,
     onStop: () -> Unit,
@@ -154,6 +157,27 @@ internal fun FocusTranscriptDialog(
                         enabled = !followLive
                     ) { Text(if (archiveMode) "↓ Laatste archiefregel" else
                         if (followLive) "Live ✓" else "Volg live") }
+                }
+                if (!archiveMode && onToggleTranslationPaused != null) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onToggleTranslationPaused
+                    ) {
+                        Text(if (translationPaused) "▶ Hervat live vertalen"
+                            else "■ Pauzeer vertaling · blijf transcript lezen")
+                    }
+                    Text(
+                        if (translationPaused)
+                            "Alleen origineel. Al ingezette lokale modeltaken kunnen intern " +
+                                "afronden, maar hun resultaten worden niet in het gesprek getoond. " +
+                                "Eerder overgeslagen zinnen vertaal je later afzonderlijk."
+                        else "Live vertaling aan." +
+                            if (pendingTranslationCount > 0)
+                                " $pendingTranslationCount zin(nen) wachten op lokale verwerking."
+                            else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 if (!archiveMode) {
                     OutlinedButton(
