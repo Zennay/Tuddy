@@ -36,6 +36,39 @@ niet overschreven: alleen regels met status **Fout** of
 niet veranderd is, kunnen worden herstart. De herstelgroep voor
 niet-gecorrigeerde regels blijft daarnaast bestaan.
 
+## Een lopende vertaling zelf stoppen
+
+Een gesprek met meerdere lokale spraakregels of tekstzinnen kan tijdelijk
+**Bezig / Vertalen…** tonen. Je hoeft niet tot de 30-seconden-time-out
+te wachten als je zo'n verwerking niet meer wilt laten weergeven.
+
+- Kies bij één **Bezig**-regel expliciet **■ Stop alleen deze vertaling**.
+  Alleen precies de zichtbare, nog ongewijzigde versie van die zin wordt
+  op **Fout** gezet met de melding dat jij haar hebt gestopt. De
+  originele tekst, taalrichting en jouw eerdere correcties blijven
+  bewaard; er wordt niets automatisch opnieuw vertaald.
+- In de gespreksfuncties staat, zolang er verwerking loopt, de knop
+  **Stop de N lopende vertalingen…**. Die opent eerst een afzonderlijke
+  bevestiging. Bij openen onthoudt Tuddy uitsluitend de regel-ID's en
+  revisies van de op dat moment lopende vertalingen. Bij bevestigen
+  worden alleen regels gestopt waarvan exact dezelfde revisie nog
+  **Bezig** is. Inmiddels afgeronde, bewerkte of nieuwe zinnen worden
+  niet meegenomen.
+- Bij een bulkstop worden eerst **alle gekozen regels** ongeldig gemaakt
+  en pas daarna hun wachtrijplaatsen en tijdelijke time-outs vrijgegeven.
+  Daarom kan het leegmaken van de FIFO geen van die gekozen regels
+  onbedoeld opnieuw starten. De microfoon blijft naar jouw bestaande
+  keuze werken; deze knop activeert of pauzeert de spraakherkenning niet.
+- Android ML Kit heeft niet altijd een intrekbaar, al begonnen
+  vertaalverzoek. Oud Android-modelwerk kan achter de schermen nog
+  afronden; het resultaat wordt door de verhoogde regelrevisie
+  genegeerd. Een gebruikersstop mag niet als een modeldefect of
+  bewezen afgebroken netwerktaak worden gerapporteerd.
+- Wil je een gestopte zin alsnog lokaal vertalen? Tik bij die
+  zin zelf opnieuw op **↻ Probeer opnieuw**. Het model moet nog
+  steeds lokaal geïnstalleerd zijn; er is geen automatische download,
+  cloudfallback, gespreksopslag of sessiebreed verborgen herstel.
+
 ## Veel zinnen tegelijk: veilige, begrensde offline verwerking
 
 Wanneer Android meerdere definitieve gesprekszinnen kort na elkaar
