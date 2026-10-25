@@ -521,6 +521,9 @@ private fun TuddyScreen(
     var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
     var pendingPinnedExport by remember { mutableStateOf<PendingPinnedCaptionExport?>(null) }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
+    var headphonesOnlyPlayback by remember(context) {
+        mutableStateOf(PrivatePlaybackRoutingPreference.headphonesOnly(context))
+    }
     // One bounded watchdog per pending RAM caption. It neither cancels the
     // Android/ML Kit provider nor downloads models; a stale completion is
     // rejected after a timeout by the existing per-row revision fence.
@@ -3175,6 +3178,10 @@ private fun TuddyScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START) {
+                // The separate Android selected-text screen shares this
+                // device preference; refresh after returning to the app.
+                headphonesOnlyPlayback =
+                    PrivatePlaybackRoutingPreference.headphonesOnly(context)
                 val requestedTag = pendingSpeechSettingsReturnTag
                 if (requestedTag != null) {
                     pendingSpeechSettingsReturnTag = null
@@ -8931,6 +8938,23 @@ private fun TuddyScreen(
                                     hasCompletedTranslation =
                                         line.status == "Lokaal vertaald" || line.status == "Lokaal",
                                     enabled = !listening,
+                                    headphonesOnly = headphonesOnlyPlayback,
+                                    onHeadphonesOnlyChange = { selected ->
+                                        captionSpeaker.stop()
+                                        val saved = PrivatePlaybackRoutingPreference.setHeadphonesOnly(
+                                            context, selected
+                                        )
+                                        headphonesOnlyPlayback =
+                                            PrivatePlaybackRoutingPreference.headphonesOnly(context)
+                                        pronunciationNotice = if (saved)
+                                            if (selected)
+                                                "Alleen-hoofdtelefoonstand gekozen. Androids " +
+                                                    "aangesloten headset is vereist vóór elk afspelen."
+                                            else "Hoofdtelefoonvereiste uit. " +
+                                                "Luidspreker kan weer worden gebruikt na Play."
+                                        else "Audiovoorkeur kon niet worden opgeslagen; " +
+                                            "vorige keuze blijft actief."
+                                    },
                                     onPlayOriginal = { pace ->
                                         if (!listening) captionSpeaker.speak(
                                             line.original, line.sourceCode, pace

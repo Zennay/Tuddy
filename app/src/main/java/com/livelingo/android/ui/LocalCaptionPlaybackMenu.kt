@@ -20,6 +20,8 @@ import com.livelingo.android.LocalSpeechPace
 internal fun LocalCaptionPlaybackMenu(
     hasCompletedTranslation: Boolean,
     enabled: Boolean,
+    headphonesOnly: Boolean,
+    onHeadphonesOnlyChange: (Boolean) -> Unit,
     onPlayOriginal: (LocalSpeechPace) -> Unit,
     onPlayTranslation: (LocalSpeechPace) -> Unit,
     onStop: () -> Unit
@@ -38,6 +40,18 @@ internal fun LocalCaptionPlaybackMenu(
                 text = { Text("Android-audiofocus nodig · headsetverlies stopt audio") },
                 onClick = {},
                 enabled = false
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (headphonesOnly) "✓ Alleen met hoofdtelefoon · uitschakelen"
+                        else "○ Alleen met hoofdtelefoon · inschakelen"
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onHeadphonesOnlyChange(!headphonesOnly)
+                }
             )
             DropdownMenuItem(
                 text = { Text("Origineel · normaal") },

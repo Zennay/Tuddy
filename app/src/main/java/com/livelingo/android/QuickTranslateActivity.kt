@@ -126,10 +126,12 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var detectionNotice by mutableStateOf("")
     private var status by mutableStateOf("")
     private var playbackNotice by mutableStateOf("")
+    private var headphonesOnlyPlayback by mutableStateOf(false)
     private var translationResult by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        headphonesOnlyPlayback = PrivatePlaybackRoutingPreference.headphonesOnly(this)
 
         val acceptedAction = intent.action == Intent.ACTION_PROCESS_TEXT &&
             intent.type?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT) == "text/plain"
@@ -190,6 +192,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     detectionNotice = detectionNotice,
                     status = status,
                     playbackNotice = playbackNotice,
+                    headphonesOnly = headphonesOnlyPlayback,
                     result = translationResult,
                     onSourceSelected = { code -> changePair(source = code) },
                     onTargetSelected = { code -> changePair(target = code) },
@@ -202,6 +205,20 @@ internal class QuickTranslateActivity : ComponentActivity() {
                         translationResult?.let { speakSelection(it, targetCode, pace) }
                     },
                     onStopPlayback = { stopPlayback() },
+                    onHeadphonesOnlyChange = { selected ->
+                        stopPlayback()
+                        val saved = PrivatePlaybackRoutingPreference.setHeadphonesOnly(
+                            this, selected
+                        )
+                        headphonesOnlyPlayback =
+                            PrivatePlaybackRoutingPreference.headphonesOnly(this)
+                        playbackNotice = if (!saved)
+                            "Audiovoorkeur kon niet worden opgeslagen; vorige keuze blijft actief."
+                        else if (selected)
+                            "Alleen-hoofdtelefoonstand gekozen. Aangesloten Android-headset " +
+                                "vereist vóór elk lokaal voorlezen."
+                        else "Hoofdtelefoonvereiste uit. Nieuwe afspeelactie kan luidspreker gebruiken."
+                    },
                     onCopy = { copyTranslation() },
                     onShare = { shareTranslation() },
                     onReturnResult = { returnTranslationToCaller() },
@@ -510,6 +527,7 @@ private fun QuickTranslateScreen(
     detectionNotice: String,
     status: String,
     playbackNotice: String,
+    headphonesOnly: Boolean,
     result: String?,
     onSourceSelected: (String) -> Unit,
     onTargetSelected: (String) -> Unit,
@@ -520,6 +538,7 @@ private fun QuickTranslateScreen(
     onPlayOriginal: (LocalSpeechPace) -> Unit,
     onPlayTranslation: (LocalSpeechPace) -> Unit,
     onStopPlayback: () -> Unit,
+    onHeadphonesOnlyChange: (Boolean) -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit,
     onReturnResult: () -> Unit,
@@ -629,6 +648,8 @@ private fun QuickTranslateScreen(
         LocalCaptionPlaybackMenu(
             hasCompletedTranslation = result != null,
             enabled = text.isNotBlank() && inputNotice.isBlank() && !busy && !detectingSource,
+            headphonesOnly = headphonesOnly,
+            onHeadphonesOnlyChange = onHeadphonesOnlyChange,
             onPlayOriginal = onPlayOriginal,
             onPlayTranslation = onPlayTranslation,
             onStop = onStopPlayback
