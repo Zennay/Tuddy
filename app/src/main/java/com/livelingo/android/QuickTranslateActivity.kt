@@ -58,7 +58,7 @@ internal const val QUICK_TARGET_CODE_EXTRA = "com.livelingo.android.extra.QUICK_
  */
 internal class QuickTranslateActivity : ComponentActivity() {
     private val inventory = OfflineTextModelInventory()
-    private val screenLockGate = LocalScreenLockPrivacyGate(this)
+    private val screenLockGate by lazy { LocalScreenLockPrivacyGate(this) }
     private val detector = LocalLanguageDetector()
     private var generation = 0L
     private var detectorRevision = 0L
