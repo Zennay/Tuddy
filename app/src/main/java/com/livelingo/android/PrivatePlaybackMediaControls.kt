@@ -84,8 +84,8 @@ internal class PrivatePlaybackMediaControls(context: Context) {
             media.isActive = true
             true
         } catch (_: RuntimeException) {
-            if (created != null && created !== session) {
-                runCatching { created.release() }
+            created?.let { orphan ->
+                if (orphan !== session) runCatching { orphan.release() }
             }
             close()
             false
