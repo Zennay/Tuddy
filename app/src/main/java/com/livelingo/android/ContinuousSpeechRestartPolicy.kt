@@ -11,6 +11,13 @@ package com.livelingo.android
 internal object ContinuousSpeechRestartPolicy {
     const val RESULT_DELAY_MS = 350L
     const val QUIET_RETRY_MS = 850L
+    // Four consecutive silent recognizer turns without any completed sentence
+    // stop a continuous microphone session, requiring another explicit tap.
+    // Unlike the no-callback watchdog this also caps normal NO_MATCH,
+    // SPEECH_TIMEOUT and empty onResults callbacks.
+    const val MAX_QUIET_TURNS = 4
+    fun quietRetryExhausted(consecutiveQuietTurns: Int): Boolean =
+        consecutiveQuietTurns >= MAX_QUIET_TURNS
 
     fun delayForError(error: Int, noMatch: Int, speechTimeout: Int): Long? {
         require(noMatch != speechTimeout) { "Error codes must be distinct" }
