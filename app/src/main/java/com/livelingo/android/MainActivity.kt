@@ -2042,6 +2042,10 @@ private fun TuddyScreen(
                 partialTranslation = text
                 return@Runnable
             }
+            // Preview speech is optional. When all physical slots are used by
+            // submitted ML Kit tasks, skip this ephemeral suggestion rather
+            // than displacing a final subtitle or creating a fourth task.
+            val deviceSlot = physicalMlKitBudget.acquire() ?: return@Runnable
             interimTranslationBusy = true
             val translator = try {
                 Translation.getClient(TranslatorOptions.Builder()
@@ -2049,31 +2053,45 @@ private fun TuddyScreen(
                     .setTargetLanguage(targetCode)
                     .build())
             } catch (_: Exception) {
+                deviceSlot.release()
+                interimTranslationBusy = false // A failed client must not freeze previews.
                 return@Runnable
             }
-            interimTranslationBusy = true
-            try {
+            val submitted = try {
                 // Do not call downloadModelIfNeeded: no per-word model traffic.
                 translator.translate(text)
-                    .addOnSuccessListener { translated ->
-                        if (InterimTranslationPolicy.mayPublish(
-                                revision, partialRevision, token, generation,
-                                voiceSessions.isCurrent(voiceToken), listening) &&
-                            !speechTranslationPaused) {
-                            partialTranslation = translated
-                        }
-                        translator.close()
-                        interimTranslationBusy = false
-                    }
-                    .addOnFailureListener {
-                        // A missing local model leaves the preview untranslated.
-                        // Never display raw ML Kit error text or attempt cloud STT.
-                        translator.close()
-                        interimTranslationBusy = false
-                    }
             } catch (_: Exception) {
-                translator.close()
+                runCatching { translator.close() }
+                deviceSlot.release() // Submission failed before Task existed.
                 interimTranslationBusy = false
+                null
+            }
+            if (submitted != null) {
+                try {
+                    submitted.addOnCompleteListener { completed ->
+                        val output = if (completed.isSuccessful) {
+                            runCatching { completed.result }.getOrNull()
+                        } else null
+                        if (output != null &&
+                            InterimTranslationPolicy.mayPublish(
+                                revision, partialRevision, token, generation,
+                                voiceSessions.isCurrent(voiceToken), listening
+                            ) && !speechTranslationPaused) {
+                            partialTranslation = output
+                        }
+                        try {
+                            runCatching { translator.close() }
+                        } finally {
+                            deviceSlot.release()
+                            interimTranslationBusy = false
+                        }
+                    }
+                } catch (_: Exception) {
+                    // The ML Kit task may still run without a listener.
+                    // Keep the physical slot reserved, preventing runaway
+                    // repeated preview submissions; clear only the UI latch.
+                    interimTranslationBusy = false
+                }
             }
         }
         pendingInterim = task
@@ -9461,6 +9479,15 @@ private fun TuddyScreen(
                 if (translationPauseNotice.isNotBlank()) {
                     Text(
                         translationPauseNotice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (physicalMlKitTasks > 0) {
+                    Text(
+                        "Lokale modeltaken op dit toestel: $physicalMlKitTasks/" +
+                            LocalMlKitWorkBudget.MAX_SUBMITTED_TASKS +
+                            " actief (ook na annuleren tot ML Kit echt afrondt)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
