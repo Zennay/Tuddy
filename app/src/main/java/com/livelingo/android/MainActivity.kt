@@ -1498,6 +1498,12 @@ private fun TuddyScreen(
                         "Bereid dit teksttaalpaar bewust via wifi voor.",
                     "Model ontbreekt", token, revision
                 )
+                OfflineTextStage.UNKNOWN -> updateLine(id,
+                    "Lokale tekstmodelstatus niet bevestigd. " +
+                        receipt.detail.take(260) +
+                        " De oorspronkelijke zin blijft staan; gebruik " +
+                        "↻ Probeer opnieuw na een nieuwe lokale modelcontrole.",
+                    "Fout", token, revision)
                 else -> updateLine(id,
                     "Lokale tekstmodelstatus niet bevestigd. Controleer modellen in instellingen.",
                     "Fout", token, revision)
@@ -1650,8 +1656,10 @@ private fun TuddyScreen(
         failedCaptionRecoveryBusy = true
         failedCaptionRecoveryNotice =
             "Geïnstalleerde lokale tekstmodellen voor $from → $to controleren…"
-        val inventory = OfflineTextModelInventory()
-        inventory.check(from, to, TargetCatalog.codes) { receipt ->
+        // Share the same bounded read-only pair inventory used by live
+        // translation; otherwise this recovery dialog can also wait forever
+        // on the exact Android provider callback that stalled the captions.
+        captionPairReadiness.check(from, to) { receipt ->
             if (token != generation || revision != failedCaptionRecoveryRevision ||
                 !failedCaptionRecoveryOpen || listening ||
                 !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
