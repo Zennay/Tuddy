@@ -74,6 +74,7 @@ import com.livelingo.android.ui.SubtitlePasteFormat
 import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
+import com.livelingo.android.ui.LiveMicrophonePermissionControls
 import com.livelingo.android.ui.PrivateConversationCurtainDialog
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
@@ -856,6 +857,14 @@ private fun TuddyScreen(
     var pendingSpeakerExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
+    // Only the request attempt and human-facing status live in RAM.
+    // Android's real RECORD_AUDIO permission is re-read after Settings.
+    var microphonePermissionRequested by remember { mutableStateOf(false) }
+    var microphonePermissionGranted by remember(context) {
+        mutableStateOf(LocalMicrophonePermissionRecovery.granted(context))
+    }
+    var microphoneSettingsTrip by remember { mutableStateOf(false) }
+    var microphoneRecoveryNotice by remember { mutableStateOf("") }
     // Ephemeral user choice, never persisted; speech recognition keeps working,
     // but ML Kit never receives newly recognized text while this is enabled.
     var speechTranslationPaused by remember { mutableStateOf(false) }
@@ -3082,11 +3091,56 @@ private fun TuddyScreen(
     val microphonePermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
+        microphonePermissionRequested = true
+        microphonePermissionGranted =
+            granted && LocalMicrophonePermissionRecovery.granted(context)
         when {
-            !granted -> error = "Microfoontoegang is nodig. Geef toestemming via de Android-instellingen."
+            !microphonePermissionGranted -> {
+                microphoneRecoveryNotice =
+                    "Android heeft de microfoontoegang niet gegeven. " +
+                    "Je kunt opnieuw toestemming vragen of zelf naar appinstellingen gaan."
+                error = microphoneRecoveryNotice
+            }
             MicrophoneStartPolicy.mayStart(lifecycleOwner.lifecycle.currentState) &&
-                lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) -> start()
-            else -> error = "Tuddy was op de achtergrond. Open de app en tik opnieuw op Luister."
+                lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) -> {
+                microphoneRecoveryNotice = ""
+                start()
+            }
+            else -> {
+                microphoneRecoveryNotice = ""
+                error = "Tuddy was op de achtergrond. Open de app en tik opnieuw op Luister."
+            }
+        }
+    }
+
+    fun requestMicrophoneByUserTap() {
+        if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            error = "Open Tuddy op de voorgrond en tik opnieuw op Luister."
+            return
+        }
+        microphonePermissionGranted = LocalMicrophonePermissionRecovery.granted(context)
+        if (microphonePermissionGranted) {
+            microphoneRecoveryNotice = ""
+            start()
+        } else {
+            microphonePermissionRequested = true
+            microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    fun openMicrophoneSettingsByUserTap() {
+        if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            microphoneRecoveryNotice =
+                "Open Tuddy eerst op de voorgrond om Android-appinstellingen te openen."
+            return
+        }
+        stop()
+        microphoneSettingsTrip = true
+        if (!LocalMicrophonePermissionRecovery.openSystemAppDetails(context)) {
+            microphoneSettingsTrip = false
+            microphoneRecoveryNotice =
+                "Android-appinstellingen konden niet worden geopend. " +
+                "Open Instellingen → Apps → Tuddy → Machtigingen → Microfoon zelf."
         }
     }
 
@@ -3978,6 +4032,17 @@ private fun TuddyScreen(
                 }
             }
             if (event == Lifecycle.Event.ON_RESUME) {
+                microphonePermissionGranted =
+                    LocalMicrophonePermissionRecovery.granted(context)
+                if (microphoneSettingsTrip) {
+                    microphoneSettingsTrip = false
+                    microphonePermissionRequested = true
+                    microphoneRecoveryNotice = if (microphonePermissionGranted)
+                        "Android geeft nu microfoontoegang. " +
+                            "Tik bewust opnieuw op Luister; Tuddy start niet vanzelf."
+                    else "Android meldt nog geen microfoontoegang. " +
+                        "Je kunt dit zelf in de appinstellingen aanpassen."
+                }
                 screenLockGateArmed = screenLockGate.arm {
                     screenLockGateArmed = false
                     val hadCapture = listening || recognizer != null
@@ -5655,15 +5720,16 @@ private fun TuddyScreen(
                 onClose = { focusMode = false },
                 onCover = { coverPrivateConversation() },
                 canStartOffline = offlineAvailable && !modelStorageBusy,
-                onStart = {
-                    if (ContextCompat.checkSelfPermission(context,
-                            Manifest.permission.RECORD_AUDIO) ==
-                        PackageManager.PERMISSION_GRANTED) {
-                        start()
-                    } else {
-                        microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
-                    }
-                },
+                onStart = { requestMicrophoneByUserTap() },
+                showMicrophonePermissionRecovery =
+                    microphonePermissionRequested && !listening &&
+                        (!microphonePermissionGranted || microphoneRecoveryNotice.isNotBlank()),
+                microphonePermissionGranted = microphonePermissionGranted,
+                microphoneCanAskAgain =
+                    LocalMicrophonePermissionRecovery.mayAskAgain(screenActivity),
+                microphonePermissionNotice = microphoneRecoveryNotice,
+                onRetryMicrophonePermission = { requestMicrophoneByUserTap() },
+                onOpenMicrophoneSettings = { openMicrophoneSettingsByUserTap() },
                 onCycleManualSpeaker = { id ->
                     // Manual, ephemeral labels; never automatic diarization.
                     if (lines.any { it.id == id }) {
@@ -8609,34 +8675,24 @@ private fun TuddyScreen(
                         MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val canStart = offlineAvailable && !listening
-                    Button(
-                        onClick = {
-                            if (listening) stop()
-                            else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
-                                == PackageManager.PERMISSION_GRANTED) start()
-                            else microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
-                        },
-                        enabled = offlineAvailable && !modelStorageBusy,
-                    ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
-                    OutlinedButton(onClick = { confirmClearConversation = true }) {
-                        Text("Wis gesprek")
-                    }
-                    TextButton(onClick = { follow = !follow }) {
-                        Text(if (follow) "Pauzeer volgen" else "Volg live")
-                    }
-                }
-                OutlinedButton(
-                    onClick = { coverPrivateConversation() },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("🔒 Gesprek afdekken · stop microfoon en audio") }
-                Text(
-                    liveSpeechPhase.label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (liveSpeechPhase == LiveSpeechPhase.INTERRUPTED)
-                        MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                LiveMicrophonePermissionControls(
+                    listening = listening,
+                    offlineAvailable = offlineAvailable,
+                    modelStorageBusy = modelStorageBusy,
+                    follow = follow,
+                    microphonePermissionRequested = microphonePermissionRequested,
+                    microphonePermissionGranted = microphonePermissionGranted,
+                    microphoneCanAskAgain =
+                        LocalMicrophonePermissionRecovery.mayAskAgain(screenActivity),
+                    microphoneRecoveryNotice = microphoneRecoveryNotice,
+                    liveSpeechPhaseLabel = liveSpeechPhase.label,
+                    speechPhaseInterrupted = liveSpeechPhase == LiveSpeechPhase.INTERRUPTED,
+                    onMicClick = { if (listening) stop() else requestMicrophoneByUserTap() },
+                    onClearConversation = { confirmClearConversation = true },
+                    onToggleFollow = { follow = !follow },
+                    onCoverConversation = { coverPrivateConversation() },
+                    onRetryPermission = { requestMicrophoneByUserTap() },
+                    onOpenAndroidSettings = { openMicrophoneSettingsByUserTap() }
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),

@@ -62,6 +62,12 @@ internal fun FocusTranscriptDialog(
     onCover: (() -> Unit)? = null,
     onStart: (() -> Unit)? = null,
     canStartOffline: Boolean = false,
+    showMicrophonePermissionRecovery: Boolean = false,
+    microphonePermissionGranted: Boolean = false,
+    microphoneCanAskAgain: Boolean = false,
+    microphonePermissionNotice: String = "",
+    onRetryMicrophonePermission: (() -> Unit)? = null,
+    onOpenMicrophoneSettings: (() -> Unit)? = null,
     archiveMode: Boolean = false,
     pinnedCaptionIds: Set<Long> = emptySet(),
     onTogglePin: ((Long) -> String)? = null,
@@ -287,6 +293,17 @@ internal fun FocusTranscriptDialog(
                     ) {
                         Text(if (listening) "■ Stop microfoon" else
                             "🎙 Start offline luisteren")
+                    }
+                    if (showMicrophonePermissionRecovery &&
+                        onRetryMicrophonePermission != null &&
+                        onOpenMicrophoneSettings != null) {
+                        MicrophonePermissionRecoveryPanel(
+                            permissionGranted = microphonePermissionGranted,
+                            canRequestAgain = microphoneCanAskAgain,
+                            message = microphonePermissionNotice,
+                            onRequestAgain = onRetryMicrophonePermission,
+                            onOpenSystemSettings = onOpenMicrophoneSettings
+                        )
                     }
                     if (!listening && !canStartOffline) {
                         Text("Offline spraakpakket of modelbeheer nog niet gereed; " +
