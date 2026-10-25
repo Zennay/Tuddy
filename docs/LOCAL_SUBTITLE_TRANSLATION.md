@@ -48,6 +48,43 @@ en behoudt de bestaande tijdcodes.
 9. Bewaar desgewenst daarna via de bestaande SRT/VTT-preview een **nieuwe kopie**.
    Tuddy overschrijft het gekozen origineel niet.
 
+## Vastlopende Android-vertaling herstellen
+
+De vertaling van een ondertitelbestand verloopt bewust **alles-of-niets**:
+geen enkele geselecteerde cue wordt tussentijds in het bestaande concept
+geschreven. Vanaf het begin van de tweede, interne modelcontrole wacht
+Tuddy maximaal **30 seconden** op een bevestigde modelstatus. Iedere
+daarna afzonderlijk ingediende cue krijgt weer **maximaal 30 seconden**
+voor het lokale ML Kit-resultaat. Bij een uitblijvende callback of
+andere fout stopt de tijdelijke batch met een duidelijke melding;
+het **hele concept en alle tijdcodes blijven ongewijzigd**, ook
+wanneer veel eerdere geselecteerde regels wel waren vertaald.
+
+Om het toestel niet te overladen deelt de ondertitelvertaler nu hetzelfde
+procesbrede plafond van **drie daadwerkelijk nog actieve ML Kit-taken**
+als de live ondertitelvertaler. Na **Annuleer** of een time-out kan
+Androids reeds ingediende ML Kit-task fysiek nog bezig zijn: Tuddy
+maakt pas weer een werkplek vrij als die taak echt voltooid is.
+Als alle plekken bezet zijn, wordt de volgende cue **niet**
+aangeboden en verschijnt een veilig foutbericht. Nieuwe vertalingen
+worden niet op de achtergrond in een wachtrij geplaatst of
+automatisch herhaald.
+
+Bij een fout van een specifieke cue verschijnt **Bekijk alleen mislukte
+regel N**. Dit verandert uitsluitend de beoogde selectie naar het
+**oorspronkelijke regelnummer** en vraagt opnieuw om bewuste controle
+van de geïnstalleerde modellen. Dat is geen automatische herhaling
+van de vorige batch. Wil je het hele bereik alsnog opnieuw proberen,
+laat dan de vorige selectie staan, controleer de modellen weer en
+start expliciet opnieuw. Na een succesvolle batch krijg je nog steeds
+de volledige voorbeeld- en bevestigingsstap voordat iets in het
+tijdelijke document wordt gewijzigd.
+
+Deze limieten zijn **app-controles**, geen garantie dat een externe
+Android/ML Kit-taak binnen 30 seconden daadwerkelijk stopt. Zonder
+fysieke Android-toestelmeting vormen de meldingen geen bewijs van
+volledig offline functioneren.
+
 ## Grenzen en privacy
 
 - De functie gebruikt alleen reeds geïnstalleerde ML Kit-tekstmodellen. Ze
