@@ -483,6 +483,8 @@ private fun TuddyScreen(
     val localLanguageDetector = remember { LocalLanguageDetector() }
     // Keep a small, session-scoped cache of already-authorized local translators.
     val localTranslatorPool = remember { LocalTranslatorPool() }
+    val captionPairReadiness = remember { OfflinePairReadinessBroker() }
+    val captionTranslationQueue = remember { OfflineCaptionTranslationQueue() }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
         mutableStateOf(PrivateScreenShield.enabled(context))
@@ -1113,6 +1115,7 @@ private fun TuddyScreen(
             lines[index] = lines[index].copy(translated = translation, status = status)
             if (status in setOf("Lokaal", "Lokaal vertaald", "Model ontbreekt", "Fout")) {
                 translationDeadline.finished(id, revision)
+                captionTranslationQueue.finished(id, revision)
             }
             // Only completed *speech-origin* translations count, never typed
             // turns, editing, pending interim text or superseded callbacks.
@@ -1170,38 +1173,66 @@ private fun TuddyScreen(
             updateLine(id, text, "Lokaal", token, revision)
             return
         }
-        // Inventory is read-only. A missing model is never downloaded merely
-        // because somebody typed, corrected or spoke a private sentence.
-        OfflineTextModelInventory().check(from, targetCode, TargetCatalog.codes) { receipt ->
+        // A burst of captions shares a single read-only pair model scan.
+        // No model result is cached beyond that in-flight request.
+        captionPairReadiness.check(from, targetCode) { receipt ->
             if (!translationStillRelevant(id, token, revision)) return@check
             when (receipt.stage) {
                 OfflineTextStage.CHECKING -> Unit
                 OfflineTextStage.READY -> {
-                    val translator = try {
-                        localTranslatorPool.acquire(from, targetCode)
-                    } catch (_: Exception) {
-                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                        return@check
+                    // Bound tracked local ML Kit work to three FIFO requests.
+                    // The existing 30-second row deadline includes queue time.
+                    val queued = captionTranslationQueue.enqueue(
+                        id, revision,
+                        onStartError = {
+                            updateLine(id, SafeLocalFailureText.TRANSLATION,
+                                "Fout", token, revision)
+                        }
+                    ) {
+                        if (!translationStillRelevant(id, token, revision) ||
+                            lines.none { it.id == id && it.status == "Bezig" }) {
+                            captionTranslationQueue.finished(id, revision)
+                        } else {
+                            val translator = try {
+                                localTranslatorPool.acquire(from, targetCode)
+                            } catch (_: Exception) {
+                                updateLine(id, SafeLocalFailureText.TRANSLATION,
+                                    "Fout", token, revision)
+                                null
+                            }
+                            if (translator != null) {
+                                try {
+                                    translator.translate(text)
+                                        .addOnSuccessListener { output ->
+                                            try {
+                                                updateLine(id, output, "Lokaal vertaald",
+                                                    token, revision)
+                                            } finally {
+                                                translator.close()
+                                            }
+                                        }
+                                        .addOnFailureListener {
+                                            try {
+                                                updateLine(id,
+                                                    SafeLocalFailureText.TRANSLATION,
+                                                    "Fout", token, revision)
+                                            } finally {
+                                                translator.close()
+                                            }
+                                        }
+                                } catch (_: Exception) {
+                                    translator.close()
+                                    updateLine(id, SafeLocalFailureText.TRANSLATION,
+                                        "Fout", token, revision)
+                                }
+                            }
+                        }
                     }
-                    try {
-                        translator.translate(text)
-                            .addOnSuccessListener { output ->
-                                try {
-                                    updateLine(id, output, "Lokaal vertaald", token, revision)
-                                } finally {
-                                    translator.close()
-                                }
-                            }
-                            .addOnFailureListener {
-                                try {
-                                    updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
-                                } finally {
-                                    translator.close()
-                                }
-                            }
-                    } catch (_: Exception) {
-                        translator.close()
-                        updateLine(id, SafeLocalFailureText.TRANSLATION, "Fout", token, revision)
+                    if (!queued) {
+                        updateLine(id,
+                            "Er staan te veel tijdelijke vertaalregels klaar. " +
+                                "Probeer deze zin later lokaal opnieuw.",
+                            "Fout", token, revision)
                     }
                 }
                 OfflineTextStage.MISSING -> updateLine(
@@ -1227,6 +1258,7 @@ private fun TuddyScreen(
         // End-to-end cap across language identification, model inventory and
         // the actual ML Kit translator. Otherwise a missing provider callback
         // can leave a private subtitle permanently stuck on "Vertalen…".
+        captionTranslationQueue.cancel(id)
         translationDeadline.watch(id, revision) {
             val pendingIndex = lines.indexOfFirst { it.id == id }
             val current = lines.getOrNull(pendingIndex)
@@ -1390,6 +1422,7 @@ private fun TuddyScreen(
             fun finishDownload(success: Boolean) {
                 translator.close()
                 localTranslatorPool.invalidate()
+                captionPairReadiness.invalidate()
                 preparingOfflineModel = false
                 offlineModelStatus = if (success)
                     "ML Kit-voltooiing voor $from → $to; aanwezige modellen opnieuw controleren."
@@ -1589,6 +1622,7 @@ private fun TuddyScreen(
             if (success) {
                 selectedModelCleanupCodes = selectedModelCleanupCodes - code
                 localTranslatorPool.invalidate()
+                captionPairReadiness.invalidate()
                 // The inventory and currently selected pair are independent;
                 // always re-read actual model status after storage changes.
                 textInventory.invalidate()
@@ -1670,6 +1704,7 @@ private fun TuddyScreen(
                 } else {
                     removedCount++
                     localTranslatorPool.invalidate()
+                captionPairReadiness.invalidate()
                     textInventory.invalidate()
                     textReceipt = OfflineTextReceipt(
                         source.translateCode, target.translateCode,
@@ -1719,6 +1754,7 @@ private fun TuddyScreen(
                 .addOnSuccessListener {
                     translator.close()
                     localTranslatorPool.invalidate()
+                captionPairReadiness.invalidate()
                     preparingOfflineModel = false
                     if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                         offlineModelStatus = "Download afgerond; aanwezigheid opnieuw controleren…"
@@ -1728,6 +1764,7 @@ private fun TuddyScreen(
                 .addOnFailureListener {
                     translator.close()
                     localTranslatorPool.invalidate()
+                captionPairReadiness.invalidate()
                     preparingOfflineModel = false
                     if (offlinePreparationEpoch.isCurrent(requestEpoch)) {
                         offlineModelStatus = "Tekstmodel niet beschikbaar. Controleer wifi en opslag; probeer opnieuw."
@@ -2306,6 +2343,7 @@ private fun TuddyScreen(
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             val removed = lines.removeAt(0)
             translationDeadline.cancel(removed.id)
+            captionTranslationQueue.cancel(removed.id)
                             speechTranslationStarted.remove(removed.id)
                             offlineSpeechChoices.remove(removed.id)
                             captionPins = captionPins - removed.id
@@ -2547,6 +2585,7 @@ private fun TuddyScreen(
         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
             val removed = lines.removeAt(0)
             translationDeadline.cancel(removed.id)
+            captionTranslationQueue.cancel(removed.id)
             offlineSpeechChoices.remove(removed.id)
             manuallyAssignedSpeakers.remove(removed.id)
             captionPins = captionPins - removed.id
@@ -3459,6 +3498,7 @@ private fun TuddyScreen(
             if (event == Lifecycle.Event.ON_STOP) closeSpeechCatalog()
             if (event == Lifecycle.Event.ON_STOP) {
                 localTranslatorPool.invalidate()
+                captionPairReadiness.invalidate()
                 modelStorage.invalidate()
                 modelStorageBusy = false
                 pendingModelDeletion = null
@@ -3535,6 +3575,7 @@ private fun TuddyScreen(
             generation++
             pendingSingleSpeechReview = null
             translationDeadline.clear()
+            captionTranslationQueue.clear()
             modelStorage.invalidate()
             starterPhraseboardOpen = false
             quickPhrasePickerOpen = false
@@ -3605,6 +3646,8 @@ private fun TuddyScreen(
             pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
             localLanguageDetector.close()
+            captionPairReadiness.close()
+            captionTranslationQueue.close()
             localTranslatorPool.close()
             captionSpeaker.close()
         }
@@ -7304,6 +7347,7 @@ private fun TuddyScreen(
                             }
                             lines.removeAt(index)
                             translationDeadline.cancel(deleteRequest.first)
+                            captionTranslationQueue.cancel(deleteRequest.first)
                             offlineSpeechChoices.remove(deleteRequest.first)
                             captionDeleteNotice = "Ondertitel uit dit gesprek gewist."
                         } else {
@@ -7517,6 +7561,7 @@ private fun TuddyScreen(
                         generation++
                         pendingSingleSpeechReview = null
                         translationDeadline.clear()
+            captionTranslationQueue.clear()
                         // A conscious conversation wipe also discards snapshots
                         // held solely for a pending external document picker.
                         pendingManualSubtitleDocument = null
@@ -8167,6 +8212,7 @@ private fun TuddyScreen(
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                                 val removed = lines.removeAt(0)
             translationDeadline.cancel(removed.id)
+            captionTranslationQueue.cancel(removed.id)
                                 offlineSpeechChoices.remove(removed.id)
                                 manuallyAssignedSpeakers.remove(removed.id)
                                 captionPins = captionPins - removed.id
@@ -8917,6 +8963,15 @@ private fun TuddyScreen(
                         Text("↻ Herstel ${failedCaptionPairs.sumOf { it.count }} " +
                             "mislukte offline vertalingen…")
                     }
+                }
+                val pendingLocalCaptions = lines.count { it.status == "Bezig" }
+                if (pendingLocalCaptions > 0) {
+                    Text(
+                        "$pendingLocalCaptions lokale vertaling(en) in verwerking of wachtrij. " +
+                            "Maximaal 3 tegelijk; na 30 seconden is herstellen mogelijk.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
