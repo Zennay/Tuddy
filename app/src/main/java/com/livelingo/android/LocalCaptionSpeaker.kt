@@ -18,6 +18,12 @@ import java.util.Locale
  * fenced by a monotonic generation. No text or utterance is retained. An
  * explicitly selected voice preference is stored locally per language only.
  */
+internal data class InstalledLocalVoice(
+    val name: String,
+    val languageTag: String,
+    val quality: Int
+)
+
 internal enum class LocalSpeechPace(val rate: Float) {
     NORMAL(1.0f), SLOW(0.72f)
 }
@@ -35,6 +41,82 @@ internal class LocalCaptionSpeaker(context: Context) {
         if (old != null) {
             runCatching { old.stop() }
             runCatching { old.shutdown() }
+        }
+    }
+
+    /**
+     * Enumerate Android-installed, non-network voices only after a user opens
+     * the picker. The temporary engine is shut down before the callback; no
+     * audio is spoken, no voice is downloaded and no transcript is supplied.
+     * Generation fencing prevents a dismissed Activity from publishing a late
+     * service callback into a new picker.
+     */
+    fun discoverInstalledVoices(
+        languageTag: String,
+        callback: (voices: List<InstalledLocalVoice>, notice: String) -> Unit
+    ) {
+        stop()
+        if (!Regex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$").matches(languageTag)) {
+            callback(emptyList(), "Deze taal heeft geen ondersteunde Android-stemcode.")
+            return
+        }
+        val locale = Locale.forLanguageTag(languageTag)
+        if (locale.language.isBlank() || locale.language == "und") {
+            callback(emptyList(), "Voor deze taal is geen bruikbare stemcode bekend.")
+            return
+        }
+        val version = generation
+        try {
+            engine = TextToSpeech(appContext, TextToSpeech.OnInitListener { result ->
+                main.post {
+                    if (generation != version) return@post
+                    val tts = engine
+                    if (result != TextToSpeech.SUCCESS || tts == null) {
+                        stop()
+                        callback(emptyList(), "Android kon de lokale voorleesstemmen niet uitlezen.")
+                        return@post
+                    }
+                    val found = runCatching {
+                        tts.voices.orEmpty()
+                            .asSequence()
+                            .filter { voice ->
+                                !voice.isNetworkConnectionRequired &&
+                                    voice.locale.language == locale.language &&
+                                    voice.features?.contains(
+                                        TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED
+                                    ) != true &&
+                                    voice.name.isNotBlank() && voice.name.length <= 256
+                            }
+                            .sortedWith(
+                                compareByDescending<android.speech.tts.Voice> {
+                                    it.locale.country.equals(locale.country, ignoreCase = true)
+                                }.thenByDescending { it.quality }.thenBy { it.name }
+                            )
+                            .distinctBy { it.name }
+                            .take(80)
+                            .map { InstalledLocalVoice(
+                                it.name, it.locale.toLanguageTag(), it.quality
+                            ) }
+                            .toList()
+                    }.getOrNull()
+                    stop()
+                    callback(
+                        found.orEmpty(),
+                        when {
+                            found == null ->
+                                "Android kon de stemmen niet betrouwbaar uitlezen."
+                            found.isEmpty() ->
+                                "Geen geïnstalleerde, als offline gemelde stem voor deze taal."
+                            else ->
+                                "${found.size} door Android als lokaal gemelde stemmen. " +
+                                "Dit is geen bewijs van werkelijke vliegtuigmodusisolatie."
+                        }
+                    )
+                }
+            })
+        } catch (_: RuntimeException) {
+            stop()
+            callback(emptyList(), "De lokale Android-voorleesdienst kon niet worden geopend.")
         }
     }
 
