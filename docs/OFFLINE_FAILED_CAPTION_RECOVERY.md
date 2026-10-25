@@ -36,6 +36,38 @@ niet overschreven: alleen regels met status **Fout** of
 niet veranderd is, kunnen worden herstart. De herstelgroep voor
 niet-gecorrigeerde regels blijft daarnaast bestaan.
 
+## Veel zinnen tegelijk: veilige, begrensde offline verwerking
+
+Wanneer Android meerdere definitieve gesprekszinnen kort na elkaar
+oplevert, controleert Tuddy voortaan slechts **eenmaal tegelijk**
+welke al geïnstalleerde tekstmodellen beschikbaar zijn per exacte
+bron-/doeltaalrichting. Regels met een ander taalpaar krijgen hun
+eigen controle. Het resultaat wordt uitsluitend aan de op dat
+moment wachtende tijdelijke regels gegeven: **geen permanente
+model-READY-cache**, en geen stilzwijgende download of netwerkvertaler.
+Als iemand via de bestaande modelbeheerfunctie modellen voorbereidt
+of verwijdert, worden eerdere controles ongeldig en volgt een
+herstelbare foutmelding in plaats van een ongeverifieerde 'klaar'-status.
+
+Daarna laat Tuddy maximaal **drie bijgehouden ML Kit-vertalingen
+tegelijk** starten; extra zinnen komen in een volgordevaste tijdelijke
+wachtrij. De zichtbare teller in het gespreksvenster toont hoeveel
+regels momenteel in behandeling zijn. Een verloren model- of
+vertaalcallback mag geen permanent vastgelopen wachtrij maken:
+de bestaande 30-secondenlimiet omvat óók het wachten. Na een
+timeout blijft de oorspronkelijke zin staan en werkt **↻ Probeer
+opnieuw**. De app kiest niet zelf voor een andere taal, begint
+geen download en stuurt niets naar een online vertaaldienst.
+
+Een gebruikerscorrectie, verwijderde regel, oudste regel die door
+de 500-regelslimiet vervalt of het bewust wissen van het gesprek
+haalt desbetreffend werk uit de wachtrij. Een al aan Android ML Kit
+overgedragen taak kan niet altijd worden ingetrokken; een laat
+resultaat wordt daarom door de bestaande generatie- en
+revisiecontroles geweigerd. In-flight controle en planning bevatten
+alleen tijdelijke appgegevens; er wordt geen gesprek naar schijf
+geschreven.
+
 ## Herstel vanuit het gewone gesprek
 
 1. De knop **Herstel N mislukte offline vertalingen…** verschijnt onder de
