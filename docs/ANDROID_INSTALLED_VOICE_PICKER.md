@@ -108,6 +108,32 @@ onbedoelde luidsprekeruitvoer, maar garandeert die niet volledig:
 controleer vóór het afspelen ook zelf de actuele Android-mediaspeaker-
 route. Dit is geen fysieke telefoonproef of release-acceptatie.
 
+## Twee talen in één bewuste lokale voorleesactie
+
+In het gesprek en bij **Vertaal geselecteerde tekst** toont het menu
+bij een voltooide vertaling nu **Origineel → vertaling** in normaal en
+langzaam tempo. Eén expliciete tik leest eerst de oorspronkelijke zin
+en daarna de lokale vertaling voor, met de afzonderlijk gekozen
+geïnstalleerde Android-stem voor **elke** taal. Deze functie start
+geen microfoon, zet geen vertaalmodel aan en bewaart geen audio.
+
+Vóór de eerste uitspraak controleert Tuddy **beide stemmen** en vraagt
+het één tijdelijke Android-audiofocus- en headsetbewaakte sessie aan.
+Ontbreekt één veilige lokale stem, dan wordt ook het eerste deel
+**niet** uitgesproken. Tussen de twee zinnen wisselt de app alleen
+naar de al gecontroleerde tweede stem. Na de tweede zin, Stop,
+achtergrond, audiofocusverlies, headsetwissel of TTS-fout stopt de
+hele actie en wordt audiofocus vrijgegeven. Verouderde callbacks van
+een eerdere uitspraak mogen niet alsnog het andere deel starten.
+
+Iedere zin heeft dezelfde grens van 400 zichtbare tekens als een
+bestaande losse voorleesactie. In het hoofdgesprek is de optie alleen
+beschikbaar als de vertaling echt als voltooid is gemarkeerd; de
+geselecteerde-tekstvertaler toont haar uitsluitend bij een resultaat.
+De bestaande **Alleen met hoofdtelefoon**-voorkeur blijft voor
+de hele tweetalige sessie gelden. Androids lokale TTS-metadata en
+audioroute-indicaties zijn geen onafhankelijke vliegtuigmodusproef.
+
 ## Grenzen voor acceptatie
 
 Een door de Android-TTS-engine als lokaal gemelde stem geeft **geen**
