@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.google.mlkit.nl.translate.Translation
+import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import java.util.Locale
@@ -398,7 +399,10 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private fun suggestSourceLanguage() {
         if (busy || detectingSource || inputNotice.isNotBlank()) return
         stopPlayback()
-        val sample = incomingText.replace('\n', ' ').trim().take(1200)
+        // ML Kit language ID itself only inspects up to 200 characters.
+        // Never imply that a prediction has classified an entire long
+        // multilingual selection; the visible proposal is advisory only.
+        val sample = incomingText.replace('\n', ' ').trim().take(200)
         suggestedSourceCode = null
         if (sample.codePointCount(0, sample.length) < 20) {
             detectionNotice = "Voor een betrouwbaar lokaal brontaalvoorstel zijn minimaal 20 tekens nodig. " +
@@ -420,7 +424,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
             if (isFinishing || requestRevision != detectorRevision) return@identify
             clearDetectionTimeout()
             detectingSource = false
-            val supported = detected?.takeIf { it in TargetCatalog.codes }
+            val supported = detected
+                ?.let(TranslateLanguage::fromLanguageTag)
+                ?.takeIf { it in TargetCatalog.codes }
             if (supported == null) {
                 detectionNotice = if (detected == null) {
                     "Geen bruikbaar lokaal brontaalvoorstel. Kies de taal handmatig."
