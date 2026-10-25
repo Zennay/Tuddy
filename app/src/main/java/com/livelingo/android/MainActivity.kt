@@ -488,12 +488,13 @@ private fun TuddyScreen(
     val localTranslatorPool = remember { LocalTranslatorPool() }
     val captionPairReadiness = remember { OfflinePairReadinessBroker() }
     val captionTranslationQueue = remember { OfflineCaptionTranslationQueue() }
-    var physicalMlKitTasks by remember { mutableIntStateOf(0) }
-    // Logical queue slots can be released by a user cancellation or visual
-    // timeout before the Android ML Kit task actually completes. A separate
-    // physical admission budget stays reserved until the provider returns.
-    val physicalMlKitBudget = remember {
-        LocalMlKitWorkBudget { physicalMlKitTasks = it }
+    // Process-wide admission persists across Activity recreation while
+    // already-submitted ML Kit Tasks can still be running on that process.
+    val physicalMlKitBudget = LocalMlKitWorkBudget.shared
+    var physicalMlKitTasks by remember { mutableIntStateOf(physicalMlKitBudget.activeCount()) }
+    DisposableEffect(physicalMlKitBudget) {
+        val unsubscribe = physicalMlKitBudget.subscribe { physicalMlKitTasks = it }
+        onDispose { unsubscribe() }
     }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
@@ -3993,7 +3994,6 @@ private fun TuddyScreen(
             localLanguageDetector.close()
             captionPairReadiness.close()
             captionTranslationQueue.close()
-            physicalMlKitBudget.close() // No new work after Activity disposal.
             localTranslatorPool.close()
             captionSpeaker.close()
         }
