@@ -46,6 +46,8 @@ internal fun FocusTranscriptDialog(
     interimTranslated: String,
     listening: Boolean,
     speechPhaseStatus: String = "",
+    captureMode: String = "Doorlopend",
+    onToggleCaptureMode: (() -> Unit)? = null,
     fontScale: Float,
     onStop: () -> Unit,
     onClose: () -> Unit,
@@ -170,6 +172,28 @@ internal fun FocusTranscriptDialog(
                             "Geen cloudspraakfallback.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (onToggleCaptureMode != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("Luistermodus: $captureMode",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f))
+                            TextButton(
+                                enabled = !listening,
+                                onClick = onToggleCaptureMode
+                            ) { Text("Wissel") }
+                        }
+                        if (captureMode == "Eén zin") {
+                            Text(
+                                "Eén zin per tik. Na resultaat, stilte of timeout stopt " +
+                                    "de microfoon; lokaal vertalen gaat daarna verder.",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
                     }
                 }
                 if (!archiveMode) {

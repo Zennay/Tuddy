@@ -113,6 +113,38 @@ een reactievertraging toe. Dit is dus extra beperking van blootstelling
 aan microfooncapture, geen onafhankelijk bewijs dat een fysiek toestel
 te allen tijde niet heeft opgenomen.
 
+## Nieuwe keuze: doorlopend of één zin
+
+In het hoofdscherm en in de fullscreen leesmodus kan de gebruiker
+**Luistermodus** wisselen terwijl de microfoon uit staat. De keuze
+wordt lokaal in app-private instellingen bewaard; uitsluitend de
+modusnaam, **nooit** een gesproken zin, opname of gesprek.
+
+- **Doorlopend** is het bestaande standaardgedrag. Na een afgeronde
+  zin, een normale stille poging of een beperkte timeout-herstelactie
+  mag de app met de bestaande privacy-, model- en lifecyclechecks een
+  nieuwe Android on-device recognizer starten.
+- **Eén zin** is precies **één** bewust gestarte herkenningspoging:
+  na een geldig resultaat wordt eerst de tijdelijke gespreksregel
+  aangemaakt en lokaal vertaald; de microfoon wordt meteen gestopt
+  en er wordt géén volgende herkenner gepland. De al gestarte
+  ML Kit-tekstvertaling kan onafhankelijk afronden, mits de regel
+  nog bestaat en ongewijzigd is.
+- Bij **geen spraakmatch**, **spraak-timeout** of het uitblijven van
+  elke Android-terminal-callback stopt Eén zin expliciet. De gebruiker
+  kan opnieuw op **Luister** tikken; de app probeert niet stiekem een
+  tweede keer op te nemen. De bestaande 60-seconden watchdog blijft
+  ook voor deze afzonderlijke poging geldig.
+- Wisselen is alleen mogelijk als de microfoon uit staat. De
+  afzonderlijke opnametijdlimiet, toestemming, microfoon/privacy-
+  bewaking, strikte vliegtuigmodus, geïnstalleerd speechpakket,
+  herkennergeneratie en stop-bij-achtergrond blijven behouden.
+
+Het statuslabel meldt in Eén zin duidelijk dat de microfoon gestopt
+is, en maakt geen claim dat de vertaling al klaar is. Deze modus is
+bedoeld voor een korte bewuste invoer, niet als garantie over
+herkenningskwaliteit of echte vliegtuigmodusisolatie.
+
 ## Gates
 
 Deze mijlpaal vereist de bestaande Android GitHub-build en source-head
