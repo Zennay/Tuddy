@@ -21,7 +21,8 @@ In het bestaande gesprek:
    terug te halen. Het resultaat blijft in dit tijdelijke gesprek.
 
 Bij een herstelde **oorspronkelijke zin** wordt de vorige bronzin,
-taalrichting, correctievlag en eventuele menselijke uitleg hersteld.
+taalrichting, correctievlag, eventuele menselijke uitleg en nog geldige
+alternatieve Android-herkenningsvoorstellen hersteld.
 Daarna wordt een *nieuwe, expliciet lokale* ML Kit-tekstvertaling
 aangevraagd. Een oud vertaalresultaat wordt niet klakkeloos hergebruikt:
 het kan immers uit een andere, inmiddels vervangen tekst stammen.
@@ -39,7 +40,8 @@ gewijzigd**. Nieuwere suggesties worden niet overschreven.
   handmatige correctie vervangt het vorige. Er wordt geen permanent
   correctiearchief, modelgeheugen, auditlog of bestand gemaakt.
 - De knop is niet beschikbaar tijdens het luisteren. Een verwante regel
-  die is gewist, uit het gesprek verdwenen of een nieuwe vertaalrevisie
+  die is gewist, uit het gesprek verdwenen (ook door de
+  geschiedenislimiet van 500 regels) of een nieuwe vertaalrevisie
   heeft gekregen, mag niet worden hersteld. Het gesprek leegmaken of de
   Activity beëindigen wist ook dit ene herstelmoment.
 - Bij herstellen krijgen gewijzigde regels een **nieuwe revisie**; eerder
