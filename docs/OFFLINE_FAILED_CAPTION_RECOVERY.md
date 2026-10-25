@@ -101,6 +101,42 @@ revisiecontroles geweigerd. In-flight controle en planning bevatten
 alleen tijdelijke appgegevens; er wordt geen gesprek naar schijf
 geschreven.
 
+## Werkelijk gestarte ML Kit-taken blijven begrensd na Stop of timeout
+
+De FIFO met maximaal drie actieve *zichtbare* vertalingen telt niet wat
+Android intern nog verwerkt. Bij **Stop deze vertaling**, wachtrijannulering,
+een nieuwe poging of na de **30-seconden-time-out** kan een al aan ML Kit
+overgedragen taak alsnog doorrekenen. De zichtbare status blijft
+terecht geannuleerd, maar het toestel heeft de oude berekening daarmee
+niet bewezen gestopt.
+
+Daarom geldt nu daarnaast één afzonderlijke toestelgebonden limiet:
+**maximaal drie echt ingediende, nog niet door ML Kit afgeronde
+vertaaltaken**, ongeacht of ze voor een definitieve ondertitel of een
+tijdelijk live-voorbeeld zijn gestart. Een plek wordt pas vrijgegeven
+als ML Kit werkelijk een terminale callback afgeeft (of als het
+aanmaken van de taak mislukte voordat er iets was ingediend).
+Een geannuleerde, verlopen of gecorrigeerde zin geeft dus niet
+stilzwijgend ruimte voor extra modeltaken. Onderliggende late
+resultaten blijven door de bestaande versiecontroles ongeldig.
+
+Tijdelijke tussentijdse spraakvoorbeelden zijn **optioneel**: bij een
+volle limiet worden ze zonder extra werk overgeslagen, zodat een
+definitieve zin niet voorrang verliest. Als een definitieve
+vertaalpoging zelf geen fysieke plek meer heeft, toont Tuddy een
+**herstelbare lokale fout** in die bestaande regel. De gebruiker
+kan wachten totdat Android werkelijk klaar is, of Tuddy bewust
+afsluiten en opnieuw openen als een provider langdurig onbereikbaar
+blijft. Dat laatste is geen bewijs dat al ingediende Android-werkzaamheden
+onmiddellijk zijn afgebroken.
+
+Het hoofdscherm toont zolang nodig **lokale modeltaken: N/3**.
+Het door de gebruiker geopende, tekst- en audiovrije
+apparaatrapport vermeldt eveneens het aantal nog actieve taken
+in RAM. Er wordt geen model gedownload, geen cloudfallback gestart
+en niets over zinnen, audio of gebruikersidentiteit opgeslagen in
+deze fysieke limietteller.
+
 ## Eerder overgeslagen zinnen bewust in een kleine batch vertalen
 
 Als **Pauzeer live vertalen · houd origineel** actief is, herkent Tuddy
