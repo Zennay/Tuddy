@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
+import com.livelingo.android.PrivateClipboardExpiry
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -1595,9 +1596,15 @@ internal fun LocalSubtitleAudioPreviewDialog(
                             Row(modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 TextButton(onClick = {
-                                    clipboard.setText(AnnotatedString(currentMarkSheet))
-                                    notice = "Eigen woordankers naar het klembord gekopieerd. " +
-                                        "Een klembordapp kan die tekst synchroniseren."
+                                    notice = if (PrivateClipboardExpiry.copy(
+                                            context, "ondertitelwoordankers", currentMarkSheet
+                                        )) {
+                                        "Eigen woordankers bewust gekopieerd. Andere apps " +
+                                            "kunnen ze lezen of synchroniseren; " +
+                                            "de vervaltijd is een poging."
+                                    } else {
+                                        "Kopiëren mislukt: woordankers niet naar klembord verzonden."
+                                    }
                                 }) { Text("Kopieer woordankers") }
                                 TextButton(onClick = {
                                     manualWordBatchInput = currentMarkSheet
@@ -1620,9 +1627,15 @@ internal fun LocalSubtitleAudioPreviewDialog(
                                 Row(modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     TextButton(onClick = {
-                                        clipboard.setText(AnnotatedString(relativeSheet))
-                                        notice = "Relatieve woordankers gekopieerd; " +
-                                            "controleer elke andere cue zelf."
+                                        notice = if (PrivateClipboardExpiry.copy(
+                                                context, "relatieve ondertitelankers", relativeSheet
+                                            )) {
+                                            "Relatieve woordankers gekopieerd; controleer " +
+                                                "andere cues zelf. Het systeemklembord is voor " +
+                                                "andere apps toegankelijk."
+                                        } else {
+                                            "Kopiëren mislukt: relatieve ankers niet gekopieerd."
+                                        }
                                     }) { Text("Kopieer relatieve ankers") }
                                     TextButton(onClick = {
                                         manualWordBatchInput = relativeSheet

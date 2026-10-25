@@ -9,7 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import com.livelingo.android.PrivateClipboardExpiry
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.AnnotatedString
 import com.livelingo.android.PrivateCaptionCopy
@@ -68,7 +69,7 @@ internal fun FocusTranscriptDialog(
     onRequestOriginalCorrection: ((Long) -> Unit)? = null
 ) {
     val listState = rememberLazyListState()
-    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
     var followLive by remember { mutableStateOf(true) }
     var speakerFilter by remember { mutableStateOf<String?>(null) }
     var captionQuery by remember { mutableStateOf("") }
@@ -441,8 +442,15 @@ internal fun FocusTranscriptDialog(
                                         if (payload == null) {
                                             copyNotice = "Deze caption kan niet veilig worden gekopieerd."
                                         } else {
-                                            clipboard.setText(AnnotatedString(payload))
-                                            copyNotice = "Origineel + vertaling gekopieerd. Het systeemklembord kan door andere apps worden gelezen."
+                                            copyNotice = if (PrivateClipboardExpiry.copy(
+                                                    context, "focusgesprek tweetalig", payload
+                                                )) {
+                                                "Origineel + vertaling bewust gekopieerd. " +
+                                                    "Andere apps kunnen het systeemklembord lezen; " +
+                                                    "de ingestelde vervaltijd is slechts een poging."
+                                            } else {
+                                                "Kopiëren mislukt: er is niets naar het Android-klembord gestuurd."
+                                            }
                                         }
                                     }) {
                                         Text("Kopieer origineel + vertaling")

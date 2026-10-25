@@ -23,7 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import com.livelingo.android.PrivateClipboardExpiry
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.Lifecycle
@@ -58,7 +58,6 @@ internal fun LanguageSupportDialog(
     onDismiss: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
-    val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val localVoiceInventory = remember(context) { LocalSpeechVoiceInventory(context) }
@@ -612,8 +611,14 @@ internal fun LanguageSupportDialog(
                         (normalizedQuery.isNotEmpty() || modelTaskFilter != "Alle" || modelAccessFilter != "Alle")
                     ) {
                         TextButton(onClick = {
-                            clipboard.setText(AnnotatedString(researchSummary))
-                            researchCopyNotice = "Gekopieerd: alleen openbare modelmetadata, geen gesprekken of audio."
+                            researchCopyNotice = if (PrivateClipboardExpiry.copy(
+                                    context, "gefilterde modelmetadata", researchSummary
+                                )) {
+                                "Gekopieerd: alleen openbare modelmetadata, geen gesprekken of audio. " +
+                                    "Optioneel klembordwissen is slechts een poging."
+                            } else {
+                                "Kopiëren mislukt: de modelmetadata staan niet op het klembord."
+                            }
                         }) { Text("Kopieer gefilterde onderzoeksresultaten") }
                         TextButton(onClick = {
                             researchSharePreview = researchSummary

@@ -27,7 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalClipboardManager
+import com.livelingo.android.PrivateClipboardExpiry
 import androidx.compose.ui.text.AnnotatedString
 import com.livelingo.android.PrivateCaptionCopy
 import androidx.compose.ui.text.SpanStyle
@@ -176,7 +176,6 @@ internal fun FullscreenCaptionCard(
     var activeSpeechLanguage by remember { mutableStateOf("") }
     var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(speaker, lifecycleOwner) {
@@ -390,9 +389,15 @@ internal fun FullscreenCaptionCard(
                                 if (payload == null) {
                                     copyNotice = "Deze afgeronde caption kan niet veilig worden gekopieerd."
                                 } else {
-                                    clipboard.setText(AnnotatedString(payload))
-                                    copyNotice = "Origineel + vertaling bewust gekopieerd. " +
-                                        "Het Android-systeemklembord kan door andere apps worden gelezen."
+                                    copyNotice = if (PrivateClipboardExpiry.copy(
+                                            context, "tweetalige gesprekskaart", payload
+                                        )) {
+                                        "Origineel + vertaling bewust gekopieerd. " +
+                                            "Andere apps kunnen het klembord lezen; wissen na de " +
+                                            "ingestelde tijd is niet gegarandeerd."
+                                    } else {
+                                        "Kopiëren mislukt: Android-klembord niet gewijzigd."
+                                    }
                                 }
                             }
                         ) { Text("⧉ Kopieer deze tweetalige caption") }
