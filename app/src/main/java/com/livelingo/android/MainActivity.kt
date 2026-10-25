@@ -3598,6 +3598,10 @@ private fun TuddyScreen(
                                             type = "text/plain"
                                             putExtra(Intent.EXTRA_PROCESS_TEXT, reviewed)
                                             putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, true)
+                                            // Validated language hints from the user's
+                                            // current in-app choice, never the sender.
+                                            putExtra(QUICK_SOURCE_CODE_EXTRA, source.translateCode)
+                                            putExtra(QUICK_TARGET_CODE_EXTRA, target.translateCode)
                                         }
                                         val opened = runCatching {
                                             context.startActivity(destination)
