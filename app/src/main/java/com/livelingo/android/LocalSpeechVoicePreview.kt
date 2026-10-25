@@ -15,6 +15,9 @@ import java.util.Locale
 internal class LocalSpeechVoicePreview(context: Context) {
     private val appContext = context.applicationContext
     private val mainHandler = Handler(Looper.getMainLooper())
+    // Preview used to bypass the guarded caption speaker. The same Android
+    // focus/headset policy now owns even built-in, non-private sample audio.
+    private val playbackSession = LocalPlaybackDeviceSession(appContext)
     private var engine: TextToSpeech? = null
     private var generation = 0L
     private var timeoutRunnable: Runnable? = null
@@ -22,6 +25,18 @@ internal class LocalSpeechVoicePreview(context: Context) {
     fun preview(entry: LocalSpeechVoiceEntry, callback: (Result<Unit>) -> Unit) {
         close()
         val requestGeneration = generation
+        if (!playbackSession.begin { reason ->
+                if (generation == requestGeneration) {
+                    close() // No queued TTS initialization may speak afterwards.
+                    callback(Result.failure(IllegalStateException(reason)))
+                }
+            }) {
+            close()
+            callback(Result.failure(IllegalStateException(
+                "Android gaf geen veilige audiofocus/uitvoerroute voor stemvoorbeeld."
+            )))
+            return
+        }
         lateinit var candidate: TextToSpeech
 
         try {
@@ -126,6 +141,15 @@ internal class LocalSpeechVoicePreview(context: Context) {
                             }
                         }
                         candidate.setOnUtteranceProgressListener(listener)
+                        if (candidate.setAudioAttributes(
+                                LocalPlaybackDeviceSession.SPEECH_AUDIO_ATTRIBUTES
+                            ) != TextToSpeech.SUCCESS) {
+                            finish(candidate, requestGeneration, callback,
+                                Result.failure(IllegalStateException(
+                                    "Android kon veilige spraakaudio niet instellen."
+                                )))
+                            return@post
+                        }
 
                         val speakStatus = candidate.speak(
                             sampleFor(entry.languageTag),
@@ -187,6 +211,7 @@ internal class LocalSpeechVoicePreview(context: Context) {
     }
 
     fun close() {
+        playbackSession.end() // No focus/route observers outlive the voice preview.
         timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
         timeoutRunnable = null
         generation++
@@ -210,6 +235,7 @@ internal class LocalSpeechVoicePreview(context: Context) {
         }
         timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
         timeoutRunnable = null
+        playbackSession.end()
         engine = null
         generation++
         runCatching { candidate.stop() }
