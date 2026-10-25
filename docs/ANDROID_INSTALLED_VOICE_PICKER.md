@@ -75,6 +75,39 @@ geldt gedeeld voor het gesprek, de snelle Android-tekstvertaler,
 stemvoorbeelden en de bestaande ondertitelreeksweergave, zonder
 extra Android-permissies en zonder audio-opname, log of upload.
 
+## Privéstand: alleen bij aangesloten hoofdtelefoon
+
+In het bestaande voorleesmenu van een Tuddy-ondertitel, en in
+**Vertaal geselecteerde tekst**, is er nu één expliciete schakelaar:
+**Alleen met hoofdtelefoon**. Deze instelling geldt voor alle Tuddy-
+voorleesacties, ook het stemvoorbeeld en het voorlezen van meerdere
+ondertitelregels. De huidige waarde verschijnt als **✓** (aan) of
+**○** (uit), zodat je de keuze ook kunt terugdraaien.
+
+- Bij ingeschakelde privéstand weigert Tuddy **vóór de eerste
+  voorleesactie** om audiofocus en TTS-afspelen op te starten als
+  Android geen aangesloten bekabelde, Bluetooth-, USB- of gehoorapparaat-
+  hoofdtelefoon meldt. Ook na het registreren van de headsetlisteners
+  wordt dat opnieuw gecontroleerd.
+- Bij een door Android gemelde loskoppeling of uitvoerwisseling stopt
+  de spraak meteen, net als bij verlies van Android-audiofocus.
+- Het omschakelen van de instelling stopt lopend voorlezen vóór de
+  nieuwe keuze wordt opgeslagen. Alleen de aan/uit-keuze staat in de
+  lokale Android-appvoorkeuren; er worden geen toestelidentificaties,
+  gesproken zinnen, gesprekken of audio opgeslagen.
+- De instelling staat op bestaande installaties standaard **uit**:
+  bewust voorlezen via de luidspreker blijft mogelijk. Als Android de
+  privacyvoorkeur niet kan lezen, werkt de toelating **fail-closed**
+  alsof alleen hoofdtelefoon is gekozen.
+
+**Belangrijke beperking:** een door Android als aangesloten gemelde
+hoofdtelefoon bewijst niet dat de daadwerkelijke TTS-uitvoer daarlangs
+loopt. De systeeminstellingen kunnen nog een andere audioroute hebben,
+en systeemmeldingen kunnen vertraagd zijn. De privéstand beperkt
+onbedoelde luidsprekeruitvoer, maar garandeert die niet volledig:
+controleer vóór het afspelen ook zelf de actuele Android-mediaspeaker-
+route. Dit is geen fysieke telefoonproef of release-acceptatie.
+
 ## Grenzen voor acceptatie
 
 Een door de Android-TTS-engine als lokaal gemelde stem geeft **geen**
