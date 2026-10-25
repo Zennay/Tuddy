@@ -1227,7 +1227,7 @@ private fun QuickTranslateScreen(
                 }
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column {
                     TextButton(onClick = {
                         previewBilingualHandoff = false
                         onCopyBilingual()
