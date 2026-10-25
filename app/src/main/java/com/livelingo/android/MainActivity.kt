@@ -783,6 +783,7 @@ private fun TuddyScreen(
     var showSettings by remember { mutableStateOf(false) }
     // Conversation-first: advanced app features are opt-in, never removed.
     var advancedActionsOpen by remember { mutableStateOf(false) }
+    var confirmClearConversation by remember { mutableStateOf(false) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
     // Ephemeral user opt-in: no microphone startup when Android still reports
     // a usable connection. Never persist or mistake this for real device proof.
@@ -6837,6 +6838,108 @@ private fun TuddyScreen(
                 }
             }
         }
+        // Keep the original comprehensive RAM-only clear behavior, but require
+        // explicit confirmation: a single mis-tap should not destroy live work.
+        val clearCurrentConversation: () -> Unit = {
+                        generation++
+                        // A conscious conversation wipe also discards snapshots
+                        // held solely for a pending external document picker.
+                        pendingManualSubtitleDocument = null
+                        pendingAuthoredLrcSourceSave = null
+                        readyFirstPasteDocument = null
+                        readySecondPasteDocument = null
+                        pendingTimedSubtitleSheet = null
+                        pendingLrcSubtitleSave = null
+                        pendingSbvSubtitleSave = null
+                        pendingAssSubtitleSave = null
+                        pendingTtmlSubtitleSave = null
+                        pendingTranscriptExport = null
+                        pendingPinnedExport = null
+                        pinnedExportOpen = false
+                        exportStatus = ""
+                        previewArchiveRows = null
+                        pendingArchivePhraseCapture = null
+                        pendingArchivePhraseBatchCapture = null
+                        archivePhraseBatchSelection = emptySet()
+                        archivePhraseCaptureNotice = ""
+                        archiveSearchQuery = ""
+                        pendingArchiveGeneration = null
+                        pendingArchiveExcerpt = null
+                        archiveExcerptNotice = ""
+                        copyStatus = ""
+                        lastCopiedCaptionId = null
+                        pendingCaptionShare = null
+                        pendingSpeakerExport = null
+                        editingCaptionId = null
+                        captionCorrectionDraft = ""
+                        editingTranslationId = null
+                        translationCorrectionDraft = ""
+                        translationCorrectionBaseline = ""
+                        translationCorrectionRevision = -1
+                        translationCorrectionGeneration = -1
+                        editingMeaning = null
+                        meaningDraft = ""
+                        meaningNotice = ""
+                        meaningIndexOpen = false
+                        pendingLivePhraseCapture = null
+                        pendingLivePhraseBatchCapture = null
+                        livePhraseBatchSelection = emptySet()
+                        livePhraseBatchSelectionMode = false
+                        capturedPhraseText = ""
+                        capturedMeaningText = ""
+                        capturedPhraseNotice = ""
+                        correctionNotice = ""
+                        pendingSingleCaptionDelete = null
+                        captionDeleteNotice = ""
+                        stop()
+                        offlineModelStatus = ""
+                        lines.clear()
+                        translationMemory.clear()
+                        translationMemoryRevision++
+                        translationMemoryOpen = false
+        speechTranslationStarted.clear()
+        offlineSpeechChoices.clear()
+                        manuallyAssignedSpeakers.clear()
+                        captionPins = emptySet()
+                        pinnedChosenIds = null
+                        pinnedRemovedUndo = emptySet()
+                        pinnedStudyEdits.clear()
+                        pinnedStudyEditId = null
+                        pinnedSearchTerm = ""
+                        pinsOpen = false
+                        pinnedExportOpen = false
+                        pinsNotice = ""
+                        historySearchQuery = ""
+                        historySearchOpen = false
+                        directionNotice = ""
+                        previewInput = ""
+                        manualText = ""
+                        quickTypedOpen = false
+                        starterPhraseboardOpen = false
+                        previewResult = null
+                        error = ""
+        }
+        if (confirmClearConversation) {
+            AlertDialog(
+                onDismissRequest = { confirmClearConversation = false },
+                title = { Text("Gesprek wissen?") },
+                text = {
+                    Text("Alle huidige ondertitels, tijdelijke correcties en markeringen verdwijnen. " +
+                        "Dit kan niet ongedaan worden gemaakt. " +
+                        "Je bewust opgeslagen privéwoorden en zinnen blijven staan; " +
+                        "eerder gedeelde of geëxporteerde kopieën worden niet teruggehaald.")
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmClearConversation = false
+                        clearCurrentConversation()
+                    }) { Text("Wis gesprek definitief") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmClearConversation = false }) { Text("Behoud gesprek") }
+                }
+            )
+        }
         Surface(Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(18.dp),
@@ -6997,85 +7100,9 @@ private fun TuddyScreen(
                         },
                         enabled = offlineAvailable && !modelStorageBusy,
                     ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
-                    OutlinedButton(onClick = {
-                        generation++
-                        // A conscious conversation wipe also discards snapshots
-                        // held solely for a pending external document picker.
-                        pendingManualSubtitleDocument = null
-                        pendingAuthoredLrcSourceSave = null
-                        readyFirstPasteDocument = null
-                        readySecondPasteDocument = null
-                        pendingTimedSubtitleSheet = null
-                        pendingLrcSubtitleSave = null
-                        pendingSbvSubtitleSave = null
-                        pendingAssSubtitleSave = null
-                        pendingTtmlSubtitleSave = null
-                        pendingTranscriptExport = null
-                        pendingPinnedExport = null
-                        pinnedExportOpen = false
-                        exportStatus = ""
-                        previewArchiveRows = null
-                        pendingArchivePhraseCapture = null
-                        pendingArchivePhraseBatchCapture = null
-                        archivePhraseBatchSelection = emptySet()
-                        archivePhraseCaptureNotice = ""
-                        archiveSearchQuery = ""
-                        pendingArchiveGeneration = null
-                        pendingArchiveExcerpt = null
-                        archiveExcerptNotice = ""
-                        copyStatus = ""
-                        lastCopiedCaptionId = null
-                        pendingCaptionShare = null
-                        pendingSpeakerExport = null
-                        editingCaptionId = null
-                        captionCorrectionDraft = ""
-                        editingTranslationId = null
-                        translationCorrectionDraft = ""
-                        translationCorrectionBaseline = ""
-                        translationCorrectionRevision = -1
-                        translationCorrectionGeneration = -1
-                        editingMeaning = null
-                        meaningDraft = ""
-                        meaningNotice = ""
-                        meaningIndexOpen = false
-                        pendingLivePhraseCapture = null
-                        pendingLivePhraseBatchCapture = null
-                        livePhraseBatchSelection = emptySet()
-                        livePhraseBatchSelectionMode = false
-                        capturedPhraseText = ""
-                        capturedMeaningText = ""
-                        capturedPhraseNotice = ""
-                        correctionNotice = ""
-                        pendingSingleCaptionDelete = null
-                        captionDeleteNotice = ""
-                        stop()
-                        offlineModelStatus = ""
-                        lines.clear()
-                        translationMemory.clear()
-                        translationMemoryRevision++
-                        translationMemoryOpen = false
-        speechTranslationStarted.clear()
-        offlineSpeechChoices.clear()
-                        manuallyAssignedSpeakers.clear()
-                        captionPins = emptySet()
-                        pinnedChosenIds = null
-                        pinnedRemovedUndo = emptySet()
-                        pinnedStudyEdits.clear()
-                        pinnedStudyEditId = null
-                        pinnedSearchTerm = ""
-                        pinsOpen = false
-                        pinnedExportOpen = false
-                        pinsNotice = ""
-                        historySearchQuery = ""
-                        historySearchOpen = false
-                        directionNotice = ""
-                        previewInput = ""
-                        manualText = ""
-                        quickTypedOpen = false
-                        starterPhraseboardOpen = false
-                        previewResult = null
-                        error = ""
-                    }) { Text("Wis gesprek") }
+                    OutlinedButton(onClick = { confirmClearConversation = true }) {
+                        Text("Wis gesprek")
+                    }
                     TextButton(onClick = { follow = !follow }) {
                         Text(if (follow) "Pauzeer volgen" else "Volg live")
                     }
