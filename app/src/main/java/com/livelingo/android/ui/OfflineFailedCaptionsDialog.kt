@@ -13,6 +13,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -36,8 +40,34 @@ internal fun OfflineFailedCaptionsDialog(
     checking: Boolean,
     notice: String,
     onRetryPair: (source: String, target: String) -> Unit,
+    onPreparePair: (source: String, target: String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Consent is specific to exactly one visible failed source -> target pair.
+    // Dismissing this warning never triggers a network/model request.
+    var preparationApproval by remember { mutableStateOf<Pair<String, String>?>(null) }
+    preparationApproval?.let { pair ->
+        AlertDialog(
+            onDismissRequest = { preparationApproval = null },
+            title = { Text("Alleen ${pair.first.uppercase()} → ${pair.second.uppercase()} voorbereiden?") },
+            text = {
+                Text("Tuddy controleert eerst de geïnstalleerde lokale tekstmodellen. " +
+                    "Alleen als dit taalpaar ontbreekt, mag ML Kit na je bevestiging " +
+                    "de benodigde modellen via wifi downloaden. Android kan een eenmaal " +
+                    "gestarte download ook na sluiten van het scherm afronden. " +
+                    "Er wordt niet automatisch vertaald of iets geüpload.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    preparationApproval = null
+                    onPreparePair(pair.first, pair.second)
+                }) { Text("Bevestig wifi-modelvoorbereiding") }
+            },
+            dismissButton = {
+                TextButton(onClick = { preparationApproval = null }) { Text("Annuleren") }
+            }
+        )
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Mislukte vertalingen herstellen") },
@@ -48,7 +78,8 @@ internal fun OfflineFailedCaptionsDialog(
                         "reeds geïnstalleerde offline tekstmodellen. Daarna " +
                         "worden maximaal 6 mislukte regels per keer opnieuw " +
                         "vertaald; de oorspronkelijke tekst en taal blijven staan. " +
-                        "Geen download of online fallback.",
+                        "Voorbereiding van ontbrekende modellen vraagt apart " +
+                        "toestemming via wifi. Nooit een cloudvertaling.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (notice.isNotBlank()) {
@@ -82,6 +113,14 @@ internal fun OfflineFailedCaptionsDialog(
                                     }
                                 ) {
                                     Text("Controleer lokaal en herstel maximaal 6")
+                                }
+                                TextButton(
+                                    enabled = !checking,
+                                    onClick = {
+                                        preparationApproval = pair.source to pair.target
+                                    }
+                                ) {
+                                    Text("Ontbrekende tekstmodellen via wifi voorbereiden…")
                                 }
                             }
                             HorizontalDivider()
