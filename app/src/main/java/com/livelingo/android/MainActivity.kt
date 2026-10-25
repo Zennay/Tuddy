@@ -5036,6 +5036,11 @@ private fun TuddyScreen(
                 listening = listening,
                 speechPhaseStatus = liveSpeechPhase.label,
                 captureMode = captureMode.label,
+                translationPaused = speechTranslationPaused,
+                pendingTranslationCount = lines.count { it.status == "Bezig" },
+                onToggleTranslationPaused = {
+                    setSpeechTranslationPaused(!speechTranslationPaused)
+                },
                 onToggleCaptureMode = {
                     if (!listening && !modelStorageBusy) {
                         val next = if (captureMode == LocalSpeechCaptureMode.CONTINUOUS)
@@ -9030,6 +9035,32 @@ private fun TuddyScreen(
                         Text("↻ Herstel ${failedCaptionPairs.sumOf { it.count }} " +
                             "mislukte offline vertalingen…")
                     }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            setSpeechTranslationPaused(!speechTranslationPaused)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (speechTranslationPaused)
+                            "▶ Hervat live vertalen"
+                        else "■ Pauzeer live vertalen · houd origineel")
+                    }
+                    Text(if (speechTranslationPaused) "Alleen origineel"
+                        else "Live vertaling aan",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                if (translationPauseNotice.isNotBlank()) {
+                    Text(
+                        translationPauseNotice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 val pendingLocalCaptions = lines.count { it.status == "Bezig" }
                 if (pendingLocalCaptions > 0) {
