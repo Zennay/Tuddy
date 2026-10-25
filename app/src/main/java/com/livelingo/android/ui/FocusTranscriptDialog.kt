@@ -45,6 +45,7 @@ internal fun FocusTranscriptDialog(
     interimOriginal: String,
     interimTranslated: String,
     listening: Boolean,
+    speechPhaseStatus: String = "",
     fontScale: Float,
     onStop: () -> Unit,
     onClose: () -> Unit,
@@ -128,6 +129,7 @@ internal fun FocusTranscriptDialog(
                 }
                 Text(
                     if (archiveMode) "■ Privé-JSON-archief · microfoon uit · alleen lezen"
+                    else if (speechPhaseStatus.isNotBlank()) speechPhaseStatus
                     else if (listening) "● Microfoon actief · on-device herkenning"
                     else "■ Microfoon uit · alleen huidige gespreksregels",
                     style = MaterialTheme.typography.bodySmall,
