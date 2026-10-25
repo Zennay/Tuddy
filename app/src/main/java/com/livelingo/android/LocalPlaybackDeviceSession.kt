@@ -51,11 +51,11 @@ internal class LocalPlaybackDeviceSession(context: Context) {
                 interrupt("Android gaf de audiofocus aan een andere app of oproep. Voorlezen gestopt.")
             }
         }
-        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-            .setAudioAttributes(SPEECH_AUDIO_ATTRIBUTES)
-            .setOnAudioFocusChangeListener(focusListener, main)
-            .build()
         try {
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(SPEECH_AUDIO_ATTRIBUTES)
+                .setOnAudioFocusChangeListener(focusListener, main)
+                .build()
             if (audio.requestAudioFocus(request) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                 end()
                 return false
