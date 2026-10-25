@@ -62,6 +62,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var generation = 0L
     private var detectorRevision = 0L
     private var localSpeaker: LocalCaptionSpeaker? = null
+    private var playbackRevision = 0L
     private var activeTranslator: Translator? = null
     // A submitted ML Kit Task may keep running after the user cancels or
     // Android pauses the screen. Never close its native translator early.
@@ -532,14 +533,47 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun speakSelection(text: String, language: String, pace: LocalSpeechPace) {
-        if (busy || detectingSource || inputNotice.isNotBlank()) return
+        if (busy || detectingSource || inputNotice.isNotBlank() || isFinishing) return
         stopPlayback()
-        // LocalCaptionSpeaker admits only installed, non-network Android voices.
-        // It also rejects overly long/control-filled text without audio fallback.
-        val speaker = localSpeaker ?: LocalCaptionSpeaker(this).also { localSpeaker = it }
-        speaker.speak(text, language, pace) { notice ->
-            if (!isFinishing) playbackNotice = notice
+        // Validate ALL text before speaking the first word. A corrupt or
+        // oversized selection cannot be spoken partially or via online TTS.
+        val planned = LocalSelectedSpeechPlan.fromSelection(text)
+        if (planned == null) {
+            playbackNotice = "Deze tekst is te lang of bevat ongeldige tekens " +
+                "voor veilig lokaal voorlezen (maximaal 8.000 tekens)."
+            return
         }
+        val revision = playbackRevision
+        val speaker = localSpeaker ?: LocalCaptionSpeaker(this).also { localSpeaker = it }
+        if (planned.size == 1 && planned[0].length <= 400) {
+            speaker.speak(planned[0], language, pace) { notice ->
+                if (revision == playbackRevision && !isFinishing) playbackNotice = notice
+            }
+            return
+        }
+        speaker.speakSequence(
+            lines = planned,
+            languageTag = language,
+            pace = pace,
+            onProgress = { completed, total ->
+                if (revision == playbackRevision && !isFinishing) {
+                    playbackNotice = "Lokaal afgespeeld: $completed van $total tekstdelen."
+                }
+            },
+            feedback = { notice ->
+                if (revision == playbackRevision && !isFinishing) playbackNotice = notice
+            },
+            onFinished = { complete ->
+                if (revision == playbackRevision && !isFinishing && complete) {
+                    playbackNotice = "Voorlezen voltooid: ${planned.size} lokale tekstdelen."
+                }
+            },
+            onLineStarted = { index ->
+                if (revision == playbackRevision && !isFinishing) {
+                    playbackNotice = "Android spreekt lokaal deel ${index + 1} van ${planned.size}…"
+                }
+            }
+        )
     }
 
     private fun speakBilingualSelection(pace: LocalSpeechPace) {
@@ -556,6 +590,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun stopPlayback() {
+        playbackRevision++ // Fence old sequence progress, TTS and lifecycle callbacks.
         localSpeaker?.stop()
         playbackNotice = ""
     }
@@ -831,6 +866,7 @@ private fun QuickTranslateScreen(
         // the shared installed-local-voice policy remains the single gate.
         LocalCaptionPlaybackMenu(
             hasCompletedTranslation = result != null,
+            bilingualAvailable = text.length <= 400 && (result?.length ?: 0) <= 400,
             enabled = text.isNotBlank() && inputNotice.isBlank() && !busy && !detectingSource,
             headphonesOnly = headphonesOnly,
             onHeadphonesOnlyChange = onHeadphonesOnlyChange,
@@ -859,9 +895,12 @@ private fun QuickTranslateScreen(
             Text(playbackNotice, style = MaterialTheme.typography.bodySmall)
         }
         Text(
-            "Voorlezen werkt alleen voor korte tekst (maximaal 400 tekens) " +
-                "met een geïnstalleerde, als offline gemelde Android-stem. " +
-                "Geen stemdownload of online fallback.",
+            "Origineel en vertaling kunnen nu afzonderlijk lokaal worden " +
+                "voorgelezen, ook bij lange selecties tot 8.000 tekens, in " +
+                "maximaal 100 fragmenten. Stop stopt de rest onmiddellijk. " +
+                "Tweetalig achter elkaar afspelen blijft beperkt tot twee " +
+                "korte regels van maximaal 400 tekens. " +
+                "Alleen geïnstalleerde Android-stemmen, geen online fallback.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

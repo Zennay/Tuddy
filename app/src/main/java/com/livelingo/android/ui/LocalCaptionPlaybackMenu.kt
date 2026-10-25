@@ -19,6 +19,7 @@ import com.livelingo.android.LocalSpeechPace
 @Composable
 internal fun LocalCaptionPlaybackMenu(
     hasCompletedTranslation: Boolean,
+    bilingualAvailable: Boolean = true,
     enabled: Boolean,
     headphonesOnly: Boolean,
     onHeadphonesOnlyChange: (Boolean) -> Unit,
@@ -83,20 +84,22 @@ internal fun LocalCaptionPlaybackMenu(
                         onPlayTranslation(LocalSpeechPace.SLOW)
                     }
                 )
-                DropdownMenuItem(
-                    text = { Text("Origineel → vertaling · normaal") },
-                    onClick = {
-                        expanded = false
-                        onPlayBilingual(LocalSpeechPace.NORMAL)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Origineel → vertaling · langzaam") },
-                    onClick = {
-                        expanded = false
-                        onPlayBilingual(LocalSpeechPace.SLOW)
-                    }
-                )
+                if (bilingualAvailable) {
+                    DropdownMenuItem(
+                        text = { Text("Origineel → vertaling · normaal") },
+                        onClick = {
+                            expanded = false
+                            onPlayBilingual(LocalSpeechPace.NORMAL)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Origineel → vertaling · langzaam") },
+                        onClick = {
+                            expanded = false
+                            onPlayBilingual(LocalSpeechPace.SLOW)
+                        }
+                    )
+                }
             }
             DropdownMenuItem(
                 text = { Text("■ Stop voorlezen") },
