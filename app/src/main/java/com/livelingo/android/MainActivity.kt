@@ -339,6 +339,18 @@ private data class Line(
     val lowAndroidConfidencePercent: Int? = null
 )
 
+/** One reversible, RAM-only correction; exact revision prevents stale undo. */
+private enum class ManualCaptionUndoKind { ORIGINAL, TRANSLATION }
+
+private data class PendingManualCaptionUndo(
+    val before: Line,
+    val after: Line,
+    val kind: ManualCaptionUndoKind,
+    val conversationGeneration: Int,
+    val suggestionsBefore: List<SessionTranslationCorrection>? = null,
+    val suggestionsAfter: List<SessionTranslationCorrection>? = null
+)
+
 private data class PendingLivePhraseBatchCapture(
     val generation: Int,
     val lines: List<Line>
@@ -1041,6 +1053,7 @@ private fun TuddyScreen(
     }
     var captionDeleteNotice by remember { mutableStateOf("") }
     var correctionNotice by remember { mutableStateOf("") }
+    var pendingManualCaptionUndo by remember { mutableStateOf<PendingManualCaptionUndo?>(null) }
     var historySearchOpen by remember { mutableStateOf(false) }
     var historySearchQuery by remember { mutableStateOf("") }
     var generation by remember { mutableIntStateOf(0) }
@@ -3954,6 +3967,7 @@ private fun TuddyScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             pendingSpeechSettingsReturnTag = null
             generation++
+            pendingManualCaptionUndo = null
             pendingTranslationCancelSelection = null
             pausedCaptionReviewEpoch++
             pausedCaptionReviewOpen = false
@@ -5847,7 +5861,7 @@ private fun TuddyScreen(
                                 pendingTranscriptExport = null
                                 exportStatus = ""
                                 offlineSpeechChoices.remove(correctionId)
-                                lines[index] = previous.copy(
+                                val next = previous.copy(
                                     original = corrected,
                                     translated = "Vertalen…",
                                     status = "Bezig",
@@ -5855,6 +5869,10 @@ private fun TuddyScreen(
                                     userCorrected = true,
                                     // A newly corrected original invalidates the human meaning.
                                     personalMeaning = null
+                                )
+                                lines[index] = next
+                                pendingManualCaptionUndo = PendingManualCaptionUndo(
+                                    previous, next, ManualCaptionUndoKind.ORIGINAL, generation
                                 )
                                 translate(corrected, previous.id, previous.targetCode,
                                     previous.sourceCode, generation,
@@ -5985,17 +6003,25 @@ private fun TuddyScreen(
                                 pendingSpeakerExport = null
                                 pendingPinnedExport = null
                                 exportStatus = ""
-                                lines[index] = previous.copy(
+                                val previousSuggestions = if (rememberForThisConversation)
+                                    translationMemory.entries() else null
+                                val next = previous.copy(
                                     translated = corrected,
                                     translationRevision = previous.translationRevision + 1,
                                     userCorrected = true
                                 )
+                                lines[index] = next
                                 val savedForSession = rememberForThisConversation &&
                                     translationMemory.remember(
                                         previous.original, corrected,
                                         previous.sourceCode, previous.targetCode
                                     )
                                 if (savedForSession) translationMemoryRevision++
+                                pendingManualCaptionUndo = PendingManualCaptionUndo(
+                                    previous, next, ManualCaptionUndoKind.TRANSLATION, generation,
+                                    suggestionsBefore = if (savedForSession) previousSuggestions else null,
+                                    suggestionsAfter = if (savedForSession) translationMemory.entries() else null
+                                )
                                 correctionNotice = when {
                                     savedForSession ->
                                         "Vertaling gecorrigeerd en als exact voorstel in dit gesprek onthouden."
@@ -7999,6 +8025,7 @@ private fun TuddyScreen(
         // explicit confirmation: a single mis-tap should not destroy live work.
         val clearCurrentConversation: () -> Unit = {
                         generation++
+                        pendingManualCaptionUndo = null
                         pendingTranslationCancelSelection = null
                         pendingTranslationCancelNotice = ""
                         pausedCaptionReviewEpoch++
