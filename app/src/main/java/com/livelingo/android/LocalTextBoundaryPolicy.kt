@@ -14,6 +14,7 @@ internal object LocalTextBoundaryPolicy {
     const val MAX_SPEECH_UNITS = 1_500
     const val MAX_TYPED_UNITS = 1_500
     const val MAX_CAPTION_TRANSLATION_UNITS = 6_000
+    const val MAX_INTERIM_TRANSLATION_UNITS = 1_500
     const val MAX_SELECTED_TRANSLATION_UNITS = 8_000
 
     fun speechHypothesis(value: String): String? =
@@ -24,6 +25,9 @@ internal object LocalTextBoundaryPolicy {
 
     fun captionTranslation(value: String): String? =
         normalize(value, MAX_CAPTION_TRANSLATION_UNITS, oneLine = false)
+
+    fun interimTranslation(value: String): String? =
+        normalize(value, MAX_INTERIM_TRANSLATION_UNITS, oneLine = true)
 
     fun selectedTranslation(value: String): String? =
         normalize(value, MAX_SELECTED_TRANSLATION_UNITS, oneLine = false)
