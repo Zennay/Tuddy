@@ -4456,6 +4456,7 @@ private fun TuddyScreen(
                 interimOriginal = partial,
                 interimTranslated = partialTranslation,
                 listening = listening,
+                speechPhaseStatus = liveSpeechPhase.label,
                 fontScale = captionSize.scale,
                 onStop = { stop() },
                 onClose = { focusMode = false },
