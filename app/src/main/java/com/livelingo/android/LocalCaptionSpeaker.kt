@@ -212,11 +212,22 @@ internal class LocalCaptionSpeaker(context: Context) {
                 "Er is niets afgespeeld.")
             return
         }
+        playbackDeadline.awaitEngine {
+            fail("Android reageerde niet bij het starten van de lokale stem. " +
+                "Audiofocus en uitvoer zijn vrijgegeven.")
+        }
 
         fun speakAt(tts: TextToSpeech, index: Int) {
             if (generation != version) return
             sequenceIndex = index
             onLineStarted(index)
+            playbackDeadline.awaitUtterance(safeLines[index].length, pace) {
+                if (generation == version && sequenceIndex == index) {
+                    fail("Android bevestigde het einde van voorleesregel ${index + 1} niet. " +
+                        "Audiofocus vrijgegeven; de overige regels worden niet afgespeeld.")
+                }
+            }
+            if (generation != version) return
             val result = runCatching {
                 tts.speak(
                     safeLines[index],
@@ -282,6 +293,7 @@ internal class LocalCaptionSpeaker(context: Context) {
                                     if (generation != version || finishedIndex != sequenceIndex) {
                                         return@post
                                     }
+                                    playbackDeadline.clear()
                                     onProgress(finishedIndex + 1, safeLines.size)
                                     if (finishedIndex + 1 >= safeLines.size) {
                                         stop()
@@ -363,6 +375,13 @@ internal class LocalCaptionSpeaker(context: Context) {
             return
         }
         feedback("Twee geïnstalleerde offline Android-stemmen controleren…")
+        playbackDeadline.awaitEngine {
+            if (generation == version) {
+                stop()
+                feedback("Android reageerde niet bij het starten van de tweetalige stem. " +
+                    "Er is niets verder afgespeeld.")
+            }
+        }
         var currentPart = 0
 
         fun fail(message: String) {
@@ -373,6 +392,13 @@ internal class LocalCaptionSpeaker(context: Context) {
 
         fun sayPart(tts: TextToSpeech, voices: List<android.speech.tts.Voice>, index: Int) {
             if (generation != version || currentPart != index) return
+            playbackDeadline.awaitUtterance(parts[index].length, pace) {
+                if (generation == version && currentPart == index) {
+                    fail("Android bevestigde de uitspraak voor ${tags[index].uppercase(Locale.ROOT)} " +
+                        "niet op tijd. Beide stemmen en audiofocus gestopt.")
+                }
+            }
+            if (generation != version) return
             val result = runCatching {
                 if (tts.setVoice(voices[index]) != TextToSpeech.SUCCESS) {
                     TextToSpeech.ERROR
@@ -431,6 +457,7 @@ internal class LocalCaptionSpeaker(context: Context) {
                                         utteranceId != "tuddy-offline-bilingual-$version-$currentPart") {
                                         return@post
                                     }
+                                    playbackDeadline.clear()
                                     if (currentPart == 0) {
                                         currentPart = 1
                                         feedback("Origineel afgerond · vertaling lokaal voorlezen…")
@@ -505,6 +532,13 @@ internal class LocalCaptionSpeaker(context: Context) {
             return
         }
         feedback("Geïnstalleerde lokale Android-stem controleren…")
+        playbackDeadline.awaitEngine {
+            if (generation == version) {
+                stop()
+                feedback("Android reageerde niet bij het starten van de lokale stem. " +
+                    "Audiofocus vrijgegeven.")
+            }
+        }
         try {
             engine = TextToSpeech(appContext, TextToSpeech.OnInitListener { result ->
                 main.post {
@@ -535,7 +569,9 @@ internal class LocalCaptionSpeaker(context: Context) {
                             override fun onStart(utteranceId: String?) = Unit
                             override fun onDone(utteranceId: String?) {
                                 main.post {
-                                    if (generation == version) {
+                                    if (generation == version &&
+                                        utteranceId == "tuddy-offline-caption-$version") {
+                                        playbackDeadline.clear()
                                         stop()
                                         feedback("Lokaal voorlezen voltooid; audiofocus vrijgegeven.")
                                     }
@@ -550,6 +586,14 @@ internal class LocalCaptionSpeaker(context: Context) {
                                 }
                             }
                         })
+                        playbackDeadline.awaitUtterance(safe.length, pace) {
+                            if (generation == version) {
+                                stop()
+                                feedback("Android bevestigde het einde van het lokale voorlezen " +
+                                    "niet op tijd. Audiofocus vrijgegeven.")
+                            }
+                        }
+                        if (generation != version) return@post
                         if (tts.speak(safe, TextToSpeech.QUEUE_FLUSH, null,
                                 "tuddy-offline-caption-$version") != TextToSpeech.SUCCESS) {
                             stop()
