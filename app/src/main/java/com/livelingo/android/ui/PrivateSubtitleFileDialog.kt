@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
+import com.livelingo.android.PrivateClipboardExpiry
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -2731,9 +2732,15 @@ internal fun PrivateSubtitleFileDialog(
                                 enabled = PrivateSubtitleCorrectionScript.parse(
                                     batchScript) != null,
                                 onClick = {
-                                    clipboard.setText(AnnotatedString(batchScript))
-                                    notice = "Eigen correctieregels bewust gekopieerd. " +
-                                        "Klembordapps kunnen tekst synchroniseren."
+                                    notice = if (PrivateClipboardExpiry.copy(
+                                            context, "privé-ondertitelcorrecties", batchScript
+                                        )) {
+                                        "Eigen correctieregels bewust gekopieerd. " +
+                                            "Andere apps kunnen ze lezen of synchroniseren; " +
+                                            "de ingestelde vervaltijd is niet gegarandeerd."
+                                    } else {
+                                        "Kopiëren mislukt: correctieregels niet naar klembord verzonden."
+                                    }
                                 }) { Text("Kopieer correctieregels") }
                             TextButton(onClick = {
                                 val pasted = clipboard.getText()?.text
