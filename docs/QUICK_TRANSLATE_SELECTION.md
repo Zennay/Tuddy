@@ -26,6 +26,36 @@ controleer eerst de bron- en doeltaal (of vraag een optioneel lokaal brontaalvoo
   blijven via de bestaande strikte import-/ondertitelpreview lopen; ze worden
   niet als een gewone zin vertaald.
 
+## Privéweergave: geselecteerde tekst niet in schermafbeeldingen
+
+De bestaande instelling **Screenshots en schermopname blokkeren** is nu
+gedeeld tussen het gewone Tuddy-gesprek en het snelle Android-scherm
+**Vertaal geselecteerde tekst**. In beide weergaven kun je de instelling
+zelf wijzigen. De keuze wordt alleen als booleaanse appvoorkeur lokaal
+bewaard: er wordt geen geselecteerde tekst, vertaling of screenshot
+opgeslagen.
+
+Als de instelling aan staat, past Tuddy `FLAG_SECURE` toe op **beide**
+Android-vensters. Android probeert dan screenshots, schermopnames,
+casting- en recente-appsvoorvertoningen van Tuddy-inhoud te verhinderen.
+De geselecteerde-tekstweergave herstelt de instelling *voordat* het
+privéselectieresultaat op het scherm verschijnt, ook als de MainActivity
+de tekst rechtstreeks heeft doorgestuurd.
+
+Een wijziging in de snelle vertaler geldt ook in de gewone app zodra
+je daar terugkomt; de eerste hervatte weergave herstelt de huidige
+venstervlag. Hierdoor blijft de privacyinstelling ook na Android-
+activiteitswisselingen synchroon zonder het tijdelijke gesprek te
+wissen of de microfoon automatisch te activeren.
+
+Deze beveiliging is **optioneel** en standaard uit om handmatige
+screenshots en schermdelen beschikbaar te houden wanneer je dat zelf
+wilt. Je kunt in de snelle vertaler alsnog aan- of uitzetten,
+ook na een geslaagde vertaling; een melding daarvoor verandert nooit
+het vertaalresultaat. `FLAG_SECURE` is geen versleuteling of
+uitzendbeveiliging: een externe camera, reeds elders gekopieerde
+tekst of de ontvangende app vallen hier niet onder.
+
 ## Verwerking annuleren en opnieuw proberen
 
 Een Android-dienst kan uitzonderlijk geen voltooiingscallback teruggeven.
