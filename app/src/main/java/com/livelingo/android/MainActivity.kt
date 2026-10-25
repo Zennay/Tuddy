@@ -1830,7 +1830,7 @@ private fun TuddyScreen(
             appendLine("Android API: ${Build.VERSION.SDK_INT}")
             appendLine("Airplane mode: $airplaneMode")
             appendLine("Strict offline radio-only microphone start (session): $requireOfflineRadioBeforeListening")
-            appendLine("Strict radio change observer currently active: ${strictRadioMonitor.isActive()}")
+            appendLine("Strict radio event observers and periodic 3-second check active: ${strictRadioMonitor.isActive()}")
             appendLine("Microphone permission/mute/call guard active: ${microphonePrivacyGuard.isActive()}")
             appendLine("Headset microphone input required (user choice): ${headsetMicrophoneGuard.enabled()}")
             appendLine("Android headset microphone observer active: ${headsetMicrophoneGuard.isActive()}")
@@ -2519,7 +2519,7 @@ private fun TuddyScreen(
             val speech = SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
             recognizer = speech
             if (requireOfflineRadioBeforeListening &&
-                !strictRadioMonitor.arm { observed ->
+                !strictRadioMonitor.arm { reason ->
                     // A newer radio or transport observation invalidates the
                     // active recognizer AND any pending continuous restart.
                     stop()
@@ -2527,9 +2527,8 @@ private fun TuddyScreen(
                         strictRadioInterruptions =
                             sessionDiagnostics.strictRadioInterruptions + 1
                     )
-                    error = "Strikte offline luistersessie afgebroken: Android meldt " +
-                        "een gewijzigde radio of netwerkverbinding. " +
-                        "Controleer vliegtuigmodus en wifi opnieuw. " +
+                    error = "Strikte offline luistersessie afgebroken: " +
+                        reason + " Controleer vliegtuigmodus en wifi opnieuw. " +
                         "Dit bewijst geen volledige netwerkisolatie."
                     offlineReadinessOpen = true
                 }) {

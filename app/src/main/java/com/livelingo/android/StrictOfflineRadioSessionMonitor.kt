@@ -14,15 +14,14 @@ import android.os.Handler
 import android.os.Looper
 
 /**
- * Session-only companion to the opt-in strict radio gate.
+ * Active only during a user's explicit strict-airplane-mode microphone turn.
  *
- * A preflight snapshot by itself is insufficient: the user/OS can turn Wi-Fi
- * on or attach a network while one SpeechRecognizer turn is still running.
- * Observe system radio broadcasts and network callbacks until Stop/background.
- * Every event re-reads actual Android state; intent payloads are never trusted.
+ * Android broadcasts and ConnectivityManager callbacks can be delayed, lost
+ * or coalesced. Independently re-read airplane mode, Wi-Fi and all visible
+ * network transports every three seconds while the recognizer is active.
+ * There is no network request, service, wake lock, storage or model download.
  *
- * Fail closed if observation cannot be registered, and unregister everything
- * on Stop. These Android signals do NOT prove complete network isolation.
+ * No Android-reported state proves complete physical radio isolation.
  */
 internal class StrictOfflineRadioSessionMonitor(context: Context) {
     private val appContext = context.applicationContext
@@ -31,30 +30,36 @@ internal class StrictOfflineRadioSessionMonitor(context: Context) {
         appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
 
     private var active = false
+    private var epoch = 0L
     private var receiverRegistered = false
     private var networkRegistered = false
     private var receiver: BroadcastReceiver? = null
     private var networkListener: ConnectivityManager.NetworkCallback? = null
-    private var onViolation: ((OfflineRadioSnapshot) -> Unit)? = null
+    private var periodicCheck: Runnable? = null
+    private var onViolation: ((String) -> Unit)? = null
 
     fun isActive(): Boolean = active
 
-    fun arm(violation: (OfflineRadioSnapshot) -> Unit): Boolean {
+    /** Failure to install *either* event observers or the polling fallback is
+     * a refusal to start listening; no best-effort silent downgrade. */
+    fun arm(violation: (String) -> Unit): Boolean {
         disarm()
         val manager = connectivity ?: return false
         if (!strictlyOffline(OfflineRadioSnapshot.capture(appContext))) return false
+        val version = epoch
 
         val radioReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                inspect()
+                // Ignore broadcast extras; inspect fresh OS state instead.
+                inspect(version)
             }
         }
         val networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) = inspectAsync()
-            override fun onLost(network: Network) = inspectAsync()
+            override fun onAvailable(network: Network) = inspect(version)
+            override fun onLost(network: Network) = inspect(version)
             override fun onCapabilitiesChanged(
                 network: Network, capabilities: NetworkCapabilities
-            ) = inspectAsync()
+            ) = inspect(version)
         }
         receiver = radioReceiver
         networkListener = networkCallback
@@ -65,8 +70,7 @@ internal class StrictOfflineRadioSessionMonitor(context: Context) {
                 addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
             }
             if (Build.VERSION.SDK_INT >= 33) {
-                // A privileged Android Wi-Fi package may send system events.
-                // Export affects event delivery, never trust: re-read OS state.
+                // System events are re-read, not trusted as authoritative.
                 appContext.registerReceiver(
                     radioReceiver, filter, Context.RECEIVER_EXPORTED
                 )
@@ -76,15 +80,17 @@ internal class StrictOfflineRadioSessionMonitor(context: Context) {
             }
             receiverRegistered = true
 
-            // Android sends callbacks for available networks in this session.
-            // The receiver covers Airplane/Wi-Fi; each callback also checks
-            // *all* transports available through OfflineRadioSnapshot.
-            manager.registerNetworkCallback(NetworkRequest.Builder().build(), networkCallback)
+            // Run network callbacks on the same main Handler as lifecycle,
+            // poll and receiver. Old callbacks are fenced by version.
+            manager.registerNetworkCallback(
+                NetworkRequest.Builder().build(), networkCallback, handler
+            )
             networkRegistered = true
             active = true
 
-            // Close the gap between the preflight and observer registration.
-            if (!strictlyOffline(OfflineRadioSnapshot.capture(appContext))) {
+            // Recheck after registrations to close the initial admission gap.
+            if (!strictlyOffline(OfflineRadioSnapshot.capture(appContext)) ||
+                !scheduleNextCheck(version)) {
                 disarm()
                 return false
             }
@@ -95,32 +101,55 @@ internal class StrictOfflineRadioSessionMonitor(context: Context) {
         }
     }
 
-    private fun inspectAsync() {
-        handler.post { inspect() }
+    private fun scheduleNextCheck(version: Long): Boolean {
+        if (!active || version != epoch) return false
+        val task = Runnable {
+            if (!active || version != epoch) return@Runnable
+            inspect(version)
+            if (active && version == epoch && !scheduleNextCheck(version)) {
+                interrupt("Android kon de periodieke offline-radiocontrole niet voortzetten.")
+            }
+        }
+        periodicCheck = task
+        val scheduled = runCatching {
+            handler.postDelayed(task, CHECK_INTERVAL_MS)
+        }.getOrDefault(false)
+        if (!scheduled) periodicCheck = null
+        return scheduled
     }
 
-    private fun inspect() {
-        if (!active) return
+    private fun inspect(version: Long) {
+        if (!active || version != epoch) return
         val snapshot = OfflineRadioSnapshot.capture(appContext)
         if (!strictlyOffline(snapshot)) {
-            val violation = onViolation
-            disarm() // disallow duplicate callbacks before notifying caller
-            violation?.invoke(snapshot)
+            interrupt("Android meldt een actieve of onbekende radio of netwerkverbinding.")
         }
     }
 
+    private fun interrupt(reason: String) {
+        if (!active) return
+        val notify = onViolation
+        disarm() // Block duplicate/stale callbacks before stopping the owner.
+        notify?.invoke(reason)
+    }
+
     fun disarm() {
+        epoch++
         active = false
         onViolation = null
+        periodicCheck?.let(handler::removeCallbacks)
+        periodicCheck = null
+
         if (receiverRegistered) {
             runCatching { receiver?.let(appContext::unregisterReceiver) }
         }
         receiverRegistered = false
         receiver = null
+
         if (networkRegistered) {
             runCatching {
-                networkListener?.let { listener ->
-                    connectivity?.unregisterNetworkCallback(listener)
+                networkListener?.let { callback ->
+                    connectivity?.unregisterNetworkCallback(callback)
                 }
             }
         }
@@ -129,6 +158,8 @@ internal class StrictOfflineRadioSessionMonitor(context: Context) {
     }
 
     companion object {
+        private const val CHECK_INTERVAL_MS = 3_000L
+
         fun strictlyOffline(snapshot: OfflineRadioSnapshot): Boolean =
             snapshot.airplaneModeOn == true &&
                 snapshot.wifiEnabled == false &&

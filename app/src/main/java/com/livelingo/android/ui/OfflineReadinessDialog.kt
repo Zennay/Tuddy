@@ -245,13 +245,14 @@ internal fun OfflineReadinessDialog(
                     else "Strikte vliegtuigmodus voor luisteren inschakelen")
                 }
                 Text(
-                    "Bij strikte vliegtuigmodus bewaakt Tuddy tijdens de " +
-                        "hele microfoonsessie Androids Wi-Fi-, vliegtuigmodus- en " +
-                        "netwerkgebeurtenissen. Als Android een verbinding of " +
-                        "onleesbare status meldt, stopt de microfoon direct en " +
-                        "worden automatische herstarts geannuleerd. " +
-                        "Kan de bewaking niet veilig starten, dan wordt luisteren " +
-                        "geweigerd. Dit is geen onafhankelijke radiometing.",
+                    "Strikte vliegtuigmodus: Tuddy controleert de huidige " +
+                        "vliegtuigmodus, Wi-Fi en Android-netwerktransporten bij " +
+                        "de start, bij systeemmeldingen én iedere 3 seconden " +
+                        "tijdens het luisteren. Bij een verbinding, onbekende " +
+                        "status of uitgevallen bewaking stopt de microfoon; " +
+                        "automatische herstarts worden geannuleerd. " +
+                        "Starten wordt geweigerd als de bewaking niet veilig " +
+                        "kan worden ingeschakeld. Dit bewijst geen radiostilte.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(radioStatus.display(), style = MaterialTheme.typography.bodySmall)
