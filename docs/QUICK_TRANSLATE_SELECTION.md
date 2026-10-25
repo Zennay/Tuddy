@@ -147,6 +147,38 @@ beide stemmen beschikbaar zijn. Na de tweede zin, een hoofdtelefoon-
 of focusonderbreking, Stop of achtergrond wordt TTS beëindigd.
 Er wordt niets automatisch gedeeld of teruggeschreven naar de bronapp.
 
+## Langere selecties, één complete lokale vertaling
+
+De Android-optie **Vertaal geselecteerde tekst** verwerkt nu langere
+platte tekst als een reeks *kleine, opeenvolgende* lokale ML Kit-opdrachten.
+De selectie moet uit maximaal **8.000 UTF-16-tekens** bestaan; elk
+gedeelte is ten hoogste **800 tekens**, er zijn maximaal **24 delen**,
+en Tuddy breekt geen UTF-16-surrogaatpaar doormidden.
+
+Tuddy toont **Gedeelte X van Y lokaal vertalen…** gedurende de
+bewerking. De lokale translator en één plek in de gezamenlijke
+ML Kit-werklimiet blijven onder controle: een volgend gedeelte begint
+pas nadat Android de vorige opdracht heeft afgerond. De bestaande
+tijdslimiet van **30 seconden voor de volledige actie** blijft gelden,
+ook bij meerdere delen. Bij een fout, ontbrekend model, tijdslimiet,
+afgebroken appselectie of **Annuleer lokale verwerking** worden
+eventuele tijdelijke deelresultaten **niet** getoond, gekopieerd,
+gedeeld of naar de aanroepende app teruggestuurd.
+
+Pas als **alle** delen zijn geslaagd, combineert Tuddy ze in RAM tot
+één resultaat van maximaal 8.000 tekens. Alineascheidingen blijven
+zoveel mogelijk bewaard; de gebruiker moet zelf controleren of de
+bedoeling klopt, want vertalen per tekstgedeelte kan context missen.
+Kopiëren, Android-deelmenu en geselecteerde tekst vervangen vereisen
+nog altijd een aparte bewuste actie. Deze route downloadt niets,
+start geen microfoon of cloudvertaling en bewaart geen transcript.
+
+Android/ML Kit kan doorgaan met een *al ingediende* lokale taak nadat
+de gebruiker Annuleer tikt. De app maakt geen nieuwe vervolgtaken
+meer aan en sluit de native client pas wanneer die taak klaar is;
+de bestaande procesbrede werkbeperking blijft daarom gereserveerd
+tot Android zijn afronding meldt.
+
 ## Privacy en grenzen
 
 De functie verwerkt uitsluitend geselecteerde `text/plain`-tekst, begrensd

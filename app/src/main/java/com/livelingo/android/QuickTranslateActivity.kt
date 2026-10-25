@@ -63,6 +63,10 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var detectorRevision = 0L
     private var localSpeaker: LocalCaptionSpeaker? = null
     private var activeTranslator: Translator? = null
+    // A submitted ML Kit Task may keep running after the user cancels or
+    // Android pauses the screen. Never close its native translator early.
+    private val clientsWithSubmittedTasks = mutableSetOf<Translator>()
+    private val clientsWaitingToClose = mutableSetOf<Translator>()
     // Private Android selection stays in RAM only, and the initiating app
     // receives no text until a separate explicit user decision.
     private val timeoutHandler = Handler(Looper.getMainLooper())
@@ -343,6 +347,12 @@ internal class QuickTranslateActivity : ComponentActivity() {
             return
         }
 
+        val planned = LocalSelectedParagraphPlan.fromSelection(incomingText)
+        if (planned == null) {
+            status = "Selecteer maximaal 8.000 geldige platte teksttekens. " +
+                "Te lange of ongeldige selecties worden niet gedeeltelijk vertaald."
+            return
+        }
         cancelOperation()
         val token = generation
         busy = true
@@ -384,51 +394,87 @@ internal class QuickTranslateActivity : ComponentActivity() {
             }
 
             activeTranslator = client
-            // The main app's actual ML Kit Tasks may still be running after
-            // cancellation or Activity recreation. Share their process-wide
-            // 3-task device admission boundary with Android text selection.
-            val deviceSlot = LocalMlKitWorkBudget.shared.acquire()
-            if (deviceSlot == null) {
-                complete(token, null,
-                    "Android verwerkt al drie lokale vertalingen. Wacht tot het " +
-                        "toestel ze afrondt; geen online fallback of verborgen download.")
-                return@check
-            }
-            val task = try {
-                client.translate(incomingText)
-            } catch (_: Exception) {
-                deviceSlot.release() // No Task was actually submitted.
-                complete(token, null,
-                    "De lokale vertaling kon niet starten. Er is niets teruggestuurd.")
-                null
-            }
-            if (task != null) {
-                try {
-                    task.addOnCompleteListener { finished ->
-                        // Always release physical admission even if this screen
-                        // was cancelled, timed out, or returned to its caller.
-                        deviceSlot.release()
-                        if (token != generation || isFinishing) return@addOnCompleteListener
-                        val raw = if (finished.isSuccessful) {
-                            runCatching { finished.result }.getOrNull()
-                        } else null
-                        val normalized = raw?.let(::normalizeTranslation)
-                        complete(token, normalized,
-                            if (normalized == null)
-                                "Lokale vertaling mislukt of gaf geen bruikbaar resultaat. " +
-                                    "Geen online fallback en niets teruggestuurd."
-                            else "Lokale vertaling klaar. Er is nog niets " +
-                                "naar de andere app teruggestuurd.")
-                    }
-                } catch (_: Exception) {
-                    // The provider may still be running this submitted task.
-                    // Keep its physical slot reserved until process exit.
-                    complete(token, null,
-                        "Android kon de lokale vertaling niet volgen. " +
-                            "Probeer later opnieuw; niets is teruggestuurd.")
+            // One local ML Kit task at a time; every chunk must succeed
+            // before the final text is revealed or can leave Tuddy.
+            translatePlannedPart(client, planned, token, 0, StringBuilder())
+        }
+    }
+
+    /**
+     * Process paragraph pieces sequentially with one global ML Kit admission
+     * slot. No intermediate translation is shown, shared or returned to the
+     * originating Android editor. User cancel/background invalidates the
+     * generation, and no additional chunks start afterwards.
+     */
+    private fun translatePlannedPart(
+        client: Translator,
+        chunks: List<LocalSelectedParagraphPlan.Chunk>,
+        token: Long,
+        index: Int,
+        assembled: StringBuilder
+    ) {
+        if (token != generation || isFinishing || !busy) return
+        status = "Gedeelte ${index + 1} van ${chunks.size} lokaal vertalen… " +
+            "Pas na alle gedeelten komt de volledige vertaling beschikbaar."
+        val slot = LocalMlKitWorkBudget.shared.acquire()
+        if (slot == null) {
+            complete(token, null, "Android verwerkt te veel lokale vertaalopdrachten. " +
+                "Geen gedeeltelijke tekst gedeeld. Probeer later opnieuw.")
+            return
+        }
+        val task = try {
+            client.translate(chunks[index].text)
+        } catch (_: Exception) {
+            slot.release()
+            complete(token, null, "Dit tekstgedeelte kon niet lokaal starten. " +
+                "Er is geen gedeeltelijke vertaling gedeeld.")
+            return
+        }
+        clientsWithSubmittedTasks.add(client)
+        try {
+            task.addOnCompleteListener { finished ->
+                slot.release()
+                clientsWithSubmittedTasks.remove(client)
+                val delayedClose = clientsWaitingToClose.remove(client)
+                if (delayedClose) runCatching { client.close() }
+                if (token != generation || isFinishing || !busy) return@addOnCompleteListener
+
+                val output = if (finished.isSuccessful)
+                    runCatching { finished.result }.getOrNull()?.let(::normalizeTranslation)
+                else null
+                if (output == null) {
+                    complete(token, null, "Lokaal gedeelte ${index + 1}/${chunks.size} " +
+                        "mislukt of gaf geen bruikbare tekst. " +
+                        "Geen gedeeltelijke vertaling gedeeld of teruggestuurd.")
+                    return@addOnCompleteListener
+                }
+                if (assembled.length + chunks[index].separatorBefore.length +
+                    output.length > MAX_RESULT_UNITS) {
+                    complete(token, null, "De volledige lokale vertaling werd groter " +
+                        "dan de veilige 8.000-tekensgrens. Er is niets gedeeld.")
+                    return@addOnCompleteListener
+                }
+                assembled.append(chunks[index].separatorBefore).append(output)
+                if (index + 1 == chunks.size) {
+                    complete(token, assembled.toString(),
+                        "Alle ${chunks.size} tekstgedeelten lokaal vertaald. " +
+                            "Er is nog niets naar een andere app gestuurd.")
+                } else {
+                    translatePlannedPart(client, chunks, token, index + 1, assembled)
                 }
             }
+        } catch (_: Exception) {
+            // Task might have started despite listener-registration failure.
+            // Retain its native client and global slot until process exit.
+            complete(token, null, "Android kon dit lokale tekstgedeelte niet volgen. " +
+                "Geen gedeeltelijke vertaling gedeeld.")
         }
+    }
+
+    private companion object {
+        const val MAX_RESULT_UNITS = 8_000
+        const val TRANSLATION_DEADLINE_MS = 30_000L
+        const val DETECTION_DEADLINE_MS = 12_000L
     }
 
     private fun normalizeTranslation(raw: String): String? {
@@ -475,7 +521,14 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private fun closeActiveTranslator() {
         val current = activeTranslator
         activeTranslator = null
-        runCatching { current?.close() }
+        if (current != null) {
+            if (current in clientsWithSubmittedTasks) {
+                // Do not close a client while an actual native task is running.
+                clientsWaitingToClose.add(current)
+            } else {
+                runCatching { current.close() }
+            }
+        }
     }
 
     private fun speakSelection(text: String, language: String, pace: LocalSpeechPace) {
@@ -590,11 +643,6 @@ internal class QuickTranslateActivity : ComponentActivity() {
         super.onStop()
     }
 
-    private companion object {
-        const val TRANSLATION_DEADLINE_MS = 30_000L
-        const val DETECTION_DEADLINE_MS = 12_000L
-    }
-
     override fun onDestroy() {
         detectorRevision++
         clearDetectionTimeout()
@@ -683,8 +731,11 @@ private fun QuickTranslateScreen(
             Text(privateScreenShieldNotice, style = MaterialTheme.typography.bodySmall)
         }
         Text(
-            "Alleen lokale ML Kit-tekstvertaling. Controleer zelf de taalrichting. " +
-                "Geen microfoon, automatische download, opslag of online fallback.",
+            "Alleen lokale ML Kit-tekstvertaling. Maximaal 8.000 tekens, " +
+                "langere selecties worden in opeenvolgende gedeelten vertaald. " +
+                "De complete vertaling verschijnt pas als alles geslaagd is. " +
+                "Controleer zelf de taalrichting. Geen microfoon, automatische download, " +
+                "opslag of online fallback.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -693,6 +744,14 @@ private fun QuickTranslateScreen(
         if (inputNotice.isNotBlank()) {
             Text(inputNotice, color = MaterialTheme.colorScheme.error)
         } else {
+            if (text.length > LocalSelectedParagraphPlan.MAX_SOURCE_UNITS) {
+                Text(
+                    "Deze selectie is langer dan 8.000 tekens. Selecteer een kleiner gedeelte; " +
+                        "Tuddy start geen gedeeltelijke vertaling.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surfaceVariant,
@@ -744,7 +803,9 @@ private fun QuickTranslateScreen(
         }
         Button(
             onClick = onTranslate,
-            enabled = text.isNotBlank() && inputNotice.isBlank() && !busy && !detectingSource &&
+            enabled = text.isNotBlank() &&
+                text.length <= LocalSelectedParagraphPlan.MAX_SOURCE_UNITS &&
+                inputNotice.isBlank() && !busy && !detectingSource &&
                 sourceCode != targetCode,
             modifier = Modifier.fillMaxWidth()
         ) { Text(if (busy) "Lokaal controleren/vertalen…" else "Vertaal lokaal") }
