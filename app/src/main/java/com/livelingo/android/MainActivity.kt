@@ -1222,6 +1222,116 @@ private fun TuddyScreen(
         }
     }
 
+    /**
+     * Consent has already been confirmed in the failed-caption dialog for
+     * one exact historical language direction, not the CURRENT mic pair.
+     * One read-only inventory must prove MISSING before any Wi-Fi preparation.
+     * Neither completion nor an old Android callback retries private text.
+     */
+    fun prepareFailedCaptionPair(from: String, to: String) {
+        if (!failedCaptionRecoveryOpen || failedCaptionRecoveryBusy ||
+            listening || preparingOfflineModel || modelStorageBusy ||
+            OfflineModelPreparationPolicy.decide(from, to, TargetCatalog.codes) !=
+                OfflinePairDecision.MODEL_REQUIRED ||
+            lines.none { it.sourceCode == from && it.targetCode == to &&
+                it.status in setOf("Model ontbreekt", "Fout") }) return
+
+        failedCaptionRecoveryBusy = true
+        failedCaptionRecoveryNotice =
+            "Alleen reeds geïnstalleerde tekstmodellen voor $from → $to controleren…"
+        val requestGeneration = generation
+        val dialogRevision = ++failedCaptionRecoveryRevision
+        val preparationEpoch = offlinePreparationEpoch.begin()
+        val inventory = OfflineTextModelInventory()
+        inventory.check(from, to, TargetCatalog.codes) { receipt ->
+            if (receipt.stage == OfflineTextStage.CHECKING) return@check
+            val current = offlinePreparationEpoch.isCurrent(preparationEpoch) &&
+                requestGeneration == generation &&
+                dialogRevision == failedCaptionRecoveryRevision &&
+                failedCaptionRecoveryOpen && !listening &&
+                lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+            if (!current) {
+                if (dialogRevision == failedCaptionRecoveryRevision)
+                    failedCaptionRecoveryBusy = false
+                return@check
+            }
+            if (receipt.stage != OfflineTextStage.MISSING) {
+                failedCaptionRecoveryBusy = false
+                failedCaptionRecoveryNotice = when (receipt.stage) {
+                    OfflineTextStage.READY ->
+                        "Modellen voor $from → $to staan al lokaal. Kies nu bewust 'Controleer lokaal en herstel maximaal 6'."
+                    else -> receipt.detail + " Geen download gestart."
+                }
+                return@check
+            }
+            if (preparingOfflineModel || modelStorageBusy) {
+                failedCaptionRecoveryBusy = false
+                failedCaptionRecoveryNotice =
+                    "Er loopt inmiddels al een modelactie. Geen tweede download gestart."
+                return@check
+            }
+            val translator = runCatching {
+                Translation.getClient(TranslatorOptions.Builder()
+                    .setSourceLanguage(from).setTargetLanguage(to).build())
+            }.getOrNull()
+            if (translator == null) {
+                failedCaptionRecoveryBusy = false
+                failedCaptionRecoveryNotice = "Deze lokale modelvoorbereiding kon niet starten."
+                return@check
+            }
+            preparingOfflineModel = true
+            offlineModelStatus = "Bewust gekozen ML Kit-model $from → $to via wifi voorbereiden…"
+            failedCaptionRecoveryNotice = offlineModelStatus
+
+            fun finishDownload(success: Boolean) {
+                translator.close()
+                localTranslatorPool.invalidate()
+                preparingOfflineModel = false
+                offlineModelStatus = if (success)
+                    "ML Kit-voltooiing voor $from → $to; aanwezige modellen opnieuw controleren."
+                else
+                    "Modelvoorbereiding voor $from → $to mislukt of onderbroken. Controleer wifi en opslag."
+                if (!offlinePreparationEpoch.isCurrent(preparationEpoch) ||
+                    dialogRevision != failedCaptionRecoveryRevision ||
+                    !failedCaptionRecoveryOpen ||
+                    !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                    if (dialogRevision == failedCaptionRecoveryRevision)
+                        failedCaptionRecoveryBusy = false
+                    return
+                }
+                if (!success) {
+                    failedCaptionRecoveryBusy = false
+                    failedCaptionRecoveryNotice = offlineModelStatus +
+                        " Bestaande gespreksregels zijn ongewijzigd."
+                    return
+                }
+                // A download-success callback does not prove both models are
+                // currently installed; re-read actual inventory before READY.
+                OfflineTextModelInventory().check(from, to, TargetCatalog.codes) { verified ->
+                    if (verified.stage == OfflineTextStage.CHECKING) return@check
+                    if (dialogRevision == failedCaptionRecoveryRevision) {
+                        failedCaptionRecoveryBusy = false
+                        if (failedCaptionRecoveryOpen &&
+                            offlinePreparationEpoch.isCurrent(preparationEpoch) &&
+                            requestGeneration == generation) {
+                            failedCaptionRecoveryNotice = if (verified.stage == OfflineTextStage.READY)
+                                "$from → $to lokaal beschikbaar. Tik zelf op 'Controleer lokaal en herstel maximaal 6'; niets automatisch vertaald."
+                            else verified.detail + " Geen regels automatisch vertaald."
+                        }
+                    }
+                }
+            }
+            try {
+                translator.downloadModelIfNeeded(
+                    DownloadConditions.Builder().requireWifi().build()
+                ).addOnSuccessListener { finishDownload(true) }
+                    .addOnFailureListener { finishDownload(false) }
+            } catch (_: Exception) {
+                finishDownload(false)
+            }
+        }
+    }
+
     // Explicit offline text preparation: one supported source->target model,
     // never a hidden bulk download or an unreviewed speech recognition model.
     // Existing ML Kit model downloads cannot be stopped by clearing text;
@@ -3546,9 +3656,11 @@ private fun TuddyScreen(
         if (failedCaptionRecoveryOpen) {
             OfflineFailedCaptionsDialog(
                 pairs = failedCaptionPairs,
-                checking = failedCaptionRecoveryBusy,
+                checking = failedCaptionRecoveryBusy || preparingOfflineModel ||
+                    modelStorageBusy || listening,
                 notice = failedCaptionRecoveryNotice,
                 onRetryPair = ::recoverFailedCaptionPair,
+                onPreparePair = ::prepareFailedCaptionPair,
                 onDismiss = {
                     failedCaptionRecoveryOpen = false
                     failedCaptionRecoveryRevision++
