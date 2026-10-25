@@ -38,6 +38,7 @@ internal fun SingleSentenceSpeechReviewDialog(
     sourceCode: String,
     targetCode: String,
     alternatives: List<String>,
+    lowAndroidConfidencePercent: Int? = null,
     onConfirm: (original: String, reviewedSource: String, reviewedTarget: String) -> Boolean,
     onDiscard: () -> Unit
 ) {
@@ -86,6 +87,22 @@ internal fun SingleSentenceSpeechReviewDialog(
                         "of gooi de zin weg.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (lowAndroidConfidencePercent != null) {
+                    Text(
+                        "⚠ Android gaf deze herkende zin een lage, niet-gekalibreerde " +
+                            "zekerheidsscore (${lowAndroidConfidencePercent}%). " +
+                            "Vergelijk zelf met wat er is gezegd voordat je bevestigt. " +
+                            "Een hogere score zou evenmin juistheid bewijzen.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else {
+                    Text(
+                        "Android gaf geen lage, bruikbaar gerapporteerde score. " +
+                            "Dat is geen bewijs van correcte spraakherkenning.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 Text(
                     "Voorgestelde tekstrichting: ${sourceCode.uppercase()} → " +
                         "${targetCode.uppercase()}. Controleer de taal van de zin zelf; " +
