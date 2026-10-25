@@ -31,6 +31,19 @@ moeten tijdens vereenvoudigen ongewijzigd blijven.
    en gebruiken hun eigen begrensde instellingenweergave. Het paneel is
    standaard dicht en vraagt geen extra opslag of machtigingen.
 
+## Gesprek bewust wissen
+
+De directe **Wis gesprek**-actie vraagt nu eerst afzonderlijk of de gebruiker
+de huidige tijdelijke gesprekstekst, correcties en markeringen wil verwijderen.
+**Behoud gesprek**, buiten het venster tikken en de Android-terugactie laten
+het gesprek intact. Pas na **Wis gesprek definitief** wordt precies de bestaande
+alles-in-één opruimroute uitgevoerd: microfoon stoppen, vertraagde callbacks
+ongeldig maken, tijdelijke export-/importconcepten annuleren en alle actieve
+gespreksregels/markeringen wissen. Deze extra bevestiging beschermt tegen
+onbedoelde dataverlies-taps zonder iets naar de cloud te bewaren. Externe,
+reeds geëxporteerde kopieën of apart bewust opgeslagen privéwoorden/zinnen
+worden niet teruggehaald of verwijderd.
+
 Dit is een broncodewijziging met bestaande GitHub Android-build/CI als
 integratiecontrole. Geen nieuw experiment, QA-suite of gemeten
 taakprestatie is uitgevoerd. De brede UX-mijlpaal met externe benchmarks,
