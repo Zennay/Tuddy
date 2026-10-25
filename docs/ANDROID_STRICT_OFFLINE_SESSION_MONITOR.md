@@ -17,23 +17,30 @@ uitspraak kunnen veranderen.
    betekent **niet starten**.
 2. Na het aanmaken van de on-device herkenner registreert de app
    tijdelijke listeners voor Android-vliegtuigmodus, Wi-Fi- en
-   netwerkgebeurtenissen. Kunnen deze listeners niet veilig worden
+   netwerkgebeurtenissen én een **periodieke hercontrole iedere
+   3 seconden**. Deze onafhankelijke hercontrole detecteert ook
+   veranderingen waarvoor Android geen callback afleverde.
+   Kunnen de listeners of de periodieke controle niet veilig worden
    geregistreerd, dan stopt de app de herkenner **zonder te luisteren**.
    Na registratie controleert de app dezelfde status opnieuw om een
    verandering tijdens registratie niet te missen.
-3. Bij een door Android gemelde gebeurtenis leest de app de *actuele*
-   toestand opnieuw. De inhoud van een broadcast wordt nooit vertrouwd.
+3. Bij een door Android gemelde gebeurtenis of periodieke controle
+   leest de app de *actuele* toestand opnieuw. De inhoud van een
+   broadcast wordt nooit vertrouwd.
    Als vliegtuigmodus uit staat, wifi aan staat, Android geen geldige
    netwerkstatus kan geven of enig netwerktransport zichtbaar is,
    dan sluit Tuddy direct de herkenner. Ook de volgende ingeplande
    herkenningsronde wordt geannuleerd, zodat geen automatische
    herstart op een gewijzigde verbinding volgt.
-4. De gebruiker ziet waarom de sessie is onderbroken en krijgt weer
-   de **Offline startcheck**. De controle doet geen modeldownloads,
+4. De gebruiker ziet of een veranderde/ongekende radio- of
+   netwerkstatus dan wel **uitgevallen periodieke bewaking** de
+   sessie onderbrak, en krijgt weer de **Offline startcheck**. De controle doet geen modeldownloads,
    start niet vanzelf opnieuw en zet geen telefooninstellingen om.
 5. **Stop**, de achtergrond-lifecycle en een gewone herkenningsfout
-   sluiten alle tijdelijke Android-listeners. Elke nieuwe herkenningsronde
-   controleert de toestand opnieuw. De app bewaart geen SSID, IP,
+   sluiten alle tijdelijke Android-listeners en annuleren de periodieke
+   controle. Iedere nieuwe herkenningsronde begint met een eigen
+   monitoringversie: callbacks van vorige rondes mogen een nieuwe
+   sessie niet veranderen. Elke nieuwe ronde controleert de toestand opnieuw. De app bewaart geen SSID, IP,
    audio, herkenningszin, verbindingslog of tijdlijn.
 6. In de bestaande sessiediagnostiek wordt uitsluitend het aantal
    door de bewaking afgebroken strikte sessies bijgehouden, tijdelijk
@@ -53,7 +60,9 @@ toestelwaarnemingen.
 
 De bewaking is **geen onafhankelijke garantie van volledige
 radiostilte**: Android kan netwerk-/radio-events vertraagd of
-onvolledig melden, en niet alle radiofrequenties worden geobserveerd.
+onvolledig melden, en de aanvullende controle kan maximaal ongeveer
+3 seconden (plus Android-planningvertraging) achterlopen. Niet alle
+radiofrequenties worden geobserveerd en dit bewijst geen nul-netwerkverkeer.
 Een fysieke Android 12+-proef, bevestiging van de daadwerkelijk
 geïnstalleerde APK, correcte herkennings-/vertaalresultaten in beide
 richtingen, review door een tweede persoon en aparte modelrechten-
