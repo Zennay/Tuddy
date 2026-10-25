@@ -796,6 +796,46 @@ internal class QuickTranslateActivity : ComponentActivity() {
         status = "Er is niets automatisch gedeeld, gekopieerd of teruggestuurd."
     }
 
+    /**
+     * Android may reclaim memory while a reviewed selected-text translation is
+     * active. Cancel locally in the UI, but never close a native ML Kit client
+     * whose submitted task is still executing: cancelOperation() already
+     * defers that close until the task reports back.
+     */
+    private fun respondToUrgentMemoryPressure() {
+        val hadPendingWork = busy || detectingSource
+        val hadPlayback = playbackNotice.isNotBlank()
+        detectorRevision++
+        clearDetectionTimeout()
+        detector.close()
+        detectingSource = false
+        cancelOperation()
+        if (hadPendingWork) {
+            translationResult = null
+            discardReview()
+            status = "Android meldt kritiek geheugentekort. Lokale vertaling gestopt; " +
+                "je geselecteerde tekst blijft alleen tijdelijk hier zichtbaar. " +
+                "Tik later opnieuw op Vertalen."
+        } else if (hadPlayback) {
+            playbackNotice = "Voorlezen gestopt vanwege kritiek Android-geheugentekort."
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        respondToUrgentMemoryPressure()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (LocalMemoryPressurePolicy.needsUrgentStop(this, level)) {
+            respondToUrgentMemoryPressure()
+        } else if (LocalMemoryPressurePolicy.shouldTrimCachedModels(level) && isFinishing) {
+            // The normal onPause/onStop path owns any running translation.
+            stopPlayback()
+        }
+    }
+
     override fun onPause() {
         screenLockGate.disarm()
         // A selected-text screen can remain STARTED but visible in split-screen
