@@ -171,6 +171,37 @@ vertalingen is geen bewijs dat ze alle zes al zijn geslaagd.
 Zonder fysiek Android-toestel is hiermee geen luchtmodus-,
 modelkwaliteits- of onafhankelijk gebruikersbewijs geleverd.
 
+## Als Android geen antwoord geeft over het tekstmodel
+
+Live ondertitels voor dezelfde taalrichting delen al één read-only
+ML Kit-inventariscontrole. Die controle had zelf nog geen eigen deadline:
+een Android-provider die niet terugbelt kon de hele taalrichting
+**blijvend blokkeren**, zelfs na een expliciete herpoging.
+
+De gedeelde controle eindigt voortaan uiterlijk na **12 seconden**.
+Alle nog wachtende gespreksregels krijgen een herstelbare **Fout** en een
+melding dat Android de lokaal geïnstalleerde modellen niet op tijd
+bevestigde. Ook **Herstel mislukte offline vertalingen** gebruikt nu
+diezelfde controle, zodat het herstelpaneel niet op dezelfde
+vastgelopen Android-call blijft wachten. De oorspronkelijke tekst,
+taalrichting en eventuele handmatige correcties blijven behouden.
+
+Na het verlopen van de deadline wordt de vorige inventarisuitkomst
+ongeldig en de wachtrij volledig vrijgegeven; een nieuwe bewuste
+modelcontrole of herpoging start dus een **verse** inventarisvraag.
+Er kunnen maximaal **64 bestaande caption-callbacks** tegelijk
+meewachten per taalrichting, zonder de ondertiteltekst te bewaren
+in de broker. Extra verzoeken krijgen direct een herstelbare melding.
+Androids oude provideroperatie kan intern nog afronden, maar mag
+geen oude READY-status meer publiceren. Er vindt **nooit een
+automatische modeldownload of online vertaling** plaats.
+
+De 12 seconden voor modelinventaris vallen binnen de bestaande
+30-seconden-bovengrens per vertaalpoging. Die totale grens
+blijft bestaan voor taalherkenning, eventuele vertaalwachtrij
+en daadwerkelijke lokale vertaling. Een snelle fout zegt niets
+over de kwaliteit van een wel succesvol uitgevoerde vertaling.
+
 ## Herstel vanuit het gewone gesprek
 
 1. De knop **Herstel N mislukte offline vertalingen…** verschijnt onder de
