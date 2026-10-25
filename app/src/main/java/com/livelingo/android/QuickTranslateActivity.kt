@@ -573,12 +573,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun normalizeTranslation(raw: String): String? {
-        val clean = raw.replace("\r\n", "\n").replace('\r', '\n').trim()
-        if (clean.isBlank() || clean.length > 8_000 ||
-            clean.any { ch -> ch == '\u0000' ||
-                (ch.isISOControl() && ch != '\n' && ch != '\t') }
-        ) return null
-        return clean
+        // Preserve paragraph breaks, refuse malformed Unicode and control
+        // payloads before a result is rendered, copied, spoken or shared.
+        return LocalTextBoundaryPolicy.selectedTranslation(raw)
     }
 
     private fun complete(token: Long, result: String?, message: String) {
