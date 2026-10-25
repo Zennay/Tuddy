@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -125,10 +126,16 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var playbackNotice by mutableStateOf("")
     private var headphonesOnlyPlayback by mutableStateOf(false)
     private var clipboardExpirySeconds by mutableStateOf(0)
+    private var privateScreenShieldOn by mutableStateOf(false)
+    private var privateScreenShieldNotice by mutableStateOf("")
     private var translationResult by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The main conversation and selected-text Activity share this opt-in.
+        // Shield the *very first* selected-text frame, before reading its text.
+        PrivateScreenShield.restore(this)
+        privateScreenShieldOn = PrivateScreenShield.enabled(this)
         headphonesOnlyPlayback = PrivatePlaybackRoutingPreference.headphonesOnly(this)
         clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(this)
 
@@ -193,6 +200,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     playbackNotice = playbackNotice,
                     headphonesOnly = headphonesOnlyPlayback,
                     clipboardExpirySeconds = clipboardExpirySeconds,
+                    privateScreenShieldOn = privateScreenShieldOn,
+                    privateScreenShieldNotice = privateScreenShieldNotice,
                     result = translationResult,
                     onSourceSelected = { code -> changePair(source = code) },
                     onTargetSelected = { code -> changePair(target = code) },
@@ -222,6 +231,21 @@ internal class QuickTranslateActivity : ComponentActivity() {
                                 "vereist vóór elk lokaal voorlezen."
                         else "Hoofdtelefoonvereiste uit. Nieuwe afspeelactie kan luidspreker gebruiken."
                     },
+                    onPrivateScreenShieldChange = { requested ->
+                        // Android window flag is applied before storing the
+                        // cross-screen preference; failure leaves it unchanged.
+                        val saved = PrivateScreenShield.change(this, requested)
+                        privateScreenShieldOn = PrivateScreenShield.enabled(this)
+                        privateScreenShieldNotice = if (!saved) {
+                            "Android-schermbeveiliging kon niet worden gewijzigd."
+                        } else if (privateScreenShieldOn) {
+                            "Privéweergave aan: screenshots, schermopname en appvoorbeelden " +
+                                "worden door Android zoveel mogelijk geblokkeerd."
+                        } else {
+                            "Privéweergave uit: de tekst kan zichtbaar zijn in " +
+                                "screenshots, schermopname of Android-appvoorbeelden."
+                        }
+                    },
                     onClipboardExpiryChange = { seconds ->
                         val saved = PrivateClipboardExpiry.changeSeconds(this, seconds)
                         clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(this)
@@ -238,6 +262,14 @@ internal class QuickTranslateActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // A setting change in the other Tuddy screen must not leave stale
+        // protection or a misleading checkbox on this Activity.
+        PrivateScreenShield.restore(this)
+        privateScreenShieldOn = PrivateScreenShield.enabled(this)
     }
 
     private fun defaultLanguagePair(): Pair<String, String> {
@@ -588,6 +620,8 @@ private fun QuickTranslateScreen(
     playbackNotice: String,
     headphonesOnly: Boolean,
     clipboardExpirySeconds: Int,
+    privateScreenShieldOn: Boolean,
+    privateScreenShieldNotice: String,
     result: String?,
     onSourceSelected: (String) -> Unit,
     onTargetSelected: (String) -> Unit,
@@ -601,6 +635,7 @@ private fun QuickTranslateScreen(
     onStopPlayback: () -> Unit,
     onHeadphonesOnlyChange: (Boolean) -> Unit,
     onClipboardExpiryChange: (Int) -> Unit,
+    onPrivateScreenShieldChange: (Boolean) -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit,
     onReturnResult: () -> Unit,
@@ -621,6 +656,32 @@ private fun QuickTranslateScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Vertaal geselecteerde tekst", style = MaterialTheme.typography.headlineSmall)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                if (privateScreenShieldOn) "Android-privéweergave · aan"
+                else "Android-privéweergave · uit",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Switch(
+                checked = privateScreenShieldOn,
+                onCheckedChange = onPrivateScreenShieldChange
+            )
+        }
+        Text(
+            "Ook voor Tuddy's hoofdscherm: Android probeert screenshots, " +
+                "schermopname en recente-appsvoorbeelden te blokkeren wanneer dit aanstaat. " +
+                "Hiermee kun je zelf ook geen screenshot maken; " +
+                "een externe camera blijft mogelijk. Geen automatische opslag.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (privateScreenShieldNotice.isNotBlank()) {
+            Text(privateScreenShieldNotice, style = MaterialTheme.typography.bodySmall)
+        }
         Text(
             "Alleen lokale ML Kit-tekstvertaling. Controleer zelf de taalrichting. " +
                 "Geen microfoon, automatische download, opslag of online fallback.",
