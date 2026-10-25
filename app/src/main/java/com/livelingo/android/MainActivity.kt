@@ -886,6 +886,12 @@ private fun TuddyScreen(
                 captureModeNotice = "Controleer of verwerp eerst de vorige " +
                     "één-zinsherkenning. Er is geen spraak of tekst weggegooid."
             }
+            (quickTypedOpen && manualText.isNotBlank()) ||
+                twoWayTypedOpen || offlineReportPickerOpen -> {
+                captureModeNotice = "Er staat al een tijdelijk tekstconcept, " +
+                    "tweeweg-gesprek of rapportactie open. Sluit dit bewust " +
+                    "voordat je een andere startschermactie gebruikt."
+            }
             incomingExternalText != null || incomingViewedSubtitle != null ||
                 incomingPersonalCsv != null -> {
                 captureModeNotice = "Rond eerst de bestaande gedeelde tekst of " +
