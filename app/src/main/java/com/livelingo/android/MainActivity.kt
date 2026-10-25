@@ -2122,8 +2122,12 @@ private fun TuddyScreen(
             if (submitted != null) {
                 try {
                     submitted.addOnCompleteListener { completed ->
+                        // Provisional text is also untrusted ML Kit
+                        // output. Never show an oversized or malformed
+                        // preview while waiting for the final translation.
                         val output = if (completed.isSuccessful) {
                             runCatching { completed.result }.getOrNull()
+                                ?.let(LocalTextBoundaryPolicy::interimTranslation)
                         } else null
                         if (output != null &&
                             InterimTranslationPolicy.mayPublish(
