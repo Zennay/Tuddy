@@ -1204,21 +1204,17 @@ private fun TuddyScreen(
                                 try {
                                     translator.translate(text)
                                         .addOnSuccessListener { output ->
-                                            try {
-                                                updateLine(id, output, "Lokaal vertaald",
-                                                    token, revision)
-                                            } finally {
-                                                translator.close()
-                                            }
+                                            // Release the completed lease BEFORE
+                                            // promoting the next FIFO request.
+                                            translator.close()
+                                            updateLine(id, output, "Lokaal vertaald",
+                                                token, revision)
                                         }
                                         .addOnFailureListener {
-                                            try {
-                                                updateLine(id,
-                                                    SafeLocalFailureText.TRANSLATION,
-                                                    "Fout", token, revision)
-                                            } finally {
-                                                translator.close()
-                                            }
+                                            translator.close()
+                                            updateLine(id,
+                                                SafeLocalFailureText.TRANSLATION,
+                                                "Fout", token, revision)
                                         }
                                 } catch (_: Exception) {
                                     translator.close()
