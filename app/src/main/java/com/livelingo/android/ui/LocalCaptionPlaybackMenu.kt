@@ -39,7 +39,7 @@ internal fun LocalCaptionPlaybackMenu(
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
-                text = { Text("Android-audiofocus nodig · headsetverlies stopt audio") },
+                text = { Text("Headset pauze/stop beëindigt lokale spraak · geen automatisch hervatten") },
                 onClick = {},
                 enabled = false
             )
