@@ -2,7 +2,6 @@ package com.livelingo.android
 
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.languageid.LanguageIdentifier
-import java.util.Locale
 
 /**
  * Reuses the bundled on-device language classifier for live captions.
@@ -13,7 +12,9 @@ internal class LocalLanguageDetector {
     private var generation = 0L
 
     fun identify(text: String, onResult: (String?) -> Unit) {
-        if (text.length < 8) {
+        // The policy checks Unicode text length and the available confidence
+        // margin. Never propose a language from a short or ambiguous guess.
+        if (text.isBlank()) {
             onResult(null)
             return
         }
@@ -26,11 +27,13 @@ internal class LocalLanguageDetector {
         }
         val request = generation
         try {
-            client.identifyLanguage(text)
-                .addOnSuccessListener { language ->
+            client.identifyPossibleLanguages(text)
+                .addOnSuccessListener { languages ->
                     if (request == generation) {
-                        onResult(language.takeIf { it.isNotBlank() && it != "und" }
-                            ?.lowercase(Locale.ROOT))
+                        onResult(ConfidentTextLanguagePolicy.select(
+                            text,
+                            languages.map { it.languageTag to it.confidence }
+                        ))
                     }
                 }
                 .addOnFailureListener {
