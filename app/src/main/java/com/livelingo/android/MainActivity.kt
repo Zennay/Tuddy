@@ -4503,7 +4503,8 @@ private fun TuddyScreen(
             sourceCode = row.sourceCode,
             targetCode = row.targetCode,
             confidencePercent = row.lowAndroidConfidencePercent!!,
-            translationRevision = row.translationRevision
+            translationRevision = row.translationRevision,
+            conversationGeneration = generation
         )
     }
 
@@ -4522,6 +4523,7 @@ private fun TuddyScreen(
                 onSeen = { reviewed ->
                     val current = lines.firstOrNull { it.id == reviewed.id }
                     if (!listening && current != null &&
+                        reviewed.conversationGeneration == generation &&
                         current.original == reviewed.original &&
                         current.sourceCode == reviewed.sourceCode &&
                         current.targetCode == reviewed.targetCode &&
@@ -4537,6 +4539,7 @@ private fun TuddyScreen(
                 onCorrect = { reviewed ->
                     val current = lines.firstOrNull { it.id == reviewed.id }
                     if (!listening && current != null &&
+                        reviewed.conversationGeneration == generation &&
                         current.original == reviewed.original &&
                         current.sourceCode == reviewed.sourceCode &&
                         current.targetCode == reviewed.targetCode &&
