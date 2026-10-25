@@ -56,6 +56,18 @@ Bij het verlaten van de snelle vertaler wordt het tijdelijke scherm
 gewist. Bijlagen, ondertitels, back-ups en andere gestructureerde
 gedeelde tekst blijven van de gewone vertaalactie gescheiden.
 
+## Zelf een geïnstalleerde voorleesstem kiezen
+
+Met **Stem bron kiezen** en **Stem vertaling kiezen** kun je op dit
+snelle vertaalscherm de momenteel op het toestel geïnstalleerde,
+door Android als niet-netwerkafhankelijk gemelde stemmen voor beide
+talen bekijken. Kies een stem, luister naar een **vast voorbeeld**
+(zonder privézin) of herstel de automatische veilige stemkeuze.
+De instelling geldt ook voor de voorleesfuncties van het gewone
+Tuddy-gesprek. Er is geen nieuwe machtiging, stemdownload, online-TTS
+of modelondersteuning nodig. Zie
+[ANDROID_INSTALLED_VOICE_PICKER.md](ANDROID_INSTALLED_VOICE_PICKER.md).
+
 ## Privacy en grenzen
 
 De functie verwerkt uitsluitend geselecteerde `text/plain`-tekst, begrensd

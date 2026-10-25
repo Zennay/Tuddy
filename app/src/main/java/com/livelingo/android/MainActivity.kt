@@ -84,6 +84,7 @@ import com.livelingo.android.ui.OfflinePersonalPhraseTurnsDialog
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
+import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.FailedCaptionPair
 import com.livelingo.android.ui.OfflineFailedCaptionsDialog
 import com.livelingo.android.ui.SpeechPackBrowserDialog
@@ -785,6 +786,7 @@ private fun TuddyScreen(
     var showSettings by remember { mutableStateOf(false) }
     // Conversation-first: advanced app features are opt-in, never removed.
     var advancedActionsOpen by remember { mutableStateOf(false) }
+    var voicePickerLanguageTag by remember { mutableStateOf<String?>(null) }
     var confirmClearConversation by remember { mutableStateOf(false) }
     // Only RAM-only retries; never mutate a completed or human-corrected row.
     var failedCaptionRecoveryOpen by remember { mutableStateOf(false) }
@@ -3424,7 +3426,19 @@ private fun TuddyScreen(
         }.sortedWith(compareByDescending<FailedCaptionPair> { it.count }
             .thenBy { it.source }.thenBy { it.target })
 
+    LaunchedEffect(listening) {
+        if (listening) voicePickerLanguageTag = null
+    }
+
     MaterialTheme(colorScheme = colors) {
+        voicePickerLanguageTag?.let { languageTag ->
+            if (!listening) {
+                InstalledLocalVoicePickerDialog(
+                    languageTag = languageTag,
+                    onDismiss = { voicePickerLanguageTag = null }
+                )
+            }
+        }
         if (failedCaptionRecoveryOpen) {
             OfflineFailedCaptionsDialog(
                 pairs = failedCaptionPairs,
@@ -7346,6 +7360,26 @@ private fun TuddyScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(if (showSettings) "Verberg taal- en modelinstellingen" else "Taal- en modelinstellingen")
+                }
+                Text(
+                    "Android-voorleesstem kiezen · afzonderlijk van spraakherkenning",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        enabled = !listening,
+                        onClick = {
+                            captionSpeaker.stop()
+                            voicePickerLanguageTag = source.translateCode
+                        }
+                    ) { Text("Stem bron · ${source.translateCode.uppercase()}") }
+                    TextButton(
+                        enabled = !listening,
+                        onClick = {
+                            captionSpeaker.stop()
+                            voicePickerLanguageTag = target.translateCode
+                        }
+                    ) { Text("Stem vertaling · ${target.translateCode.uppercase()}") }
                 }
                 // Settings used to occupy the full unscrollable outer Column on
                 // phones, starving the weighted transcript of its available height.
