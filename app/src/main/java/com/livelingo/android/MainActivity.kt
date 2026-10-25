@@ -6892,6 +6892,7 @@ private fun TuddyScreen(
                                 copyStatus = ""
                             }
                             lines.removeAt(index)
+                            translationDeadline.cancel(deleteRequest.first)
                             offlineSpeechChoices.remove(deleteRequest.first)
                             captionDeleteNotice = "Ondertitel uit dit gesprek gewist."
                         } else {
