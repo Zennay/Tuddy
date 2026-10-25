@@ -359,11 +359,38 @@ internal class LocalCaptionSpeaker(context: Context) {
                             tts.setVoice(chosen) != TextToSpeech.SUCCESS ||
                             tts.setAudioAttributes(LocalPlaybackDeviceSession.SPEECH_AUDIO_ATTRIBUTES) !=
                                 TextToSpeech.SUCCESS ||
-                            tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS ||
-                            tts.speak(safe, TextToSpeech.QUEUE_FLUSH, null,
-                                "tuddy-offline-caption-$version") != TextToSpeech.SUCCESS) {
+                            tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS) {
                             stop()
                             feedback("Geen geïnstalleerde lokale stem voor deze taal. Geen online fallback.")
+                            return@post
+                        }
+                        // A finished one-line playback must release focus and
+                        // device listeners without requiring a manual Stop tap.
+                        // Late callbacks from an old TextToSpeech engine are
+                        // fenced by the same generation used on background.
+                        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                            override fun onStart(utteranceId: String?) = Unit
+                            override fun onDone(utteranceId: String?) {
+                                main.post {
+                                    if (generation == version) {
+                                        stop()
+                                        feedback("Lokaal voorlezen voltooid; audiofocus vrijgegeven.")
+                                    }
+                                }
+                            }
+                            override fun onError(utteranceId: String?) {
+                                main.post {
+                                    if (generation == version) {
+                                        stop()
+                                        feedback("Android stopte het lokale voorlezen. Geen online fallback.")
+                                    }
+                                }
+                            }
+                        })
+                        if (tts.speak(safe, TextToSpeech.QUEUE_FLUSH, null,
+                                "tuddy-offline-caption-$version") != TextToSpeech.SUCCESS) {
+                            stop()
+                            feedback("Lokale stem kon niet starten. Geen online fallback.")
                         } else {
                             feedback(
                                 if (pace == LocalSpeechPace.SLOW)
