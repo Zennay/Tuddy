@@ -1847,7 +1847,8 @@ private fun TuddyScreen(
             val stillCurrent = InterimTranslationPolicy.mayPublish(
                 revision, partialRevision, token, generation,
                 voiceSessions.isCurrent(voiceToken), listening)
-            if (!stillCurrent || speechTranslationPaused || interimTranslationBusy) return@Runnable
+            if (!stillCurrent || interimTranslationBusy) return@Runnable
+            if (speechTranslationPaused) return@Runnable
             if (sourceCode == targetCode) {
                 partialTranslation = text
                 return@Runnable
@@ -2377,13 +2378,18 @@ private fun TuddyScreen(
                         if (!speechTranslationPaused) {
                             speechTranslationStarted[id] = SystemClock.elapsedRealtime()
                         }
-                        lines.add(Line(
-                            id, sentence,
-                            if (speechTranslationPaused) "Alleen origineel · bewust niet vertaald"
-                            else "Vertalen…",
-                            if (speechTranslationPaused) "Gepauzeerd" else "Bezig",
-                            observedSource, selectedTarget
-                        ))
+                        if (speechTranslationPaused) {
+                            // Do not start any local MT job for a transcript-only
+                            // speech turn; preserve the original language tags.
+                            lines.add(Line(
+                                id, sentence, "Alleen origineel · bewust niet vertaald",
+                                "Gepauzeerd", observedSource, selectedTarget
+                            ))
+                        } else {
+                            // Preserve the normal, previously verified live
+                            // caption path and its bounded retention order.
+                            lines.add(Line(id, sentence, "Vertalen…", "Bezig", observedSource, selectedTarget))
+                        }
                         val suggestions = OfflineSpeechCorrectionChoices.fromDeviceResults(
                             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION),
                             sentence
