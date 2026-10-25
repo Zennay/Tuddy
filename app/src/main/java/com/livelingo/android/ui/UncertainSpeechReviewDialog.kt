@@ -27,7 +27,8 @@ internal data class UncertainSpeechReviewItem(
     val sourceCode: String,
     val targetCode: String,
     val confidencePercent: Int,
-    val translationRevision: Int
+    val translationRevision: Int,
+    val conversationGeneration: Int
 )
 
 @Composable
