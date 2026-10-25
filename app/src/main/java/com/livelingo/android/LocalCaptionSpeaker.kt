@@ -302,6 +302,155 @@ internal class LocalCaptionSpeaker(context: Context) {
         }
     }
 
+    /**
+     * User-triggered two-part listening: first the reviewed original, then
+     * its completed translation. Both languages must have installed,
+     * non-network Android voices BEFORE any audio begins. A single audio
+     * focus/headset session covers the whole pair and is released after the
+     * second completion, Stop/background, or any device/engine error.
+     *
+     * Never saves either sentence, spawns a model download or accepts an
+     * online TTS voice. An old engine's late callbacks cannot advance a
+     * newer pair or speak the next language.
+     */
+    fun speakBilingualPair(
+        original: String,
+        translated: String,
+        sourceLanguage: String,
+        targetLanguage: String,
+        pace: LocalSpeechPace,
+        feedback: (String) -> Unit
+    ) {
+        stop()
+        val parts = listOf(original.trim(), translated.trim())
+        if (parts.any { line ->
+                line.isEmpty() || line.length > 400 ||
+                    line.any { it == '\u0000' || it == '\r' || it == '\n' || it.isISOControl() }
+            }
+        ) {
+            feedback("Tweetalig voorlezen vereist twee korte, voltooide regels. Geen online fallback.")
+            return
+        }
+        val tags = listOf(sourceLanguage, targetLanguage)
+        if (tags.any { !Regex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$").matches(it) }) {
+            feedback("Voor één van deze talen is geen veilige Android-stemcode bekend.")
+            return
+        }
+        val locales = tags.map { Locale.forLanguageTag(it) }
+        if (locales.any { it.language.isBlank() || it.language == "und" }) {
+            feedback("De twee talen moeten elk een bruikbare lokale voorleesstem hebben.")
+            return
+        }
+        val version = generation
+        if (!playbackSession.begin { reason ->
+                if (generation == version) {
+                    stop()
+                    feedback(reason)
+                }
+            }) {
+            stop()
+            feedback("Geen veilige Android-audiofocus of uitvoerroute. Er is niets afgespeeld.")
+            return
+        }
+        feedback("Twee geïnstalleerde offline Android-stemmen controleren…")
+        var currentPart = 0
+
+        fun fail(message: String) {
+            if (generation != version) return
+            stop()
+            feedback(message)
+        }
+
+        fun sayPart(tts: TextToSpeech, voices: List<android.speech.tts.Voice>, index: Int) {
+            if (generation != version || currentPart != index) return
+            val result = runCatching {
+                if (tts.setVoice(voices[index]) != TextToSpeech.SUCCESS) {
+                    TextToSpeech.ERROR
+                } else {
+                    tts.speak(
+                        parts[index], TextToSpeech.QUEUE_FLUSH, null,
+                        "tuddy-offline-bilingual-$version-$index"
+                    )
+                }
+            }.getOrDefault(TextToSpeech.ERROR)
+            if (result != TextToSpeech.SUCCESS) {
+                fail("Lokale stem voor ${tags[index].uppercase(Locale.ROOT)} kon niet starten. " +
+                    "Resterende audio gestopt; geen online fallback.")
+            }
+        }
+
+        try {
+            engine = TextToSpeech(appContext, TextToSpeech.OnInitListener { result ->
+                main.post {
+                    if (generation != version) return@post
+                    val tts = engine
+                    if (result != TextToSpeech.SUCCESS || tts == null) {
+                        fail("Android heeft geen bruikbare lokale voorleesdienst. Niets afgespeeld.")
+                        return@post
+                    }
+                    try {
+                        val voices = locales.mapIndexed { index, locale ->
+                            chooseInstalledVoice(tts, locale, tags[index])
+                        }
+                        if (voices.any { it == null }) {
+                            fail("Eén van de twee talen heeft geen geïnstalleerde offline stem. " +
+                                "Geen gedeeltelijk of online voorlezen.")
+                            return@post
+                        }
+                        val localVoices = voices.filterNotNull()
+                        // Admit *both* voice selections before any private
+                        // speech is sent to the TTS engine.
+                        if (tts.setAudioAttributes(
+                                LocalPlaybackDeviceSession.SPEECH_AUDIO_ATTRIBUTES
+                            ) != TextToSpeech.SUCCESS ||
+                            tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS ||
+                            tts.setVoice(localVoices[0]) != TextToSpeech.SUCCESS ||
+                            tts.setVoice(localVoices[1]) != TextToSpeech.SUCCESS ||
+                            tts.setVoice(localVoices[0]) != TextToSpeech.SUCCESS
+                        ) {
+                            fail("De twee geïnstalleerde Android-stemmen konden niet beide " +
+                                "worden ingesteld. Er is niets afgespeeld.")
+                            return@post
+                        }
+                        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                            override fun onStart(utteranceId: String?) = Unit
+                            override fun onDone(utteranceId: String?) {
+                                main.post {
+                                    if (generation != version ||
+                                        utteranceId != "tuddy-offline-bilingual-$version-$currentPart") {
+                                        return@post
+                                    }
+                                    if (currentPart == 0) {
+                                        currentPart = 1
+                                        feedback("Origineel afgerond · vertaling lokaal voorlezen…")
+                                        sayPart(tts, localVoices, 1)
+                                    } else {
+                                        stop()
+                                        feedback("Beide zinnen lokaal voorgelezen; audiofocus vrijgegeven.")
+                                    }
+                                }
+                            }
+                            override fun onError(utteranceId: String?) {
+                                main.post {
+                                    if (generation == version) {
+                                        fail("Android stopte het tweetalige voorlezen. " +
+                                            "Geen online fallback.")
+                                    }
+                                }
+                            }
+                        })
+                        feedback("Origineel lokaal voorlezen · daarna de vertaling…")
+                        sayPart(tts, localVoices, 0)
+                    } catch (_: RuntimeException) {
+                        fail("Android kon de tweetalige offline stemmen niet veilig starten.")
+                    }
+                }
+            })
+        } catch (_: RuntimeException) {
+            fail("De lokale voorleesdienst kon niet worden geopend. Geen online fallback.")
+        }
+    }
+
     fun close() = stop()
 
     fun speak(translated: String, languageTag: String, feedback: (String) -> Unit) {
