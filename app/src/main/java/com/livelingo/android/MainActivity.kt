@@ -74,7 +74,7 @@ import com.livelingo.android.ui.SubtitlePasteFormat
 import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
-import com.livelingo.android.ui.MicrophonePermissionRecoveryPanel
+import com.livelingo.android.ui.LiveMicrophonePermissionControls
 import com.livelingo.android.ui.PrivateConversationCurtainDialog
 import com.livelingo.android.ui.SubtitleDraftControls
 import com.livelingo.android.ui.FullscreenCaptionCard
@@ -8675,43 +8675,24 @@ private fun TuddyScreen(
                         MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val canStart = offlineAvailable && !listening
-                    Button(
-                        onClick = {
-                            if (listening) stop()
-                            else requestMicrophoneByUserTap()
-                        },
-                        enabled = offlineAvailable && !modelStorageBusy,
-                    ) { Text(if (listening) "■ Stop" else "🎙 Luister") }
-                    OutlinedButton(onClick = { confirmClearConversation = true }) {
-                        Text("Wis gesprek")
-                    }
-                    TextButton(onClick = { follow = !follow }) {
-                        Text(if (follow) "Pauzeer volgen" else "Volg live")
-                    }
-                }
-                if (microphonePermissionRequested && !listening &&
-                    (!microphonePermissionGranted || microphoneRecoveryNotice.isNotBlank())) {
-                    MicrophonePermissionRecoveryPanel(
-                        permissionGranted = microphonePermissionGranted,
-                        canRequestAgain =
-                            LocalMicrophonePermissionRecovery.mayAskAgain(screenActivity),
-                        message = microphoneRecoveryNotice,
-                        onRequestAgain = { requestMicrophoneByUserTap() },
-                        onOpenSystemSettings = { openMicrophoneSettingsByUserTap() }
-                    )
-                }
-                OutlinedButton(
-                    onClick = { coverPrivateConversation() },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("🔒 Gesprek afdekken · stop microfoon en audio") }
-                Text(
-                    liveSpeechPhase.label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (liveSpeechPhase == LiveSpeechPhase.INTERRUPTED)
-                        MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                LiveMicrophonePermissionControls(
+                    listening = listening,
+                    offlineAvailable = offlineAvailable,
+                    modelStorageBusy = modelStorageBusy,
+                    follow = follow,
+                    microphonePermissionRequested = microphonePermissionRequested,
+                    microphonePermissionGranted = microphonePermissionGranted,
+                    microphoneCanAskAgain =
+                        LocalMicrophonePermissionRecovery.mayAskAgain(screenActivity),
+                    microphoneRecoveryNotice = microphoneRecoveryNotice,
+                    liveSpeechPhaseLabel = liveSpeechPhase.label,
+                    speechPhaseInterrupted = liveSpeechPhase == LiveSpeechPhase.INTERRUPTED,
+                    onMicClick = { if (listening) stop() else requestMicrophoneByUserTap() },
+                    onClearConversation = { confirmClearConversation = true },
+                    onToggleFollow = { follow = !follow },
+                    onCoverConversation = { coverPrivateConversation() },
+                    onRetryPermission = { requestMicrophoneByUserTap() },
+                    onOpenAndroidSettings = { openMicrophoneSettingsByUserTap() }
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
