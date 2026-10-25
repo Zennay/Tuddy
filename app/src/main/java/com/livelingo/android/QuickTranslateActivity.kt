@@ -45,6 +45,12 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import java.util.Locale
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 
+// Internal-only hints for Tuddy's reviewed ACTION_SEND draft handoff.
+// The QuickTranslateActivity is not exported, and every hint is validated
+// against the actual ML Kit target catalog before display.
+internal const val QUICK_SOURCE_CODE_EXTRA = "com.livelingo.android.extra.QUICK_SOURCE_CODE"
+internal const val QUICK_TARGET_CODE_EXTRA = "com.livelingo.android.extra.QUICK_TARGET_CODE"
+
 /**
  * Android's selected-text action. Translation is explicit, local-only and
  * returns to the originating editor only after a separate user tap.
@@ -100,8 +106,16 @@ internal class QuickTranslateActivity : ComponentActivity() {
         }
 
         val defaults = defaultLanguagePair()
-        sourceCode = defaults.first
-        targetCode = defaults.second
+        val hintedSource = runCatching {
+            intent.getStringExtra(QUICK_SOURCE_CODE_EXTRA)
+        }.getOrNull()?.takeIf { it in TargetCatalog.codes }
+        val hintedTarget = runCatching {
+            intent.getStringExtra(QUICK_TARGET_CODE_EXTRA)
+        }.getOrNull()?.takeIf { it in TargetCatalog.codes }
+        sourceCode = hintedSource ?: defaults.first
+        targetCode = hintedTarget ?: defaults.second
+        intent.removeExtra(QUICK_SOURCE_CODE_EXTRA)
+        intent.removeExtra(QUICK_TARGET_CODE_EXTRA)
         selectionReadOnly = textReadOnly
         incomingText = incoming?.draft.orEmpty()
         inputNotice = incoming?.notice ?: if (!acceptedAction) {
