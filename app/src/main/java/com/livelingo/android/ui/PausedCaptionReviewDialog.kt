@@ -111,7 +111,8 @@ internal fun PausedCaptionReviewDialog(
                 onClick = {
                     // Stable order follows current visible caption positions.
                     onTranslateSelected(choices.filter { it.id in validSelection }.map { it.id })
-                    selected = emptySet()
+                    // Keep selection if Android reports a missing model.
+                    // Successfully submitted rows disappear from eligible choices.
                 }
             ) { Text("Controleer lokaal en vertaal $count") }
         },
