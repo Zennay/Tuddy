@@ -204,6 +204,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     onPlayTranslation = { pace ->
                         translationResult?.let { speakSelection(it, targetCode, pace) }
                     },
+                    onPlayBilingual = { pace ->
+                        speakBilingualSelection(pace)
+                    },
                     onStopPlayback = { stopPlayback() },
                     onHeadphonesOnlyChange = { selected ->
                         stopPlayback()
@@ -431,6 +434,19 @@ internal class QuickTranslateActivity : ComponentActivity() {
         }
     }
 
+    private fun speakBilingualSelection(pace: LocalSpeechPace) {
+        val translated = translationResult ?: return
+        if (busy || detectingSource || inputNotice.isNotBlank() ||
+            isFinishing || incomingText.isBlank()) return
+        stopPlayback()
+        val speaker = localSpeaker ?: LocalCaptionSpeaker(this).also { localSpeaker = it }
+        speaker.speakBilingualPair(
+            incomingText, translated, sourceCode, targetCode, pace
+        ) { notice ->
+            if (!isFinishing) playbackNotice = notice
+        }
+    }
+
     private fun stopPlayback() {
         localSpeaker?.stop()
         playbackNotice = ""
@@ -558,6 +574,7 @@ private fun QuickTranslateScreen(
     onCancel: () -> Unit,
     onPlayOriginal: (LocalSpeechPace) -> Unit,
     onPlayTranslation: (LocalSpeechPace) -> Unit,
+    onPlayBilingual: (LocalSpeechPace) -> Unit,
     onStopPlayback: () -> Unit,
     onHeadphonesOnlyChange: (Boolean) -> Unit,
     onClipboardExpiryChange: (Int) -> Unit,
@@ -674,6 +691,7 @@ private fun QuickTranslateScreen(
             onHeadphonesOnlyChange = onHeadphonesOnlyChange,
             onPlayOriginal = onPlayOriginal,
             onPlayTranslation = onPlayTranslation,
+            onPlayBilingual = onPlayBilingual,
             onStop = onStopPlayback
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
