@@ -16,7 +16,8 @@ internal object PrivatePlaybackRoutingPreference {
     fun headphonesOnly(context: Context): Boolean = runCatching {
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getBoolean(HEADPHONES_ONLY, false)
-    }.getOrDefault(false)
+    // Corrupt/unreadable privacy settings must never silently permit speakers.
+    }.getOrDefault(true)
 
     /** The caller must stop any active TTS session *before* changing policy. */
     fun setHeadphonesOnly(context: Context, enabled: Boolean): Boolean = runCatching {
