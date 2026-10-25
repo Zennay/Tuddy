@@ -29,6 +29,16 @@ internal object LocalSpeechVoicePreferences {
         return true
     }
 
+    fun clearVoice(context: Context, languageTag: String): Boolean {
+        val language = languageKey(languageTag) ?: return false
+        context.applicationContext
+            .getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            .edit()
+            .remove(VOICE_PREFIX + language)
+            .apply()
+        return true
+    }
+
     fun clearAll(context: Context) {
         context.applicationContext
             .getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
