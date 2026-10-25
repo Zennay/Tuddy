@@ -58,6 +58,7 @@ internal const val QUICK_TARGET_CODE_EXTRA = "com.livelingo.android.extra.QUICK_
  */
 internal class QuickTranslateActivity : ComponentActivity() {
     private val inventory = OfflineTextModelInventory()
+    private val screenLockGate = LocalScreenLockPrivacyGate(this)
     private val detector = LocalLanguageDetector()
     private var generation = 0L
     private var detectorRevision = 0L
@@ -289,6 +290,12 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Even before ON_PAUSE, a protected Android SCREEN_OFF event clears
+        // imported selection, reviewed translation and all local audio.
+        // Never repopulate them automatically after the device unlocks.
+        if (!screenLockGate.arm { redactForScreenLock() }) {
+            redactForScreenLock()
+        }
         // A setting change in the other Tuddy screen must not leave stale
         // protection or a misleading checkbox on this Activity.
         PrivateScreenShield.restore(this)
@@ -777,7 +784,23 @@ internal class QuickTranslateActivity : ComponentActivity() {
         finish()
     }
 
+    private fun redactForScreenLock() {
+        detectorRevision++
+        clearDetectionTimeout()
+        detector.close()
+        detectingSource = false
+        detectionNotice = ""
+        cancelOperation()
+        incomingText = ""
+        translationResult = null
+        discardReview()
+        inputNotice = "Het Android-scherm is vergrendeld of kon niet veilig " +
+            "worden bewaakt. De privéselectie is gewist. Selecteer tekst opnieuw."
+        status = "Er is niets automatisch gedeeld, gekopieerd of teruggestuurd."
+    }
+
     override fun onPause() {
+        screenLockGate.disarm()
         // A selected-text screen can remain STARTED but visible in split-screen
         // after another application takes focus. Redact ephemeral private text
         // immediately, not only on the later ON_STOP transition.
@@ -815,6 +838,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        screenLockGate.disarm()
         detectorRevision++
         clearDetectionTimeout()
         detector.close()
