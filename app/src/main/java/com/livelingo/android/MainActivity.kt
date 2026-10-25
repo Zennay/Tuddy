@@ -2531,12 +2531,16 @@ private fun TuddyScreen(
             targetCode !in TargetCatalog.codes) return false
         if (reviewedSpeech != null &&
             (reviewedSpeech.generation != generation ||
-                reviewedSpeech.sourceCode != sourceCode ||
-                reviewedSpeech.targetCode != targetCode ||
                 pendingSingleSpeechReview != reviewedSpeech)) return false
+        // Only the current human-confirmed review can override the text
+        // direction of one sentence; never modify future mic/source settings.
         val id = System.nanoTime()
         val token = generation
-        val speechCorrected = reviewedSpeech != null && sentence != reviewedSpeech.original
+        val speechCorrected = reviewedSpeech != null && (
+            sentence != reviewedSpeech.original ||
+                sourceCode != reviewedSpeech.sourceCode ||
+                targetCode != reviewedSpeech.targetCode
+            )
         lines.add(Line(id, sentence, "Vertalen…", "Bezig", sourceCode, targetCode,
             userCorrected = speechCorrected))
         if (reviewedSpeech != null) {
@@ -3923,9 +3927,9 @@ private fun TuddyScreen(
                 sourceCode = review.sourceCode,
                 targetCode = review.targetCode,
                 alternatives = review.alternatives,
-                onConfirm = { approved ->
+                onConfirm = { approved, chosenSource, chosenTarget ->
                     if (appendTypedTurn(
-                            approved, review.sourceCode, review.targetCode,
+                            approved, chosenSource, chosenTarget,
                             reviewedSpeech = review
                         )
                     ) {
