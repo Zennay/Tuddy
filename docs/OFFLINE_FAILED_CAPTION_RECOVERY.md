@@ -64,6 +64,41 @@ De bestaande één-regel-knop **↻ Probeer opnieuw** en de aparte
 tweeweg-tekstherstelactie blijven bestaan. Ook die routes negeren
 handmatig gecorrigeerde of verouderde regels.
 
+## Rechtstreeks één ontbrekend taalpaar via wifi voorbereiden
+
+De herstelweergave biedt per historische bron→doeltaal nu twee **afzonderlijke**
+acties. **Controleer lokaal en herstel maximaal 6** blijft een uitsluitend
+lokale, read-only modelcontrole met een expliciete hervertaalactie voor
+ongewijzigde mislukte regels. Hij downloadt niets.
+
+**Ontbrekende tekstmodellen via wifi voorbereiden…** opent eerst een
+tweede, niet-automatische toestemmingsdialoog met het precieze historische
+taalpaar. Pas na **Bevestig wifi-modelvoorbereiding**:
+
+1. Controleert Tuddy of het bron- en doeltaalpaar onder de bestaande
+   ondersteunde ML Kit-teksttaalcodes valt. Het actuele microfoontaalpaar
+   wordt niet gewijzigd.
+2. Leest Tuddy de reeds aanwezige tekstmodellen **zonder netwerkactie**
+   uit. Bij `READY` meldt het scherm dat opnieuw downloaden niet nodig
+   is. Bij `UNKNOWN` of `UNSUPPORTED` wordt niets gedownload.
+3. Alleen bij aangetoonde `MISSING` maakt Tuddy een tijdelijke ML Kit
+   vertaalklant voor dat **ene gekozen** taalpaar en vraagt met
+   `requireWifi()` de ontbrekende modellen aan. Er loopt hoogstens één
+   expliciete modelactie tegelijk.
+4. Na download rapporteert Tuddy niet zomaar “gereed”: de app leest
+   onafhankelijk opnieuw uit welke tekstmodellen werkelijk aanwezig zijn.
+   Het resultaat wordt alleen in het herstelpaneel getoond zolang dat
+   venster, die sessie en dezelfde aanvraag nog actueel zijn.
+5. Oude ondertitels worden nooit automatisch vertaald. Je moet zelf
+   **Controleer lokaal en herstel maximaal 6** kiezen. Gewijzigde
+   gespreksregels krijgen geen ongevraagde vervanging.
+
+Android/ML Kit kan een eenmaal begonnen modeldownload na het sluiten
+van de app voortzetten. Daarom betekent **Sluiten** nadrukkelijk
+**niet** “modeldownload geannuleerd”. Gespreksinhoud en audio worden
+niet meegestuurd; voorbereiding betreft enkel ML Kit-tekstmodellen,
+nooit Android-spraakmodellen of ongereviewde Koerdisch/Pasjtoe-gewichten.
+
 ## Privacy en acceptatie
 
 Alles werkt alleen met de al gekozen tekst uit het tijdelijke gesprek,
