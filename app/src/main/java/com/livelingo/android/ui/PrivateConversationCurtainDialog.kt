@@ -72,7 +72,8 @@ internal fun PrivateConversationCurtainDialog(
                 )
                 Text(
                     "Dit scherm verbergt de inhoud alleen binnen Tuddy. " +
-                        "Het vergrendelt de telefoon niet en is geen wachtwoordbeveiliging.",
+                        "Het vergrendelt de telefoon niet, wist geen eerder gekopieerde " +
+                        "tekst van Androids klembord en is geen wachtwoordbeveiliging.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
