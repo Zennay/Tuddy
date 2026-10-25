@@ -32,6 +32,7 @@ internal class LocalPlaybackDeviceSession(context: Context) {
 
     private var active = false
     private var everHadHeadset = false
+    private var mustHaveHeadphones = false
     private var focus: AudioFocusRequest? = null
     private var audioDeviceCallback: AudioDeviceCallback? = null
     private var noisyReceiver: BroadcastReceiver? = null
@@ -44,6 +45,10 @@ internal class LocalPlaybackDeviceSession(context: Context) {
         val audio = manager ?: return false
         // Unknown route metadata is a failure, not implied permission to speak.
         val initiallyConnected = visibleHeadset(audio) ?: return false
+        mustHaveHeadphones = PrivatePlaybackRoutingPreference.headphonesOnly(appContext)
+        // A connected headset is still only Android's device inventory, not
+        // independent confirmation of the actual physical media output route.
+        if (mustHaveHeadphones && !initiallyConnected) return false
         everHadHeadset = initiallyConnected
         interruption = onInterrupted
         val focusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
@@ -94,7 +99,9 @@ internal class LocalPlaybackDeviceSession(context: Context) {
             // Route may have changed between the original user tap and
             // listener registration. Never start speaking after that gap.
             val nowConnected = visibleHeadset(audio)
-            if (nowConnected == null || (initiallyConnected && !nowConnected)) {
+            if (nowConnected == null ||
+                (mustHaveHeadphones && !nowConnected) ||
+                (initiallyConnected && !nowConnected)) {
                 end()
                 return false
             }
@@ -112,8 +119,9 @@ internal class LocalPlaybackDeviceSession(context: Context) {
         when {
             available == null ->
                 interrupt("Android kan de huidige audio-uitvoer niet controleren. Voorlezen gestopt.")
-            everHadHeadset && !available ->
-                interrupt("De hoofdtelefoon is losgekoppeld. Voorlezen gestopt vóór verder afspelen.")
+            (mustHaveHeadphones || everHadHeadset) && !available ->
+                interrupt("Geen aangesloten hoofdtelefoon meer door Android gemeld. " +
+                    "Privévoorlezen gestopt vóór verder afspelen.")
             available -> everHadHeadset = true
         }
     }
@@ -129,6 +137,7 @@ internal class LocalPlaybackDeviceSession(context: Context) {
         active = false
         interruption = null
         everHadHeadset = false
+        mustHaveHeadphones = false
         if (receiverRegistered) {
             runCatching { noisyReceiver?.let(appContext::unregisterReceiver) }
         }
