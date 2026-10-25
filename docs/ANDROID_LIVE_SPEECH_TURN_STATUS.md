@@ -156,13 +156,16 @@ tussentekstvertaling is uitgeschakeld. Dat geldt ook voor een
 bewust beoordeelde **één-zin**-spraakopname: de originele tekst blijft
 zichtbaar maar wordt niet automatisch vertaald.
 
-Bij het pauzeren krijgen bestaande, nog wachtende regels expliciet de
-status **Gepauzeerd**. Hun oorspronkelijke tekst, taalrichting,
-correctie- en sprekerlabels blijven bewaard. Reeds gestarte ML Kit-
-modeltaken kunnen op de achtergrond nog intern afronden: Android biedt
-hier geen gegarandeerde afbreekmogelijkheid. Maar hun oude callbacks
-mogen die gepauzeerde regel niet meer wijzigen, omdat de app
-vertaalwachtrijen en deadlines leegt en de regelrevisie verhoogt.
+Bij het pauzeren krijgen bestaande, nog wachtende **spraakafkomstige**
+regels expliciet de status **Gepauzeerd**. Hun oorspronkelijke tekst,
+taalrichting, correctie- en sprekerlabels blijven bewaard. Reeds
+gestarte ML Kit-modeltaken kunnen op de achtergrond nog intern afronden:
+Android biedt hier geen gegarandeerde afbreekmogelijkheid. Hun oude
+callbacks mogen de gepauzeerde regel niet meer wijzigen: de app
+verhoogt eerst de regelrevisie en annuleert daarna uitsluitend voor die
+spraakregels de bijbehorende wachtrij- en deadlineverzoeken.
+Een daarnaast door de gebruiker **expliciet getypte vertaling** blijft
+doorlopen en wordt niet automatisch geannuleerd of gewijzigd.
 Dit is een **weergave- en nieuwe-vertaalaanvragen-stop**, geen
 onbewijsbare belofte dat eerdere lokale verwerking onmiddellijk stopt.
 
