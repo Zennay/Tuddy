@@ -527,7 +527,7 @@ private fun TuddyScreen(
     val context = LocalContext.current
     // Reuse ML Kit's bundled on-device language detector across live captions;
     // callbacks are invalidated when the screen leaves composition.
-    val localLanguageDetector = remember { LocalLanguageDetector() }
+
     // Keep a small, session-scoped cache of already-authorized local translators.
     val localTranslatorPool = remember { LocalTranslatorPool() }
     val captionPairReadiness = remember { OfflinePairReadinessBroker() }
@@ -1487,20 +1487,23 @@ private fun TuddyScreen(
                 }
             }
         }
-        if (explicitlyChosenSource) {
-            translateResolved(text, id, sourceCode, targetCode, token, revision)
+        // Preserve the exact source chosen by the user or *confirmed* by
+        // Android's on-device speech language-switch callback. A language
+        // classifier looking at ASR text cannot prove which speech model
+        // listened: guessing again here silently mistranslates short speech.
+        // For explicitly typed input the source is already user-reviewed.
+        // Explicitly pass even the Android-confirmed BCP-47 source through
+        // ML Kit's supported TEXT catalog: never let a community preview,
+        // unexpected provider tag or unlicensed speech language become a
+        // downloadable/online translator source.
+        val catalogSource = TranslateLanguage.fromLanguageTag(sourceCode)
+            ?.takeIf { it in TargetCatalog.codes }
+        if (catalogSource == null) {
+            updateLine(id, "Deze brontaal is niet beschikbaar voor lokale tekstvertaling.",
+                "Fout", token, revision)
             return
         }
-        // Speech recognition may provide a broad language tag. This local-only
-        // detector is advisory and never upgrades unsupported model coverage.
-        localLanguageDetector.identify(text) { guess ->
-            if (!translationStillRelevant(id, token, revision)) return@identify
-            val detected = guess
-                ?.let { TranslateLanguage.fromLanguageTag(it) }
-                ?.takeIf { it in TargetCatalog.codes }
-            translateResolved(text, id, detected ?: sourceCode,
-                targetCode, token, revision)
-        }
+        translateResolved(text, id, catalogSource, targetCode, token, revision)
     }
 
     /**
@@ -4158,7 +4161,6 @@ private fun TuddyScreen(
             pendingSingleCaptionDelete = null
             pendingStudyErase = false
             manuallyAssignedSpeakers.clear()
-            localLanguageDetector.close()
             captionPairReadiness.close()
             captionTranslationQueue.close()
             localTranslatorPool.close()
