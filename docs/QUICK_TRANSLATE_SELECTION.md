@@ -82,6 +82,33 @@ de onderliggende Android/ML Kit-provider elk intern werk meteen
 heeft gestopt. Het scherm downloadt nooit automatisch modellen
 en gebruikt geen online fallback.
 
+## Mislukte lange selectie hervatten zonder eerdere delen opnieuw te vertalen
+
+Bij een lange selectie werkt Tuddy lokaal in opeenvolgende
+tekstgedeelten. Na een **mislukte of vastgelopen poging** verschijnt
+**Herstel vanaf gedeelte X van Y** wanneer één of meer voorafgaande
+gedeelten wél lokaal voltooid zijn. Dit is een bewuste vervolgactie,
+geen automatische herstart of modeldownload.
+
+Tuddy houdt die afgeronde delen tijdelijk **alleen in Activity-RAM**
+en toont, kopieert, deelt of retourneert ze **niet afzonderlijk**. Bij
+herstellen controleert Tuddy **opnieuw** de geïnstalleerde offline
+ML Kit-modellen, vergelijkt een vingerafdruk van exact dezelfde
+oorspronkelijke selectie en de gekozen bron- en doeltaal, en hervat
+dan uitsluitend het eerste mislukte gedeelte en de resterende delen.
+De volledige vertaling komt pas beschikbaar wanneer **alle** delen
+geslaagd zijn. Het model wordt niet online aangevuld en Tuddy doet
+geen verborgen tweede poging.
+
+De tijdelijke gedeeltelijke inhoud wordt vernietigd wanneer je
+**Annuleer**, **Vertaal lokaal** (volledig opnieuw), **Wissel talen**,
+een ander taalpaar, afsluiten, een schermvergrendeling of een wissel
+naar een andere app kiest. Een late callback van een vorige poging
+kan geen deel toevoegen: iedere nieuwe poging heeft een eigen
+Activity-generatie en de al bestaande ML Kit-werkcapaciteitsgrens.
+De 30-secondenlimiet geldt ook voor een herstelpoging; er is geen
+belofte dat Androids onderliggende native taak meteen stopt.
+
 ## Brontekst en vertaling lokaal laten voorlezen
 
 Vanuit hetzelfde snelle Android-selectiescherm kun je **🔊 Lokaal voorlezen · kies tempo** openen. Kies **Origineel · normaal/langzaam** voordat of nadat je vertaalt; na een echt voltooide lokale vertaling kun je ook **Vertaling · normaal/langzaam** kiezen. **■ Stop voorlezen** stopt de Android-stem onmiddellijk. Vertalen, een nieuwe taalrichting kiezen, het scherm sluiten of naar de achtergrond gaan stopt de vorige stem eveneens.
