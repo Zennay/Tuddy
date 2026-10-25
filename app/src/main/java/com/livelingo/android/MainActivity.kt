@@ -339,6 +339,35 @@ private data class Line(
     val lowAndroidConfidencePercent: Int? = null
 )
 
+/** One reversible, RAM-only correction; exact revision prevents stale undo. */
+private enum class ManualCaptionUndoKind { ORIGINAL, TRANSLATION }
+
+private data class PendingManualCaptionUndo(
+    val before: Line,
+    val after: Line,
+    val kind: ManualCaptionUndoKind,
+    val conversationGeneration: Int,
+    val suggestionsBefore: List<SessionTranslationCorrection>? = null,
+    val suggestionsAfter: List<SessionTranslationCorrection>? = null,
+    val speechAlternativesBefore: List<String>? = null
+)
+
+/** Does not accept a stale row, deleted caption or older conversation epoch. */
+private fun canUndoManualCorrection(
+    pending: PendingManualCaptionUndo, current: Line?, generation: Int
+): Boolean =
+    pending.conversationGeneration == generation &&
+        current != null &&
+        current.id == pending.after.id &&
+        current.original == pending.after.original &&
+        current.sourceCode == pending.after.sourceCode &&
+        current.targetCode == pending.after.targetCode &&
+        current.translationRevision == pending.after.translationRevision &&
+        current.userCorrected == pending.after.userCorrected &&
+        (pending.kind == ManualCaptionUndoKind.ORIGINAL ||
+            (current.translated == pending.after.translated &&
+                current.status == pending.after.status))
+
 private data class PendingLivePhraseBatchCapture(
     val generation: Int,
     val lines: List<Line>
@@ -1041,6 +1070,7 @@ private fun TuddyScreen(
     }
     var captionDeleteNotice by remember { mutableStateOf("") }
     var correctionNotice by remember { mutableStateOf("") }
+    var pendingManualCaptionUndo by remember { mutableStateOf<PendingManualCaptionUndo?>(null) }
     var historySearchOpen by remember { mutableStateOf(false) }
     var historySearchQuery by remember { mutableStateOf("") }
     var generation by remember { mutableIntStateOf(0) }
@@ -2707,6 +2737,9 @@ private fun TuddyScreen(
                         // translationStillRelevant(lines.any { it.id == id }).
                         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                             val removed = lines.removeAt(0)
+            if (pendingManualCaptionUndo?.after?.id == removed.id) {
+                pendingManualCaptionUndo = null
+            }
             translationDeadline.cancel(removed.id)
             captionTranslationQueue.cancel(removed.id)
                             speechTranslationStarted.remove(removed.id)
@@ -2958,6 +2991,9 @@ private fun TuddyScreen(
         }
         repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
             val removed = lines.removeAt(0)
+            if (pendingManualCaptionUndo?.after?.id == removed.id) {
+                pendingManualCaptionUndo = null
+            }
             translationDeadline.cancel(removed.id)
             captionTranslationQueue.cancel(removed.id)
             offlineSpeechChoices.remove(removed.id)
@@ -3954,6 +3990,7 @@ private fun TuddyScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             pendingSpeechSettingsReturnTag = null
             generation++
+            pendingManualCaptionUndo = null
             pendingTranslationCancelSelection = null
             pausedCaptionReviewEpoch++
             pausedCaptionReviewOpen = false
@@ -5846,8 +5883,9 @@ private fun TuddyScreen(
                                 pendingCaptionShare = null
                                 pendingTranscriptExport = null
                                 exportStatus = ""
-                                offlineSpeechChoices.remove(correctionId)
-                                lines[index] = previous.copy(
+                                val previousSpeechAlternatives =
+                                    offlineSpeechChoices.remove(correctionId)
+                                val next = previous.copy(
                                     original = corrected,
                                     translated = "Vertalen…",
                                     status = "Bezig",
@@ -5855,6 +5893,11 @@ private fun TuddyScreen(
                                     userCorrected = true,
                                     // A newly corrected original invalidates the human meaning.
                                     personalMeaning = null
+                                )
+                                lines[index] = next
+                                pendingManualCaptionUndo = PendingManualCaptionUndo(
+                                    previous, next, ManualCaptionUndoKind.ORIGINAL, generation,
+                                    speechAlternativesBefore = previousSpeechAlternatives
                                 )
                                 translate(corrected, previous.id, previous.targetCode,
                                     previous.sourceCode, generation,
@@ -5985,17 +6028,25 @@ private fun TuddyScreen(
                                 pendingSpeakerExport = null
                                 pendingPinnedExport = null
                                 exportStatus = ""
-                                lines[index] = previous.copy(
+                                val previousSuggestions = if (rememberForThisConversation)
+                                    translationMemory.entries() else null
+                                val next = previous.copy(
                                     translated = corrected,
                                     translationRevision = previous.translationRevision + 1,
                                     userCorrected = true
                                 )
+                                lines[index] = next
                                 val savedForSession = rememberForThisConversation &&
                                     translationMemory.remember(
                                         previous.original, corrected,
                                         previous.sourceCode, previous.targetCode
                                     )
                                 if (savedForSession) translationMemoryRevision++
+                                pendingManualCaptionUndo = PendingManualCaptionUndo(
+                                    previous, next, ManualCaptionUndoKind.TRANSLATION, generation,
+                                    suggestionsBefore = if (savedForSession) previousSuggestions else null,
+                                    suggestionsAfter = if (savedForSession) translationMemory.entries() else null
+                                )
                                 correctionNotice = when {
                                     savedForSession ->
                                         "Vertaling gecorrigeerd en als exact voorstel in dit gesprek onthouden."
@@ -7786,6 +7837,9 @@ private fun TuddyScreen(
                                 copyStatus = ""
                             }
                             lines.removeAt(index)
+                            if (pendingManualCaptionUndo?.after?.id == id) {
+                                pendingManualCaptionUndo = null
+                            }
                             translationDeadline.cancel(deleteRequest.first)
                             captionTranslationQueue.cancel(deleteRequest.first)
                             offlineSpeechChoices.remove(deleteRequest.first)
@@ -7999,6 +8053,7 @@ private fun TuddyScreen(
         // explicit confirmation: a single mis-tap should not destroy live work.
         val clearCurrentConversation: () -> Unit = {
                         generation++
+                        pendingManualCaptionUndo = null
                         pendingTranslationCancelSelection = null
                         pendingTranslationCancelNotice = ""
                         pausedCaptionReviewEpoch++
@@ -8693,6 +8748,9 @@ private fun TuddyScreen(
                                 selectedSource, selectedTarget))
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                                 val removed = lines.removeAt(0)
+            if (pendingManualCaptionUndo?.after?.id == removed.id) {
+                pendingManualCaptionUndo = null
+            }
             translationDeadline.cancel(removed.id)
             captionTranslationQueue.cancel(removed.id)
                                 offlineSpeechChoices.remove(removed.id)
@@ -9693,6 +9751,85 @@ private fun TuddyScreen(
                 if (correctionNotice.isNotBlank()) {
                     Text(correctionNotice, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary)
+                }
+                pendingManualCaptionUndo?.let { undo ->
+                    val current = lines.firstOrNull { it.id == undo.after.id }
+                    val valid = !listening &&
+                        canUndoManualCorrection(undo, current, generation)
+                    TextButton(
+                        enabled = valid,
+                        onClick = {
+                            val selected = pendingManualCaptionUndo ?: return@TextButton
+                            val index = lines.indexOfFirst { it.id == selected.after.id }
+                            val actual = lines.getOrNull(index)
+                            if (listening || !canUndoManualCorrection(
+                                    selected, actual, generation
+                                )) {
+                                pendingManualCaptionUndo = null
+                                correctionNotice =
+                                    "De ondertitel is inmiddels gewijzigd. Herstellen is niet veilig."
+                                return@TextButton
+                            }
+                            // Invalidate the old local translation and external
+                            // drafts before restoring an earlier human decision.
+                            val restoredRevision = actual!!.translationRevision + 1
+                            captionSpeaker.stop()
+                            translationDeadline.cancel(actual.id)
+                            captionTranslationQueue.cancel(actual.id)
+                            pendingCaptionShare = null
+                            pendingTranscriptExport = null
+                            pendingSpeakerExport = null
+                            pendingPinnedExport = null
+                            exportStatus = ""
+                            pendingManualCaptionUndo = null
+                            if (selected.kind == ManualCaptionUndoKind.ORIGINAL) {
+                                val restored = selected.before.copy(
+                                    translationRevision = restoredRevision,
+                                    translated = "Vertalen…",
+                                    status = "Bezig"
+                                )
+                                lines[index] = restored
+                                selected.speechAlternativesBefore?.takeIf { it.isNotEmpty() }
+                                    ?.let { candidates ->
+                                        if (offlineSpeechChoices[restored.id] == null) {
+                                            offlineSpeechChoices[restored.id] = candidates
+                                        }
+                                    }
+                                translate(
+                                    restored.original, restored.id,
+                                    restored.targetCode, restored.sourceCode,
+                                    generation, explicitlyChosenSource = true
+                                )
+                                correctionNotice =
+                                    "Vorige oorspronkelijke zin hersteld; vertaling opnieuw lokaal aangevraagd."
+                            } else {
+                                lines[index] = selected.before.copy(
+                                    translationRevision = restoredRevision
+                                )
+                                val rememberedAfter = selected.suggestionsAfter
+                                val rememberedBefore = selected.suggestionsBefore
+                                val memoryRestored =
+                                    rememberedAfter != null && rememberedBefore != null &&
+                                    translationMemory.entries() == rememberedAfter &&
+                                    translationMemory.replaceAll(rememberedBefore)
+                                if (memoryRestored) translationMemoryRevision++
+                                correctionNotice = if (rememberedAfter != null && !memoryRestored)
+                                    "Vorige vertaling hersteld. Nieuwere tijdelijke voorstellen zijn niet overschreven."
+                                else "Vorige handmatige vertaling hersteld in dit gesprek."
+                            }
+                        }
+                    ) {
+                        Text(if (undo.kind == ManualCaptionUndoKind.ORIGINAL)
+                            "↶ Herstel vorige oorspronkelijke zin"
+                        else "↶ Herstel vorige vertaling")
+                    }
+                    Text(
+                        if (undo.kind == ManualCaptionUndoKind.ORIGINAL)
+                            "Herstellen vraagt opnieuw een lokale vertaling; er wordt niets online opgezocht."
+                        else "Herstellen wijzigt alleen deze tijdelijke zin en de exacte oude sessiesuggestie.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 if (capturedPhraseNotice.isNotBlank()) {
                     Text(capturedPhraseNotice, style = MaterialTheme.typography.bodySmall,
