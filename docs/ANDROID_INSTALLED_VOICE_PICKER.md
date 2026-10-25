@@ -134,6 +134,36 @@ De bestaande **Alleen met hoofdtelefoon**-voorkeur blijft voor
 de hele tweetalige sessie gelden. Androids lokale TTS-metadata en
 audioroute-indicaties zijn geen onafhankelijke vliegtuigmodusproef.
 
+## Apart stemvoorbeeld en spreken versus luisteren
+
+Het stemoverzicht bij **Taalondersteuning** gebruikt een eigen native
+Android-TTS-preview, die eerder niet dezelfde audiofocus-/headsetcontrole
+als het gewone voorlezen gebruikte. Deze route vraagt nu vóór het
+starten expliciet Android-audiofocus en bewaakt headsetverlies via
+de bestaande `LocalPlaybackDeviceSession`, met dezelfde optionele
+**alleen-hoofdtelefoon**-instelling. Kan Android die audiofocus of
+uitvoer niet bevestigen, dan wordt het voorbeeld niet gestart.
+Bij focusverlies, headsetverlies, afronding, afspeelfout of time-out
+stopt de voorbeeldspraak en worden tijdelijke Android-listeners en
+audiofocus weer vrijgegeven.
+
+Wanneer Tuddy naar de achtergrond gaat of de Activity wordt gepauzeerd,
+sluiten het stemoverzicht en de stemvoorbeeldengine eveneens. Het
+overzicht kan nog op het scherm staan bij terugkeer, maar de oude
+voorleesactie start dan niet zelfstandig opnieuw.
+
+**Luisteren heeft voorrang op voorlezen**: zodra een gebruiker een
+nieuwe on-device microfoonsessie start, stopt Tuddy eerst lopende
+lokale ondertitel-/vertaal-TTS. Daardoor kan een eerdere voorleeszin
+niet door de nieuwe recognizer als eigen spraak worden opgevangen.
+Normale expliciete play-knoppen tijdens actief luisteren blijven
+uitgeschakeld; na stoppen van de microfoon moet de gebruiker opnieuw
+bewust een afspeelactie starten.
+
+De waarneembare Android-audiofocus- en headsetstatus blijft
+best-effort en bewijst geen fysieke audio-outputroute. Er zijn
+geen nieuwe permissies, audio-opnames of cloud-Fallbacks.
+
 ## Grenzen voor acceptatie
 
 Een door de Android-TTS-engine als lokaal gemelde stem geeft **geen**

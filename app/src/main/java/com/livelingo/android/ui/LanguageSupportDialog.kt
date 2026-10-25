@@ -26,6 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.LanguageSearch
@@ -57,6 +60,7 @@ internal fun LanguageSupportDialog(
     val uriHandler = LocalUriHandler.current
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val localVoiceInventory = remember(context) { LocalSpeechVoiceInventory(context) }
     val localVoicePreview = remember(context) { LocalSpeechVoicePreview(context) }
     var installedLocalVoices by remember { mutableStateOf<List<LocalSpeechVoiceEntry>?>(null) }
@@ -68,8 +72,22 @@ internal fun LanguageSupportDialog(
     var visibleLocalVoiceCount by remember { mutableStateOf(20) }
     var previewingVoice by remember { mutableStateOf<String?>(null) }
     var localVoicePreviewNotice by remember { mutableStateOf("") }
-    DisposableEffect(localVoiceInventory, localVoicePreview) {
+    DisposableEffect(localVoiceInventory, localVoicePreview, lifecycleOwner) {
+        val lifecycleObserver = LifecycleEventObserver { _, event ->
+            // The dialog can stay composed while the Activity loses focus.
+            // Neither voice preview nor inventory service may keep a device
+            // audio session running behind another screen.
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                localVoicePreview.close()
+                localVoiceInventory.close()
+                previewingVoice = null
+                localVoicePreviewNotice =
+                    "Stemvoorbeeld gestopt toen Tuddy niet meer actief was."
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
             localVoiceInventory.close()
             localVoicePreview.close()
         }
