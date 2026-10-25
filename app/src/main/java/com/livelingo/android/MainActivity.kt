@@ -873,6 +873,18 @@ private fun TuddyScreen(
     var failedCaptionRecoveryNotice by remember { mutableStateOf("") }
     var failedCaptionRecoveryRevision by remember { mutableIntStateOf(0) }
     var offlineReadinessOpen by remember { mutableStateOf(false) }
+    // Ephemeral user opt-in: no microphone startup when Android still reports
+    // a usable connection. Never persist or mistake this for real device proof.
+    var requireOfflineRadioBeforeListening by remember { mutableStateOf(false) }
+    var installedApkSha256 by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(offlineReadinessOpen) {
+        if (offlineReadinessOpen) {
+            installedApkSha256 = withContext(Dispatchers.IO) {
+                installedBaseApkSha256(context) ?: "unavailable"
+            }
+        }
+    }
+    var offlineReportPickerOpen by remember { mutableStateOf(false) }
     // Home-screen shortcuts open existing workflows only. They cannot start
     // capture, approve text, download models or interrupt a running session.
     LaunchedEffect(incomingLauncherShortcut?.id) {
@@ -917,18 +929,6 @@ private fun TuddyScreen(
         }
         onLauncherShortcutConsumed(request.id)
     }
-    // Ephemeral user opt-in: no microphone startup when Android still reports
-    // a usable connection. Never persist or mistake this for real device proof.
-    var requireOfflineRadioBeforeListening by remember { mutableStateOf(false) }
-    var installedApkSha256 by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(offlineReadinessOpen) {
-        if (offlineReadinessOpen) {
-            installedApkSha256 = withContext(Dispatchers.IO) {
-                installedBaseApkSha256(context) ?: "unavailable"
-            }
-        }
-    }
-    var offlineReportPickerOpen by remember { mutableStateOf(false) }
     // Only event counts and monotonic durations live in RAM, never speech/text.
     var sessionDiagnostics by remember { mutableStateOf(OfflineSessionDiagnostics()) }
     val speechTranslationStarted = remember { mutableMapOf<Long, Long>() }
