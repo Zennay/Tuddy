@@ -1,5 +1,7 @@
 package com.livelingo.android
 
+import android.os.Handler
+import android.os.Looper
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
@@ -14,11 +16,49 @@ import com.google.mlkit.nl.translate.TranslatorOptions
  */
 internal class PrivateSubtitleTranslationController {
     private val inventory = OfflineTextModelInventory()
+    private val main = Handler(Looper.getMainLooper())
     private var generation = 0L
     private var activeTranslator: Translator? = null
+    private var pendingDeadline: Runnable? = null
+
+    private fun cancelDeadline() {
+        pendingDeadline?.let(main::removeCallbacks)
+        pendingDeadline = null
+    }
+
+    /**
+     * Each model lookup and each cue gets a fresh 30-second UI deadline.
+     * A timed-out ML Kit Task may still run: its physical budget lease must
+     * remain occupied until the actual terminal callback arrives.
+     */
+    private fun armDeadline(
+        token: Long,
+        message: String,
+        onComplete: (texts: List<String>?, error: String?) -> Unit,
+        onStalled: () -> Unit = {}
+    ): Boolean {
+        cancelDeadline()
+        val task = Runnable {
+            if (token == generation) {
+                pendingDeadline = null
+                onStalled()
+                complete(token, null, message, onComplete)
+            }
+        }
+        pendingDeadline = task
+        if (main.postDelayed(task, DEADLINE_MS)) return true
+        pendingDeadline = null
+        if (token == generation) {
+            complete(token, null,
+                "Android kon de lokale vertaaldeadline niet veilig starten. " +
+                    "Het concept is ongewijzigd.", onComplete)
+        }
+        return false
+    }
 
     fun cancel() {
         generation++
+        cancelDeadline()
         inventory.invalidate()
         closeActiveTranslator()
     }
@@ -41,7 +81,8 @@ internal class PrivateSubtitleTranslationController {
         target: String,
         onProgress: (completed: Int, total: Int) -> Unit,
         onComplete: (texts: List<String>?, error: String?) -> Unit,
-        sourceRowNumbers: List<Int> = cues.indices.map { it + 1 }
+        sourceRowNumbers: List<Int> = cues.indices.map { it + 1 },
+        onSourceRowProblem: (sourceRow: Int) -> Unit = {}
     ) {
         cancel()
         val token = generation
@@ -69,6 +110,14 @@ internal class PrivateSubtitleTranslationController {
             return
         }
 
+        if (!armDeadline(
+                token,
+                "Android bevestigde de lokaal geïnstalleerde tekstmodellen niet " +
+                    "binnen 30 seconden. Probeer de modelcontrole bewust opnieuw. " +
+                    "Het concept is ongewijzigd.",
+                onComplete
+            )) return
+
         inventory.check(source, target, TargetCatalog.codes) { receipt ->
             if (token != generation) return@check
             if (receipt.stage == OfflineTextStage.CHECKING) return@check
@@ -76,6 +125,7 @@ internal class PrivateSubtitleTranslationController {
                 complete(token, null, receipt.detail, onComplete)
                 return@check
             }
+            cancelDeadline()
 
             val client = runCatching {
                 Translation.getClient(
@@ -123,41 +173,72 @@ internal class PrivateSubtitleTranslationController {
                     return
                 }
 
-                try {
-                    client.translate(input)
-                        .addOnSuccessListener { raw ->
-                            if (token != generation) return@addOnSuccessListener
-                            val clean = normalize(raw)
-                            if (clean == null) {
-                                complete(
-                                    token, null,
-                                    "Vertaalde regel $sourceRow overschrijdt de veilige tekstgrenzen. " +
-                                        "Het concept is ongewijzigd.",
-                                    onComplete
-                                )
-                            } else {
-                                translated[index] = clean
-                                onProgress(index + 1, cues.size)
-                                translateAt(index + 1)
-                            }
-                        }
-                        .addOnFailureListener {
-                            if (token == generation) {
-                                complete(
-                                    token, null,
-                                    "Lokale vertaling van regel $sourceRow mislukte. " +
-                                        "Er zijn geen gedeeltelijke wijzigingen toegepast.",
-                                    onComplete
-                                )
-                            }
-                        }
-                } catch (_: Exception) {
+                // One physical ML Kit task at a time for this subtitle batch,
+                // shared with all other actual running ML Kit tasks in Tuddy.
+                // Cancel/retry does not free this lease while Android's prior
+                // task is still in flight; only completion does.
+                val lease = LocalMlKitWorkBudget.shared.acquire()
+                if (lease == null) {
+                    onSourceRowProblem(sourceRow)
                     complete(
                         token, null,
-                        "Lokale vertaling van regel $sourceRow kon niet starten. " +
+                        "De lokale vertaler verwerkt nog andere Android-verzoeken. " +
+                            "Regel $sourceRow is niet gestart. Probeer later opnieuw. " +
                             "Het concept is ongewijzigd.",
                         onComplete
                     )
+                    return
+                }
+                if (!armDeadline(
+                        token,
+                        "Lokale vertaling van regel $sourceRow reageerde niet binnen " +
+                            "30 seconden. Controleer deze regel en probeer bewust opnieuw. " +
+                            "Er zijn geen gedeeltelijke wijzigingen toegepast.",
+                        onComplete,
+                        onStalled = { onSourceRowProblem(sourceRow) }
+                    )) {
+                    lease.release() // no task submitted
+                    return
+                }
+                val task = try {
+                    client.translate(input)
+                } catch (_: Exception) {
+                    lease.release() // only release if ML Kit never accepted the task
+                    onSourceRowProblem(sourceRow)
+                    complete(
+                        token, null,
+                        "Lokale vertaling van regel $sourceRow kon niet starten. " +
+                            "Het concept is ongewijzigd.", onComplete
+                    )
+                    return
+                }
+                task.addOnCompleteListener { outcome ->
+                    // This executes even if the user cancelled, timed out,
+                    // deleted the dialog or Android closed the translator.
+                    // Physical budget tracks actual device work, not a UI row.
+                    lease.release()
+                    if (token != generation) return@addOnCompleteListener
+                    val clean = if (outcome.isSuccessful) {
+                        outcome.result?.let(::normalize)
+                    } else null
+                    if (clean == null) {
+                        onSourceRowProblem(sourceRow)
+                        complete(
+                            token, null,
+                            if (outcome.isSuccessful)
+                                "Vertaalde regel $sourceRow overschrijdt de veilige " +
+                                    "tekstgrenzen. Het concept is ongewijzigd."
+                            else
+                                "Lokale vertaling van regel $sourceRow mislukte. " +
+                                    "Er zijn geen gedeeltelijke wijzigingen toegepast.",
+                            onComplete
+                        )
+                    } else {
+                        translated[index] = clean
+                        cancelDeadline()
+                        onProgress(index + 1, cues.size)
+                        translateAt(index + 1)
+                    }
                 }
             }
 
@@ -183,6 +264,7 @@ internal class PrivateSubtitleTranslationController {
         onComplete: (List<String>?, String?) -> Unit
     ) {
         if (token != generation) return
+        cancelDeadline()
         closeActiveTranslator()
         generation++
         onComplete(texts, error)
@@ -195,6 +277,7 @@ internal class PrivateSubtitleTranslationController {
     }
 
     private companion object {
+        const val DEADLINE_MS = 30_000L
         const val MAX_CUES = 500
         const val MAX_CUE_CHARS = 2400
         const val MAX_CUE_LINES = 8
