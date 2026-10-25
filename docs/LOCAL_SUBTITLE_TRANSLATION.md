@@ -52,10 +52,11 @@ en behoudt de bestaande tijdcodes.
 
 De vertaling van een ondertitelbestand verloopt bewust **alles-of-niets**:
 geen enkele geselecteerde cue wordt tussentijds in het bestaande concept
-geschreven. Vanaf het begin van de tweede, interne modelcontrole wacht
-Tuddy maximaal **30 seconden** op een bevestigde modelstatus. Iedere
-daarna afzonderlijk ingediende cue krijgt weer **maximaal 30 seconden**
-voor het lokale ML Kit-resultaat. Bij een uitblijvende callback of
+geschreven. Vanaf de eerste door jou gekozen **Controleer lokale modellen**
+én vanaf de tweede, interne modelcontrole wacht Tuddy telkens maximaal
+**30 seconden** op een bevestigde modelstatus. Iedere daarna afzonderlijk
+ingediende cue krijgt opnieuw **maximaal 30 seconden** voor het lokale
+ML Kit-resultaat. Bij een uitblijvende callback of
 andere fout stopt de tijdelijke batch met een duidelijke melding;
 het **hele concept en alle tijdcodes blijven ongewijzigd**, ook
 wanneer veel eerdere geselecteerde regels wel waren vertaald.
