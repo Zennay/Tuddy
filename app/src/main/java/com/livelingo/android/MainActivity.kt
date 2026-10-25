@@ -492,10 +492,6 @@ private fun TuddyScreen(
     // already-submitted ML Kit Tasks can still be running on that process.
     val physicalMlKitBudget = LocalMlKitWorkBudget.shared
     var physicalMlKitTasks by remember { mutableIntStateOf(physicalMlKitBudget.activeCount()) }
-    DisposableEffect(physicalMlKitBudget) {
-        val unsubscribe = physicalMlKitBudget.subscribe { physicalMlKitTasks = it }
-        onDispose { unsubscribe() }
-    }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
         mutableStateOf(PrivateScreenShield.enabled(context))
@@ -3997,6 +3993,11 @@ private fun TuddyScreen(
             localTranslatorPool.close()
             captionSpeaker.close()
         }
+    }
+
+    DisposableEffect(physicalMlKitBudget) {
+        val unsubscribe = physicalMlKitBudget.subscribe { physicalMlKitTasks = it }
+        onDispose { unsubscribe() }
     }
 
     // Android window flag is present ONLY during a consented listening session.
