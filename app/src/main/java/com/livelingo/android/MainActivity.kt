@@ -3580,6 +3580,47 @@ private fun TuddyScreen(
                             )
                         }
                         if (draftFromExternalShare) {
+                            OutlinedButton(
+                                enabled = !listening &&
+                                    OfflineTypedCaptionPolicy.normalize(manualText) != null,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    // Android ACTION_SEND text/plain stays a draft until
+                                    // this explicit user choice. The quick translator
+                                    // receives only the bounded normalized sentence;
+                                    // nothing is added to the running conversation.
+                                    val reviewed = OfflineTypedCaptionPolicy.normalize(manualText)
+                                    if (reviewed != null && !listening) {
+                                        val destination = Intent(
+                                            context, QuickTranslateActivity::class.java
+                                        ).apply {
+                                            action = Intent.ACTION_PROCESS_TEXT
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_PROCESS_TEXT, reviewed)
+                                            putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, true)
+                                            // Validated language hints from the user's
+                                            // current in-app choice, never the sender.
+                                            putExtra(QUICK_SOURCE_CODE_EXTRA, source.translateCode)
+                                            putExtra(QUICK_TARGET_CODE_EXTRA, target.translateCode)
+                                        }
+                                        val opened = runCatching {
+                                            context.startActivity(destination)
+                                            true
+                                        }.getOrDefault(false)
+                                        if (opened) {
+                                            quickTypedOpen = false
+                                            draftFromExternalShare = false
+                                            sharedTextToTwoWay = null
+                                            manualText = ""
+                                        } else {
+                                            error = "Snelle vertaling kon niet openen. " +
+                                                "De tekst blijft hier als concept staan."
+                                        }
+                                    }
+                                }
+                            ) { Text("Vertaal apart · zonder gespreksgeschiedenis") }
+                        }
+                        if (draftFromExternalShare) {
                             TextButton(onClick = {
                                 // Keep the already-reviewed draft in RAM while the
                                 // user adjusts the actual target/source picker.

@@ -1,7 +1,11 @@
 package com.livelingo.android
 
 import android.content.Intent
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
+import android.os.PersistableBundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -33,8 +37,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.google.mlkit.nl.translate.Translation
@@ -42,6 +44,12 @@ import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import java.util.Locale
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
+
+// Internal-only hints for Tuddy's reviewed ACTION_SEND draft handoff.
+// The QuickTranslateActivity is not exported, and every hint is validated
+// against the actual ML Kit target catalog before display.
+internal const val QUICK_SOURCE_CODE_EXTRA = "com.livelingo.android.extra.QUICK_SOURCE_CODE"
+internal const val QUICK_TARGET_CODE_EXTRA = "com.livelingo.android.extra.QUICK_TARGET_CODE"
 
 /**
  * Android's selected-text action. Translation is explicit, local-only and
@@ -98,8 +106,16 @@ internal class QuickTranslateActivity : ComponentActivity() {
         }
 
         val defaults = defaultLanguagePair()
-        sourceCode = defaults.first
-        targetCode = defaults.second
+        val hintedSource = runCatching {
+            intent.getStringExtra(QUICK_SOURCE_CODE_EXTRA)
+        }.getOrNull()?.takeIf { it in TargetCatalog.codes }
+        val hintedTarget = runCatching {
+            intent.getStringExtra(QUICK_TARGET_CODE_EXTRA)
+        }.getOrNull()?.takeIf { it in TargetCatalog.codes }
+        sourceCode = hintedSource ?: defaults.first
+        targetCode = hintedTarget ?: defaults.second
+        intent.removeExtra(QUICK_SOURCE_CODE_EXTRA)
+        intent.removeExtra(QUICK_TARGET_CODE_EXTRA)
         selectionReadOnly = textReadOnly
         incomingText = incoming?.draft.orEmpty()
         inputNotice = incoming?.notice ?: if (!acceptedAction) {
@@ -132,7 +148,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
                         translationResult?.let { speakSelection(it, targetCode, pace) }
                     },
                     onStopPlayback = { stopPlayback() },
-                    onCopy = { status = "Vertaling gekopieerd. Tuddy bewaart geen kopie." },
+                    onCopy = { copyTranslation() },
+                    onShare = { shareTranslation() },
                     onReturnResult = { returnTranslationToCaller() },
                     onOpenTuddy = { openTuddy() },
                     onClose = { closeAndFinish() }
@@ -312,6 +329,42 @@ internal class QuickTranslateActivity : ComponentActivity() {
         playbackNotice = ""
     }
 
+    private fun copyTranslation() {
+        val result = translationResult ?: return
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val copied = clipboard != null && runCatching {
+            val clip = ClipData.newPlainText("Tuddy · privévertaling", result)
+            // On Android 13+ suppress the system's automatic clipboard preview.
+            // The text is still intentionally accessible to other apps after copying.
+            clip.description.extras = PersistableBundle().apply {
+                putBoolean("android.content.extra.IS_SENSITIVE", true)
+            }
+            clipboard.setPrimaryClip(clip)
+            true
+        }.getOrDefault(false)
+        status = if (copied) {
+            "Vertaling naar Android-klembord gekopieerd. Andere apps kunnen dit klembord lezen."
+        } else {
+            "Kopiëren is mislukt. Er is niets naar het klembord gestuurd."
+        }
+    }
+
+    private fun shareTranslation() {
+        val result = translationResult ?: return
+        if (busy || isFinishing) return
+        // This only runs after a separate in-app confirmation. Android's
+        // receiver may store/sync text, so never share silently.
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, result)
+        }
+        runCatching {
+            startActivity(Intent.createChooser(send, "Deel je vertaling met…"))
+        }.onFailure {
+            status = "Het Android-deelmenu kon niet worden geopend. De tekst is niet automatisch gedeeld."
+        }
+    }
+
     private fun returnTranslationToCaller() {
         val result = translationResult ?: return
         if (selectionReadOnly) return
@@ -378,13 +431,14 @@ private fun QuickTranslateScreen(
     onPlayTranslation: (LocalSpeechPace) -> Unit,
     onStopPlayback: () -> Unit,
     onCopy: () -> Unit,
+    onShare: () -> Unit,
     onReturnResult: () -> Unit,
     onOpenTuddy: () -> Unit,
     onClose: () -> Unit
 ) {
     var sourcePicker by remember { mutableStateOf(false) }
     var targetPicker by remember { mutableStateOf(false) }
-    val clipboard = LocalClipboardManager.current
+    var confirmExternalShare by remember { mutableStateOf(false) }
     val sourceLabel = TargetCatalog.targets.firstOrNull { it.code == sourceCode }?.title ?: sourceCode
     val targetLabel = TargetCatalog.targets.firstOrNull { it.code == targetCode }?.title ?: targetCode
 
@@ -510,12 +564,13 @@ private fun QuickTranslateScreen(
                 )
             }
             OutlinedButton(
-                onClick = {
-                    clipboard.setText(AnnotatedString(result))
-                    onCopy()
-                },
+                onClick = onCopy,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Kopieer vertaling") }
+            OutlinedButton(
+                onClick = { confirmExternalShare = true },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Deel vertaling via Android…") }
             if (!readOnly) {
                 Button(onClick = onReturnResult, modifier = Modifier.fillMaxWidth()) {
                     Text("Vervang geselecteerde tekst in de andere app")
@@ -535,6 +590,31 @@ private fun QuickTranslateScreen(
         }
     }
 
+    if (confirmExternalShare && result != null) {
+        AlertDialog(
+            onDismissRequest = { confirmExternalShare = false },
+            title = { Text("Vertaling buiten Tuddy delen?") },
+            text = {
+                Text(
+                    "Je deelt alleen de vertaalde tekst met een Android-app die je zelf kiest. " +
+                        "Die app kan de tekst opslaan of online verwerken. " +
+                        "Tuddy kan die kopie daarna niet verwijderen. " +
+                        "Annuleer om de vertaling alleen hier te houden."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmExternalShare = false
+                    onShare()
+                }) { Text("Open Android-deelmenu") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmExternalShare = false }) {
+                    Text("Niet delen")
+                }
+            }
+        )
+    }
     if (sourcePicker) {
         LanguagePickerDialog(
             title = "Brontaal",
