@@ -9359,6 +9359,20 @@ private fun TuddyScreen(
                                             line.translated, line.targetCode, pace
                                         ) { pronunciationNotice = it }
                                     },
+                                    onPlayBilingual = { pace ->
+                                        if (!listening &&
+                                            (line.status == "Lokaal vertaald" ||
+                                                line.status == "Lokaal") &&
+                                            lines.any { current ->
+                                                current.id == line.id && current == line
+                                            }
+                                        ) {
+                                            captionSpeaker.speakBilingualPair(
+                                                line.original, line.translated,
+                                                line.sourceCode, line.targetCode, pace
+                                            ) { pronunciationNotice = it }
+                                        }
+                                    },
                                     onStop = {
                                         captionSpeaker.stop()
                                         pronunciationNotice = "Lokaal voorlezen gestopt."
