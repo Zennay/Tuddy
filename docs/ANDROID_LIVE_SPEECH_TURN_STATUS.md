@@ -79,6 +79,40 @@ stilte leidt doorgaans tot een Android `NO_MATCH` of
 Ook deze app-logica is geen vervanging voor een geautoriseerde,
 **fysieke Android 12+-vliegtuigmodustest** met werkelijke resultaten.
 
+## Toestelinteractie: actieve microfoonprivacybewaking
+
+De bestaande **Start / Stop**, toestemming, on-device spraakdienst en
+beperkte herstarts blijven leidend. Daarnaast gebruikt elke nieuwe
+Android-herkenningsronde een tijdelijke sessieguard die:
+
+- de bestaande `RECORD_AUDIO`-toestemming opnieuw controleert;
+- Androids globale melding **microfoon gedempt** controleert;
+- leest of Android naar bel-, beltoon- of VoIP-communicatiemodus ging;
+- de drie signalen ongeveer iedere **twee seconden** blijft controleren
+  zolang die herkenner actief is.
+
+Deze guard start **vóór** `SpeechRecognizer.startListening`. Kunnen de
+actuele Android-signalen niet betrouwbaar worden gelezen of kan de
+tijdelijke controle niet worden ingepland, dan wordt de microfoon
+**niet geopend**. Als de telefoon daarna een oproep meldt, de microfoon
+mute of de toestemming intrekt, beëindigt de app de herkenner en alle
+automatische herstartverzoeken, met een leesbare reden. De gebruiker
+kan na controle zelf opnieuw op **Luister** tikken; Tuddy opent geen
+systeeminstellingen of andere app en vraagt geen nieuwe rechten aan.
+
+Een nieuwe herkenningsronde vervangt de voorgaande monitor. **Stop**,
+achtergrond en Activity-afsluiting verwijderen alle callbacks. Het
+diagnoserapport telt alleen het *aantal* door Android gemelde
+privacyonderbrekingen in RAM, niet gesprekken, belgegevens,
+telefoonnummers, audio, transcript, namen of tijdstippen.
+
+**Beperking:** Androids `AudioManager`-status is niet gegarandeerd
+identiek aan een fysieke mute-schakelaar, de status van een externe
+headsetmicrofoon of iedere OEM-privacyimplementatie. Het interval laat
+een reactievertraging toe. Dit is dus extra beperking van blootstelling
+aan microfooncapture, geen onafhankelijk bewijs dat een fysiek toestel
+te allen tijde niet heeft opgenomen.
+
 ## Gates
 
 Deze mijlpaal vereist de bestaande Android GitHub-build en source-head

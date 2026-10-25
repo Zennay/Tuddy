@@ -22,6 +22,7 @@ internal data class OfflineSessionDiagnostics(
     val missingTextModels: Int = 0,
     val translationFailures: Int = 0,
     val strictRadioInterruptions: Int = 0,
+    val microphonePrivacyInterruptions: Int = 0,
     val translationLatenciesMs: List<Long> = emptyList()
 ) {
     fun asReportLines(): List<String> = listOf(
@@ -36,6 +37,7 @@ internal data class OfflineSessionDiagnostics(
         "Android recognizer rounds without a terminal callback (RAM only): $stalledSpeechTurns",
         "Terminal recognizer errors: $terminalSpeechErrors",
         "Strict airplane-mode radio interruptions (not proof of isolation): $strictRadioInterruptions",
+        "Android microphone permission/mute/call interruptions (RAM only): $microphonePrivacyInterruptions",
         "Completed local text translations of recognized speech: $localTranslations",
         "Recognized speech with missing text model: $missingTextModels",
         "Recognized speech translation failures: $translationFailures",

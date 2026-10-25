@@ -160,6 +160,16 @@ internal fun OfflineReadinessDialog(
                         ) { Text("Open Android spraakinstellingen") }
                     }
                 }
+                Text(
+                    "Tijdens het luisteren controleert Tuddy ook ongeveer elke twee " +
+                        "seconden of Android de microfoontoestemming, mute-stand " +
+                        "of een oproep-/communicatiemodus meldt. Bij een onveilige " +
+                        "of onleesbare status stopt Tuddy de microfoon en de " +
+                        "automatische herstart. Dit gebruikt geen belgeschiedenis, " +
+                        "audio-opname of extra telefoonmachtiging. Android-status " +
+                        "is geen onafhankelijke fysieke privacygarantie.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 HorizontalDivider()
                 Text("2 · Tekst vertalen zonder internet",
                     style = MaterialTheme.typography.titleSmall)

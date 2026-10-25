@@ -765,6 +765,9 @@ private fun TuddyScreen(
     // One temporary cap per Android on-device recognizer instance; a vendor
     // that never calls onResults/onError must not hold the microphone forever.
     val speechTurnDeadline = remember { OfflineSpeechTurnDeadline() }
+    // Checks Android permission/mute/call mode during a live on-device turn,
+    // not only at initial mic admission or after recognizer restart.
+    val microphonePrivacyGuard = remember(context) { LocalMicrophonePrivacyGuard(context) }
     var consecutiveSpeechStalls by remember { mutableIntStateOf(0) }
     var microphoneLimitMinutes by remember(context) {
         mutableIntStateOf(microphoneLimit.selectedMinutes())
@@ -1414,6 +1417,8 @@ private fun TuddyScreen(
             appendLine("Airplane mode: $airplaneMode")
             appendLine("Strict offline radio-only microphone start (session): $requireOfflineRadioBeforeListening")
             appendLine("Strict radio change observer currently active: ${strictRadioMonitor.isActive()}")
+            appendLine("Microphone permission/mute/call guard active: ${microphonePrivacyGuard.isActive()}")
+            appendLine("Android current microphone blocker (best effort): ${microphonePrivacyGuard.currentBlocker() ?: "none reported"}")
             appendLine("Strict radio interruptions (RAM-only): ${sessionDiagnostics.strictRadioInterruptions}")
             OfflineRadioSnapshot.capture(context).reportLines().forEach {
                 appendLine(it)
@@ -1734,6 +1739,7 @@ private fun TuddyScreen(
     }
 
     fun stop() {
+        microphonePrivacyGuard.disarm() // No privacy polls after Stop/background.
         speechTurnDeadline.cancel() // Old provider cannot outlive Stop/background.
         strictRadioMonitor.disarm() // No radio observers after Stop/background.
         microphoneLimit.cancel() // No timeout can outlive Stop or background.
@@ -2015,6 +2021,7 @@ private fun TuddyScreen(
             // Every start, including a rapid restart after Android's own end-of-speech,
             // must invalidate the previous recognizer's delayed callbacks.
             val voiceToken = voiceSessions.begin()
+            microphonePrivacyGuard.disarm() // Replace old recognizer's observer.
             speechTurnDeadline.cancel() // Each new recognizer has its own deadline.
             // Android final/end-of-speech requires a fresh recognizer.
             // Release both its microphone capture and service before restart.
@@ -2043,6 +2050,25 @@ private fun TuddyScreen(
                     "worden ingeschakeld of Android meldt een verbinding. " +
                     "Controleer vliegtuigmodus en wifi in de Offline startcheck."
                 offlineReadinessOpen = true
+                return
+            }
+            if (!microphonePrivacyGuard.arm { reason ->
+                    if (voiceSessions.isCurrent(voiceToken)) {
+                        stop()
+                        sessionDiagnostics = sessionDiagnostics.copy(
+                            microphonePrivacyInterruptions =
+                                sessionDiagnostics.microphonePrivacyInterruptions + 1
+                        )
+                        liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                        error = "$reason Luisteren gestopt; controleer de Android-microfoon- " +
+                            "en oproepinstellingen en tik zelf opnieuw op Luister."
+                    }
+                }) {
+                stop()
+                liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                error = (microphonePrivacyGuard.currentBlocker()
+                    ?: "Android kon de sessiecontrole van de microfoon niet activeren.") +
+                    " Luisteren niet gestart. Controleer microfoon- en oproepinstellingen."
                 return
             }
             val selectedTarget = target.translateCode
