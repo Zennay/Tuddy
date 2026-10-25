@@ -3361,10 +3361,8 @@ private fun TuddyScreen(
                     }
                 }
             }
-            if (event == Lifecycle.Event.ON_STOP) {
-                pendingSingleSpeechReview = null // no speech draft in background
-                stop()
-            }
+            if (event == Lifecycle.Event.ON_STOP) pendingSingleSpeechReview = null
+            if (event == Lifecycle.Event.ON_STOP) stop()
             if (event == Lifecycle.Event.ON_STOP) closeSpeechCatalog()
             if (event == Lifecycle.Event.ON_STOP) {
                 localTranslatorPool.invalidate()
