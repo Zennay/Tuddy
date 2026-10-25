@@ -219,6 +219,38 @@ uitsluitend bij RAM-gespreksregels; export en gedeelde tekst nemen
 deze scores niet op. Werkelijke spraakkwaliteit vereist menselijke
 toestelproeven en onafhankelijke taalreview.
 
+## Stoppen na herhaalde stilte in de continue modus
+
+De bestaande continue Android-on-device spraakherkenner blijft tijdens
+gewone gesprekken bewust zinnen achter elkaar beluisteren. Soms meldt
+Android in korte opeenvolging `ERROR_NO_MATCH`,
+`ERROR_SPEECH_TIMEOUT` of zelfs een formeel geslaagd `onResults`
+zonder herkenbare woorden. Onbegrensd automatisch opnieuw luisteren
+kan dan langdurig microfoon en batterij gebruiken zonder een bruikbaar
+gespreksresultaat.
+
+Tuddy geeft nu na **maximaal vier opeenvolgende stille herkenningsrondes**
+geen nieuwe automatische herstart meer. De microfoon, Android-listeners
+en de vertraagde restart worden gestopt; het tijdelijke gesprek, ook
+eerder geslaagde ondertitels/vertalingen, blijft staan. Er wordt nooit
+een lege gesprekszin ingevoegd. De UI toont expliciet waarom het
+luisteren stopte en hoe je bewust een **nieuwe Luister-tap** kunt doen.
+
+Een nieuwe expliciete start begint met een nieuwe stiltesteller.
+Een **echt niet-leeg spraakresultaat** binnen de bestaande sessie
+zet de teller ook op nul. De oorspronkelijke korte herstartvertraging
+voor de eerste drie stiltes blijft bestaan. Het is geen
+maximumduur voor een *actief succesvol* gesprek: daarvoor bestaan
+losse, optionele sessielimieten. Een Android-herkenner die helemaal
+geen terminale callback geeft, valt nog steeds onder de
+aparte timeout-wachtdienst, niet onder deze stiltesteller.
+
+De expliciete **één-zinsmodus** blijft onaangetast en stopt al na
+één poging, ook bij stilte. De tijdelijke diagnostiek telt uitsluitend
+hoe vaak de stiltestop is opgetreden; geen audio, timestamps, transcript
+of herkende woorden worden opgeslagen of verstuurd. Dit levert geen
+bewijs van vliegtuigmodus-isolatie of nauwkeurige herkenning.
+
 ## Gates
 
 Deze mijlpaal vereist de bestaande Android GitHub-build en source-head
