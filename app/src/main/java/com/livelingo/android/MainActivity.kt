@@ -821,6 +821,12 @@ private fun TuddyScreen(
     // Checks Android permission/mute/call mode during a live on-device turn,
     // not only at initial mic admission or after recognizer restart.
     val microphonePrivacyGuard = remember(context) { LocalMicrophonePrivacyGuard(context) }
+    // Optional Android-reported headset INPUT gate, not hardware attestation.
+    val headsetMicrophoneGuard = remember(context) { LocalHeadsetMicrophoneGuard(context) }
+    var headsetMicrophoneOnly by remember(context) {
+        mutableStateOf(headsetMicrophoneGuard.enabled())
+    }
+    var headsetMicrophoneNotice by remember { mutableStateOf("") }
     // User-opted device thermal / critical battery protection, scoped to
     // on-device capture only; never runs a background service.
     val speechPowerGuard = remember(context) { LocalSpeechPowerGuard(context) }
@@ -1720,6 +1726,10 @@ private fun TuddyScreen(
             appendLine("Strict offline radio-only microphone start (session): $requireOfflineRadioBeforeListening")
             appendLine("Strict radio change observer currently active: ${strictRadioMonitor.isActive()}")
             appendLine("Microphone permission/mute/call guard active: ${microphonePrivacyGuard.isActive()}")
+            appendLine("Headset microphone input required (user choice): ${headsetMicrophoneGuard.enabled()}")
+            appendLine("Android headset microphone observer active: ${headsetMicrophoneGuard.isActive()}")
+            appendLine("Headset microphone interruptions (RAM only): ${sessionDiagnostics.headsetMicInterruptions}")
+            appendLine("Headset microphone blocker (Android metadata only): ${headsetMicrophoneGuard.currentBlocker() ?: "none reported"}")
             appendLine("Opt-in thermal/critical battery speech protection: ${speechPowerGuard.enabled()}")
             appendLine("Speech power guard active: ${speechPowerGuard.isActive()}")
             appendLine("Speech power safety interruptions (RAM only): ${sessionDiagnostics.powerSafetyInterruptions}")
@@ -2048,6 +2058,7 @@ private fun TuddyScreen(
     }
 
     fun stop() {
+        headsetMicrophoneGuard.disarm() // No route observers after Stop/background.
         speechPowerGuard.disarm() // No thermal/battery listeners without an active microphone.
         microphonePrivacyGuard.disarm() // No privacy polls after Stop/background.
         speechTurnDeadline.cancel() // Old provider cannot outlive Stop/background.
@@ -2308,6 +2319,16 @@ private fun TuddyScreen(
             return
         }
         if (listening && !forceRestart) return
+        if (headsetMicrophoneGuard.enabled()) {
+            val blocker = headsetMicrophoneGuard.currentBlocker()
+            if (blocker != null) {
+                stop() // Applies to automatic recognizer restarts too.
+                liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                error = "$blocker Headsetmodus is ingeschakeld; " +
+                    "sluit een microfoon aan of schakel deze optie bewust uit."
+                return
+            }
+        }
         if (speechPowerGuard.enabled()) {
             val blocker = speechPowerGuard.currentBlocker()
             if (blocker != null) {
@@ -2372,6 +2393,25 @@ private fun TuddyScreen(
                     "worden ingeschakeld of Android meldt een verbinding. " +
                     "Controleer vliegtuigmodus en wifi in de Offline startcheck."
                 offlineReadinessOpen = true
+                return
+            }
+            if (!headsetMicrophoneGuard.arm { reason ->
+                    if (voiceSessions.isCurrent(voiceToken)) {
+                        stop() // Invalidates old callbacks, timers and automatic restarts.
+                        sessionDiagnostics = sessionDiagnostics.copy(
+                            headsetMicInterruptions =
+                                sessionDiagnostics.headsetMicInterruptions + 1
+                        )
+                        liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                        error = "$reason De microfoon is gestopt; " +
+                            "controleer de Android-invoer en tik bewust opnieuw op Luister."
+                    }
+                }) {
+                stop()
+                liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                error = (headsetMicrophoneGuard.currentBlocker()
+                    ?: "Android kon de headsetmicrofoon niet veilig blijven bewaken.") +
+                    " Luisteren niet gestart; het huidige gesprek blijft behouden."
                 return
             }
             if (!microphonePrivacyGuard.arm { reason ->
@@ -8879,6 +8919,35 @@ private fun TuddyScreen(
                 }
                 if (microphoneLimitNotice.isNotBlank())
                     Text(microphoneLimitNotice, style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider()
+                Text("Microfoon · headsetinvoer verplicht stellen",
+                    style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Optioneel: Tuddy start of herstart alleen met een door Android " +
+                        "gemelde headsetmicrofoon (bedraad, USB of Bluetooth). " +
+                        "Verdwijnt die invoer tijdens luisteren, dan stopt de microfoon. " +
+                        "Androids apparaatinformatie bewijst niet welke microfoon " +
+                        "de spraakherkenner daadwerkelijk gebruikt.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                TextButton(
+                    enabled = !listening,
+                    onClick = {
+                        val requested = !headsetMicrophoneOnly
+                        val saved = headsetMicrophoneGuard.setEnabled(requested)
+                        if (saved) headsetMicrophoneOnly = requested
+                        headsetMicrophoneNotice = if (!saved)
+                            "De headsetmicrofoonvoorkeur kon niet worden opgeslagen."
+                        else if (requested)
+                            "Headsetmicrofoon vereist vanaf volgende luisterstart. " +
+                                "Geen aangesloten input betekent niet starten."
+                        else "Headsetvereiste uitgeschakeld voor volgende luisterstart."
+                    }
+                ) { Text(if (headsetMicrophoneOnly)
+                    "Headsetmicrofoon vereist · aan ✓" else
+                    "Headsetmicrofoon vereist · uit") }
+                if (headsetMicrophoneNotice.isNotBlank())
+                    Text(headsetMicrophoneNotice, style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 Text("Toestelbeveiliging · lokaal luisteren en accu",
                     style = MaterialTheme.typography.titleSmall)
