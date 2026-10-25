@@ -8381,13 +8381,21 @@ private fun TuddyScreen(
                 onDismissRequest = { confirmPrivateExit = false },
                 title = { Text("Tuddy afsluiten?") },
                 text = {
-                    Text(
-                        "Je huidige gesprek, concepttekst en tijdelijke voorbeelden " +
-                            "staan alleen in het geheugen en verdwijnen als je de app afsluit. " +
-                            "Je bewust opgeslagen privéwoorden blijven behouden. " +
-                            "Tuddy bewaart of deelt je gesprek niet automatisch. " +
-                            "De microfoon en het voorlezen zijn alvast gestopt."
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Je huidige gesprek, concepttekst en tijdelijke voorbeelden " +
+                                "staan alleen in het geheugen en verdwijnen als je de app afsluit. " +
+                                "Je bewust opgeslagen privéwoorden blijven behouden. " +
+                                "Tuddy bewaart of deelt je gesprek niet automatisch. " +
+                                "De microfoon en het voorlezen zijn alvast gestopt."
+                        )
+                        if (lines.isNotEmpty()) {
+                            TextButton(onClick = {
+                                confirmPrivateExit = false
+                                conversationToolsOpen = true
+                            }) { Text("Bekijk exportopties (alleen op jouw verzoek)") }
+                        }
+                    }
                 },
                 confirmButton = {
                     TextButton(onClick = {
@@ -8399,14 +8407,6 @@ private fun TuddyScreen(
                 dismissButton = {
                     TextButton(onClick = { confirmPrivateExit = false }) {
                         Text("Blijf in Tuddy")
-                    }
-                },
-                neutralButton = {
-                    if (lines.isNotEmpty()) {
-                        TextButton(onClick = {
-                            confirmPrivateExit = false
-                            conversationToolsOpen = true
-                        }) { Text("Bekijk exportopties") }
                     }
                 }
             )
