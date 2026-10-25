@@ -3604,7 +3604,7 @@ private fun TuddyScreen(
                 },
                 retryableCount = { from, to ->
                     lines.count { it.sourceCode == from && it.targetCode == to &&
-                        it.status == "Model ontbreekt" }
+                        it.status == "Model ontbreekt" && !it.userCorrected }
                 },
                 onRetryMissing = { from, to ->
                     if (listening || from !in TargetCatalog.codes ||
