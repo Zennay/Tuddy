@@ -44,6 +44,7 @@ import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import java.util.Locale
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
+import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 
 // Internal-only hints for Tuddy's reviewed ACTION_SEND draft handoff.
 // The QuickTranslateActivity is not exported, and every hint is validated
@@ -438,6 +439,7 @@ private fun QuickTranslateScreen(
 ) {
     var sourcePicker by remember { mutableStateOf(false) }
     var targetPicker by remember { mutableStateOf(false) }
+    var localVoicePickerCode by remember { mutableStateOf<String?>(null) }
     var confirmExternalShare by remember { mutableStateOf(false) }
     val sourceLabel = TargetCatalog.targets.firstOrNull { it.code == sourceCode }?.title ?: sourceCode
     val targetLabel = TargetCatalog.targets.firstOrNull { it.code == targetCode }?.title ?: targetCode
@@ -537,6 +539,22 @@ private fun QuickTranslateScreen(
             onPlayTranslation = onPlayTranslation,
             onStop = onStopPlayback
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                enabled = !busy && !detectingSource,
+                onClick = {
+                    onStopPlayback()
+                    localVoicePickerCode = sourceCode
+                }
+            ) { Text("Stem bron kiezen") }
+            TextButton(
+                enabled = !busy && !detectingSource,
+                onClick = {
+                    onStopPlayback()
+                    localVoicePickerCode = targetCode
+                }
+            ) { Text("Stem vertaling kiezen") }
+        }
         if (playbackNotice.isNotBlank()) {
             Text(playbackNotice, style = MaterialTheme.typography.bodySmall)
         }
@@ -615,6 +633,13 @@ private fun QuickTranslateScreen(
             }
         )
     }
+    localVoicePickerCode?.let { code ->
+        InstalledLocalVoicePickerDialog(
+            languageTag = code,
+            onDismiss = { localVoicePickerCode = null }
+        )
+    }
+
     if (sourcePicker) {
         LanguagePickerDialog(
             title = "Brontaal",
