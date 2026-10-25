@@ -5577,6 +5577,13 @@ private fun TuddyScreen(
                 captureMode = captureMode.label,
                 translationPaused = speechTranslationPaused,
                 pendingTranslationCount = lines.count { it.status == "Bezig" },
+                uncertainSpeechCount = unreviewedSpeechRows.size,
+                onReviewUncertainSpeech = {
+                    if (!listening && unreviewedSpeechRows.isNotEmpty()) {
+                        focusMode = false
+                        uncertainSpeechReviewOpen = true
+                    }
+                },
                 onToggleTranslationPaused = {
                     setSpeechTranslationPaused(!speechTranslationPaused)
                 },
