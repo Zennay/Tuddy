@@ -821,6 +821,13 @@ private fun TuddyScreen(
     // Checks Android permission/mute/call mode during a live on-device turn,
     // not only at initial mic admission or after recognizer restart.
     val microphonePrivacyGuard = remember(context) { LocalMicrophonePrivacyGuard(context) }
+    // User-opted device thermal / critical battery protection, scoped to
+    // on-device capture only; never runs a background service.
+    val speechPowerGuard = remember(context) { LocalSpeechPowerGuard(context) }
+    var speechPowerProtectionOn by remember(context) {
+        mutableStateOf(speechPowerGuard.enabled())
+    }
+    var speechPowerNotice by remember { mutableStateOf("") }
     var consecutiveSpeechStalls by remember { mutableIntStateOf(0) }
     var microphoneLimitMinutes by remember(context) {
         mutableIntStateOf(microphoneLimit.selectedMinutes())
@@ -1713,6 +1720,9 @@ private fun TuddyScreen(
             appendLine("Strict offline radio-only microphone start (session): $requireOfflineRadioBeforeListening")
             appendLine("Strict radio change observer currently active: ${strictRadioMonitor.isActive()}")
             appendLine("Microphone permission/mute/call guard active: ${microphonePrivacyGuard.isActive()}")
+            appendLine("Opt-in thermal/critical battery speech protection: ${speechPowerGuard.enabled()}")
+            appendLine("Speech power guard active: ${speechPowerGuard.isActive()}")
+            appendLine("Speech power safety interruptions (RAM only): ${sessionDiagnostics.powerSafetyInterruptions}")
             appendLine("Android current microphone blocker (best effort): ${microphonePrivacyGuard.currentBlocker() ?: "none reported"}")
             appendLine("Strict radio interruptions (RAM-only): ${sessionDiagnostics.strictRadioInterruptions}")
             OfflineRadioSnapshot.capture(context).reportLines().forEach {
@@ -2038,6 +2048,7 @@ private fun TuddyScreen(
     }
 
     fun stop() {
+        speechPowerGuard.disarm() // No thermal/battery listeners without an active microphone.
         microphonePrivacyGuard.disarm() // No privacy polls after Stop/background.
         speechTurnDeadline.cancel() // Old provider cannot outlive Stop/background.
         strictRadioMonitor.disarm() // No radio observers after Stop/background.
@@ -2297,6 +2308,17 @@ private fun TuddyScreen(
             return
         }
         if (listening && !forceRestart) return
+        if (speechPowerGuard.enabled()) {
+            val blocker = speechPowerGuard.currentBlocker()
+            if (blocker != null) {
+                // Includes automatic recognizer restarts: don't keep a prior
+                // microphone instance open after a newly critical reading.
+                stop()
+                liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                error = "$blocker Microfoon niet gestart. Controleer de toestelstatus."
+                return
+            }
+        }
         if (requireOfflineRadioBeforeListening) {
             val radio = OfflineRadioSnapshot.capture(context)
             if (!StrictOfflineRadioSessionMonitor.strictlyOffline(radio)) {
@@ -2369,6 +2391,25 @@ private fun TuddyScreen(
                 error = (microphonePrivacyGuard.currentBlocker()
                     ?: "Android kon de sessiecontrole van de microfoon niet activeren.") +
                     " Luisteren niet gestart. Controleer microfoon- en oproepinstellingen."
+                return
+            }
+            if (!speechPowerGuard.arm { reason ->
+                    if (voiceSessions.isCurrent(voiceToken)) {
+                        stop()
+                        sessionDiagnostics = sessionDiagnostics.copy(
+                            powerSafetyInterruptions =
+                                sessionDiagnostics.powerSafetyInterruptions + 1
+                        )
+                        liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                        error = "$reason Je gesprek blijft bewaard; " +
+                            "tik na herstel bewust opnieuw op Luister."
+                    }
+                }) {
+                stop()
+                liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                error = (speechPowerGuard.currentBlocker()
+                    ?: "Android kon de optionele energiebewaking niet activeren.") +
+                    " Microfoon niet gestart. Zet de optie uit of controleer de toestelstatus."
                 return
             }
             val selectedTarget = target.translateCode
@@ -8838,6 +8879,38 @@ private fun TuddyScreen(
                 }
                 if (microphoneLimitNotice.isNotBlank())
                     Text(microphoneLimitNotice, style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider()
+                Text("Toestelbeveiliging · lokaal luisteren en accu",
+                    style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Optioneel: beëindig alleen een actieve microfoonsessie als Android " +
+                        "ernstige oververhitting of een accu van maximaal 5% zonder laden meldt. " +
+                        "De originele gespreksregels blijven op het toestel; " +
+                        "er wordt niet automatisch opnieuw geluisterd. " +
+                        "Geen accu- of temperatuurgeschiedenis wordt opgeslagen.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                TextButton(
+                    enabled = !listening,
+                    onClick = {
+                        val selected = !speechPowerProtectionOn
+                        if (speechPowerGuard.setEnabled(selected)) {
+                            speechPowerProtectionOn = selected
+                            speechPowerNotice = if (selected)
+                                "Ingeschakeld voor volgende luistersessies. " +
+                                    "Android-signalen zijn geen onafhankelijke fysieke meting."
+                            else "Uitgeschakeld. Bestaande microfoonlimieten blijven gelden."
+                        } else {
+                            speechPowerNotice = "Kon de toestelbeveiligingskeuze niet bewaren."
+                        }
+                    }
+                ) {
+                    Text(if (speechPowerProtectionOn)
+                        "✓ Accu- en oververhittingsbewaking: aan"
+                        else "Accu- en oververhittingsbewaking inschakelen")
+                }
+                if (speechPowerNotice.isNotBlank())
+                    Text(speechPowerNotice, style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider()
                 Text("Privacy · opgeslagen oefengegevens",
                     style = MaterialTheme.typography.titleSmall)
