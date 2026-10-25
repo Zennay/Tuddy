@@ -611,6 +611,10 @@ private fun TuddyScreen(
     var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
     var pendingPinnedExport by remember { mutableStateOf<PendingPinnedCaptionExport?>(null) }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
+    // Protected system screen-off complements Activity ON_PAUSE on Android
+    // vendors that deliver focus callbacks after the device starts locking.
+    val screenLockGate = remember(context) { LocalScreenLockPrivacyGate(context) }
+    var screenLockGateArmed by remember { mutableStateOf(false) }
     var headphonesOnlyPlayback by remember(context) {
         mutableStateOf(PrivatePlaybackRoutingPreference.headphonesOnly(context))
     }
@@ -2389,7 +2393,8 @@ private fun TuddyScreen(
         // The runtime permission dialog may return after the Activity has
         // stopped. The microphone must never start from that stale callback.
         if (!MicrophoneStartPolicy.mayStart(lifecycleOwner.lifecycle.currentState) ||
-            !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            !lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) ||
+            !screenLockGateArmed || !screenLockGate.isInteractiveAndUnlocked()) {
             listening = false
             error = "Microfoon gestopt: open Tuddy en tik opnieuw op Luister."
             return
@@ -3892,7 +3897,34 @@ private fun TuddyScreen(
                     }
                 }
             }
+            if (event == Lifecycle.Event.ON_RESUME) {
+                screenLockGateArmed = screenLockGate.arm {
+                    screenLockGateArmed = false
+                    val hadCapture = listening || recognizer != null
+                    val hadReview = pendingSingleSpeechReview != null
+                    pendingSingleSpeechReview = null
+                    // Screen-off is a protected system event. Do not depend
+                    // solely on the later Activity ON_PAUSE to release capture.
+                    stop()
+                    if (hadCapture || hadReview) {
+                        error = "Android heeft het scherm vergrendeld of uitgeschakeld: " +
+                            "de microfoon is direct gestopt en een onbevestigde zin " +
+                            "is gewist. Ontgrendel en tik bewust opnieuw op Luister."
+                    }
+                }
+                if (!screenLockGateArmed) {
+                    val hadCapture = listening || recognizer != null
+                    pendingSingleSpeechReview = null
+                    stop()
+                    if (hadCapture) {
+                        error = "Android kon de schermvergrendeling niet veilig " +
+                            "bewaken. Luisteren blijft gestopt; open Tuddy opnieuw."
+                    }
+                }
+            }
             if (event == Lifecycle.Event.ON_PAUSE) {
+                screenLockGate.disarm()
+                screenLockGateArmed = false
                 // ON_PAUSE happens when focus moves to a different app in
                 // Android split-screen even if Tuddy remains STARTED/visible.
                 // Never continue on-device capture or local TTS in that state.
@@ -3988,6 +4020,8 @@ private fun TuddyScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            screenLockGate.disarm()
+            screenLockGateArmed = false
             pendingSpeechSettingsReturnTag = null
             generation++
             pendingManualCaptionUndo = null
