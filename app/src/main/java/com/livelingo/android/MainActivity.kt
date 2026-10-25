@@ -304,6 +304,8 @@ private enum class LiveSpeechPhase(val label: String) {
     HEARING("Spraak ontvangen · luisteren naar je zin"),
     PROCESSING("Zin afronden · Android verwerkt de spraak"),
     TRANSLATING("Zin ontvangen · lokale tekstvertaling loopt apart"),
+    SINGLE_FINISHED("Eén zin ontvangen · microfoon gestopt; lokale vertaling loopt apart"),
+    SINGLE_EMPTY("Geen zin herkend · microfoon gestopt; tik voor een nieuwe zin"),
     RETRYING("Geen bruikbaar spraakresultaat · lokaal opnieuw luisteren…"),
     STALLED("Android-spraakdienst antwoordt niet · sessie veilig herstellen…"),
     INTERRUPTED("Luisteren gestopt door een Android-spraakfout · bekijk de melding")
@@ -757,6 +759,9 @@ private fun TuddyScreen(
     var pendingSpeakerExport by remember { mutableStateOf<Pair<Int, ByteArray>?>(null) }
     var previewResult by remember { mutableStateOf<String?>(null) }
     var listening by remember { mutableStateOf(false) }
+    val captureModePrefs = remember(context) { LocalSpeechCaptureModePreferences(context) }
+    var captureMode by remember { mutableStateOf(captureModePrefs.selected()) }
+    var captureModeNotice by remember { mutableStateOf("") }
     var liveSpeechPhase by remember { mutableStateOf(LiveSpeechPhase.OFF) }
     var preparingOfflineModel by remember { mutableStateOf(false) }
     var offlineModelStatus by remember { mutableStateOf("") }
@@ -2124,7 +2129,14 @@ private fun TuddyScreen(
                     clearInterim()
                     val retry = ContinuousSpeechRestartPolicy.delayForError(
                         code, SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
-                    if (retry != null) {
+                    if (retry != null && captureMode == LocalSpeechCaptureMode.SINGLE_SENTENCE) {
+                        // One user tap means one recognition attempt, including silence.
+                        // Never keep microphone capture open across automatic restarts.
+                        stop()
+                        liveSpeechPhase = LiveSpeechPhase.SINGLE_EMPTY
+                        error = "Geen herkenbare zin ontvangen. Microfoon gestopt; " +
+                            "tik opnieuw op Luister voor een nieuwe poging."
+                    } else if (retry != null) {
                         sessionDiagnostics = sessionDiagnostics.copy(
                             retryableSpeechErrors = sessionDiagnostics.retryableSpeechErrors + 1
                         )
@@ -2203,10 +2215,19 @@ private fun TuddyScreen(
                         }
                         translate(sentence, id, selectedTarget, observedSource, token)
                     }
-                    // The user asked for live captions, not one isolated sentence.
-                    // A new recognizer generation suppresses callbacks from the old one.
-                    scheduleRestart(voiceToken, ContinuousSpeechRestartPolicy.RESULT_DELAY_MS) {
-                        start(forceRestart = true)
+                    if (captureMode == LocalSpeechCaptureMode.SINGLE_SENTENCE) {
+                        // Translation work started above is independent of the
+                        // microphone; stop() invalidates recognizer callbacks,
+                        // NOT the in-flight row/generation used by local ML Kit.
+                        stop()
+                        liveSpeechPhase = if (sentence.isNotBlank())
+                            LiveSpeechPhase.SINGLE_FINISHED else LiveSpeechPhase.SINGLE_EMPTY
+                    } else {
+                        // Continuous is the existing default: only a fresh
+                        // recognizer generation can handle another spoken turn.
+                        scheduleRestart(voiceToken, ContinuousSpeechRestartPolicy.RESULT_DELAY_MS) {
+                            start(forceRestart = true)
+                        }
                     }
                 }
                 override fun onPartialResults(results: Bundle?) {
@@ -2252,7 +2273,12 @@ private fun TuddyScreen(
                     sessionDiagnostics = sessionDiagnostics.copy(
                         stalledSpeechTurns = sessionDiagnostics.stalledSpeechTurns + 1
                     )
-                    if (consecutiveSpeechStalls <=
+                    if (captureMode == LocalSpeechCaptureMode.SINGLE_SENTENCE) {
+                        stop()
+                        liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
+                        error = "Android reageerde 60 seconden niet op deze ene " +
+                            "spraakpoging. Microfoon gestopt; probeer zelf opnieuw."
+                    } else if (consecutiveSpeechStalls <=
                         OfflineSpeechTurnDeadline.MAX_AUTOMATIC_STALL_RETRIES) {
                         liveSpeechPhase = LiveSpeechPhase.STALLED
                         error = "Android reageerde 60 seconden niet op de lokale " +
@@ -4715,6 +4741,19 @@ private fun TuddyScreen(
                 interimTranslated = partialTranslation,
                 listening = listening,
                 speechPhaseStatus = liveSpeechPhase.label,
+                captureMode = captureMode.label,
+                onToggleCaptureMode = {
+                    if (!listening && !modelStorageBusy) {
+                        val next = if (captureMode == LocalSpeechCaptureMode.CONTINUOUS)
+                            LocalSpeechCaptureMode.SINGLE_SENTENCE
+                        else LocalSpeechCaptureMode.CONTINUOUS
+                        captureMode = next
+                        val saved = captureModePrefs.choose(next)
+                        captureModeNotice = if (saved)
+                            "${next.label}: kies Luister om te beginnen."
+                        else "Modus alleen voor deze sessie ingesteld."
+                    }
+                },
                 fontScale = captionSize.scale,
                 onStop = { stop() },
                 onClose = { focusMode = false },
@@ -7572,6 +7611,33 @@ private fun TuddyScreen(
                         MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Luistermodus",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        enabled = !listening && !modelStorageBusy,
+                        onClick = {
+                            val next = if (captureMode == LocalSpeechCaptureMode.CONTINUOUS)
+                                LocalSpeechCaptureMode.SINGLE_SENTENCE
+                            else LocalSpeechCaptureMode.CONTINUOUS
+                            captureMode = next
+                            val saved = captureModePrefs.choose(next)
+                            captureModeNotice = if (saved)
+                                "${next.label}: kies Luister om te beginnen."
+                            else "Modus alleen voor deze sessie ingesteld."
+                        }
+                    ) { Text("${captureMode.label} · wissel") }
+                }
+                if (captureModeNotice.isNotBlank()) {
+                    Text(captureModeNotice, style = MaterialTheme.typography.labelSmall)
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
