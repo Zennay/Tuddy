@@ -2,6 +2,7 @@ package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +13,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,6 +22,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OfflineTypedCaptionPolicy
+import com.livelingo.android.OfflineTextModelInventory
+import com.livelingo.android.OfflineTextStage
+import com.livelingo.android.TargetCatalog
 
 /**
  * One-shot Android on-device result is a PRIVATE DRAFT until explicitly
@@ -32,11 +38,36 @@ internal fun SingleSentenceSpeechReviewDialog(
     sourceCode: String,
     targetCode: String,
     alternatives: List<String>,
-    onConfirm: (String) -> Boolean,
+    onConfirm: (original: String, reviewedSource: String, reviewedTarget: String) -> Boolean,
     onDiscard: () -> Unit
 ) {
-    var draft by remember(original) { mutableStateOf(original) }
-    var notice by remember(original) { mutableStateOf("") }
+    var draft by remember(original, sourceCode, targetCode) { mutableStateOf(original) }
+    var reviewedSource by remember(original, sourceCode, targetCode) { mutableStateOf(sourceCode) }
+    var reviewedTarget by remember(original, sourceCode, targetCode) { mutableStateOf(targetCode) }
+    var selection by remember(original, sourceCode, targetCode) { mutableStateOf<String?>(null) }
+    var notice by remember(original, sourceCode, targetCode) { mutableStateOf("") }
+    var modelNotice by remember(reviewedSource, reviewedTarget) {
+        mutableStateOf("Lokale tekstmodellen nog niet gecontroleerd.")
+    }
+    // Read-only model check: never initiates a download or sends the sentence.
+    // New pair checks invalidate previous callbacks; disposal cancels the
+    // publication of late receipts into a discarded private review dialog.
+    val inventory = remember { OfflineTextModelInventory() }
+    LaunchedEffect(reviewedSource, reviewedTarget) {
+        inventory.check(reviewedSource, reviewedTarget, TargetCatalog.codes) { receipt ->
+            if (receipt.source == reviewedSource && receipt.target == reviewedTarget) {
+                modelNotice = when (receipt.stage) {
+                    OfflineTextStage.READY -> "Geïnstalleerde tekstmodellen beschikbaar. " + receipt.detail
+                    OfflineTextStage.CHECKING -> "Geïnstalleerde offline tekstmodellen controleren…"
+                    OfflineTextStage.MISSING -> "Tekstmodel ontbreekt. " + receipt.detail
+                    else -> "Lokale modelstatus niet bevestigd. " + receipt.detail
+                }
+            }
+        }
+    }
+    DisposableEffect(inventory) {
+        onDispose { inventory.invalidate() }
+    }
     val normalized = OfflineTypedCaptionPolicy.normalize(draft)
 
     AlertDialog(
@@ -56,10 +87,31 @@ internal fun SingleSentenceSpeechReviewDialog(
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    "Tekstrichting: ${sourceCode.uppercase()} → ${targetCode.uppercase()}. " +
-                        "Geen online herkenning of automatische vertaling.",
+                    "Voorgestelde tekstrichting: ${sourceCode.uppercase()} → " +
+                        "${targetCode.uppercase()}. Controleer de taal van de zin zelf; " +
+                        "Android-herkenning en tekstmodellen zijn afzonderlijk.",
                     style = MaterialTheme.typography.labelMedium
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { selection = "bron" }) {
+                        Text("Bron: ${reviewedSource.uppercase()} · kies")
+                    }
+                    TextButton(onClick = { selection = "doel" }) {
+                        Text("Doel: ${reviewedTarget.uppercase()} · kies")
+                    }
+                }
+                if (reviewedSource == reviewedTarget) {
+                    Text("Gelijke teksttalen: deze zin wordt zonder vertaling overgenomen.",
+                        style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text(modelNotice, style = MaterialTheme.typography.bodySmall)
+                }
+                if (reviewedSource != sourceCode || reviewedTarget != targetCode) {
+                    TextButton(onClick = {
+                        reviewedSource = sourceCode
+                        reviewedTarget = targetCode
+                    }) { Text("Herstel oorspronkelijke taalrichting") }
+                }
                 OutlinedTextField(
                     value = draft,
                     onValueChange = { draft = it.take(OfflineTypedCaptionPolicy.MAX_INPUT_UNITS) },
@@ -100,7 +152,7 @@ internal fun SingleSentenceSpeechReviewDialog(
             TextButton(
                 enabled = normalized != null,
                 onClick = {
-                    if (!onConfirm(draft)) {
+                    if (!onConfirm(draft, reviewedSource, reviewedTarget)) {
                         notice = "Deze zin kon niet veilig worden toegevoegd. " +
                             "Je tekst blijft hier staan."
                     }
@@ -111,4 +163,18 @@ internal fun SingleSentenceSpeechReviewDialog(
             TextButton(onClick = onDiscard) { Text("Gooi zin weg") }
         }
     )
+    selection?.let { which ->
+        ReviewedSentenceLanguagePicker(
+            which = which,
+            selectedCode = if (which == "bron") reviewedSource else reviewedTarget,
+            onSelect = { code ->
+                if (code in TargetCatalog.codes) {
+                    if (which == "bron") reviewedSource = code
+                    else reviewedTarget = code
+                    notice = ""
+                }
+            },
+            onDismiss = { selection = null }
+        )
+    }
 }
