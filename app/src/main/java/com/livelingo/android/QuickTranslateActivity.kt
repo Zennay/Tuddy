@@ -41,6 +41,7 @@ import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import java.util.Locale
+import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 
 /**
  * Android's selected-text action. Translation is explicit, local-only and
@@ -50,6 +51,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private val inventory = OfflineTextModelInventory()
     private val detector = LocalLanguageDetector()
     private var generation = 0L
+    private var detectorRevision = 0L
+    private var localSpeaker: LocalCaptionSpeaker? = null
     private var activeTranslator: Translator? = null
 
     private var incomingText by mutableStateOf("")
@@ -61,6 +64,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var detectingSource by mutableStateOf(false)
     private var detectionNotice by mutableStateOf("")
     private var status by mutableStateOf("")
+    private var playbackNotice by mutableStateOf("")
     private var translationResult by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,12 +120,18 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     detectingSource = detectingSource,
                     detectionNotice = detectionNotice,
                     status = status,
+                    playbackNotice = playbackNotice,
                     result = translationResult,
                     onSourceSelected = { code -> changePair(source = code) },
                     onTargetSelected = { code -> changePair(target = code) },
                     onSwapLanguages = { changePair(source = targetCode, target = sourceCode) },
                     onSuggestSource = { suggestSourceLanguage() },
                     onTranslate = { startTranslation() },
+                    onPlayOriginal = { pace -> speakSelection(incomingText, sourceCode, pace) },
+                    onPlayTranslation = { pace ->
+                        translationResult?.let { speakSelection(it, targetCode, pace) }
+                    },
+                    onStopPlayback = { stopPlayback() },
                     onCopy = { status = "Vertaling gekopieerd. Tuddy bewaart geen kopie." },
                     onReturnResult = { returnTranslationToCaller() },
                     onOpenTuddy = { openTuddy() },
@@ -140,6 +150,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun changePair(source: String? = null, target: String? = null) {
+        detectorRevision++
         detector.close()
         detectingSource = false
         detectionNotice = ""
@@ -152,16 +163,18 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     private fun suggestSourceLanguage() {
         if (busy || detectingSource || inputNotice.isNotBlank()) return
+        stopPlayback()
         val sample = incomingText.replace('\n', ' ').trim().take(1200)
         if (sample.length < 8) {
             detectionNotice = "Er staat te weinig tekst in deze selectie om lokaal een brontaal voor te stellen."
             return
         }
         detector.close()
+        val requestRevision = ++detectorRevision
         detectingSource = true
         detectionNotice = "Brontaalvoorstel lokaal berekenen…"
         detector.identify(sample) { detected ->
-            if (isFinishing) return@identify
+            if (isFinishing || requestRevision != detectorRevision) return@identify
             detectingSource = false
             val supported = detected?.takeIf { it in TargetCatalog.codes }
             if (supported == null) {
@@ -270,6 +283,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     private fun cancelOperation() {
+        stopPlayback()
         generation++
         inventory.invalidate()
         closeActiveTranslator()
@@ -280,6 +294,22 @@ internal class QuickTranslateActivity : ComponentActivity() {
         val current = activeTranslator
         activeTranslator = null
         runCatching { current?.close() }
+    }
+
+    private fun speakSelection(text: String, language: String, pace: LocalSpeechPace) {
+        if (busy || detectingSource || inputNotice.isNotBlank()) return
+        stopPlayback()
+        // LocalCaptionSpeaker admits only installed, non-network Android voices.
+        // It also rejects overly long/control-filled text without audio fallback.
+        val speaker = localSpeaker ?: LocalCaptionSpeaker(this).also { localSpeaker = it }
+        speaker.speak(text, language, pace) { notice ->
+            if (!isFinishing) playbackNotice = notice
+        }
+    }
+
+    private fun stopPlayback() {
+        localSpeaker?.stop()
+        playbackNotice = ""
     }
 
     private fun returnTranslationToCaller() {
@@ -303,6 +333,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        detectorRevision++
         detector.close()
         detectingSource = false
         detectionNotice = ""
@@ -316,6 +347,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        detectorRevision++
         detector.close()
         cancelOperation()
         incomingText = ""
@@ -335,12 +367,16 @@ private fun QuickTranslateScreen(
     detectingSource: Boolean,
     detectionNotice: String,
     status: String,
+    playbackNotice: String,
     result: String?,
     onSourceSelected: (String) -> Unit,
     onTargetSelected: (String) -> Unit,
     onSwapLanguages: () -> Unit,
     onSuggestSource: () -> Unit,
     onTranslate: () -> Unit,
+    onPlayOriginal: (LocalSpeechPace) -> Unit,
+    onPlayTranslation: (LocalSpeechPace) -> Unit,
+    onStopPlayback: () -> Unit,
     onCopy: () -> Unit,
     onReturnResult: () -> Unit,
     onOpenTuddy: () -> Unit,
@@ -438,6 +474,25 @@ private fun QuickTranslateScreen(
                 }
             }
         }
+        // No microphone permission, voice download, or network TTS path:
+        // the shared installed-local-voice policy remains the single gate.
+        LocalCaptionPlaybackMenu(
+            hasCompletedTranslation = result != null,
+            enabled = text.isNotBlank() && inputNotice.isBlank() && !busy && !detectingSource,
+            onPlayOriginal = onPlayOriginal,
+            onPlayTranslation = onPlayTranslation,
+            onStop = onStopPlayback
+        )
+        if (playbackNotice.isNotBlank()) {
+            Text(playbackNotice, style = MaterialTheme.typography.bodySmall)
+        }
+        Text(
+            "Voorlezen werkt alleen voor korte tekst (maximaal 400 tekens) " +
+                "met een geïnstalleerde, als offline gemelde Android-stem. " +
+                "Geen stemdownload of online fallback.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         if (result != null) {
             HorizontalDivider()
             Text("Lokale vertaling", style = MaterialTheme.typography.titleMedium)

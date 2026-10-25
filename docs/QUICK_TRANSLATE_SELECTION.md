@@ -26,6 +26,14 @@ controleer eerst de bron- en doeltaal (of vraag een optioneel lokaal brontaalvoo
   blijven via de bestaande strikte import-/ondertitelpreview lopen; ze worden
   niet als een gewone zin vertaald.
 
+## Brontekst en vertaling lokaal laten voorlezen
+
+Vanuit hetzelfde snelle Android-selectiescherm kun je **🔊 Lokaal voorlezen · kies tempo** openen. Kies **Origineel · normaal/langzaam** voordat of nadat je vertaalt; na een echt voltooide lokale vertaling kun je ook **Vertaling · normaal/langzaam** kiezen. **■ Stop voorlezen** stopt de Android-stem onmiddellijk. Vertalen, een nieuwe taalrichting kiezen, het scherm sluiten of naar de achtergrond gaan stopt de vorige stem eveneens.
+
+Tuddy hergebruikt de bestaande `LocalCaptionSpeaker` en accepteert uitsluitend een reeds geïnstalleerde Android-stem die door Android als niet-netwerkafhankelijk wordt gemeld. Een enkele voorleeszin is maximaal 400 tekens en moet voldoen aan de bestaande tekst-/stembescherming. Ontbreekt die stem of is de selectie te lang, dan verschijnt alleen een begrijpelijke melding: geen spraakdownload, cloud-TTS, nieuwe machtiging of automatische microfoonactivatie. De getoonde gesproken inhoud wordt niet opgeslagen. Een apparaatclaim blijft afhankelijk van echte vliegtuigmodus- en toestelacceptatie; Androids stemmetadata zijn geen onafhankelijke radiometing.
+
+Ook het lokale brontaalvoorstel is nu tegen verouderde asynchrone callbacks beschermd: als de selectiepagina afsluit, de gebruiker tussentijds talen wisselt of de app naar de achtergrond gaat, kan een late herkenningsuitkomst de nieuwere selectie niet terugzetten.
+
 ## Privacy en grenzen
 
 De functie verwerkt uitsluitend geselecteerde `text/plain`-tekst, begrensd
