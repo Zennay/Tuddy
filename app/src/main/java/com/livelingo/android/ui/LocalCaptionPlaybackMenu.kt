@@ -87,11 +87,11 @@ internal fun LocalCaptionPlaybackMenu(
                 if (bilingualAvailable) {
                     DropdownMenuItem(
                         text = { Text("Origineel → vertaling · normaal") },
-                    onClick = {
-                        expanded = false
-                        onPlayBilingual(LocalSpeechPace.NORMAL)
-                    }
-                )
+                        onClick = {
+                            expanded = false
+                            onPlayBilingual(LocalSpeechPace.NORMAL)
+                        }
+                    )
                     DropdownMenuItem(
                         text = { Text("Origineel → vertaling · langzaam") },
                         onClick = {
