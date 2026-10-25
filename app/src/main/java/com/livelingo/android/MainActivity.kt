@@ -1211,9 +1211,11 @@ private fun TuddyScreen(
                                                 token, revision)
                                         }
                                         .addOnFailureListener {
-                                            translator.close()
+                                            // Preserve the established fixed local error
+                                            // boundary, never expose a provider message.
                                             updateLine(id, SafeLocalFailureText.TRANSLATION,
                                                 "Fout", token, revision)
+                                            translator.close()
                                         }
                                 } catch (_: Exception) {
                                     translator.close()
