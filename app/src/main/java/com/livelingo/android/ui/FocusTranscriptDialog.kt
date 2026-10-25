@@ -96,7 +96,7 @@ internal fun FocusTranscriptDialog(
     val focusedIndex = displayedCaptions.indexOfFirst { it.id == stepCaptionId }
         .takeIf { it >= 0 } ?: displayedCaptions.lastIndex
     val renderedCaptions = if (stepReading)
-        displayedCaptions.getOrNull(focusedIndex)?.let(::listOf).orEmpty()
+        displayedCaptions.getOrNull(focusedIndex)?.let { listOf(it) }.orEmpty()
     else displayedCaptions
     val showInterim = !stepReading && !archiveMode && speakerFilter == null &&
         captionQuery.isBlank() && !onlyPinned
@@ -209,7 +209,7 @@ internal fun FocusTranscriptDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedButton(
+                        TextButton(
                             enabled = focusedIndex > 0,
                             onClick = {
                                 stepCaptionId = displayedCaptions.getOrNull(focusedIndex - 1)?.id
@@ -224,7 +224,7 @@ internal fun FocusTranscriptDialog(
                                 .semantics { heading() },
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        OutlinedButton(
+                        TextButton(
                             enabled = focusedIndex >= 0 &&
                                 focusedIndex < displayedCaptions.lastIndex,
                             onClick = {
