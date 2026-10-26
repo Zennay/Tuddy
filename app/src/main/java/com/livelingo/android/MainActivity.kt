@@ -8254,10 +8254,11 @@ private fun TuddyScreen(
                 onDismissRequest = { pendingSingleCaptionDelete = null },
                 title = { Text("Eén ondertitel wissen?") },
                 text = {
-                    Text("Alleen deze regel verdwijnt uit het huidige tijdelijke gesprek. " +
-                        "Andere ondertitels en privéwoorden blijven bestaan. " +
-                        "Eerder gekopieerde, gedeelde of geëxporteerde bestanden " +
-                        "buiten Tuddy kunnen hiermee niet worden gewist.")
+                    Text("Alleen deze regel verdwijnt uit het tijdelijke gesprek. " +
+                        "Je kunt haar 30 seconden lokaal herstellen zolang Tuddy openblijft. " +
+                        "Lopende vertalingen worden niet opnieuw gestart, en na verlaten, " +
+                        "een volledig gewist gesprek of verlopen van de tijd is herstel weg. " +
+                        "Externe kopieën blijven buiten Tuddy bestaan.")
                 },
                 confirmButton = {
                     TextButton(enabled = stillSelected, onClick = {
@@ -8289,6 +8290,7 @@ private fun TuddyScreen(
                             pendingCaptionShare = null
                             exportStatus = ""
                             captionPins = captionPins - id
+                            pinnedChosenIds = pinnedChosenIds?.minus(id)
                             pinnedStudyEdits.remove(id)
                             manuallyAssignedSpeakers.remove(id)
                             if (editingCaptionId == id) {
@@ -8312,6 +8314,8 @@ private fun TuddyScreen(
                             }
                             translationDeadline.cancel(deleteRequest.first)
                             captionTranslationQueue.cancel(deleteRequest.first)
+                            speechTranslationStarted.remove(deleteRequest.first)
+                            seenUncertainSpeechIds = seenUncertainSpeechIds - deleteRequest.first
                             offlineSpeechChoices.remove(deleteRequest.first)
                             captionDeleteNotice = "Ondertitel gewist. Herstel binnen 30 seconden als dit per ongeluk was."
                         } else {
@@ -10300,7 +10304,7 @@ private fun TuddyScreen(
                             }
                             deletedCaptionUndo = null
                             captionDeleteNotice =
-                                "Onderregel lokaal hersteld; er is geen nieuwe " +
+                                "Ondertitel lokaal hersteld; er is geen nieuwe " +
                                     "spraakherkenning of vertaling gestart."
                         }
                     ) { Text("↶ Verwijderde ondertitel terugzetten (30 sec)") }
