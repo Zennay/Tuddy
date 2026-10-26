@@ -1398,6 +1398,7 @@ private fun TuddyScreen(
             manuallyAssignedSpeakers.remove(id)
             if (editingCaptionId == id) {
                 editingCaptionId = null
+                captionCorrectionBaseline = null
                 captionCorrectionDraft = ""
             }
             if (editingTranslationId == id) {
@@ -3099,6 +3100,7 @@ private fun TuddyScreen(
                             manuallyAssignedSpeakers.remove(removed.id)
                             if (editingCaptionId == removed.id) {
                                 editingCaptionId = null
+                                captionCorrectionBaseline = null
                                 captionCorrectionDraft = ""
                             }
                             if (editingTranslationId == removed.id) {
@@ -3352,6 +3354,7 @@ private fun TuddyScreen(
                             pinnedStudyEdits.remove(removed.id)
             if (editingCaptionId == removed.id) {
                 editingCaptionId = null
+                captionCorrectionBaseline = null
                 pendingCaptionLanguageChange = null
                 captionCorrectionDraft = ""
             }
@@ -4442,6 +4445,7 @@ private fun TuddyScreen(
                 pendingCaptionShare = null
                 pendingSpeakerExport = null
                 editingCaptionId = null
+                captionCorrectionBaseline = null
                 pendingCaptionLanguageChange = null // dismiss sensitive caption tool on background
                 captionCorrectionDraft = ""
                 editingTranslationId = null
@@ -4529,6 +4533,7 @@ private fun TuddyScreen(
             pendingPinnedExport = null
             pinnedExportOpen = false
             editingCaptionId = null
+            captionCorrectionBaseline = null
             captionCorrectionDraft = ""
             editingTranslationId = null
             translationCorrectionDraft = ""
@@ -8670,6 +8675,7 @@ private fun TuddyScreen(
                         pendingCaptionShare = null
                         pendingSpeakerExport = null
                         editingCaptionId = null
+                        captionCorrectionBaseline = null
                         captionCorrectionDraft = ""
                         editingTranslationId = null
                         translationCorrectionDraft = ""
@@ -9387,6 +9393,7 @@ private fun TuddyScreen(
                             pinnedStudyEdits.remove(removed.id)
                                 if (editingCaptionId == removed.id) {
                                     editingCaptionId = null
+                                    captionCorrectionBaseline = null
                                     captionCorrectionDraft = ""
                                 }
                             }
