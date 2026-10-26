@@ -4,13 +4,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.ImeAction
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import com.livelingo.android.BilingualReplayPair
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
+
+private enum class RecallPromptSide { ORIGINAL, TRANSLATION }
 
 /**
  * An opt-in, entirely in-memory recall round over an existing bounded,
@@ -58,9 +68,27 @@ internal fun PrivateBilingualRecallPanel(
     var audioNotice by remember(practice, sourceCode, targetCode) {
         mutableStateOf("")
     }
-
-    DisposableEffect(speaker, practice, sourceCode, targetCode) {
-        onDispose { speaker.stop() }
+    var typedAnswer by remember(practice, sourceCode, targetCode) {
+        mutableStateOf("")
+    }
+    var promptSide by remember(practice, sourceCode, targetCode) {
+        mutableStateOf(RecallPromptSide.ORIGINAL)
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(speaker, practice, sourceCode, targetCode, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                speaker.stop()
+                typedAnswer = ""
+                revealed = false
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            speaker.stop()
+            typedAnswer = ""
+        }
     }
 
     val currentIndices = if (retryOnly) retryIndices else practice.indices.toList()
@@ -77,6 +105,22 @@ internal fun PrivateBilingualRecallPanel(
         retryIndices = emptyList()
         round = 1
         audioNotice = ""
+        typedAnswer = ""
+    }
+
+    fun choosePrompt(side: RecallPromptSide) {
+        if (promptSide == side) return
+        speaker.stop()
+        promptSide = side
+        started = false
+        position = 0
+        revealed = false
+        missed = emptySet()
+        retryOnly = false
+        retryIndices = emptyList()
+        round = 1
+        audioNotice = ""
+        typedAnswer = ""
     }
 
     fun mark(tryAgain: Boolean) {
@@ -86,6 +130,7 @@ internal fun PrivateBilingualRecallPanel(
         position++
         revealed = false
         audioNotice = ""
+        typedAnswer = ""
     }
 
     Column(
@@ -103,6 +148,25 @@ internal fun PrivateBilingualRecallPanel(
                 "Een fout antwoord verandert geen ondertitel, model of woordenlijst.",
             style = MaterialTheme.typography.bodySmall
         )
+        Text(
+            "Oefenrichting: kies welke kant je zelf wilt terugvertalen. " +
+                "Richting wisselen wist je lopende antwoorden en begint een nieuwe ronde.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = promptSide == RecallPromptSide.ORIGINAL,
+                enabled = enabled && practice.isNotEmpty(),
+                onClick = { choosePrompt(RecallPromptSide.ORIGINAL) },
+                label = { Text("${sourceCode.uppercase()} → ${targetCode.uppercase()}") }
+            )
+            FilterChip(
+                selected = promptSide == RecallPromptSide.TRANSLATION,
+                enabled = enabled && practice.isNotEmpty(),
+                onClick = { choosePrompt(RecallPromptSide.TRANSLATION) },
+                label = { Text("${targetCode.uppercase()} → ${sourceCode.uppercase()}") }
+            )
+        }
         if (!started) {
             OutlinedButton(
                 onClick = ::begin,
@@ -125,6 +189,7 @@ internal fun PrivateBilingualRecallPanel(
                         position = 0
                         revealed = false
                         audioNotice = ""
+                        typedAnswer = ""
                         round++
                     }
                 ) { Text("Oefen alleen gemiste zinnen opnieuw") }
