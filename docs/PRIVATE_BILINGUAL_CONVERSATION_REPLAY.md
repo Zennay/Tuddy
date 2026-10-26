@@ -8,9 +8,10 @@ stembeoordeling of export.
 ## Gebruiken
 
 1. Beëindig de microfoonsessie. Open **Gesprekstools**.
-2. Selecteer het gewenste bron- en doeltaalpaar in de gewone appinstellingen.
+2. Tuddy neemt de taalrichting van de **meest recente afgeronde, lokaal vertaalde**
+   zin. Andere eerdere taalrichtingen worden niet ongemerkt gecombineerd.
 3. Het paneel toont hoeveel bestaande, *voltooide* lokaal vertaalde zinnen
-   in die taalrichting veilig voorgelezen kunnen worden, maximaal acht.
+   in diezelfde taalrichting veilig voorgelezen kunnen worden, maximaal acht.
    Handmatige vertaalvoorstellen, verlopen taken, ontbrekende modellen,
    onzekere foutstatussen of regels uit een andere taalrichting worden
    niet automatisch in deze oefening meegenomen.
