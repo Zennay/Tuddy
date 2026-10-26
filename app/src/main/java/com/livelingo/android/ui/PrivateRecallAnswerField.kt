@@ -6,6 +6,8 @@ import android.text.InputType
 import android.text.TextWatcher
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.content.Context
 import android.widget.EditText
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -80,6 +82,10 @@ internal fun PrivateRecallAnswerField(
                 setOnEditorActionListener { view, actionId, _ ->
                     if (actionId == EditorInfo.IME_ACTION_DONE) {
                         view.clearFocus()
+                        (context.getSystemService(Context.INPUT_METHOD_SERVICE)
+                            as? InputMethodManager)?.hideSoftInputFromWindow(
+                            view.windowToken, 0
+                        )
                         true
                     } else false
                 }
