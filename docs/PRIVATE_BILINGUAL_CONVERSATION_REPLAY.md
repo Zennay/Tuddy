@@ -8,17 +8,26 @@ stembeoordeling of export.
 ## Gebruiken
 
 1. Beëindig de microfoonsessie. Open **Gesprekstools**.
-2. Tuddy neemt de taalrichting van de **meest recente afgeronde, lokaal vertaalde**
-   zin. Andere eerdere taalrichtingen worden niet ongemerkt gecombineerd.
-3. Het paneel toont hoeveel bestaande, *voltooide* lokaal vertaalde zinnen
-   in diezelfde taalrichting veilig voorgelezen kunnen worden, maximaal acht.
-   Handmatige vertaalvoorstellen, verlopen taken, ontbrekende modellen,
-   onzekere foutstatussen of regels uit een andere taalrichting worden
-   niet automatisch in deze oefening meegenomen.
+2. Tuddy selecteert standaard de taalrichting van de **meest recente afgeronde,
+   lokaal vertaalde zin**. Tik op **Kies taalrichting** om ook oudere richtingen
+   te kiezen die in dit gemengde privégesprek voorkomen. Het menu toont maximaal
+   zestien richtingen, met per richting de hoeveelheid reeds veilig afspeelbare
+   tweetalige zinnen (maximaal acht). De nieuwste beschikbare richting staat
+   bovenaan. Als een recent taalpaar geen veilige voorleesbare regels heeft,
+   verschijnt het niet in het menu.
+3. Na een bewuste keuze beperkt Tuddy de hele luisteroefening tot die
+   taalrichting. Een nieuw gespreksonderdeel in een andere taal verandert
+   die bewuste keuze niet. Als alle regels van het gekozen paar verdwijnen,
+   valt Tuddy terug op de actuele, wel beschikbare richting. Een richting
+   wijzigen stopt lopende spraak en begint een nieuwe oefenkeuze; het verandert
+   nooit de microfoontaal, de ondertitels of geïnstalleerde modellen.
+   Handmatige vertaalvoorstellen, verlopen taken, ontbrekende modellen
+   en foutstatussen worden niet automatisch meegenomen.
 4. Kies expliciet een maximum van **1, 3, 5 of 8** zinnen. Zonder
    verdere keuze neemt Tuddy zoals voorheen de laatste afgeronde zinnen.
    Via **Kies startzin** kun je in hetzelfde actuele gesprek ook
    **vanaf een specifieke van de acht beschikbare zinnen** oefenen.
+   Bij een andere taalrichting begint ook de startzinselectie opnieuw.
    Wanneer er vanaf die zin minder dan het gekozen aantal overblijven,
    oefent Tuddy alleen die bestaande zinnen: er wordt niets herhaald,
    opgevuld of uit een andere taalrichting gehaald. **Automatisch ·
@@ -50,7 +59,7 @@ stembeoordeling of export.
 ## Veiligheidsgrenzen
 
 De oefening behoudt alleen een tijdelijke snapshot van bestaande
-gespreksregels in RAM. Startzin, aantal en volgorde worden alleen in
+gespreksregels in RAM. Taalrichting, startzin, aantal en volgorde worden alleen in
 het huidige scherm bijgehouden; niets daarvan gaat naar een bestand. Het maximum is acht tweetalige paren (zestien
 uitgesproken segmenten), elk maximaal 400 veilig leesbare tekens.
 Er zijn geen audiobestanden, geschiedenis, analytics of voorkeurswijzigingen.
