@@ -10,6 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import com.livelingo.android.LocalPlaybackDeviceSession
 import com.livelingo.android.LocalSpeechPace
 
 /**
@@ -31,15 +33,33 @@ internal fun LocalCaptionPlaybackMenu(
     onStop: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var deviceOutputHint by remember { mutableStateOf("") }
 
     Box {
-        TextButton(onClick = { expanded = true }, enabled = enabled) {
+        TextButton(onClick = {
+            // Refresh only when the user opens the menu, not on every Compose
+            // recomposition; this is a snapshot, not a verified output route.
+            deviceOutputHint = LocalPlaybackDeviceSession.currentOutputHint(context)
+            expanded = true
+        }, enabled = enabled) {
             Text("🔊 Lokaal voorlezen · kies tempo")
         }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
+            DropdownMenuItem(
+                text = { Text(deviceOutputHint) },
+                onClick = {},
+                enabled = false
+            )
+            DropdownMenuItem(
+                text = { Text("↻ Android-uitvoer opnieuw controleren") },
+                onClick = {
+                    deviceOutputHint = LocalPlaybackDeviceSession.currentOutputHint(context)
+                }
+            )
             DropdownMenuItem(
                 text = { Text("Headset pauze/stop beëindigt lokale spraak · geen automatisch hervatten") },
                 onClick = {},
