@@ -37,17 +37,26 @@ stembeoordeling of export.
    vertaling wordt vóór het originele antwoord voorgelezen. Beide
    volgordes vereisen dezelfde geïnstalleerde offline stem voor *beide*
    talen; bij het wisselen van volgorde stopt lopende playback.
-6. Tik op **▶ Oefen zinnen** of **▶ Rustig**. Tuddy controleert **beide**
+6. Kies desgewenst **Direct**, **2,5 s** of **5 s** nadenkpauze.
+   **Direct** behoudt het oude afspelen zonder tussenpauze. Met de twee
+   andere keuzes wacht Tuddy na de *eerste* uitgesproken taal van elk
+   paar, zodat je zelf de andere taal kunt proberen te zeggen voordat
+   Android het antwoord voorleest. Tussen twee volledige paren wacht
+   Tuddy korter (respectievelijk 0,75 of 1,5 seconde). De volgorde
+   **Origineel eerst** of **Vertaling eerst** blijft intact.
+   De pauze-instelling is tijdelijk in RAM en verandert geen
+   systeemsnelheid of telefoonvoorkeur.
+7. Tik op **▶ Oefen zinnen** of **▶ Rustig**. Tuddy controleert **beide**
    Android-stemmen voordat enige private tekst wordt voorgelezen.
    Er wordt niets gedownload, opnieuw vertaald of online verzonden.
    Het gekozen bereik verschijnt vooraf zichtbaar in het paneel.
-7. De geselecteerde paren blijven in hun oorspronkelijke
+8. De geselecteerde paren blijven in hun oorspronkelijke
    gespreksvolgorde. Binnen elk paar wordt de gekozen taalvolgorde
    toegepast: de bronzin met de bronstem en de vertaling met de
    doelstem, ook als **Vertaling eerst** actief is. Na elk paar
    verschijnt de voortgang. Bij volledige afronding of **■ Stop**
    sluit de app de tijdelijke TTS-engine en geeft de audiofocus vrij.
-8. De replay en de overige voorleesknoppen delen vanaf nu exact **één
+9. De replay en de overige voorleesknoppen delen vanaf nu exact **één
    lokale TTS-engine per hoofdscherm**. Daardoor stopt een microfoonstart
    de replay **vóór** Android begint met luisteren: de microfoon hoort
    niet per ongeluk zijn eigen synthetic speech. Andere expliciete
@@ -63,6 +72,14 @@ gespreksregels in RAM. Taalrichting, startzin, aantal en volgorde worden alleen 
 het huidige scherm bijgehouden; niets daarvan gaat naar een bestand. Het maximum is acht tweetalige paren (zestien
 uitgesproken segmenten), elk maximaal 400 veilig leesbare tekens.
 Er zijn geen audiobestanden, geschiedenis, analytics of voorkeurswijzigingen.
+De geplande pauze maakt geen opnames en houdt geen audit- of oefentijdlijn
+bij. Tijdens de pauze houdt Tuddy de al aangevraagde tijdelijke audiofocus
+vast; Android-mediabediening, Stop, een nieuwe voorleesactie,
+het afsluiten van de app of achtergrondgang beëindigt die sessie en
+annuleert de uitgestelde volgende zin. Een Android-fout bij het plannen
+van zo'n korte pauze beëindigt de oefening zonder stilzwijgend
+extra audio te starten.
+
 De Android-spraakdienst moet voor beide talen een geïnstalleerde,
 niet-netwerkafhankelijke stem melden. Ontbreekt één stem, dan wordt
 **geen enkele** zin afgespeeld. Het apparaat kan een oproep of andere
