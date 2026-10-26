@@ -135,6 +135,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
     private var status by mutableStateOf("")
     private var playbackNotice by mutableStateOf("")
     private var headphonesOnlyPlayback by mutableStateOf(false)
+    private var respectQuietModePlayback by mutableStateOf(false)
     private var clipboardExpirySeconds by mutableStateOf(0)
     private var privateScreenShieldOn by mutableStateOf(false)
     private var privateScreenShieldNotice by mutableStateOf("")
@@ -158,6 +159,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         PrivateScreenShield.restore(this)
         privateScreenShieldOn = PrivateScreenShield.enabled(this)
         headphonesOnlyPlayback = PrivatePlaybackRoutingPreference.headphonesOnly(this)
+        respectQuietModePlayback = PrivatePlaybackRoutingPreference.respectQuietMode(this)
         clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(this)
 
         val acceptedAction = intent.action == Intent.ACTION_PROCESS_TEXT &&
@@ -221,6 +223,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
                     status = status,
                     playbackNotice = playbackNotice,
                     headphonesOnly = headphonesOnlyPlayback,
+                    respectQuietMode = respectQuietModePlayback,
                     clipboardExpirySeconds = clipboardExpirySeconds,
                     privateScreenShieldOn = privateScreenShieldOn,
                     privateScreenShieldNotice = privateScreenShieldNotice,
@@ -251,6 +254,21 @@ internal class QuickTranslateActivity : ComponentActivity() {
                         speakBilingualSelection(pace)
                     },
                     onStopPlayback = { stopPlayback() },
+                    onRespectQuietModeChange = { selected ->
+                        stopPlayback()
+                        val saved = PrivatePlaybackRoutingPreference.setRespectQuietMode(
+                            this, selected
+                        )
+                        respectQuietModePlayback =
+                            PrivatePlaybackRoutingPreference.respectQuietMode(this)
+                        playbackNotice = if (!saved)
+                            "Stille-modusvoorkeur kon niet worden opgeslagen; " +
+                                "vorige keuze blijft actief."
+                        else if (respectQuietModePlayback)
+                            "Stil/trillen respecteren aan: geen lokale spraak in " +
+                                "deze Android-belstand, ook niet via de hoofdtelefoon."
+                        else "Stille-modusbeveiliging uit; alleen expliciet Play start TTS."
+                    },
                     onHeadphonesOnlyChange = { selected ->
                         stopPlayback()
                         val saved = PrivatePlaybackRoutingPreference.setHeadphonesOnly(
@@ -312,6 +330,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
         // protection or a misleading checkbox on this Activity.
         PrivateScreenShield.restore(this)
         privateScreenShieldOn = PrivateScreenShield.enabled(this)
+        headphonesOnlyPlayback = PrivatePlaybackRoutingPreference.headphonesOnly(this)
+        respectQuietModePlayback = PrivatePlaybackRoutingPreference.respectQuietMode(this)
     }
 
     private fun defaultLanguagePair(): Pair<String, String> {
@@ -952,6 +972,7 @@ private fun QuickTranslateScreen(
     status: String,
     playbackNotice: String,
     headphonesOnly: Boolean,
+    respectQuietMode: Boolean,
     clipboardExpirySeconds: Int,
     privateScreenShieldOn: Boolean,
     privateScreenShieldNotice: String,
@@ -979,6 +1000,7 @@ private fun QuickTranslateScreen(
     onPlayBilingual: (LocalSpeechPace) -> Unit,
     onStopPlayback: () -> Unit,
     onHeadphonesOnlyChange: (Boolean) -> Unit,
+    onRespectQuietModeChange: (Boolean) -> Unit,
     onClipboardExpiryChange: (Int) -> Unit,
     onPrivateScreenShieldChange: (Boolean) -> Unit,
     onCopy: () -> Unit,
@@ -1168,6 +1190,8 @@ private fun QuickTranslateScreen(
                 !busy && !detectingSource && !reviewingTranslation,
             headphonesOnly = headphonesOnly,
             onHeadphonesOnlyChange = onHeadphonesOnlyChange,
+            respectQuietMode = respectQuietMode,
+            onRespectQuietModeChange = onRespectQuietModeChange,
             onPlayOriginal = onPlayOriginal,
             onPlayTranslation = onPlayTranslation,
             onPlayBilingual = onPlayBilingual,

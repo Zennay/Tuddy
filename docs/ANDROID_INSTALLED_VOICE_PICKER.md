@@ -243,6 +243,38 @@ kan afleveren is geen bewijs dat audio fysiek uitsluitend via die
 headset is afgespeeld. De bestaande hoofdtelefoon-only-optie en
 audiofocus/routecontroles blijven de eigenlijke voorzorgsgrenzen.
 
+## Android stille en trilstand bewust respecteren
+
+De gedeelde afspeelbediening in het live gesprek en de snelle
+tekstvertaler heeft nu ook de optie **Stil/trillen respecteren**.
+Deze staat standaard *uit*, zodat bewust gestarte muziek-/media-
+uitvoer op bestaande toestellen niet ineens wordt geblokkeerd.
+
+Als je deze optionele bescherming inschakelt, controleert Tuddy
+vóór élke expliciet gestarte lokale voorleesactie Androids huidige
+belstand. In **stil** of **trillen**, of wanneer die status niet
+betrouwbaar kan worden gelezen, weigert de app de TTS-sessie.
+Tijdens het voorlezen controleert Tuddy opnieuw bij Androids
+belstandwissel-signaal en ten minste eens per twee seconden.
+Schakelt de telefoon alsnog naar stil/trillen, dan stopt Tuddy
+de audio, vernietigt de TTS-engine en laat de audiofocus en
+tijdelijke bewaking los. Er wordt nooit automatisch hervat.
+
+Dit geldt voor beide schermen, het voorlezen van één zin,
+tweetalige regels, bestaande ondertitelreeksen en vaste
+stemvoorbeelden, omdat ze dezelfde Android-TTS-sessie gebruiken.
+Een wijziging van deze voorkeur stopt eerst eventuele lopende
+TTS-uitvoer. Alleen de booleaanse voorkeur blijft lokaal bewaard;
+er worden geen belstanden, tijden of gesproken teksten gelogd.
+
+Androids **Niet storen** (DND) kan onafhankelijk van belstand werken;
+een gewone Android-mediastream kan zich ook anders gedragen dan
+een belsignaal. Deze optie is daarom een *extra gebruikerskeuze*
+en geen bewijs van een geluidloze telefoon, afgesloten hardware,
+fysieke radio-isolatie of Android-acceptatie. De reeds bestaande
+**Alleen met hoofdtelefoon**-optie en audiofocusbeveiliging blijven
+los toepasbaar.
+
 ## Grenzen voor acceptatie
 
 Een door de Android-TTS-engine als lokaal gemelde stem geeft **geen**

@@ -658,6 +658,9 @@ private fun TuddyScreen(
     var headphonesOnlyPlayback by remember(context) {
         mutableStateOf(PrivatePlaybackRoutingPreference.headphonesOnly(context))
     }
+    var respectQuietModePlayback by remember(context) {
+        mutableStateOf(PrivatePlaybackRoutingPreference.respectQuietMode(context))
+    }
     // One bounded watchdog per pending RAM caption. It neither cancels the
     // Android/ML Kit provider nor downloads models; a stale completion is
     // rejected after a timeout by the existing per-row revision fence.
@@ -4123,6 +4126,8 @@ private fun TuddyScreen(
                 // device preference; refresh after returning to the app.
                 headphonesOnlyPlayback =
                     PrivatePlaybackRoutingPreference.headphonesOnly(context)
+                respectQuietModePlayback =
+                    PrivatePlaybackRoutingPreference.respectQuietMode(context)
                 clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(context)
                 val requestedTag = pendingSpeechSettingsReturnTag
                 if (requestedTag != null) {
@@ -10618,6 +10623,23 @@ private fun TuddyScreen(
                                         line.status == "Lokaal vertaald" || line.status == "Lokaal",
                                     enabled = !listening,
                                     headphonesOnly = headphonesOnlyPlayback,
+                                    respectQuietMode = respectQuietModePlayback,
+                                    onRespectQuietModeChange = { selected ->
+                                        captionSpeaker.stop()
+                                        val saved = PrivatePlaybackRoutingPreference.setRespectQuietMode(
+                                            context, selected
+                                        )
+                                        respectQuietModePlayback =
+                                            PrivatePlaybackRoutingPreference.respectQuietMode(context)
+                                        pronunciationNotice = if (!saved)
+                                            "Stille-modusvoorkeur kon niet worden opgeslagen; " +
+                                                "vorige keuze blijft actief."
+                                        else if (respectQuietModePlayback)
+                                            "Tuddy speelt niet voor in stille of trilstand. " +
+                                                "Deze keuze geldt ook in de snelle vertaler."
+                                        else "Stille-modusbeveiliging uit. " +
+                                            "Lokaal voorlezen volgt weer alleen je Play-keuze."
+                                    },
                                     onHeadphonesOnlyChange = { selected ->
                                         captionSpeaker.stop()
                                         val saved = PrivatePlaybackRoutingPreference.setHeadphonesOnly(
