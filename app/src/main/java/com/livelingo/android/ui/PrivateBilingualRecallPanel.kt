@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -101,6 +104,15 @@ internal fun PrivateBilingualRecallPanel(
     var promptSide by remember(practice, sourceCode, targetCode) {
         mutableStateOf(RecallPromptSide.ORIGINAL)
     }
+    // Android 13+ may list multiple independently installed regional ASR packs
+    // for a broad ML Kit text language (e.g., en -> en-GB / en-US).
+    // Never persist these choices; require an explicit second tap to record.
+    var installedAnswerSpeechTags by remember(
+        practice, sourceCode, targetCode, promptSide
+    ) { mutableStateOf(emptyList<String>()) }
+    var chosenAnswerSpeechTag by remember(
+        practice, sourceCode, targetCode, promptSide
+    ) { mutableStateOf<String?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(speaker, practice, sourceCode, targetCode, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -279,6 +291,28 @@ internal fun PrivateBilingualRecallPanel(
                             " Strikte vliegtuigmodus geldt ook voor je antwoordmicrofoon."
                         else " Androids oproep-, mute- en headsetmicrofoonbeleid gelden ook hier.",
                     style = MaterialTheme.typography.bodySmall)
+                if (installedAnswerSpeechTags.isNotEmpty()) {
+                    Text(
+                        "Kies één door Android bevestigd geïnstalleerd spraakpakket " +
+                            "voor ${answerLanguage.uppercase()}. De gekozen regio geldt " +
+                            "alleen voor deze oefenrichting en is geen nauwkeurigheidsgarantie.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    LazyColumn(modifier = Modifier.heightIn(max = 160.dp)) {
+                        items(installedAnswerSpeechTags, key = { it }) { installedTag ->
+                            FilterChip(
+                                selected = chosenAnswerSpeechTag == installedTag,
+                                enabled = enabled && !recordingAnswer,
+                                onClick = {
+                                    chosenAnswerSpeechTag = installedTag
+                                    speechNotice = "Pakket $installedTag gekozen. " +
+                                        "Tik opnieuw bewust op Spreek mijn antwoord in."
+                                },
+                                label = { Text("Geïnstalleerde regio $installedTag") }
+                            )
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(
                         enabled = enabled && !recordingAnswer,
@@ -291,7 +325,7 @@ internal fun PrivateBilingualRecallPanel(
                                 spokenAnswer = ""
                                 speechNotice = ""
                                 recordingAnswer = recallSpeech.start(
-                                    answerLanguage,
+                                    chosenAnswerSpeechTag ?: answerLanguage,
                                     strictOfflineRadioOnly = strictOfflineRadioOnly,
                                     onNotice = { notice ->
                                         speechNotice = notice
@@ -301,6 +335,15 @@ internal fun PrivateBilingualRecallPanel(
                                     },
                                     onFinalAnswer = { answer ->
                                         spokenAnswer = answer
+                                        recordingAnswer = false
+                                    },
+                                    onVariantSelectionRequired = { installedTags ->
+                                        // Only tags from Android's INSTALLED speech
+                                        // list, never downloadables or text models.
+                                        // No microphone begins until user selects
+                                        // a region and explicitly taps Play again.
+                                        installedAnswerSpeechTags = installedTags
+                                        chosenAnswerSpeechTag = null
                                         recordingAnswer = false
                                     }
                                 )
