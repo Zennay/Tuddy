@@ -28,10 +28,26 @@ internal fun SessionCorrectionPlaybackActions(
     var headphonesOnly by remember(context, entry) {
         mutableStateOf(PrivatePlaybackRoutingPreference.headphonesOnly(context))
     }
+    var respectQuietMode by remember(context, entry) {
+        mutableStateOf(PrivatePlaybackRoutingPreference.respectQuietMode(context))
+    }
     LocalCaptionPlaybackMenu(
         hasCompletedTranslation = true,
         enabled = true,
         headphonesOnly = headphonesOnly,
+        respectQuietMode = respectQuietMode,
+        onRespectQuietModeChange = { selected ->
+            speaker.stop()
+            val saved = PrivatePlaybackRoutingPreference.setRespectQuietMode(
+                context, selected
+            )
+            respectQuietMode = PrivatePlaybackRoutingPreference.respectQuietMode(context)
+            notice = if (!saved)
+                "De stille-modusvoorkeur kon niet worden opgeslagen."
+            else if (respectQuietMode)
+                "Lokaal voorlezen geblokkeerd in Androids stille-/trilstand."
+            else "Stille-modusbeveiliging uit: Play blijft altijd expliciet."
+        },
         onHeadphonesOnlyChange = { selected ->
             speaker.stop()
             val saved = PrivatePlaybackRoutingPreference.setHeadphonesOnly(context, selected)
