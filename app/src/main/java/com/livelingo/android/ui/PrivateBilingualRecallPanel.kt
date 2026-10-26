@@ -8,6 +8,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.runtime.LaunchedEffect
 import com.livelingo.android.PrivateRecallSpeechAttempt
+import com.livelingo.android.PrivateRecallRoundReview
+import com.livelingo.android.RecallSelfAssessment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,8 +66,9 @@ internal fun PrivateBilingualRecallPanel(
     var started by remember(practice, sourceCode, targetCode) { mutableStateOf(false) }
     var revealed by remember(practice, sourceCode, targetCode) { mutableStateOf(false) }
     var position by remember(practice, sourceCode, targetCode) { mutableStateOf(0) }
-    var missed by remember(practice, sourceCode, targetCode) {
-        mutableStateOf(emptySet<Int>())
+    // RAM-only self-review; no learner text or speech is recorded here.
+    var review by remember(practice, sourceCode, targetCode) {
+        mutableStateOf(PrivateRecallRoundReview())
     }
     var retryOnly by remember(practice, sourceCode, targetCode) {
         mutableStateOf(false)
@@ -155,6 +158,7 @@ internal fun PrivateBilingualRecallPanel(
     }
 
     val currentIndices = if (retryOnly) retryIndices else practice.indices.toList()
+    val missed = review.missed(currentIndices)
     val current = currentIndices.getOrNull(position)?.let(practice::get)
     val done = started && current == null && currentIndices.isNotEmpty()
 
@@ -168,7 +172,7 @@ internal fun PrivateBilingualRecallPanel(
         started = true
         position = 0
         revealed = false
-        missed = emptySet()
+        review = PrivateRecallRoundReview()
         retryOnly = false
         retryIndices = emptyList()
         round = 1
@@ -188,7 +192,7 @@ internal fun PrivateBilingualRecallPanel(
         started = false
         position = 0
         revealed = false
-        missed = emptySet()
+        review = PrivateRecallRoundReview()
         retryOnly = false
         retryIndices = emptyList()
         round = 1
@@ -196,19 +200,40 @@ internal fun PrivateBilingualRecallPanel(
         typedAnswer = ""
     }
 
-    fun mark(tryAgain: Boolean) {
+    fun mark(assessment: RecallSelfAssessment) {
         val index = currentIndices.getOrNull(position) ?: return
+        if (!started || !enabled) return
         speaker.stop()
         recallSpeech.cancel()
         recordingAnswer = false
         spokenAnswer = ""
         comparisonSource = null
         speechNotice = ""
-        if (tryAgain) missed = missed + index
+        review = review.mark(index, currentIndices, assessment)
         position++
         revealed = false
         audioNotice = ""
         typedAnswer = ""
+    }
+
+    /**
+     * Undo only the preceding SELF mark, not a private typed/spoken answer.
+     * Deliberately reveal no reference on return; a learner chooses again.
+     */
+    fun revisePrevious() {
+        if (!started || !enabled || position <= 0) return
+        val preceding = currentIndices.getOrNull(position - 1) ?: return
+        speaker.stop()
+        recallSpeech.cancel()
+        recordingAnswer = false
+        spokenAnswer = ""
+        typedAnswer = ""
+        comparisonSource = null
+        speechNotice = ""
+        audioNotice = ""
+        review = review.undo(preceding)
+        position--
+        revealed = false
     }
 
     Column(
@@ -229,6 +254,12 @@ internal fun PrivateBilingualRecallPanel(
         Text(
             "Oefenrichting: kies welke kant je zelf wilt terugvertalen. " +
                 "Richting wisselen wist je lopende antwoorden en begint een nieuwe ronde.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            "Sla desgewenst een zin over of herzie via Vorige zin je laatste " +
+                "beoordeling. Eerdere getypte en gesproken antwoorden komen " +
+                "niet terug; de referentie wordt opnieuw verborgen.",
             style = MaterialTheme.typography.bodySmall
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -252,8 +283,9 @@ internal fun PrivateBilingualRecallPanel(
             ) { Text("Begin stille overhoorronde") }
         } else if (done) {
             Text(
-                "Ronde $round voltooid · ${currentIndices.size - missed.size} goed " +
-                    "· ${missed.size} nog oefenen.",
+                "Ronde $round voltooid · ${review.goodCount(currentIndices)} zelf goed " +
+                    "· ${review.needsPracticeCount(currentIndices)} nog oefenen " +
+                    "· ${review.skippedCount(currentIndices)} overgeslagen.",
                 style = MaterialTheme.typography.bodyMedium
             )
             if (missed.isNotEmpty()) {
@@ -265,7 +297,7 @@ internal fun PrivateBilingualRecallPanel(
                         retryOnly = true
                         comparisonSource = null
                         spokenAnswer = ""
-                        missed = emptySet()
+                        review = PrivateRecallRoundReview()
                         position = 0
                         revealed = false
                         audioNotice = ""
@@ -280,6 +312,9 @@ internal fun PrivateBilingualRecallPanel(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            TextButton(onClick = ::revisePrevious, enabled = enabled && position > 0) {
+                Text("← Herzie laatste beoordeling vóór afronden")
+            }
             TextButton(onClick = ::begin, enabled = enabled) {
                 Text("Begin volledige ronde opnieuw")
             }
@@ -293,6 +328,12 @@ internal fun PrivateBilingualRecallPanel(
                 "Ronde $round · zin ${position + 1}/${currentIndices.size}" +
                     " · ${promptLanguage.uppercase()} → ${answerLanguage.uppercase()}",
                 style = MaterialTheme.typography.labelMedium
+            )
+            Text(
+                "Zelf beoordeeld: ${review.goodCount(currentIndices)} goed · " +
+                    "${review.needsPracticeCount(currentIndices)} opnieuw · " +
+                    "${review.skippedCount(currentIndices)} overgeslagen.",
+                style = MaterialTheme.typography.bodySmall
             )
             Text(question, style = MaterialTheme.typography.bodyLarge)
             if (!revealed) {
@@ -427,6 +468,10 @@ internal fun PrivateBilingualRecallPanel(
                         "De referentie blijft verborgen tot jij op Onthul tikt.",
                     style = MaterialTheme.typography.bodySmall
                 )
+                TextButton(
+                    enabled = enabled,
+                    onClick = { mark(RecallSelfAssessment.SKIPPED) }
+                ) { Text("Sla over · later oefenen") }
                 OutlinedButton(
                     onClick = {
                         speaker.stop()
@@ -503,10 +548,10 @@ internal fun PrivateBilingualRecallPanel(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { mark(false) }, enabled = enabled) {
+                    OutlinedButton(onClick = { mark(RecallSelfAssessment.SELF_GOOD) }, enabled = enabled) {
                         Text("Zelf goed")
                     }
-                    TextButton(onClick = { mark(true) }, enabled = enabled) {
+                    TextButton(onClick = { mark(RecallSelfAssessment.TRY_AGAIN) }, enabled = enabled) {
                         Text("Nog oefenen")
                     }
                 }
@@ -537,6 +582,11 @@ internal fun PrivateBilingualRecallPanel(
             }
             if (audioNotice.isNotBlank()) {
                 Text(audioNotice, style = MaterialTheme.typography.bodySmall)
+            }
+            if (position > 0) {
+                TextButton(onClick = ::revisePrevious, enabled = enabled) {
+                    Text("← Vorige zin · herzie mijn beoordeling")
+                }
             }
             TextButton(onClick = ::begin, enabled = enabled) {
                 Text("Stop en begin opnieuw")
