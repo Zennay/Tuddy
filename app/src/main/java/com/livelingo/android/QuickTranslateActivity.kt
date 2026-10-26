@@ -368,7 +368,10 @@ internal class QuickTranslateActivity : ComponentActivity() {
             return
         }
         reviewDraft = text
-        reviewNotice = ""
+        // Immediate, content-free explanation rather than an inexplicable
+        // disabled Save button. Do not persist or copy rejected characters.
+        reviewNotice = if (text.isBlank()) "" else
+            LocalTranslationReviewPolicy.validationNotice(text).orEmpty()
     }
 
     private fun saveReviewedTranslation() {
@@ -376,8 +379,8 @@ internal class QuickTranslateActivity : ComponentActivity() {
             translationResult == null || machineTranslationResult == null) return
         val normalized = LocalTranslationReviewPolicy.normalize(reviewDraft)
         if (normalized == null) {
-            reviewNotice = "Controleer de aangepaste tekst: maximaal 8.000 tekens, " +
-                "niet leeg, zonder ongeldige Unicode of verborgen controletekens."
+            reviewNotice = LocalTranslationReviewPolicy.validationNotice(reviewDraft)
+                ?: "Deze vertaling voldoet niet aan de veilige Android-tekstgrens."
             return
         }
         stopPlayback()
@@ -762,10 +765,25 @@ internal class QuickTranslateActivity : ComponentActivity() {
         playbackNotice = ""
     }
 
+    /**
+     * Every outbound Android path must revalidate the precise current text.
+     * A manually corrected result must have the SAME Unicode controls as the
+     * original local ML Kit output; no truncation or silent sanitization.
+     */
+    private fun outboundTranslationOrExplain(): String? {
+        val result = translationResult ?: return null
+        if (LocalTranslationReviewPolicy.normalize(result) != result) {
+            status = LocalTranslationReviewPolicy.validationNotice(result)
+                ?: "De uitgaande vertaling is gewijzigd of bevat onveilige tekens. " +
+                    "Er is niets naar Android verstuurd."
+            return null
+        }
+        return result
+    }
+
     private fun copyTranslation() {
         if (busy || reviewingTranslation || isFinishing) return
-        val result = translationResult
-            ?.takeIf { LocalTranslationReviewPolicy.normalize(it) == it } ?: return
+        val result = outboundTranslationOrExplain() ?: return
         val copied = PrivateClipboardExpiry.copy(
             this, "Tuddy · privévertaling", result
         )
@@ -780,9 +798,14 @@ internal class QuickTranslateActivity : ComponentActivity() {
         if (busy || detectingSource || reviewingTranslation ||
             isFinishing || inputNotice.isNotBlank()) return null
         val translation = translationResult ?: return null
-        return PrivateBilingualHandoffPolicy.format(
+        val payload = PrivateBilingualHandoffPolicy.format(
             incomingText, translation, sourceCode, targetCode, manuallyAdjustedTranslation
         )
+        if (payload == null) {
+            status = "Bron of vertaling voldoet niet aan de veilige Unicode-grens. " +
+                "Er is niets gekopieerd of gedeeld."
+        }
+        return payload
     }
 
     private fun copyBilingualHandoff() {
@@ -813,8 +836,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     private fun shareTranslation() {
         if (busy || reviewingTranslation || isFinishing) return
-        val result = translationResult
-            ?.takeIf { LocalTranslationReviewPolicy.normalize(it) == it } ?: return
+        val result = outboundTranslationOrExplain() ?: return
         // This only runs after a separate in-app confirmation. Android's
         // receiver may store/sync text, so never share silently.
         val send = Intent(Intent.ACTION_SEND).apply {
@@ -830,8 +852,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
 
     private fun returnTranslationToCaller() {
         if (busy || reviewingTranslation || isFinishing || selectionReadOnly) return
-        val result = translationResult
-            ?.takeIf { LocalTranslationReviewPolicy.normalize(it) == it } ?: return
+        val result = outboundTranslationOrExplain() ?: return
         setResult(RESULT_OK, Intent().putExtra(Intent.EXTRA_PROCESS_TEXT, result))
         closeAndFinish()
     }
@@ -1262,9 +1283,13 @@ private fun QuickTranslateScreen(
                     label = { Text("Je eigen correctie · tijdelijk op dit toestel") },
                     minLines = 4,
                     maxLines = 12,
+                    isError = reviewDraft.isNotBlank() &&
+                        LocalTranslationReviewPolicy.normalize(reviewDraft) == null,
                     supportingText = {
-                        Text("${reviewDraft.length} / 8.000 tekens. " +
-                            "De originele ML Kit-vertaling blijft herstelbaar.")
+                        val reason = if (reviewDraft.isNotBlank())
+                            LocalTranslationReviewPolicy.validationNotice(reviewDraft) else null
+                        Text(reason ?: ("${reviewDraft.length} / 8.000 tekens. " +
+                            "De originele ML Kit-vertaling blijft herstelbaar."))
                     }
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1278,8 +1303,10 @@ private fun QuickTranslateScreen(
                     }
                 }
                 Text(
-                    "Kopiëren, voorlezen, extern delen en terugplaatsen zijn " +
-                        "geblokkeerd totdat je de correctie hebt overgenomen.",
+                    "Gewone RTL-schriften blijven toegestaan; alleen onveilige " +
+                        "Unicode-opmaak wordt geweigerd. Kopiëren, voorlezen, " +
+                        "extern delen en terugplaatsen blijven geblokkeerd " +
+                        "totdat je de correctie hebt overgenomen.",
                     style = MaterialTheme.typography.bodySmall
                 )
             } else {
