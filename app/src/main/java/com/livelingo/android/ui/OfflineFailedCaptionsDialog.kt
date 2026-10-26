@@ -59,7 +59,7 @@ internal fun OfflineFailedCaptionsDialog(
                         "Voorbereiding van ontbrekende modellen vraagt apart " +
                         "toestemming via wifi. Herstel krijgt voorrang op nog " +
                         "wachtende automatische regels, niet op lopende taken. " +
-                        "Nooit een cloudvertaling."
+                        "Nooit een cloudvertaling.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (notice.isNotBlank()) {
