@@ -46,6 +46,7 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import java.util.Locale
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
+import com.livelingo.android.ui.InstalledDeviceVoiceCatalogDialog
 
 // Internal-only hints for Tuddy's reviewed ACTION_SEND draft handoff.
 // The QuickTranslateActivity is not exported, and every hint is validated
@@ -991,6 +992,7 @@ private fun QuickTranslateScreen(
     var sourcePicker by remember { mutableStateOf(false) }
     var targetPicker by remember { mutableStateOf(false) }
     var localVoicePickerCode by remember { mutableStateOf<String?>(null) }
+    var deviceVoiceCatalogOpen by remember { mutableStateOf(false) }
     var confirmExternalShare by remember { mutableStateOf(false) }
     var previewBilingualHandoff by remember { mutableStateOf(false) }
     val bilingualHandoff = if (!busy && !detectingSource && !reviewingTranslation &&
@@ -1187,6 +1189,14 @@ private fun QuickTranslateScreen(
                 }
             ) { Text("Stem vertaling kiezen") }
         }
+        TextButton(
+            enabled = !busy && !detectingSource,
+            onClick = {
+                onStopPlayback()
+                localVoicePickerCode = null
+                deviceVoiceCatalogOpen = true
+            }
+        ) { Text("Bekijk alle lokale Android-stemmen…") }
         if (playbackNotice.isNotBlank()) {
             Text(playbackNotice, style = MaterialTheme.typography.bodySmall)
         }
@@ -1412,6 +1422,12 @@ private fun QuickTranslateScreen(
             }
         )
     }
+    if (deviceVoiceCatalogOpen) {
+        InstalledDeviceVoiceCatalogDialog(
+            onDismiss = { deviceVoiceCatalogOpen = false }
+        )
+    }
+
     localVoicePickerCode?.let { code ->
         InstalledLocalVoicePickerDialog(
             languageTag = code,
