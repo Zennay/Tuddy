@@ -275,6 +275,36 @@ fysieke radio-isolatie of Android-acceptatie. De reeds bestaande
 **Alleen met hoofdtelefoon**-optie en audiofocusbeveiliging blijven
 los toepasbaar.
 
+## Veilig snel wisselen tussen voorleesacties
+
+Wanneer je snel op **Stop**, een andere vertaalzin, een tweetalig
+afspeelcommando of een stemvoorbeeld tikt, kunnen Androids vorige
+audiofocus-, headset-, mediaknop- en stille-modusmeldingen alsnog
+binnenkomen. De gedeelde playbackbewaking gebruikt daarom per
+**voorleespoging een nieuwe sessie-identiteit**. Meldingen van een
+reeds afgesloten sessie mogen **niet** de nieuwe afspeelsessie
+annuleren of diens route/status wijzigen. Tijdens het opbouwen van
+een nieuwe sessie wordt ook gecontroleerd of Android ondertussen
+de audiofocus heeft ingetrokken. Bij twijfel of mislukte registratie
+start de TTS-uitvoer niet.
+
+Het voorleesmenu toont bij openen nu een korte, vers opgevraagde
+indicatie van Androids **aanwezige uitvoerapparaten**; met
+**Android-uitvoer opnieuw controleren** kun je die handmatig
+verversen, bijvoorbeeld na het aansluiten van een headset.
+Is **Alleen met hoofdtelefoon** ingeschakeld en meldt Android
+geen geschikte hoofdtelefoon, dan waarschuwt het menu alvast dat
+afspelen geweigerd zal worden. Is die voorkeur uitgeschakeld,
+dan wordt gewaarschuwd dat geluid via de luidspreker kan klinken.
+
+Dit is geen routing- of aftapinterface: Tuddy verandert geen
+systeemuitvoer, bewaart geen apparaatnamen of netwerkgegevens,
+en de melding kan achterhaald zijn zodra je op Play tikt.
+Bij de werkelijke voorleesactie controleren de bestaande
+audiofocus-, headset- en stille-modusbeveiligingen opnieuw de
+actuele Android-toestand. Androids uitvoerlijst bewijst niet
+welke speaker of Bluetoothverbinding fysiek audio afspeelt.
+
 ## Grenzen voor acceptatie
 
 Een door de Android-TTS-engine als lokaal gemelde stem geeft **geen**
