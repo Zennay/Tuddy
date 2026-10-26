@@ -54,7 +54,6 @@ internal object PrivateBilingualConversationReplay {
             }
             .map { it.sourceCode to it.targetCode }
             .distinct()
-            .take(MAX_DIRECTIONS)
             .map { (source, target) ->
                 BilingualReplayDirection(
                     source, target,
@@ -62,6 +61,7 @@ internal object PrivateBilingualConversationReplay {
                 )
             }
             .filter { it.playableCount > 0 }
+            .take(MAX_DIRECTIONS)
             .toList()
 
 
