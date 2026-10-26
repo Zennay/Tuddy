@@ -10291,17 +10291,13 @@ private fun TuddyScreen(
                         }
                     ) { Text("Schrijf ${livePhraseBatchSelection.size} eigen privékaarten…") }
                 }
-                if (captionDeleteNotice.isNotBlank()) {
-                    Text(captionDeleteNotice, style = MaterialTheme.typography.bodySmall)
-                }
-                deletedCaptionUndo?.let { deleted ->
+                if (deletedCaptionUndo != null) {
                     PrivateCaptionDeletionUndoControl(
-                        canRestore = deleted.valid(
-                            generation, SystemClock.elapsedRealtime()
-                        ) && !lines.any { it.id == deleted.row.id } &&
-                            lines.size < CaptionRetentionPolicy.MAX_CAPTIONS,
+                        canRestore = true,
                         onRestore = ::restoreDeletedCaptionUndo
                     )
+                } else if (captionDeleteNotice.isNotBlank()) {
+                    Text(captionDeleteNotice, style = MaterialTheme.typography.bodySmall)
                 }
                 if (historySearchOpen) {
                     OutlinedTextField(
