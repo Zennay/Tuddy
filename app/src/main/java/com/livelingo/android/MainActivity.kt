@@ -622,6 +622,31 @@ class MainActivity : ComponentActivity() {
  * exceeds the 64 KiB limit for its generated composable method.
  */
 @Composable
+private fun TuddySpeakerQuickJump(
+    countA: Int,
+    countB: Int,
+    onJumpA: () -> Unit,
+    onJumpB: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
+                "De labels zijn geen stemherkenning, worden niet geëxporteerd en " +
+                "verdwijnen wanneer deze gesprekssessie wordt gewist.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(enabled = countA > 0, onClick = onJumpA) {
+                Text("Volgende A ($countA)")
+            }
+            TextButton(enabled = countB > 0, onClick = onJumpB) {
+                Text("Volgende B ($countB)")
+            }
+        }
+    }
+}
+
+@Composable
 private fun TuddyConversationNotices(
     favoriteNotice: String,
     directionNotice: String
@@ -10047,24 +10072,12 @@ private fun TuddyScreen(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
-                            "De labels zijn geen stemherkenning, worden niet geëxporteerd en " +
-                            "verdwijnen wanneer deze gesprekssessie wordt gewist.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val countA = lines.count { manuallyAssignedSpeakers[it.id] == "A" }
-                        val countB = lines.count { manuallyAssignedSpeakers[it.id] == "B" }
-                        TextButton(enabled = countA > 0, onClick = { jumpToSpeaker("A") }) {
-                            Text("Volgende A ($countA)")
-                        }
-                        TextButton(enabled = countB > 0, onClick = { jumpToSpeaker("B") }) {
-                            Text("Volgende B ($countB)")
-                        }
-                    }
-                }
+                TuddySpeakerQuickJump(
+                    countA = lines.count { manuallyAssignedSpeakers[it.id] == "A" },
+                    countB = lines.count { manuallyAssignedSpeakers[it.id] == "B" },
+                    onJumpA = { jumpToSpeaker("A") },
+                    onJumpB = { jumpToSpeaker("B") }
+                )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
