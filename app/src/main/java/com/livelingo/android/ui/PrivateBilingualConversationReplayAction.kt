@@ -46,16 +46,19 @@ internal fun PrivateBilingualConversationReplayAction(
     var selectedOrder by remember(sourceCode, targetCode) {
         mutableStateOf(BilingualReplayOrder.SOURCE_FIRST)
     }
-    var selectedStart by remember(sourceCode, targetCode) { mutableStateOf<Int?>(null) }
-    var choosingStart by remember(sourceCode, targetCode) { mutableStateOf(false) }
-    // The Activity owns and closes this engine on background/microphone Stop.
-    // When this tool is hidden, cancel only playback, never close its owner.
-    DisposableEffect(speaker) {
-        onDispose { speaker.stop() }
+    var selectedStart by remember(sourceCode, targetCode, captions) {
+        mutableStateOf<Int?>(null)
     }
+    var choosingStart by remember(sourceCode, targetCode) { mutableStateOf(false) }
     val eligible = PrivateBilingualConversationReplay.available(
         captions, sourceCode, targetCode
     )
+    // If a caption is edited or removed while replay is active, stop the
+    // snapshot rather than narrating content the user already changed.
+    // The owner retains the TTS adapter; this only releases its session.
+    DisposableEffect(speaker, eligible) {
+        onDispose { speaker.stop() }
+    }
     // A deleted or revised caption can shrink the available snapshot while
     // this control remains composed. Never claim a stale start still exists.
     val currentStart = selectedStart?.takeIf { it in eligible.indices }
