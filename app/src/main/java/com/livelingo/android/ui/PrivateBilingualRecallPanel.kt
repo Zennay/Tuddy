@@ -150,10 +150,14 @@ internal fun PrivateBilingualRecallPanel(
     }
     LaunchedEffect(enabled) {
         if (!enabled) {
+            // Losing interactive control must also stop any already queued
+            // private A/B audio, not just the one-shot answer microphone.
+            speaker.stop()
             recallSpeech.cancel()
             recordingAnswer = false
             spokenAnswer = ""
             comparisonSource = null
+            audioNotice = ""
         }
     }
 
@@ -439,6 +443,10 @@ internal fun PrivateBilingualRecallPanel(
                 PrivateRecallAnswerField(
                     value = typedAnswer,
                     onValueChange = { candidate ->
+                        // A spoken version of an older draft must not continue
+                        // when the learner changes their private answer.
+                        speaker.stop()
+                        audioNotice = ""
                         // The native Android EditText constrains the buffer
                         // before calling us; revalidate at this RAM boundary.
                         typedAnswer = candidate.replace('\n', ' ').replace('\r', ' ')
@@ -546,6 +554,17 @@ internal fun PrivateBilingualRecallPanel(
                             attemptLabel = "lokaal herkende spraak"
                         )
                     }
+                    // Only rendered AFTER explicit Onthul. Never queue an
+                    // undisclosed reference or an unsubmitted learner draft.
+                    PrivateRecallAuditoryComparisonPanel(
+                        typedAttempt = typedAnswer,
+                        spokenAttempt = spokenAnswer,
+                        revealedReference = reference,
+                        answerLanguageTag = answerLanguage,
+                        speaker = speaker,
+                        enabled = enabled && !recordingAnswer,
+                        onNotice = { audioNotice = it }
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { mark(RecallSelfAssessment.SELF_GOOD) }, enabled = enabled) {
