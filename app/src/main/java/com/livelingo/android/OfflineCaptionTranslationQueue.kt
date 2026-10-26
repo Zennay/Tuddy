@@ -34,7 +34,10 @@ internal class OfflineCaptionTranslationQueue {
         begin: () -> Unit
     ): Boolean {
         if (closed) return false
-        cancel(id)
+        // A retry replacing its own old revision must be admitted before
+        // draining the freed active slot; otherwise an automatic caption can
+        // jump ahead between cancellation and insertion.
+        removeMatching(id)
         if (automatic.size + userRequested.size >= CaptionRetentionPolicy.MAX_CAPTIONS) {
             return false
         }
@@ -58,11 +61,15 @@ internal class OfflineCaptionTranslationQueue {
         }
     }
 
-    fun cancel(id: Long) {
+    private fun removeMatching(id: Long): Boolean {
         val activeRemoved = active.remove(id) != null
         val autoRemoved = automatic.removeIf { it.id == id }
         val humanRemoved = userRequested.removeIf { it.id == id }
-        if (activeRemoved || autoRemoved || humanRemoved) drain()
+        return activeRemoved || autoRemoved || humanRemoved
+    }
+
+    fun cancel(id: Long) {
+        if (removeMatching(id)) drain()
     }
 
     fun clear() {
