@@ -344,7 +344,9 @@ private data class Line(
     val personalMeaning: String? = null,
     // Android's optional uncalibrated score, only retained when LOW.
     // Human corrections remain authoritative, and nothing persists.
-    val lowAndroidConfidencePercent: Int? = null
+    val lowAndroidConfidencePercent: Int? = null,
+    // In-memory provenance for typed requests; never persisted/exported.
+    val requestedByUser: Boolean = false
 )
 
 /** One reversible, RAM-only correction; exact revision prevents stale undo. */
@@ -1523,6 +1525,9 @@ private fun TuddyScreen(
         userRequested: Boolean = false
     ) {
         val snapshot = lines.firstOrNull { it.id == id } ?: return
+        // Honor user-typed rows even through the unchanged five-argument
+        // translator call shared with the existing offline typed fallback.
+        val deliberateRequest = userRequested || snapshot.requestedByUser
         val revision = snapshot.translationRevision
         if (snapshot.status != "Bezig" ||
             !translationStillRelevant(id, token, revision)) return
@@ -1567,7 +1572,7 @@ private fun TuddyScreen(
             return
         }
         translateResolved(
-            text, id, catalogSource, targetCode, token, revision, userRequested
+            text, id, catalogSource, targetCode, token, revision, deliberateRequest
         )
     }
 
@@ -9168,7 +9173,7 @@ private fun TuddyScreen(
                             val selectedSource = source.translateCode
                             val selectedTarget = target.translateCode
                             lines.add(Line(id, sentence, "Vertalen…", "Bezig",
-                                selectedSource, selectedTarget))
+                                selectedSource, selectedTarget, requestedByUser = true))
                             repeat(CaptionRetentionPolicy.oldestToDrop(lines.size)) {
                                 val removed = lines.removeAt(0)
             if (pendingManualCaptionUndo?.after?.id == removed.id) {
@@ -9186,7 +9191,7 @@ private fun TuddyScreen(
                                 }
                             }
                             manualText = ""
-                            translate(sentence, id, selectedTarget, selectedSource, token, userRequested = true)
+                            translate(sentence, id, selectedTarget, selectedSource, token)
                             follow = true
                         },
                         enabled = OfflineTypedCaptionPolicy.normalize(manualText) != null
