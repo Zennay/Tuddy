@@ -27,6 +27,29 @@ juiste dialectvariant voor de gevraagde zin beschikbaar is. De
 bestaande controle van exacte taal-/regiotags voor live spraak blijft
 ongewijzigd.
 
+**De opname gebruikt nu de exact bevestigde Android-spraakvariant.**
+Als de oefening bijvoorbeeld om `nl` vraagt maar Android alleen
+`nl-NL` als daadwerkelijk geïnstalleerd meldt, verstuurt Tuddy
+`nl-NL` als microfoontaalcode, niet stilzwijgend de onbevestigde
+kale `nl`-code. Er wordt geen regio verzonnen uit een ML Kit-tekstcode.
+
+Meldt Android **meerdere geïnstalleerde regionale spraakpakketten**
+voor die antwoordtaal, dan stopt Tuddy de pakketcontrole **zonder de
+microfoon te openen**. Het oefenpaneel toont uitsluitend de door
+Android als geïnstalleerd gemelde codes. Kies bewust de gewenste
+regio en tik **opnieuw** op *Spreek mijn antwoord in*. Tuddy
+controleert bij die tweede tik opnieuw dat juist dat exacte pakket
+werkelijk is geïnstalleerd; een inmiddels ontbrekende variant start
+geen opname. De keuze bestaat alleen in deze tijdelijke oefenrichting,
+niet als account- of toestelvoorkeur.
+
+Bij één geïnstalleerde variant kan Tuddy die exact bevestigde regio
+direct gebruiken. Bij onbekende pakketstatus blijft uitsluitend de
+on-device-only poging over, uitdrukkelijk **zonder** bewering dat de
+spraaktaal geïnstalleerd is. Een regio kiezen is geen native-speaker-
+review of garantie op nauwkeurigheid. Andere live transcript- en
+ML Kit-teksttaalinstellingen worden hiermee niet veranderd.
+
 Meldt Android een pakket als ontbrekend, in behandeling, alleen online
 of niet ondersteund, dan opent Tuddy **geen microfoon**. Het paneel
 verwijst naar de bewuste pakketvoorbereiding via **Offline startcheck**
