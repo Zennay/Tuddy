@@ -25,6 +25,7 @@ import com.livelingo.android.BilingualReplayCaption
 import com.livelingo.android.BilingualReplayOrder
 import com.livelingo.android.BilingualReplayPacing
 import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.PrivateRecallSpeechAttempt
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.PrivateBilingualConversationReplay
 
@@ -40,6 +41,7 @@ internal fun PrivateBilingualConversationReplayAction(
     sourceCode: String,
     targetCode: String,
     speaker: LocalCaptionSpeaker,
+    recallSpeech: PrivateRecallSpeechAttempt,
     enabled: Boolean
 ) {
     var notice by remember { mutableStateOf("") }
@@ -267,6 +269,7 @@ internal fun PrivateBilingualConversationReplayAction(
             sourceCode = activeSource,
             targetCode = activeTarget,
             speaker = speaker,
+            recallSpeech = recallSpeech,
             enabled = enabled
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
