@@ -15,6 +15,14 @@ internal data class BilingualReplayCaption(
 
 internal data class BilingualReplayPair(val original: String, val translated: String)
 
+/** One user-selectable direction that already has a playable translation. */
+internal data class BilingualReplayDirection(
+    val sourceCode: String,
+    val targetCode: String,
+    val playableCount: Int
+)
+
+
 /**
  * Source-first lets someone hear what was actually said; translation-first
  * permits private recall practice. Both use the identical existing, strictly
@@ -26,6 +34,36 @@ internal enum class BilingualReplayOrder {
 
 internal object PrivateBilingualConversationReplay {
     const val MAX_PAIRS = 8
+    const val MAX_DIRECTIONS = 16
+
+    /**
+     * Only offer directions with at least one safely playable, already
+     * completed translation in this RAM conversation. Recency determines
+     * menu order; no call can start ML Kit, TTS, or a model download.
+     *
+     * Reuse available() for the same Unicode/text boundaries and bounded
+     * capacity as the eventual playback action. An unsupported/unfinished
+     * pair must not appear as a misleading "ready" direction.
+     */
+    fun directions(rows: List<BilingualReplayCaption>): List<BilingualReplayDirection> =
+        rows.asReversed().asSequence()
+            .filter { it.status == "Lokaal vertaald" &&
+                it.sourceCode in TargetCatalog.codes &&
+                it.targetCode in TargetCatalog.codes &&
+                it.sourceCode != it.targetCode
+            }
+            .map { it.sourceCode to it.targetCode }
+            .distinct()
+            .take(MAX_DIRECTIONS)
+            .map { (source, target) ->
+                BilingualReplayDirection(
+                    source, target,
+                    available(rows, source, target).size
+                )
+            }
+            .filter { it.playableCount > 0 }
+            .toList()
+
 
     /**
      * An explicit starting caption takes precedence over "latest N"; when
