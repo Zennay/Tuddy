@@ -86,6 +86,7 @@ import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.OfflinePersonalPhraseTurnsDialog
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
+import com.livelingo.android.ui.PrivateCaptionDeletionUndoControl
 import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.InstalledDeviceVoiceCatalogDialog
@@ -1277,6 +1278,45 @@ private fun TuddyScreen(
                 return Offset.Zero
             }
         }
+    }
+
+    // Keep restoration outside the giant Compose history lambda. This stays
+    // a normal foreground user action; it never submits model or mic work.
+    fun restoreDeletedCaptionUndo() {
+        val snapshot = deletedCaptionUndo ?: return
+        if (!snapshot.valid(generation, SystemClock.elapsedRealtime()) ||
+            lines.any { it.id == snapshot.row.id } ||
+            lines.size >= CaptionRetentionPolicy.MAX_CAPTIONS) {
+            deletedCaptionUndo = null
+            captionDeleteNotice = "Herstellen niet mogelijk: tijd verstreken of gesprek gewijzigd."
+            return
+        }
+        val restored = snapshot.row.let { original ->
+            if (original.status == "Bezig") original.copy(
+                translated = "Vertaling onderbroken door verwijderen; " +
+                    "tik bewust opnieuw op Probeer opnieuw.",
+                status = "Fout",
+                translationRevision = original.translationRevision + 1
+            ) else original.copy(translationRevision = original.translationRevision + 1)
+        }
+        lines.add(snapshot.index.coerceIn(0, lines.size), restored)
+        if (snapshot.wasPinned && captionPins.size < SessionCaptionPins.MAX_PINS) {
+            captionPins = captionPins + restored.id
+            if (snapshot.wasSelectedPin && pinnedChosenIds != null) {
+                pinnedChosenIds = pinnedChosenIds?.plus(restored.id)
+            }
+        }
+        snapshot.pinnedStudyCorrection?.let { pinnedStudyEdits[restored.id] = it }
+        snapshot.manuallyAssignedSpeaker?.let {
+            manuallyAssignedSpeakers[restored.id] = it
+        }
+        snapshot.speechAlternatives?.let { offlineSpeechChoices[restored.id] = it }
+        if (snapshot.alreadyReviewedConfidence) {
+            seenUncertainSpeechIds = seenUncertainSpeechIds + restored.id
+        }
+        deletedCaptionUndo = null
+        captionDeleteNotice = "Ondertitel lokaal hersteld; er is geen nieuwe " +
+            "spraakherkenning of vertaling gestart."
     }
 
     // Revision fences prevent an old ML Kit callback from replacing a later
@@ -10255,59 +10295,13 @@ private fun TuddyScreen(
                     Text(captionDeleteNotice, style = MaterialTheme.typography.bodySmall)
                 }
                 deletedCaptionUndo?.let { deleted ->
-                    val recoverable = deleted.valid(
-                        generation, SystemClock.elapsedRealtime()
-                    ) && !lines.any { it.id == deleted.row.id } &&
-                        lines.size < CaptionRetentionPolicy.MAX_CAPTIONS
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = recoverable,
-                        onClick = {
-                            val snapshot = deletedCaptionUndo ?: return@OutlinedButton
-                            if (!snapshot.valid(generation, SystemClock.elapsedRealtime()) ||
-                                lines.any { it.id == snapshot.row.id } ||
-                                lines.size >= CaptionRetentionPolicy.MAX_CAPTIONS) {
-                                deletedCaptionUndo = null
-                                captionDeleteNotice =
-                                    "Herstellen niet mogelijk: tijd verstreken of gesprek gewijzigd."
-                                return@OutlinedButton
-                            }
-                            val restored = snapshot.row.let { original ->
-                                if (original.status == "Bezig") original.copy(
-                                    translated = "Vertaling onderbroken door verwijderen; " +
-                                        "tik bewust opnieuw op Probeer opnieuw.",
-                                    status = "Fout",
-                                    translationRevision = original.translationRevision + 1
-                                ) else original.copy(
-                                    translationRevision = original.translationRevision + 1
-                                )
-                            }
-                            lines.add(snapshot.index.coerceIn(0, lines.size), restored)
-                            if (snapshot.wasPinned &&
-                                captionPins.size < SessionCaptionPins.MAX_PINS) {
-                                captionPins = captionPins + restored.id
-                                if (snapshot.wasSelectedPin && pinnedChosenIds != null) {
-                                    pinnedChosenIds = pinnedChosenIds?.plus(restored.id)
-                                }
-                            }
-                            snapshot.pinnedStudyCorrection?.let {
-                                pinnedStudyEdits[restored.id] = it
-                            }
-                            snapshot.manuallyAssignedSpeaker?.let {
-                                manuallyAssignedSpeakers[restored.id] = it
-                            }
-                            snapshot.speechAlternatives?.let {
-                                offlineSpeechChoices[restored.id] = it
-                            }
-                            if (snapshot.alreadyReviewedConfidence) {
-                                seenUncertainSpeechIds = seenUncertainSpeechIds + restored.id
-                            }
-                            deletedCaptionUndo = null
-                            captionDeleteNotice =
-                                "Ondertitel lokaal hersteld; er is geen nieuwe " +
-                                    "spraakherkenning of vertaling gestart."
-                        }
-                    ) { Text("↶ Verwijderde ondertitel terugzetten (30 sec)") }
+                    PrivateCaptionDeletionUndoControl(
+                        canRestore = deleted.valid(
+                            generation, SystemClock.elapsedRealtime()
+                        ) && !lines.any { it.id == deleted.row.id } &&
+                            lines.size < CaptionRetentionPolicy.MAX_CAPTIONS,
+                        onRestore = ::restoreDeletedCaptionUndo
+                    )
                 }
                 if (historySearchOpen) {
                     OutlinedTextField(
