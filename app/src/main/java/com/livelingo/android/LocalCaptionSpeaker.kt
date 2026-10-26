@@ -651,7 +651,11 @@ internal class LocalCaptionSpeaker(context: Context) {
                                         feedback("Alle ${pairs.size} tweetalige zinnen lokaal " +
                                             "voorgelezen. Audiofocus vrijgegeven.")
                                         onFinished(true)
-                                    } else if (turns.readyForNext()) {
+                                    } else {
+                                        // Keep the completed utterance terminal
+                                        // during the pause. readyForNext() is a
+                                        // one-time state transition, performed
+                                        // only when the next utterance starts.
                                         // Deliberate practice gap: after the
                                         // first language, allow the learner to
                                         // think of its translation; between
@@ -662,7 +666,9 @@ internal class LocalCaptionSpeaker(context: Context) {
                                         val delayMs = if (afterFirstLanguage)
                                             pacing.thinkingGapMs else pacing.nextPairGapMs
                                         if (delayMs == 0L) {
-                                            next(tts, orderedVoices, ended + 1)
+                                            if (turns.readyForNext()) {
+                                                next(tts, orderedVoices, ended + 1)
+                                            }
                                         } else {
                                             feedback(
                                                 if (afterFirstLanguage)
