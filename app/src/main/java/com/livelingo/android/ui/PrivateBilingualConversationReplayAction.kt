@@ -262,6 +262,13 @@ internal fun PrivateBilingualConversationReplayAction(
                 )
             }
         }
+        PrivateBilingualRecallPanel(
+            practice = practice,
+            sourceCode = activeSource,
+            targetCode = activeTarget,
+            speaker = speaker,
+            enabled = enabled
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (pace in listOf(LocalSpeechPace.NORMAL, LocalSpeechPace.SLOW)) {
                 TextButton(
