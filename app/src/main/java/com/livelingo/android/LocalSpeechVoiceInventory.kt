@@ -25,6 +25,7 @@ internal class LocalSpeechVoiceInventory(context: Context) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var engine: TextToSpeech? = null
     private var generation = 0L
+    private var pendingTimeout: Runnable? = null
 
     fun inspect(callback: (Result<List<LocalSpeechVoiceEntry>>) -> Unit) {
         close()
@@ -54,25 +55,29 @@ internal class LocalSpeechVoiceInventory(context: Context) {
                                 !voice.isNetworkConnectionRequired &&
                                     voice.features?.contains(
                                         TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED
-                                    ) != true
+                                    ) != true &&
+                                    voice.name.isNotBlank() && voice.name.length <= 256 &&
+                                    voice.name.none { it.isISOControl() }
                             }
                             .mapNotNull { voice ->
                                 val locale = voice.locale
                                 val tag = locale.toLanguageTag()
                                 if (locale.language.isBlank() || locale.language == "und" ||
-                                    tag.isBlank()
+                                    !Regex("^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$").matches(tag)
                                 ) {
                                     null
                                 } else {
                                     LocalSpeechVoiceEntry(
                                         voiceName = voice.name,
                                         languageTag = tag,
-                                        displayName = locale.getDisplayName(Locale.getDefault()),
+                                        displayName = locale.getDisplayName(Locale.getDefault())
+                                            .take(100).filterNot { it.isISOControl() },
                                         quality = voice.quality
                                     )
                                 }
                             }
-                            .distinctBy { it.voiceName }
+                            .distinctBy { it.voiceName to it.languageTag }
+                            .take(MAX_INSTALLED_VOICES)
                             .sortedWith(
                                 compareBy<LocalSpeechVoiceEntry> {
                                     it.displayName.lowercase(Locale.ROOT)
@@ -93,6 +98,24 @@ internal class LocalSpeechVoiceInventory(context: Context) {
                 }
             })
             engine = candidate
+            // Some vendor TextToSpeech implementations never deliver onInit.
+            // End the read-only inspection and return control to Refresh.
+            val timeout = Runnable {
+                if (generation == requestGeneration && engine === candidate) {
+                    close()
+                    callback(Result.failure(IllegalStateException(
+                        "Android reageerde niet bij het uitlezen van geïnstalleerde stemmen. " +
+                            "Tik bewust op Ververs om het opnieuw te proberen."
+                    )))
+                }
+            }
+            pendingTimeout = timeout
+            if (!mainHandler.postDelayed(timeout, INSPECTION_TIMEOUT_MS)) {
+                close()
+                callback(Result.failure(IllegalStateException(
+                    "Android kon de stemcontrole niet veilig plannen."
+                )))
+            }
         } catch (_: RuntimeException) {
             if (generation == requestGeneration) {
                 close()
@@ -103,8 +126,15 @@ internal class LocalSpeechVoiceInventory(context: Context) {
         }
     }
 
+    private companion object {
+        const val INSPECTION_TIMEOUT_MS = 15_000L
+        const val MAX_INSTALLED_VOICES = 128
+    }
+
     fun close() {
         generation++
+        pendingTimeout?.let(mainHandler::removeCallbacks)
+        pendingTimeout = null
         val old = engine
         engine = null
         if (old != null) runCatching { old.shutdown() }
