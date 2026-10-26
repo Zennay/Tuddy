@@ -292,6 +292,11 @@ internal class LocalCaptionSpeaker(context: Context) {
                                     if (generation != version) return@post
                                     val index = sequenceIndex
                                     val line = safeLines.getOrNull(index) ?: return@post
+                                    // Some Android TTS engines emit word ranges
+                                    // without a preceding onStart. Treat the
+                                    // first valid range as that line's start
+                                    // (still exactly once, by full utterance ID).
+                                    turnGate.started(utteranceId)?.let(onLineStarted)
                                     val range = turnGate.range(
                                         utteranceId, start, end, line.length
                                     ) ?: return@post
