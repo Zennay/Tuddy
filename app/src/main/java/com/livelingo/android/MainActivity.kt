@@ -87,6 +87,7 @@ import com.livelingo.android.ui.OfflinePersonalPhraseTurnsDialog
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.PrivateCaptionDeletionUndoControl
+import com.livelingo.android.ui.PrivateCaptionDeleteConfirmDialog
 import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.InstalledDeviceVoiceCatalogDialog
@@ -1317,6 +1318,72 @@ private fun TuddyScreen(
         deletedCaptionUndo = null
         captionDeleteNotice = "Ondertitel lokaal hersteld; er is geen nieuwe " +
             "spraakherkenning of vertaling gestart."
+    }
+
+    // Keep complex row cleanup out of the huge Compose dialog lambda.
+    fun deleteSingleCaption(deleteRequest: Triple<Long, String, Int>) {
+        val index = lines.indexOfFirst { it.id == deleteRequest.first }
+        if (index >= 0 && lines[index].original == deleteRequest.second &&
+            lines[index].translationRevision == deleteRequest.third) {
+            val row = lines[index]
+            val id = row.id
+            // Existing confirmed delete action alone creates a
+            // 30-second private undo receipt. Nothing goes to
+            // disk, export, clipboard or ML Kit.
+            deletedCaptionUndo = PendingDeletedCaptionUndo(
+                row = row,
+                index = index,
+                conversationGeneration = generation,
+                createdAtElapsedMillis = SystemClock.elapsedRealtime(),
+                wasPinned = id in captionPins,
+                wasSelectedPin = pinnedChosenIds?.contains(id) == true,
+                pinnedStudyCorrection = pinnedStudyEdits[id],
+                manuallyAssignedSpeaker = manuallyAssignedSpeakers[id],
+                speechAlternatives = offlineSpeechChoices[id]?.toList(),
+                alreadyReviewedConfidence = id in seenUncertainSpeechIds
+            )
+            captionSpeaker.stop() // Deleted caption must not keep being spoken.
+            // Revoke unconsumed external payloads; already exported
+            // files and the system clipboard are outside our control.
+            pendingTranscriptExport = null
+            pendingSpeakerExport = null
+            pendingCaptionShare = null
+            exportStatus = ""
+            captionPins = captionPins - id
+            pinnedChosenIds = pinnedChosenIds?.minus(id)
+            pinnedStudyEdits.remove(id)
+            manuallyAssignedSpeakers.remove(id)
+            if (editingCaptionId == id) {
+                editingCaptionId = null
+                captionCorrectionDraft = ""
+            }
+            if (editingTranslationId == id) {
+                editingTranslationId = null
+                translationCorrectionDraft = ""
+                translationCorrectionBaseline = ""
+                translationCorrectionRevision = -1
+                translationCorrectionGeneration = -1
+            }
+            if (lastCopiedCaptionId == id) {
+                lastCopiedCaptionId = null
+                copyStatus = ""
+            }
+            lines.removeAt(index)
+            if (pendingManualCaptionUndo?.after?.id == id) {
+                pendingManualCaptionUndo = null
+            }
+            translationDeadline.cancel(deleteRequest.first)
+            captionTranslationQueue.cancel(deleteRequest.first)
+            speechTranslationStarted.remove(deleteRequest.first)
+            seenUncertainSpeechIds = seenUncertainSpeechIds - deleteRequest.first
+            offlineSpeechChoices.remove(deleteRequest.first)
+            captionDeleteNotice = "Ondertitel gewist. Herstel binnen 30 seconden als dit per ongeluk was."
+        } else {
+            captionDeleteNotice = "Regel is gewijzigd; niets verwijderd."
+        }
+        livePhraseBatchSelection =
+            livePhraseBatchSelection - deleteRequest.first
+        pendingSingleCaptionDelete = null
     }
 
     // Revision fences prevent an old ML Kit callback from replacing a later
@@ -8287,90 +8354,12 @@ private fun TuddyScreen(
         val deleteRequest = pendingSingleCaptionDelete
         if (deleteRequest != null) {
             val selectedRow = lines.firstOrNull { it.id == deleteRequest.first }
-            val stillSelected = selectedRow != null &&
-                selectedRow.original == deleteRequest.second &&
-                selectedRow.translationRevision == deleteRequest.third
-            AlertDialog(
-                onDismissRequest = { pendingSingleCaptionDelete = null },
-                title = { Text("Eén ondertitel wissen?") },
-                text = {
-                    Text("Alleen deze regel verdwijnt uit het tijdelijke gesprek. " +
-                        "Je kunt haar 30 seconden lokaal herstellen zolang Tuddy openblijft. " +
-                        "Lopende vertalingen worden niet opnieuw gestart, en na verlaten, " +
-                        "een volledig gewist gesprek of verlopen van de tijd is herstel weg. " +
-                        "Externe kopieën blijven buiten Tuddy bestaan.")
-                },
-                confirmButton = {
-                    TextButton(enabled = stillSelected, onClick = {
-                        val index = lines.indexOfFirst { it.id == deleteRequest.first }
-                        if (index >= 0 && lines[index].original == deleteRequest.second &&
-                            lines[index].translationRevision == deleteRequest.third) {
-                            val row = lines[index]
-                            val id = row.id
-                            // Existing confirmed delete action alone creates a
-                            // 30-second private undo receipt. Nothing goes to
-                            // disk, export, clipboard or ML Kit.
-                            deletedCaptionUndo = PendingDeletedCaptionUndo(
-                                row = row,
-                                index = index,
-                                conversationGeneration = generation,
-                                createdAtElapsedMillis = SystemClock.elapsedRealtime(),
-                                wasPinned = id in captionPins,
-                                wasSelectedPin = pinnedChosenIds?.contains(id) == true,
-                                pinnedStudyCorrection = pinnedStudyEdits[id],
-                                manuallyAssignedSpeaker = manuallyAssignedSpeakers[id],
-                                speechAlternatives = offlineSpeechChoices[id]?.toList(),
-                                alreadyReviewedConfidence = id in seenUncertainSpeechIds
-                            )
-                            captionSpeaker.stop() // Deleted caption must not keep being spoken.
-                            // Revoke unconsumed external payloads; already exported
-                            // files and the system clipboard are outside our control.
-                            pendingTranscriptExport = null
-                            pendingSpeakerExport = null
-                            pendingCaptionShare = null
-                            exportStatus = ""
-                            captionPins = captionPins - id
-                            pinnedChosenIds = pinnedChosenIds?.minus(id)
-                            pinnedStudyEdits.remove(id)
-                            manuallyAssignedSpeakers.remove(id)
-                            if (editingCaptionId == id) {
-                                editingCaptionId = null
-                                captionCorrectionDraft = ""
-                            }
-                            if (editingTranslationId == id) {
-                                editingTranslationId = null
-                                translationCorrectionDraft = ""
-                                translationCorrectionBaseline = ""
-                                translationCorrectionRevision = -1
-                                translationCorrectionGeneration = -1
-                            }
-                            if (lastCopiedCaptionId == id) {
-                                lastCopiedCaptionId = null
-                                copyStatus = ""
-                            }
-                            lines.removeAt(index)
-                            if (pendingManualCaptionUndo?.after?.id == id) {
-                                pendingManualCaptionUndo = null
-                            }
-                            translationDeadline.cancel(deleteRequest.first)
-                            captionTranslationQueue.cancel(deleteRequest.first)
-                            speechTranslationStarted.remove(deleteRequest.first)
-                            seenUncertainSpeechIds = seenUncertainSpeechIds - deleteRequest.first
-                            offlineSpeechChoices.remove(deleteRequest.first)
-                            captionDeleteNotice = "Ondertitel gewist. Herstel binnen 30 seconden als dit per ongeluk was."
-                        } else {
-                            captionDeleteNotice = "Regel is gewijzigd; niets verwijderd."
-                        }
-                        livePhraseBatchSelection =
-                            livePhraseBatchSelection - deleteRequest.first
-                        pendingSingleCaptionDelete = null
-                    }) { Text("Wis deze regel") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { pendingSingleCaptionDelete = null }) {
-                        Text("Behouden")
-                    }
-                }
+            PrivateCaptionDeleteConfirmDialog(
+                stillSelected = selectedRow != null &&
+                    selectedRow.original == deleteRequest.second &&
+                    selectedRow.translationRevision == deleteRequest.third,
+                onConfirm = { deleteSingleCaption(deleteRequest) },
+                onDismiss = { pendingSingleCaptionDelete = null }
             )
         }
         val deletionCode = pendingModelDeletion
