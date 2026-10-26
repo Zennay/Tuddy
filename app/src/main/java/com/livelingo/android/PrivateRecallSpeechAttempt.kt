@@ -110,7 +110,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
                         results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     )
                     val safe = LocalTextBoundaryPolicy.speechHypothesis(candidate)
-                        ?.take(MAX_SPOKEN_CHARACTERS)
+                        ?.takeIf { it.length <= MAX_SPOKEN_CHARACTERS }
                     cancel()
                     if (safe.isNullOrBlank()) {
                         onNotice("Geen bruikbaar lokaal antwoord. Je kunt opnieuw inspreken.")
