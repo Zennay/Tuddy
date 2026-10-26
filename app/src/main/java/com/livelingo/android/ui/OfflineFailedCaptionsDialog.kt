@@ -57,7 +57,9 @@ internal fun OfflineFailedCaptionsDialog(
                         "worden maximaal 6 mislukte regels per keer opnieuw " +
                         "vertaald; de oorspronkelijke tekst en taal blijven staan. " +
                         "Voorbereiding van ontbrekende modellen vraagt apart " +
-                        "toestemming via wifi. Nooit een cloudvertaling.",
+                        "toestemming via wifi. Herstel krijgt voorrang op nog " +
+                        "wachtende automatische regels, niet op lopende taken. " +
+                        "Nooit een cloudvertaling."
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (notice.isNotBlank()) {
