@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.BilingualReplayCaption
 import com.livelingo.android.BilingualReplayOrder
+import com.livelingo.android.BilingualReplayPacing
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.PrivateBilingualConversationReplay
@@ -58,6 +59,9 @@ internal fun PrivateBilingualConversationReplayAction(
     var selectedCount by remember(activeSource, activeTarget) { mutableStateOf(3) }
     var selectedOrder by remember(activeSource, activeTarget) {
         mutableStateOf(BilingualReplayOrder.SOURCE_FIRST)
+    }
+    var selectedPacing by remember(activeSource, activeTarget) {
+        mutableStateOf(BilingualReplayPacing.CONTINUOUS)
     }
     val eligible = PrivateBilingualConversationReplay.available(
         captions, activeSource, activeTarget
@@ -227,6 +231,37 @@ internal fun PrivateBilingualConversationReplayAction(
                 label = { Text("Vertaling eerst") }
             )
         }
+        Text(
+            "Nadenkpauze tussen origineel en vertaling · ook " +
+                "na een oefenzin een kortere tussenpauze. " +
+                "Audio wordt niet opgenomen; met Stop stopt ook de pauze.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (pacing in BilingualReplayPacing.entries) {
+                FilterChip(
+                    selected = selectedPacing == pacing,
+                    enabled = enabled && practice.isNotEmpty(),
+                    modifier = Modifier.semantics {
+                        contentDescription = pacing.label +
+                            ". Kies een pauze voor de volgende offline luisteroefening."
+                    },
+                    onClick = {
+                        speaker.stop()
+                        selectedPacing = pacing
+                        notice = "Oefenpauze gekozen: ${pacing.label}. " +
+                            "Tik op afspelen; Stop onderbreekt ook een pauze."
+                    },
+                    label = {
+                        Text(when (pacing) {
+                            BilingualReplayPacing.CONTINUOUS -> "Direct"
+                            BilingualReplayPacing.LISTEN_AND_ANSWER -> "2,5 s"
+                            BilingualReplayPacing.REFLECT -> "5 s"
+                        })
+                    }
+                )
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (pace in listOf(LocalSpeechPace.NORMAL, LocalSpeechPace.SLOW)) {
                 TextButton(
@@ -244,7 +279,8 @@ internal fun PrivateBilingualConversationReplayAction(
                                         notice = "Voorlezen gestopt."
                                     }
                                 },
-                                order = selectedOrder
+                                order = selectedOrder,
+                                pacing = selectedPacing
                             )
                         }
                     }
