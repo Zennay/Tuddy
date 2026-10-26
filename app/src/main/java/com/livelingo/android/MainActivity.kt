@@ -667,7 +667,8 @@ private fun LatestPrivateCaptionAccessibilityAction(
     speaker: LocalCaptionSpeaker,
     listening: Boolean,
     privateCurtainOpen: Boolean,
-    confirmClearConversation: Boolean
+    confirmClearConversation: Boolean,
+    strictOfflineRadioOnly: Boolean
 ) {
     if (listening || privateCurtainOpen || confirmClearConversation) return
     val activity = LocalContext.current as? MainActivity ?: return
@@ -701,7 +702,8 @@ private fun LatestPrivateCaptionAccessibilityAction(
         targetCode = recent.targetCode,
         speaker = speaker,
         recallSpeech = recallSpeech,
-        enabled = true
+        enabled = true,
+        strictOfflineRadioOnly = strictOfflineRadioOnly
     )
 }
 
@@ -10057,7 +10059,7 @@ private fun TuddyScreen(
                 if (conversationToolsOpen) {
                     LatestPrivateCaptionAccessibilityAction(
                         lines, captionSpeaker, listening, privateCurtainOpen,
-                        confirmClearConversation
+                        confirmClearConversation, requireOfflineRadioBeforeListening
                     )
                     translationMemoryRevision // Reflect the count after opt-in or deletion.
                     OutlinedButton(
