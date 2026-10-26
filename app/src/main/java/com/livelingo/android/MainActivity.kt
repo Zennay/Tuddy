@@ -88,6 +88,7 @@ import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
+import com.livelingo.android.ui.InstalledDeviceVoiceCatalogDialog
 import com.livelingo.android.ui.FailedCaptionPair
 import com.livelingo.android.ui.OfflineFailedCaptionsDialog
 import com.livelingo.android.ui.UncertainSpeechReviewDialog
@@ -990,6 +991,7 @@ private fun TuddyScreen(
     var advancedActionsOpen by remember { mutableStateOf(false) }
     var launcherShortcutNotice by remember { mutableStateOf("") }
     var voicePickerLanguageTag by remember { mutableStateOf<String?>(null) }
+    var deviceVoiceCatalogOpen by remember { mutableStateOf(false) }
     var confirmClearConversation by remember { mutableStateOf(false) }
     var confirmPrivateExit by remember { mutableStateOf(false) }
     // Only IDs and row revisions, never private caption text, are held for confirmation.
@@ -4806,6 +4808,11 @@ private fun TuddyScreen(
                     pendingSingleSpeechReview = null
                     liveSpeechPhase = LiveSpeechPhase.OFF
                 }
+            )
+        }
+        if (deviceVoiceCatalogOpen && !listening) {
+            InstalledDeviceVoiceCatalogDialog(
+                onDismiss = { deviceVoiceCatalogOpen = false }
             )
         }
         voicePickerLanguageTag?.let { languageTag ->
@@ -9035,6 +9042,15 @@ private fun TuddyScreen(
                         }
                     ) { Text("Stem vertaling · ${target.translateCode.uppercase()}") }
                 }
+                OutlinedButton(
+                    enabled = !listening,
+                    onClick = {
+                        captionSpeaker.stop()
+                        voicePickerLanguageTag = null
+                        deviceVoiceCatalogOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Bekijk alle geïnstalleerde offline Android-stemmen…") }
                 // Settings used to occupy the full unscrollable outer Column on
                 // phones, starving the weighted transcript of its available height.
                 // Keep listening/clear/follow controls pinned above a separately
