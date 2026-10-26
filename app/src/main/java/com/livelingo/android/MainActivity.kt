@@ -603,6 +603,32 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Kept outside TuddyScreen's giant Compose call graph. Kotlin/JVM otherwise
+ * exceeds the 64 KiB limit for its generated composable method.
+ */
+@Composable
+private fun LatestPrivateCaptionAccessibilityAction(
+    lines: List<Line>,
+    listening: Boolean,
+    privateCurtainOpen: Boolean,
+    confirmClearConversation: Boolean
+) {
+    if (listening || privateCurtainOpen || confirmClearConversation) return
+    val latest = lines.lastOrNull {
+        it.status == "Lokaal vertaald" || it.status == "Lokaal"
+    } ?: return
+    if (latest.original.isBlank()) return
+    ExplicitAccessibilityCaptionAction(
+        title = "Laatste voltooide gespreksregel · Android-schermlezer",
+        original = latest.original,
+        translation = latest.translated,
+        sourceCode = latest.sourceCode,
+        targetCode = latest.targetCode,
+        enabled = true
+    )
+}
+
 @Composable
 private fun TuddyScreen(
     incomingExternalText: IncomingSharedText?,
@@ -9957,24 +9983,9 @@ private fun TuddyScreen(
                         else "Gesprekstools · export, sprekers en archief")
                 }
                 if (conversationToolsOpen) {
-                    // Accessibility services may belong to third parties.
-                    // Only a deliberate, confirmed tap may disclose one current
-                    // completed RAM caption; never announce live microphone text.
-                    val mostRecentCompleted = lines.lastOrNull {
-                        it.status in setOf("Lokaal vertaald", "Lokaal") &&
-                            it.original.isNotBlank()
-                    }
-                    if (mostRecentCompleted != null && !listening && !privateCurtainOpen) {
-                        ExplicitAccessibilityCaptionAction(
-                            title = "Laatste voltooide gespreksregel · Android-schermlezer",
-                            original = mostRecentCompleted.original,
-                            translation = mostRecentCompleted.translated,
-                            sourceCode = mostRecentCompleted.sourceCode,
-                            targetCode = mostRecentCompleted.targetCode,
-                            enabled = !listening && !privateCurtainOpen &&
-                                !confirmClearConversation
-                        )
-                    }
+                    LatestPrivateCaptionAccessibilityAction(
+                        lines, listening, privateCurtainOpen, confirmClearConversation
+                    )
                     translationMemoryRevision // Reflect the count after opt-in or deletion.
                     OutlinedButton(
                         onClick = { translationMemoryOpen = true },
