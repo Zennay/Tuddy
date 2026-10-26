@@ -312,6 +312,9 @@ internal fun PrivateBilingualRecallPanel(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            TextButton(onClick = ::revisePrevious, enabled = enabled && position > 0) {
+                Text("← Herzie laatste beoordeling vóór afronden")
+            }
             TextButton(onClick = ::begin, enabled = enabled) {
                 Text("Begin volledige ronde opnieuw")
             }
