@@ -12,8 +12,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.BilingualReplayCaption
 import com.livelingo.android.LocalCaptionSpeaker
@@ -34,8 +37,8 @@ internal fun PrivateBilingualConversationReplayAction(
     speaker: LocalCaptionSpeaker,
     enabled: Boolean
 ) {
-    var notice by androidx.compose.runtime.remember { mutableStateOf("") }
-    var selectedCount by androidx.compose.runtime.remember { mutableStateOf(3) }
+    var notice by remember { mutableStateOf("") }
+    var selectedCount by remember { mutableStateOf(3) }
     // The Activity owns and closes this engine on background/microphone Stop.
     // When this tool is hidden, cancel only playback, never close its owner.
     DisposableEffect(speaker) {
@@ -69,6 +72,9 @@ internal fun PrivateBilingualConversationReplayAction(
             for (count in listOf(1, 3, 5, 8)) {
                 FilterChip(
                     selected = selectedCount == count,
+                    modifier = Modifier.semantics {
+                        contentDescription = "Laatste $count zinnen oefenen"
+                    },
                     onClick = {
                         speaker.stop()
                         selectedCount = count
