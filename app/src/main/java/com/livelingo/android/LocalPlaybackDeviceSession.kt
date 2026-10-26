@@ -61,9 +61,16 @@ internal class LocalPlaybackDeviceSession(context: Context) {
         if (mustHaveHeadphones && !initiallyConnected) return false
         everHadHeadset = initiallyConnected
         interruption = onInterrupted
+        // Android may enqueue a focus/route event from the *previous* TTS
+        // session after the user has already started another. Never let a
+        // retired listener stop its successor.
+        val version = epoch
+        var focusLostDuringAdmission = false
         val focusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
-            if (focusChange != AudioManager.AUDIOFOCUS_GAIN) {
-                interrupt("Android gaf de audiofocus aan een andere app of oproep. Voorlezen gestopt.")
+            if (version == epoch && focusChange != AudioManager.AUDIOFOCUS_GAIN) {
+                if (!active) focusLostDuringAdmission = true
+                else interrupt(version,
+                    "Android gaf de audiofocus aan een andere app of oproep. Voorlezen gestopt.")
             }
         }
         try {
@@ -78,10 +85,10 @@ internal class LocalPlaybackDeviceSession(context: Context) {
             focus = request
             val routeCallback = object : AudioDeviceCallback() {
                 override fun onAudioDevicesAdded(addedDevices: Array<AudioDeviceInfo>) {
-                    inspectRoute()
+                    inspectRoute(version)
                 }
                 override fun onAudioDevicesRemoved(removedDevices: Array<AudioDeviceInfo>) {
-                    inspectRoute()
+                    inspectRoute(version)
                 }
             }
             audioDeviceCallback = routeCallback
@@ -91,10 +98,12 @@ internal class LocalPlaybackDeviceSession(context: Context) {
                 override fun onReceive(context: Context?, intent: Intent?) {
                     // Ignore untrusted payloads: stopping TTS is safe, and
                     // Android route state is checked at the next explicit tap.
+                    if (version != epoch) return
                     if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
-                        interrupt("De audio-uitvoer kan naar de luidspreker wisselen. Voorlezen gestopt.")
+                        interrupt(version,
+                            "De audio-uitvoer kan naar de luidspreker wisselen. Voorlezen gestopt.")
                     } else if (intent?.action == AudioManager.RINGER_MODE_CHANGED_ACTION) {
-                        inspectQuietMode()
+                        inspectQuietMode(version)
                     }
                 }
             }
@@ -113,7 +122,8 @@ internal class LocalPlaybackDeviceSession(context: Context) {
             // Route may have changed between the original user tap and
             // listener registration. Never start speaking after that gap.
             val nowConnected = visibleHeadset(audio)
-            if (nowConnected == null ||
+            if (version != epoch || focusLostDuringAdmission ||
+                nowConnected == null ||
                 (mustHaveHeadphones && !nowConnected) ||
                 (initiallyConnected && !nowConnected)) {
                 end()
@@ -123,13 +133,18 @@ internal class LocalPlaybackDeviceSession(context: Context) {
             // Focus and route must already be safe before advertising a
             // cancellable media session. No media PLAY/RESUME is published.
             if (!mediaControls.open {
-                    interrupt("Voorlezen gestopt via Android-mediabediening of headsetknop.")
+                    interrupt(version,
+                        "Voorlezen gestopt via Android-mediabediening of headsetknop.")
                 }) {
                 end() // No audio may begin if the stop route is unavailable.
                 return false
             }
             // Guard the gap after registering the native receiver, then
             // periodically re-read Android even on devices omitting broadcasts.
+            if (version != epoch || focusLostDuringAdmission) {
+                end()
+                return false
+            }
             if (respectQuietMode) {
                 if (isAudibleMode(audio) != true) {
                     end()
@@ -150,10 +165,11 @@ internal class LocalPlaybackDeviceSession(context: Context) {
     private fun isAudibleMode(audio: AudioManager): Boolean? =
         runCatching { audio.ringerMode == AudioManager.RINGER_MODE_NORMAL }.getOrNull()
 
-    private fun inspectQuietMode() {
-        if (!active || !respectQuietMode) return
+    private fun inspectQuietMode(version: Long) {
+        if (!active || version != epoch || !respectQuietMode) return
         if (manager?.let(::isAudibleMode) != true) {
             interrupt(
+                version,
                 "Android meldt stille/trilstand of kan de belmodus niet uitlezen. " +
                     "Lokaal voorlezen gestopt; tik alleen na een bewuste instelling opnieuw op Play."
             )
@@ -165,9 +181,10 @@ internal class LocalPlaybackDeviceSession(context: Context) {
         val next = Runnable {
             quietPoll = null
             if (active && respectQuietMode && version == epoch) {
-                inspectQuietMode()
+                inspectQuietMode(version)
                 if (active && version == epoch && !scheduleQuietPoll(version)) {
-                    interrupt("Android kon de stille-modusbewaking niet voortzetten. Voorlezen gestopt.")
+                    interrupt(version,
+                        "Android kon de stille-modusbewaking niet voortzetten. Voorlezen gestopt.")
                 }
             }
         }
@@ -179,21 +196,21 @@ internal class LocalPlaybackDeviceSession(context: Context) {
         return true
     }
 
-    private fun inspectRoute() {
-        if (!active) return
+    private fun inspectRoute(version: Long) {
+        if (!active || version != epoch) return
         val available = manager?.let(::visibleHeadset)
         when {
             available == null ->
-                interrupt("Android kan de huidige audio-uitvoer niet controleren. Voorlezen gestopt.")
+                interrupt(version, "Android kan de huidige audio-uitvoer niet controleren. Voorlezen gestopt.")
             (mustHaveHeadphones || everHadHeadset) && !available ->
-                interrupt("Geen aangesloten hoofdtelefoon meer door Android gemeld. " +
+                interrupt(version, "Geen aangesloten hoofdtelefoon meer door Android gemeld. " +
                     "Privévoorlezen gestopt vóór verder afspelen.")
             available -> everHadHeadset = true
         }
     }
 
-    private fun interrupt(reason: String) {
-        if (!active) return
+    private fun interrupt(version: Long, reason: String) {
+        if (!active || version != epoch) return
         val notify = interruption
         end()
         notify?.invoke(reason)
@@ -234,6 +251,27 @@ internal class LocalPlaybackDeviceSession(context: Context) {
 
     companion object {
         private const val QUIET_POLL_MS = 2_000L
+
+        /**
+         * Fresh, advisory output information for the user's explicit
+         * playback menu. This neither routes audio nor authorizes TTS.
+         * The actual playback admission rechecks Android state separately.
+         */
+        fun currentOutputHint(context: Context): String {
+            val app = context.applicationContext
+            val audio = app.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                ?: return "Android-uitvoer onbekend · voorlezen wordt veilig gecontroleerd"
+            val headset = runCatching {
+                audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { it.type in HEADSET_DEVICE_TYPES }
+            }.getOrNull() ?: return "Uitvoer niet uitleesbaar · voorlezen wordt veilig gecontroleerd"
+            val onlyHeadphones = PrivatePlaybackRoutingPreference.headphonesOnly(app)
+            return when {
+                headset -> "Android meldt hoofdtelefoon aanwezig · route niet fysiek bevestigd"
+                onlyHeadphones -> "Hoofdtelefoon vereist · Android meldt er geen; afspelen wordt geweigerd"
+                else -> "Geen hoofdtelefoon gemeld · geluid kan via luidspreker klinken"
+            }
+        }
+
         val SPEECH_AUDIO_ATTRIBUTES: AudioAttributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
