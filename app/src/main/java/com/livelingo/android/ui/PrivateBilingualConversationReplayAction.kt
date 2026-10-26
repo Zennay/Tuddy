@@ -59,13 +59,16 @@ internal fun PrivateBilingualConversationReplayAction(
     var selectedOrder by remember(activeSource, activeTarget) {
         mutableStateOf(BilingualReplayOrder.SOURCE_FIRST)
     }
-    var selectedStart by remember(activeSource, activeTarget, captions) {
-        mutableStateOf<Int?>(null)
-    }
-    var choosingStart by remember(activeSource, activeTarget) { mutableStateOf(false) }
     val eligible = PrivateBilingualConversationReplay.available(
         captions, activeSource, activeTarget
     )
+    // Only reset an explicit start if *this chosen direction's* playable
+    // captions changed. New conversations in a different language must
+    // not quietly turn a selected start into "latest N" again.
+    var selectedStart by remember(activeSource, activeTarget, eligible) {
+        mutableStateOf<Int?>(null)
+    }
+    var choosingStart by remember(activeSource, activeTarget) { mutableStateOf(false) }
     // If a caption is edited or removed while replay is active, stop the
     // snapshot rather than narrating content the user already changed.
     // The owner retains the TTS adapter; this only releases its session.
