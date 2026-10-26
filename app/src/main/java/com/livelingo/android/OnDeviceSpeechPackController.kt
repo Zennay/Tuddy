@@ -29,7 +29,11 @@ internal enum class SpeechPackStage {
 internal data class SpeechPackReceipt(
     val tag: String,
     val stage: SpeechPackStage,
-    val detail: String
+    val detail: String,
+    // Populated only by an Android 13+ read-only recall inspection. Never
+    // inferred from a downloadable or online-only regional language.
+    val installedSpeechTags: List<String> = emptyList(),
+    val admittedSpeechTag: String? = null
 ) {
     val canDownload: Boolean get() = stage == SpeechPackStage.DOWNLOADABLE || stage == SpeechPackStage.ERROR
 }
@@ -83,35 +87,48 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
         // useful for a voluntary one-shot local practice attempt, but it is
         // NOT evidence that the regionless requested locale itself is an
         // exact installed model. Strict live speech checks stay unchanged.
-        fun reported(tags: Collection<String>): Boolean {
-            if (includesRequestedTag(tags, tag)) return true
-            if (!allowLanguageVariant || '-' in tag) return false
+        fun reported(tags: Collection<String>): List<String> {
+            val exact = tags.filter { it.equals(tag, ignoreCase = true) }
+            if (!allowLanguageVariant || '-' in tag) return exact.distinct()
             val language = Locale.forLanguageTag(tag).language
-            return language.isNotBlank() && language != "und" &&
-                tags.any {
-                    val observed = Locale.forLanguageTag(it)
-                    observed.language.equals(language, ignoreCase = true) &&
-                        observed.country.isNotBlank()
-                }
+            if (language.isBlank() || language == "und") return exact.distinct()
+            val variants = tags.filter { observedTag ->
+                val observed = Locale.forLanguageTag(observedTag)
+                observed.language.equals(language, ignoreCase = true) &&
+                    observed.country.isNotBlank() &&
+                    observed.toLanguageTag().equals(observedTag, ignoreCase = true)
+            }
+            // Stable options; only Android-confirmed INSTALLED tags ever reach
+            // the caller. Never synthesize a region or interpret downloadables
+            // as installed. Bound the picker to prevent untrusted large lists.
+            return (exact + variants).distinctBy { it.lowercase(Locale.ROOT) }
+                .sortedWith(compareBy<String> { !it.equals(tag, ignoreCase = true) }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it })
+                .take(24)
         }
-        if (reported(support.installedOnDeviceLanguages)) {
+        val installed = reported(support.installedOnDeviceLanguages)
+        if (installed.isNotEmpty()) {
+            val selected = installed.firstOrNull { it.equals(tag, ignoreCase = true) }
+                ?: installed.singleOrNull()
             return SpeechPackReceipt(tag, SpeechPackStage.READY,
                 if (allowLanguageVariant && '-' !in tag)
-                    "Android meldt minstens één geïnstalleerde regionale offline " +
-                        "spraakvariant voor $tag. De exacte regio is niet bevestigd; " +
-                        "geen garantie op herkenning of nauwkeurigheid."
+                    "Android bevestigt ${installed.size} geïnstalleerde offline " +
+                        "spraakvariant(en) voor $tag. De opname gebruikt de exacte " +
+                        "Android-code van het gekozen pakket."
                 else "Android meldt een geïnstalleerd offline spraakpakket voor $tag. " +
-                    "Geen garantie op nauwkeurigheid.")
+                    "Geen garantie op herkenning of nauwkeurigheid.",
+                if (allowLanguageVariant) installed else emptyList(),
+                if (allowLanguageVariant) selected else null)
         }
-        if (reported(support.pendingOnDeviceLanguages)) {
+        if (reported(support.pendingOnDeviceLanguages).isNotEmpty()) {
             return SpeechPackReceipt(tag, SpeechPackStage.PENDING,
                 "Android bereidt het spraakpakket voor $tag nog voor. Controleer straks opnieuw.")
         }
-        if (reported(support.supportedOnDeviceLanguages)) {
+        if (reported(support.supportedOnDeviceLanguages).isNotEmpty()) {
             return SpeechPackReceipt(tag, SpeechPackStage.DOWNLOADABLE,
                 "Offline spraak voor $tag wordt door dit toestel aangeboden; het pakket ontbreekt nog.")
         }
-        if (reported(support.onlineLanguages)) {
+        if (reported(support.onlineLanguages).isNotEmpty()) {
             return SpeechPackReceipt(tag, SpeechPackStage.ONLINE_ONLY,
                 "Voor $tag biedt de herkenningsdienst alleen online spraak. Tuddy gebruikt die niet.")
         }

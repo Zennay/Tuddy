@@ -73,7 +73,8 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
         languageTag: String,
         strictOfflineRadioOnly: Boolean,
         onNotice: (String) -> Unit,
-        onFinalAnswer: (String) -> Unit
+        onFinalAnswer: (String) -> Unit,
+        onVariantSelectionRequired: (List<String>) -> Unit = {}
     ): Boolean {
         cancel()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
@@ -119,18 +120,49 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
                     when (receipt.stage) {
                     SpeechPackStage.CHECKING -> onNotice(
                         "Android controleert het geïnstalleerde offline pakket voor $languageTag…")
-                    SpeechPackStage.READY, SpeechPackStage.UNKNOWN -> {
+                    SpeechPackStage.READY -> {
                         packTimeout?.let(main::removeCallbacks)
                         packTimeout = null
                         checkingSpeechPack = false
-                        // UNKNOWN never means confirmed installed. Only the
-                        // actual on-device SpeechRecognizer may be attempted.
-                        val unknown = receipt.stage == SpeechPackStage.UNKNOWN
+                        // Only a tag reported INSTALLED by Android may pass
+                        // as a confirmed speech locale. Regionless "nl"/"en"
+                        // does NOT prove a regional model will recognize it.
+                        val confirmed = receipt.admittedSpeechTag
+                        if (confirmed == null) {
+                            val options = receipt.installedSpeechTags
+                            cancel()
+                            if (options.isNotEmpty()) {
+                                onVariantSelectionRequired(options)
+                                onNotice("Meerdere geïnstalleerde spraakregio's " +
+                                    "beschikbaar. Kies zelf één Android-variant " +
+                                    "en tik opnieuw op de microfoon. Geen opname gestart.")
+                            } else {
+                                onNotice("Geen exacte geïnstalleerde spraakvariant " +
+                                    "voor deze antwoordtaal bevestigd. Microfoon blijft uit.")
+                            }
+                            return@checkRecallLanguage
+                        }
+                        val started = beginCapture(
+                            confirmed, strictOfflineRadioOnly, version,
+                            onNotice, onFinalAnswer
+                        )
+                        if (started) {
+                            onNotice("Android bevestigt het lokale spraakpakket $confirmed. " +
+                                "Eenmalige herkenning met exact deze taalcode gestart.")
+                        }
+                    }
+                    SpeechPackStage.UNKNOWN -> {
+                        packTimeout?.let(main::removeCallbacks)
+                        packTimeout = null
+                        checkingSpeechPack = false
+                        // Unknown is not a verified installed model. Preserve
+                        // the existing strictly on-device fallback with no
+                        // unsupported claim of local language availability.
                         val started = beginCapture(
                             languageTag, strictOfflineRadioOnly, version,
                             onNotice, onFinalAnswer
                         )
-                        if (started && unknown) {
+                        if (started) {
                             onNotice("Pakketstatus voor $languageTag onbekend; " +
                                 "uitsluitend de on-device herkenner is gestart. " +
                                 "Android kan deze taal alsnog weigeren. Geen cloudfallback.")
