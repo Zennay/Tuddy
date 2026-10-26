@@ -512,6 +512,158 @@ internal class LocalCaptionSpeaker(context: Context) {
         }
     }
 
+    /**
+     * One explicit, read-only bilingual practice session: up to 8 completed
+     * original/translation pairs, one Android TTS engine and one audio-focus
+     * lease. BOTH local voices are admitted before the first utterance.
+     * Missing/unsafe voices reject the entire session, never half-play it.
+     * Every spoken turn is admitted exactly once by its full utterance ID.
+     */
+    fun speakBilingualConversation(
+        pairs: List<BilingualReplayPair>,
+        sourceCode: String,
+        targetCode: String,
+        pace: LocalSpeechPace,
+        onProgress: (completedPairs: Int, totalPairs: Int) -> Unit,
+        feedback: (String) -> Unit,
+        onFinished: (Boolean) -> Unit
+    ) {
+        stop()
+        val supported = Regex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
+        val tags = listOf(sourceCode, targetCode)
+        val locales = tags.map { Locale.forLanguageTag(it) }
+        if (pairs.isEmpty() || pairs.size > PrivateBilingualConversationReplay.MAX_PAIRS ||
+            sourceCode == targetCode || tags.any { !supported.matches(it) } ||
+            locales.any { it.language.isBlank() || it.language == "und" } ||
+            pairs.any { pair ->
+                listOf(pair.original, pair.translated).any { value ->
+                    LocalTextBoundaryPolicy.speechHypothesis(value) != value ||
+                        value.length > 400
+                }
+            }) {
+            feedback("Tweetalige oefening vereist 1–8 korte, gecontroleerde " +
+                "vertaalparen. Geen online fallback.")
+            onFinished(false)
+            return
+        }
+        val phrases = pairs.flatMap { listOf(it.original, it.translated) }
+        val version = generation
+        val turns = OfflineSpeechSequenceTurnGate(version, phrases.size)
+        var currentIndex = 0
+        fun fail(message: String) {
+            if (generation != version) return
+            stop()
+            feedback(message)
+            onFinished(false)
+        }
+        if (!playbackSession.begin { reason -> fail(reason) }) {
+            fail("Geen veilige Android-audiofocus of uitvoerroute. Niets afgespeeld.")
+            return
+        }
+        feedback("Beide geïnstalleerde, niet-netwerkafhankelijke Android-stemmen controleren…")
+        playbackDeadline.awaitEngine {
+            fail("Android reageerde niet bij het voorbereiden van de oefening. " +
+                "Audiofocus vrijgegeven.")
+        }
+
+        fun next(tts: TextToSpeech, voices: List<android.speech.tts.Voice>, index: Int) {
+            if (generation != version || !turns.queueNext(index)) {
+                fail("De voorleesvolgorde kon niet veilig doorgaan.")
+                return
+            }
+            currentIndex = index
+            playbackDeadline.awaitUtterance(phrases[index].length, pace) {
+                if (generation == version && currentIndex == index) {
+                    fail("Android bevestigde oefenzin ${index + 1} niet binnen de limiet. " +
+                        "Alle resterende audio is gestopt.")
+                }
+            }
+            val result = runCatching {
+                if (tts.setVoice(voices[index % 2]) != TextToSpeech.SUCCESS)
+                    TextToSpeech.ERROR
+                else tts.speak(
+                    phrases[index], TextToSpeech.QUEUE_FLUSH, null, turns.activeId(index)
+                )
+            }.getOrDefault(TextToSpeech.ERROR)
+            if (result != TextToSpeech.SUCCESS) {
+                fail("Een geïnstalleerde stem kon oefenzin ${index + 1} niet uitspreken. " +
+                    "De oefening is gestopt.")
+            }
+        }
+
+        try {
+            engine = TextToSpeech(appContext, TextToSpeech.OnInitListener { result ->
+                main.post {
+                    if (generation != version) return@post
+                    playbackDeadline.clear()
+                    val tts = engine
+                    if (result != TextToSpeech.SUCCESS || tts == null) {
+                        fail("Geen bruikbare lokale Android-voorleesdienst. Niets afgespeeld.")
+                        return@post
+                    }
+                    try {
+                        val voices = locales.mapIndexed { index, locale ->
+                            chooseInstalledVoice(tts, locale, tags[index])
+                        }
+                        if (voices.any { it == null }) {
+                            fail("Niet beide talen hebben een geïnstalleerde offline stem. " +
+                                "Er is geen gedeeltelijke of online oefening gestart.")
+                            return@post
+                        }
+                        val admitted = voices.filterNotNull()
+                        if (tts.setAudioAttributes(
+                                LocalPlaybackDeviceSession.SPEECH_AUDIO_ATTRIBUTES
+                            ) != TextToSpeech.SUCCESS ||
+                            tts.setSpeechRate(pace.rate) != TextToSpeech.SUCCESS ||
+                            tts.setVoice(admitted[0]) != TextToSpeech.SUCCESS ||
+                            tts.setVoice(admitted[1]) != TextToSpeech.SUCCESS ||
+                            tts.setVoice(admitted[0]) != TextToSpeech.SUCCESS
+                        ) {
+                            fail("De twee lokale stemmen konden niet veilig worden ingesteld. " +
+                                "Er is niets afgespeeld.")
+                            return@post
+                        }
+                        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                            override fun onStart(utteranceId: String?) = Unit
+                            override fun onDone(utteranceId: String?) {
+                                main.post {
+                                    if (generation != version) return@post
+                                    val ended = turns.completed(utteranceId) ?: return@post
+                                    playbackDeadline.clear()
+                                    if (ended % 2 == 1) {
+                                        onProgress((ended + 1) / 2, pairs.size)
+                                    }
+                                    if (generation != version) return@post
+                                    if (ended + 1 == phrases.size) {
+                                        stop()
+                                        feedback("Alle ${pairs.size} tweetalige zinnen lokaal " +
+                                            "voorgelezen. Audiofocus vrijgegeven.")
+                                        onFinished(true)
+                                    } else if (turns.readyForNext()) {
+                                        next(tts, admitted, ended + 1)
+                                    }
+                                }
+                            }
+                            override fun onError(utteranceId: String?) {
+                                main.post {
+                                    if (generation == version && turns.failed(utteranceId)) {
+                                        fail("Android kon de huidige tweetalige oefenzin niet " +
+                                            "uitspreken. Geen online fallback.")
+                                    }
+                                }
+                            }
+                        })
+                        next(tts, admitted, 0)
+                    } catch (_: RuntimeException) {
+                        fail("Android kon de offline luisteroefening niet veilig starten.")
+                    }
+                }
+            })
+        } catch (_: RuntimeException) {
+            fail("De lokale Android-voorleesdienst kon niet worden gestart.")
+        }
+    }
+
     fun close() = stop()
 
     fun speak(translated: String, languageTag: String, feedback: (String) -> Unit) {

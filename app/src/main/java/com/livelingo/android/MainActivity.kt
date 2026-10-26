@@ -87,6 +87,7 @@ import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.OfflinePersonalPhraseTurnsDialog
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
+import com.livelingo.android.ui.PrivateBilingualConversationReplayAction
 import com.livelingo.android.ui.PrivateCaptionDeletionUndoControl
 import com.livelingo.android.ui.PrivateCaptionDeleteConfirmDialog
 import com.livelingo.android.ui.PrivateOfflineBackTranslationDialog
@@ -625,6 +626,23 @@ private fun LatestPrivateCaptionAccessibilityAction(
         translation = latest.translated,
         sourceCode = latest.sourceCode,
         targetCode = latest.targetCode,
+        enabled = true
+    )
+    // This helper stays outside the giant TuddyScreen Compose lambda.
+    // The separate action owns its own Android TTS cleanup and user state;
+    // no extra onDispose before the Activity's existing microphone lifecycle.
+    val recent = lines.lastOrNull {
+        it.status == "Lokaal vertaald" && it.sourceCode != it.targetCode
+    } ?: return
+    PrivateBilingualConversationReplayAction(
+        captions = lines.map { line ->
+            BilingualReplayCaption(
+                line.original, line.translated,
+                line.sourceCode, line.targetCode, line.status
+            )
+        },
+        sourceCode = recent.sourceCode,
+        targetCode = recent.targetCode,
         enabled = true
     )
 }
