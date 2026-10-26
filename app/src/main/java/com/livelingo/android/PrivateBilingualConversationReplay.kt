@@ -15,8 +15,35 @@ internal data class BilingualReplayCaption(
 
 internal data class BilingualReplayPair(val original: String, val translated: String)
 
+/**
+ * Source-first lets someone hear what was actually said; translation-first
+ * permits private recall practice. Both use the identical existing, strictly
+ * local voice admission for each of the two languages.
+ */
+internal enum class BilingualReplayOrder {
+    SOURCE_FIRST, TRANSLATION_FIRST
+}
+
 internal object PrivateBilingualConversationReplay {
     const val MAX_PAIRS = 8
+
+    /**
+     * An explicit starting caption takes precedence over "latest N"; when
+     * no caption was selected, preserve the old default: last N in order.
+     * Never mutate the current conversation or include an unfinished caption.
+     */
+    fun window(
+        eligible: List<BilingualReplayPair>,
+        requestedCount: Int,
+        startIndex: Int?
+    ): List<BilingualReplayPair> {
+        if (eligible.isEmpty()) return emptyList()
+        val safe = eligible.takeLast(MAX_PAIRS)
+        val count = requestedCount.coerceIn(1, MAX_PAIRS)
+        val from = startIndex?.takeIf { it in safe.indices }
+            ?: (safe.size - count).coerceAtLeast(0)
+        return safe.drop(from).take(count)
+    }
 
     fun available(
         rows: List<BilingualReplayCaption>,

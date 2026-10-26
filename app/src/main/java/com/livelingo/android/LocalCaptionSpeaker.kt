@@ -526,7 +526,8 @@ internal class LocalCaptionSpeaker(context: Context) {
         pace: LocalSpeechPace,
         onProgress: (completedPairs: Int, totalPairs: Int) -> Unit,
         feedback: (String) -> Unit,
-        onFinished: (Boolean) -> Unit
+        onFinished: (Boolean) -> Unit,
+        order: BilingualReplayOrder = BilingualReplayOrder.SOURCE_FIRST
     ) {
         stop()
         val supported = Regex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
@@ -546,7 +547,12 @@ internal class LocalCaptionSpeaker(context: Context) {
             onFinished(false)
             return
         }
-        val phrases = pairs.flatMap { listOf(it.original, it.translated) }
+        // Keep voice and language order paired; no additional text leaves RAM.
+        val phrases = pairs.flatMap { pair ->
+            if (order == BilingualReplayOrder.TRANSLATION_FIRST)
+                listOf(pair.translated, pair.original)
+            else listOf(pair.original, pair.translated)
+        }
         val version = generation
         val turns = OfflineSpeechSequenceTurnGate(version, phrases.size)
         var currentIndex = 0
@@ -623,6 +629,8 @@ internal class LocalCaptionSpeaker(context: Context) {
                                 "Er is niets afgespeeld.")
                             return@post
                         }
+                        val orderedVoices = if (order == BilingualReplayOrder.TRANSLATION_FIRST)
+                            listOf(admitted[1], admitted[0]) else admitted
                         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                             override fun onStart(utteranceId: String?) = Unit
                             override fun onDone(utteranceId: String?) {
@@ -640,7 +648,7 @@ internal class LocalCaptionSpeaker(context: Context) {
                                             "voorgelezen. Audiofocus vrijgegeven.")
                                         onFinished(true)
                                     } else if (turns.readyForNext()) {
-                                        next(tts, admitted, ended + 1)
+                                        next(tts, orderedVoices, ended + 1)
                                     }
                                 }
                             }
@@ -653,7 +661,7 @@ internal class LocalCaptionSpeaker(context: Context) {
                                 }
                             }
                         })
-                        next(tts, admitted, 0)
+                        next(tts, orderedVoices, 0)
                     } catch (_: RuntimeException) {
                         fail("Android kon de offline luisteroefening niet veilig starten.")
                     }
