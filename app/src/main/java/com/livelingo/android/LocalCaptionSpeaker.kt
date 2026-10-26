@@ -37,9 +37,12 @@ internal class LocalCaptionSpeaker(context: Context) {
     private val playbackDeadline = LocalSpeechPlaybackDeadline()
     private var engine: TextToSpeech? = null
     private var generation = 0L
+    private var queuedBilingualTurn: Runnable? = null
 
     fun stop() {
         generation++
+        queuedBilingualTurn?.let(main::removeCallbacks)
+        queuedBilingualTurn = null
         playbackDeadline.clear() // No watchdog outlives Stop, background or playback replacement.
         playbackSession.end() // Release audio focus and device/noisy listeners.
         val old = engine
@@ -527,7 +530,8 @@ internal class LocalCaptionSpeaker(context: Context) {
         onProgress: (completedPairs: Int, totalPairs: Int) -> Unit,
         feedback: (String) -> Unit,
         onFinished: (Boolean) -> Unit,
-        order: BilingualReplayOrder = BilingualReplayOrder.SOURCE_FIRST
+        order: BilingualReplayOrder = BilingualReplayOrder.SOURCE_FIRST,
+        pacing: BilingualReplayPacing = BilingualReplayPacing.CONTINUOUS
     ) {
         stop()
         val supported = Regex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
@@ -648,7 +652,38 @@ internal class LocalCaptionSpeaker(context: Context) {
                                             "voorgelezen. Audiofocus vrijgegeven.")
                                         onFinished(true)
                                     } else if (turns.readyForNext()) {
-                                        next(tts, orderedVoices, ended + 1)
+                                        // Deliberate practice gap: after the
+                                        // first language, allow the learner to
+                                        // think of its translation; between
+                                        // pairs, allow a shorter reset.
+                                        // TTS audiofocus remains held, but
+                                        // Stop/background cancels the callback.
+                                        val afterFirstLanguage = ended % 2 == 0
+                                        val delayMs = if (afterFirstLanguage)
+                                            pacing.thinkingGapMs else pacing.nextPairGapMs
+                                        if (delayMs == 0L) {
+                                            next(tts, orderedVoices, ended + 1)
+                                        } else {
+                                            feedback(
+                                                if (afterFirstLanguage)
+                                                    "Nadenkpauze: denk zelf aan de andere taal. " +
+                                                        "Stoppen kan altijd."
+                                                else "Korte pauze vóór de volgende oefenzin."
+                                            )
+                                            val advance = Runnable {
+                                                queuedBilingualTurn = null
+                                                if (generation == version &&
+                                                    turns.readyForNext()) {
+                                                    next(tts, orderedVoices, ended + 1)
+                                                }
+                                            }
+                                            queuedBilingualTurn = advance
+                                            if (!main.postDelayed(advance, delayMs)) {
+                                                queuedBilingualTurn = null
+                                                fail("Android kon de oefenpauze niet " +
+                                                    "veilig plannen. Audio gestopt.")
+                                            }
+                                        }
                                     }
                                 }
                             }
