@@ -143,6 +143,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
                             "Controleer het spraakpakket in Offline startcheck " +
                             "of typ je oefenantwoord zelf.")
                     }
+                    }
                 }, allowLanguageVariant = true)
             } catch (_: Exception) {
                 cancel()
