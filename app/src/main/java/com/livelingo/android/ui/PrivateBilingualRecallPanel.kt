@@ -150,10 +150,14 @@ internal fun PrivateBilingualRecallPanel(
     }
     LaunchedEffect(enabled) {
         if (!enabled) {
+            // Losing interactive control must also stop any already queued
+            // private A/B audio, not just the one-shot answer microphone.
+            speaker.stop()
             recallSpeech.cancel()
             recordingAnswer = false
             spokenAnswer = ""
             comparisonSource = null
+            audioNotice = ""
         }
     }
 
