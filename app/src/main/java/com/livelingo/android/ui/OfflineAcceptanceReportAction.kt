@@ -66,6 +66,9 @@ internal fun OfflineAcceptanceReportAction(
     var attemptMessage by remember { mutableStateOf("") }
     var pendingReport by remember { mutableStateOf<ByteArray?>(null) }
     var pendingBaseline by remember { mutableStateOf<ByteArray?>(null) }
+    var pendingCheckpoint by remember { mutableStateOf<ByteArray?>(null) }
+    var checkpointImported by remember { mutableStateOf(false) }
+    var checkpointNotice by remember { mutableStateOf("") }
 
     fun recordAttempt() {
         val time = attemptLatency.toLongOrNull()
@@ -168,6 +171,8 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Tuddy manual offline acceptance record")
             appendLine("Record format: aggregate observations only; no raw speech, audio or transcript")
             appendLine("Self-reported by device operator: yes")
+            appendLine("Manually imported earlier attempt classifications: $checkpointImported")
+            appendLine("Imported observations are NOT proof of one continuous offline radio session")
             appendLine("Independently verified by Tuddy: no")
             appendLine("Session recorded at epoch milliseconds UTC: $recordedAt")
             appendLine("Observation completeness: ${if (complete) "required observations recorded (NOT acceptance)" else "incomplete; inspect unrecorded or unchecked observations"}")
@@ -227,6 +232,9 @@ internal fun OfflineAcceptanceReportAction(
         attemptMessage = ""
         pendingReport = null
         pendingBaseline = null
+        pendingCheckpoint = null
+        checkpointImported = false
+        checkpointNotice = ""
     }
 
     // Twenty operator-observed attempts take time to enter. A stray Back press
@@ -280,6 +288,97 @@ internal fun OfflineAcceptanceReportAction(
                     sidecarNotice = "Geen bruikbare sha256sum-regel gevonden. " +
                         "Kies bewust app-debug.apk.sha256 uit het juiste build-artifact. " +
                         "Het veld is niet gewijzigd."
+                }
+            }
+        }
+    }
+
+    // Explicit SAF export only. No app-private persistence or hidden sync.
+    // External document providers may themselves synchronize selected files.
+    val saveCheckpoint = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        onPickerFinished()
+        val copy = pendingCheckpoint
+        pendingCheckpoint = null
+        if (uri == null || copy == null) {
+            checkpointNotice = "Concept opslaan geannuleerd; huidige pogingen blijven staan."
+        } else {
+            val wrote = runCatching {
+                context.contentResolver.openOutputStream(uri, "w")?.use {
+                    it.write(copy)
+                    it.flush()
+                    true
+                } ?: false
+            }.getOrDefault(false)
+            checkpointNotice = if (wrote)
+                "Tijdelijk concept opgeslagen in de door jou gekozen Android-provider. " +
+                    "Controleer of deze provider bestanden synchroniseert."
+            else "Opslaan van concept mislukt. Je pogingen blijven tijdelijk in de app."
+        }
+    }
+
+    // Import restores ONLY attempt classifications after comparing the
+    // current installed APK's SHA to the checkpoint. Radio/mic/consent
+    // observations are reset and must be independently re-checked today.
+    val openCheckpoint = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        onPickerFinished()
+        if (uri == null) {
+            checkpointNotice = "Geen concept gekozen."
+        } else if (opened && (attempts.isNotEmpty() ||
+                observedSpeech || observedTranslation || attemptLatency.isNotBlank())) {
+            checkpointNotice = "Bestaande waarnemingen blijven staan. Wis of bewaar " +
+                "eerst het huidige concept voordat je een ander opent."
+        } else {
+            coroutineScope.launch {
+                val parsed = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            val bytes = ByteArray(OfflineObservationCheckpointCodec.MAX_BYTES + 1)
+                            var used = 0
+                            while (used < bytes.size) {
+                                val read = input.read(bytes, used, bytes.size - used)
+                                if (read <= 0) break
+                                used += read
+                            }
+                            if (used in 1..OfflineObservationCheckpointCodec.MAX_BYTES)
+                                OfflineObservationCheckpointCodec.decode(bytes.copyOf(used))
+                            else null
+                        }
+                    }.getOrNull()
+                }
+                val latest = deviceSnapshot()
+                val installed = installedApkDigest(latest)
+                if (parsed == null || latest == null || installed == null ||
+                    parsed.installedApkSha256 != installed) {
+                    checkpointNotice = "Concept ongeldig of gemaakt met een andere APK. " +
+                        "Er zijn geen uitkomsten geladen en geen vinkjes overgenomen."
+                } else if (opened && attempts.isNotEmpty()) {
+                    checkpointNotice = "Dit concept bevat al waarnemingen; import is geweigerd."
+                } else {
+                    baseline = latest.copyOf()
+                    recordedAt = System.currentTimeMillis()
+                    expectedApkSha256 = parsed.expectedApkSha256.orEmpty()
+                    attempts = parsed.attempts
+                    chosenDirection = OfflineObservationDirection.entries.firstOrNull {
+                        OfflineObservationLedger.totals(attempts, it).attempts <
+                            OfflineObservationLedger.REQUIRED_ATTEMPTS_PER_DIRECTION
+                    } ?: OfflineObservationDirection.EN_NL
+                    disconnectedConfirmed = false
+                    permissionAndStopConfirmed = false
+                    noCloudFallbackConfirmed = false
+                    privacyClearingConfirmed = false
+                    observedSpeech = false
+                    observedTranslation = false
+                    attemptLatency = ""
+                    checkpointImported = true
+                    opened = true
+                    checkpointNotice = "Alleen de uitkomsten van ${attempts.size} pogingen " +
+                        "zijn heropend. Controleer nu opnieuw toestel, vliegtuigmodus, " +
+                        "wifi en alle vier handmatige waarnemingen. " +
+                        "Een import bewijst nooit één ononderbroken offline proef."
                 }
             }
         }
@@ -343,6 +442,17 @@ internal fun OfflineAcceptanceReportAction(
                 }
             }
         ) { Text("Leg fysieke offline-waarnemingen vast…") }
+        OutlinedButton(
+            enabled = enabled && !opened,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                onPickerStarted()
+                openCheckpoint.launch(arrayOf("text/plain", "application/octet-stream"))
+            }
+        ) { Text("Heropen eerder handmatig proefconcept…") }
+        if (checkpointNotice.isNotBlank()) {
+            Text(checkpointNotice, style = MaterialTheme.typography.bodySmall)
+        }
         Text(
             "Leg na een echte Android 12+-toestelsessie alleen uitkomsten en aantallen vast. " +
                 "Geen gesproken woorden, transcript, audio of vrije notities. Het rapport is zelfgerapporteerd.",
@@ -365,6 +475,44 @@ internal fun OfflineAcceptanceReportAction(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (checkpointImported) {
+                        Text(
+                            "Heropend concept: dit bevat alleen eerder handmatig " +
+                                "geregistreerde uitkomsten. Radiostilte en de overige " +
+                                "acceptatiepunten moet je opnieuw waarnemen. " +
+                                "Geen acceptatie of onafgebroken sessie bewezen.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    OutlinedButton(
+                        enabled = enabled && attempts.isNotEmpty() &&
+                            installedApkDigest(baseline) != null,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            val digest = installedApkDigest(baseline)
+                            val checkpoint = if (digest == null) null
+                                else OfflineObservationCheckpointCodec.encode(
+                                    OfflineObservationCheckpoint(
+                                        digest,
+                                        expectedApkSha256.trim().lowercase()
+                                            .takeUnless { it.isEmpty() },
+                                        attempts
+                                    )
+                                )
+                            if (checkpoint == null) {
+                                checkpointNotice = "Concept kon niet worden gevalideerd. " +
+                                    "Controleer de APK-checksum en de pogingen."
+                            } else {
+                                pendingCheckpoint = checkpoint
+                                onPickerStarted()
+                                saveCheckpoint.launch("Tuddy-offline-proefconcept.txt")
+                            }
+                        }
+                    ) { Text("Bewaar voorlopig proefconcept (zonder transcript)…") }
+                    if (checkpointNotice.isNotBlank()) {
+                        Text(checkpointNotice, style = MaterialTheme.typography.bodySmall)
+                    }
                     Text(
                         "Vul alleen waarnemingen in die je zojuist op dit fysieke toestel hebt gedaan. " +
                             "Een vinkje of dit rapport verandert geen releasegate en wordt niet automatisch geverifieerd.",
