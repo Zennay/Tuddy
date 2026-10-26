@@ -55,6 +55,28 @@ zin als goed beoordeelt, laat de app dat als **zelfbeoordeelde
 oefenvoortgang** zien; dit wordt nooit gepresenteerd als bewezen
 vertaalkwaliteit, taalvaardigheid of een geslaagde offline toestelproef.
 
+### Overgeslagen zinnen en een beoordeling herzien
+
+Niet zeker van je antwoord? Tik vóór **Onthul referentie** op
+**Sla over · later oefenen**. De zin wordt dan niet als juist geteld,
+maar blijft in de lijst voor **Oefen alleen gemiste zinnen opnieuw**.
+Aan het einde en tijdens de ronde onderscheidt Tuddy drie eigen
+keuzes: **Zelf goed**, **Nog oefenen** en **Overgeslagen**.
+Deze cijfers zijn uitsluitend zelfbeoordelingen, geen automatische
+taal-, spraak- of vertaalanalyse.
+
+Per ongeluk verkeerd beoordeeld? Tik **Vorige zin · herzie mijn
+beoordeling**, ook als de ronde net voltooid is. Tuddy haalt dan
+uitsluitend die laatste beoordeling uit de tijdelijke voortgang
+en toont de vorige vraag opnieuw met een **verborgen** referentie.
+Eerder getypte tekst, een herkend gesproken antwoord, vergelijking
+en lopende audio worden uit het scherm gewist; niemand kan langs
+deze knop een verborgen referentie of privéantwoord terughalen.
+Je kunt de zin zelf opnieuw onthullen en vervolgens als goed,
+nog oefenen of overgeslagen markeren. Ook binnen gemiste-zinnen-
+rondes blijft de voortgang per ronde gescheiden; stoppen of
+richtingswissel wist die tijdelijke beoordelingen.
+
 ### Audio is nooit automatisch
 
 De knoppen **Luister vraag** en, pas na onthulling, **Luister
