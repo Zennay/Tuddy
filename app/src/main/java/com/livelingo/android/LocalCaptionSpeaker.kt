@@ -296,10 +296,10 @@ internal class LocalCaptionSpeaker(context: Context) {
                                     // without a preceding onStart. Treat the
                                     // first valid range as that line's start
                                     // (still exactly once, by full utterance ID).
-                                    turnGate.started(utteranceId)?.let(onLineStarted)
                                     val range = turnGate.range(
                                         utteranceId, start, end, line.length
                                     ) ?: return@post
+                                    turnGate.started(utteranceId)?.let(onLineStarted)
                                     onWordRange(index, range.first, range.second)
                                 }
                             }
