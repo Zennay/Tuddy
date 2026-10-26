@@ -354,6 +354,39 @@ private data class Line(
 )
 
 /**
+ * Snapshot captured on the user's explicit request to edit the *original*
+ * recognized speech line. Never use an editor draft to overwrite a row that
+ * ML Kit, a second editor, a language correction, or a new conversation has
+ * changed underneath it. Session-only; contains no persistent user data.
+ */
+private data class OriginalCaptionEditBaseline(
+    val id: Long,
+    val generation: Int,
+    val revision: Int,
+    val original: String,
+    val translated: String,
+    val status: String,
+    val sourceCode: String,
+    val targetCode: String
+) {
+    fun matches(row: Line?, currentGeneration: Int): Boolean =
+        row != null && currentGeneration == generation &&
+            row.id == id && row.translationRevision == revision &&
+            row.original == original && row.translated == translated &&
+            row.status == status &&
+            row.sourceCode == sourceCode && row.targetCode == targetCode
+
+    companion object {
+        fun capture(row: Line, generation: Int): OriginalCaptionEditBaseline =
+            OriginalCaptionEditBaseline(
+                row.id, generation, row.translationRevision,
+                row.original, row.translated, row.status,
+                row.sourceCode, row.targetCode
+            )
+    }
+}
+
+/**
  * One time-limited, RAM-only snapshot of a single deleted caption. The owner
  * never persists this, and never revives Android/ML Kit tasks for its row.
  * A live unfinished translation becomes an explicit retryable local failure.
@@ -1136,6 +1169,9 @@ private fun TuddyScreen(
         mutableStateOf<Triple<Long, Int, Int>?>(null)
     }
     var captionCorrectionDraft by remember { mutableStateOf("") }
+    var captionCorrectionBaseline by remember {
+        mutableStateOf<OriginalCaptionEditBaseline?>(null)
+    }
     // Manual translation edits are revision-fenced and remain RAM-only like captions.
     var editingTranslationId by remember { mutableStateOf<Long?>(null) }
     var translationCorrectionDraft by remember { mutableStateOf("") }
@@ -1172,6 +1208,13 @@ private fun TuddyScreen(
     var historySearchOpen by remember { mutableStateOf(false) }
     var historySearchQuery by remember { mutableStateOf("") }
     var generation by remember { mutableIntStateOf(0) }
+    fun beginOriginalCorrection(row: Line) {
+        editingCaptionId = row.id
+        captionCorrectionBaseline = OriginalCaptionEditBaseline.capture(row, generation)
+        captionCorrectionDraft = row.original
+        correctionNotice = ""
+    }
+
     LaunchedEffect(deletedCaptionUndo?.row?.id, deletedCaptionUndo?.createdAtElapsedMillis) {
         val pending = deletedCaptionUndo ?: return@LaunchedEffect
         val remaining = (30_000L -
@@ -1359,6 +1402,7 @@ private fun TuddyScreen(
             manuallyAssignedSpeakers.remove(id)
             if (editingCaptionId == id) {
                 editingCaptionId = null
+                captionCorrectionBaseline = null
                 captionCorrectionDraft = ""
             }
             if (editingTranslationId == id) {
@@ -3060,6 +3104,7 @@ private fun TuddyScreen(
                             manuallyAssignedSpeakers.remove(removed.id)
                             if (editingCaptionId == removed.id) {
                                 editingCaptionId = null
+                                captionCorrectionBaseline = null
                                 captionCorrectionDraft = ""
                             }
                             if (editingTranslationId == removed.id) {
@@ -3313,6 +3358,7 @@ private fun TuddyScreen(
                             pinnedStudyEdits.remove(removed.id)
             if (editingCaptionId == removed.id) {
                 editingCaptionId = null
+                captionCorrectionBaseline = null
                 pendingCaptionLanguageChange = null
                 captionCorrectionDraft = ""
             }
@@ -4403,6 +4449,7 @@ private fun TuddyScreen(
                 pendingCaptionShare = null
                 pendingSpeakerExport = null
                 editingCaptionId = null
+                captionCorrectionBaseline = null
                 pendingCaptionLanguageChange = null // dismiss sensitive caption tool on background
                 captionCorrectionDraft = ""
                 editingTranslationId = null
@@ -4490,6 +4537,7 @@ private fun TuddyScreen(
             pendingPinnedExport = null
             pinnedExportOpen = false
             editingCaptionId = null
+            captionCorrectionBaseline = null
             captionCorrectionDraft = ""
             editingTranslationId = null
             translationCorrectionDraft = ""
@@ -4944,9 +4992,7 @@ private fun TuddyScreen(
                         current.lowAndroidConfidencePercent == reviewed.confidencePercent &&
                         !current.userCorrected) {
                         uncertainSpeechReviewOpen = false
-                        editingCaptionId = current.id
-                        captionCorrectionDraft = current.original
-                        correctionNotice = ""
+                        beginOriginalCorrection(current)
                     }
                 },
                 onDismiss = { uncertainSpeechReviewOpen = false }
@@ -6097,9 +6143,7 @@ private fun TuddyScreen(
                         current.original.isNotBlank()
                     ) {
                         focusMode = false
-                        editingCaptionId = id
-                        captionCorrectionDraft = current.original
-                        correctionNotice = ""
+                        beginOriginalCorrection(current)
                     }
                 }
             )
@@ -6389,10 +6433,13 @@ private fun TuddyScreen(
         }
         val correctionId = editingCaptionId
         val correctionLine = lines.firstOrNull { it.id == correctionId }
+        val originalEditFresh =
+            !listening && captionCorrectionBaseline?.matches(correctionLine, generation) == true
         if (correctionId != null && correctionLine != null) {
             AlertDialog(
                 onDismissRequest = {
                     editingCaptionId = null
+                    captionCorrectionBaseline = null
                     captionCorrectionDraft = ""
                 },
                 title = { Text("Herstel herkende zin") },
@@ -6401,6 +6448,19 @@ private fun TuddyScreen(
                         Text("Controleer zelf wat er werkelijk is gezegd. De originele " +
                             "zin en de bijbehorende vertaling worden in dit tijdelijke " +
                             "gesprek vervangen. Dit is geen automatische controle.")
+                        if (!originalEditFresh) {
+                            Text(
+                                "Deze zin of haar vertaalversie is inmiddels gewijzigd, " +
+                                    "of de luistersessie is veranderd. Je concept wordt " +
+                                    "niet over de actuele regel heen opgeslagen.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            TextButton(
+                                enabled = !listening,
+                                onClick = { beginOriginalCorrection(correctionLine) }
+                            ) { Text("Laad nieuwste zin opnieuw · concept vervangen") }
+                        }
                         val suggestedCorrections = offlineSpeechChoices[correctionId].orEmpty()
                         if (suggestedCorrections.isNotEmpty()) {
                             Text("Andere tekstvoorstellen van Android (niet geverifieerd). " +
@@ -6438,15 +6498,20 @@ private fun TuddyScreen(
                 },
                 confirmButton = {
                     TextButton(
-                        enabled = !listening &&
+                        enabled = originalEditFresh &&
                             OfflineTypedCaptionPolicy.normalize(captionCorrectionDraft) != null &&
                             OfflineTypedCaptionPolicy.normalize(captionCorrectionDraft) != correctionLine.original,
                         onClick = {
                             val corrected = OfflineTypedCaptionPolicy.normalize(captionCorrectionDraft)
                                 ?: return@TextButton
                             val index = lines.indexOfFirst { it.id == correctionId }
-                            if (index >= 0 && !listening &&
-                                lines[index].original != corrected) {
+                            if (index < 0 || listening ||
+                                captionCorrectionBaseline?.matches(lines[index], generation) != true) {
+                                correctionNotice = "Regel intussen gewijzigd; concept niet opgeslagen. " +
+                                    "Laad de nieuwste zin bewust opnieuw."
+                                return@TextButton
+                            }
+                            if (lines[index].original != corrected) {
                                 val previous = lines[index]
                                 captionSpeaker.stop()
                                 pronunciationNotice = ""
@@ -6477,6 +6542,7 @@ private fun TuddyScreen(
                                     "vertaling opnieuw gestart."
                             }
                             editingCaptionId = null
+                            captionCorrectionBaseline = null
                             captionCorrectionDraft = ""
                         }
                     ) { Text("Corrigeer en vertaal") }
@@ -6484,6 +6550,7 @@ private fun TuddyScreen(
                 dismissButton = {
                     TextButton(onClick = {
                         editingCaptionId = null
+                        captionCorrectionBaseline = null
                         captionCorrectionDraft = ""
                     }) { Text("Annuleer") }
                 }
@@ -7400,9 +7467,7 @@ private fun TuddyScreen(
                                         TextButton(
                                             enabled = !listening,
                                             onClick = {
-                                                editingCaptionId = line.id
-                                                captionCorrectionDraft = line.original
-                                                correctionNotice = ""
+                                                beginOriginalCorrection(line)
                                             }
                                         ) { Text("✎ Controleer deze herkende zin") }
                                     }
@@ -8614,6 +8679,7 @@ private fun TuddyScreen(
                         pendingCaptionShare = null
                         pendingSpeakerExport = null
                         editingCaptionId = null
+                        captionCorrectionBaseline = null
                         captionCorrectionDraft = ""
                         editingTranslationId = null
                         translationCorrectionDraft = ""
@@ -9331,6 +9397,7 @@ private fun TuddyScreen(
                             pinnedStudyEdits.remove(removed.id)
                                 if (editingCaptionId == removed.id) {
                                     editingCaptionId = null
+                                    captionCorrectionBaseline = null
                                     captionCorrectionDraft = ""
                                 }
                             }
@@ -10545,9 +10612,7 @@ private fun TuddyScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         enabled = !listening,
                                         onClick = {
-                                            editingCaptionId = line.id
-                                            captionCorrectionDraft = line.original
-                                            correctionNotice = ""
+                                            beginOriginalCorrection(line)
                                         }
                                     ) { Text("✎ Corrigeer tekst") }
                                     TextButton(
