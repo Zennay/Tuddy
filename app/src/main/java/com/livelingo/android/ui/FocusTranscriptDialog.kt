@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.livelingo.android.PrivateClipboardExpiry
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import com.livelingo.android.PrivateAccessibleReaderPreferences
 import androidx.compose.ui.text.AnnotatedString
 import com.livelingo.android.PrivateCaptionCopy
 import androidx.compose.ui.geometry.Offset
@@ -79,6 +81,15 @@ internal fun FocusTranscriptDialog(
 ) {
     val listState = rememberLazyListState()
     val context = LocalContext.current
+    // Presentation choice only: never save spoken content, caption IDs, scroll
+    // positions or whether the microphone is active.
+    var readerZoomStep by remember(context) {
+        mutableIntStateOf(PrivateAccessibleReaderPreferences.step(context))
+    }
+    var readabilityControlsOpen by remember { mutableStateOf(false) }
+    var readabilityNotice by remember { mutableStateOf("") }
+    val readerZoom = PrivateAccessibleReaderPreferences.multiplier(readerZoomStep)
+    val readerTextScale = fontScale * readerZoom
     var followLive by remember { mutableStateOf(true) }
     // RAM-only focused reading: never persist a text selection or auto-advance
     // to a newly arriving caption while the user is reading a prior line.
@@ -92,9 +103,16 @@ internal fun FocusTranscriptDialog(
     var speakerMenuOpen by remember { mutableStateOf(false) }
     // Columns only when Android reports adequate width; never crush two
     // full-length languages into half a narrow portrait phone screen.
-    val isWide = LocalConfiguration.current.screenWidthDp >= 600
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val isWide = screenWidthDp >= 600
+    val canUseColumns = PrivateAccessibleReaderPreferences.canUseTwoColumns(
+        screenWidthDp = screenWidthDp,
+        androidFontScale = LocalDensity.current.fontScale,
+        appCaptionScale = fontScale,
+        readerMultiplier = readerZoom
+    )
     var preferColumns by remember { mutableStateOf(true) }
-    val showColumns = isWide && preferColumns
+    val showColumns = canUseColumns && preferColumns
     val matchedCaptions = SessionCaptionSearch.filter(
         captions, captionQuery, if (archiveMode) null else speakerFilter
     )
@@ -175,6 +193,56 @@ internal fun FocusTranscriptDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                TextButton(onClick = { readabilityControlsOpen = !readabilityControlsOpen }) {
+                    Text(
+                        "A A · Leesvergroting ${(readerZoom * 100).toInt()}% " +
+                            if (readabilityControlsOpen) "· opties sluiten" else "· aanpassen"
+                    )
+                }
+                if (readabilityControlsOpen) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            enabled = readerZoomStep > 0,
+                            onClick = {
+                                val next = (readerZoomStep - 1).coerceAtLeast(0)
+                                readerZoomStep = next
+                                readabilityNotice =
+                                    if (PrivateAccessibleReaderPreferences.saveStep(context, next))
+                                        "Leesvergroting lokaal opgeslagen."
+                                    else "Leesvergroting alleen voor dit scherm ingesteld."
+                            }
+                        ) { Text("A−") }
+                        Text(
+                            "${(readerZoom * 100).toInt()}% · plus Android-systeemtekst",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedButton(
+                            enabled = readerZoomStep < 3,
+                            onClick = {
+                                val next = (readerZoomStep + 1).coerceAtMost(3)
+                                readerZoomStep = next
+                                readabilityNotice =
+                                    if (PrivateAccessibleReaderPreferences.saveStep(context, next))
+                                        "Leesvergroting lokaal opgeslagen."
+                                    else "Leesvergroting alleen voor dit scherm ingesteld."
+                            }
+                        ) { Text("A+") }
+                    }
+                    Text(
+                        "Vergroting geldt voor origineel én vertaling. " +
+                            "Bij grote tekst kiest Tuddy automatisch brede, " +
+                            "enkelvoudige leesregels.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (readabilityNotice.isNotBlank()) {
+                        Text(readabilityNotice, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -427,7 +495,7 @@ internal fun FocusTranscriptDialog(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (isWide) {
+                if (canUseColumns) {
                     OutlinedButton(
                         onClick = { preferColumns = !preferColumns },
                         modifier = Modifier.fillMaxWidth()
@@ -436,8 +504,11 @@ internal fun FocusTranscriptDialog(
                             else "▥ Onder elkaar · kies naast elkaar")
                     }
                 } else {
-                    Text("Tip: draai je toestel horizontaal voor twee kolommen met " +
-                        "origineel en vertaling naast elkaar.",
+                    Text(
+                        if (isWide) "Bij deze tekstvergroting toont Tuddy origineel " +
+                            "en vertaling automatisch onder elkaar voor leesbaarheid."
+                        else "Tip: draai je toestel horizontaal voor twee kolommen " +
+                            "wanneer Android genoeg leesruimte meldt.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -591,7 +662,7 @@ internal fun FocusTranscriptDialog(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     SessionCaptionSearchText(own, captionQuery,
                                         MaterialTheme.typography.titleMedium.copy(
-                                            fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale,
+                                            fontSize = MaterialTheme.typography.titleMedium.fontSize * readerTextScale,
                                             textDirection = TextDirection.ContentOrRtl
                                         ))
                                 }
@@ -606,7 +677,7 @@ internal fun FocusTranscriptDialog(
                                     Text(
                                         line.original,
                                         style = MaterialTheme.typography.headlineSmall.copy(
-                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
+                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale,
                                             textDirection = TextDirection.ContentOrRtl
                                         )
                                     )
@@ -621,7 +692,7 @@ internal fun FocusTranscriptDialog(
                                         else "Nog geen afgeronde lokale vertaling: ${line.status}",
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             color = MaterialTheme.colorScheme.primary,
-                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
+                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale,
                                             textDirection = TextDirection.ContentOrRtl
                                         )
                                     )
@@ -632,7 +703,7 @@ internal fun FocusTranscriptDialog(
                                         sourceCode = line.sourceCode,
                                         targetCode = line.targetCode,
                                         status = line.status,
-                                        fontScale = fontScale,
+                                        fontScale = readerTextScale,
                                         isInterim = false,
                                         highlightLatestFinal = highlightLatestFinal,
                                         searchQuery = captionQuery,
@@ -642,7 +713,7 @@ internal fun FocusTranscriptDialog(
                                 } else {
                                     SessionCaptionSearchText(line.original, captionQuery,
                                     style = MaterialTheme.typography.headlineSmall.copy(
-                                        fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
+                                        fontSize = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale,
                                         textDirection = TextDirection.ContentOrRtl
                                     ),
                                     enableOfflineWordCards = true,
@@ -654,7 +725,7 @@ internal fun FocusTranscriptDialog(
                                     SessionCaptionSearchText(line.translated, captionQuery,
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             color = MaterialTheme.colorScheme.primary,
-                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
+                                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale,
                                             textDirection = TextDirection.ContentOrRtl
                                         ),
                                         enableOfflineWordCards = true,
@@ -686,7 +757,7 @@ internal fun FocusTranscriptDialog(
                                             sourceCode = "",
                                             targetCode = "",
                                             status = "Voorlopig",
-                                            fontScale = fontScale,
+                                            fontScale = readerTextScale,
                                             isInterim = true
                                         )
                                     } else {
