@@ -8,6 +8,42 @@ vertaling mislukt. Tuddy bewaart dan de oorspronkelijke regel in het
 tijdelijke gesprek, met status **Model ontbreekt** of **Fout**. De gebruiker
 hoeft die oorspronkelijke zin niet opnieuw in te spreken.
 
+## Wachten op echt vrijgekomen ML Kit-capaciteit
+
+Android kan een lokale vertaaltaak nog verwerken terwijl de gebruiker
+die vertaling annuleert, de 30-secondenweergavelimiet verloopt of een
+gespreksregel wordt verwijderd. Die oude ML Kit-taak is dan **niet**
+automatisch beëindigd. Tuddy telt daarom fysieke Android-vertaaltaken
+los van de tijdelijke gespreksregels en staat maximaal **drie** werkelijk
+ingediende taken tegelijk toe.
+
+Bij drie nog lopende provider-taken verwerpt Tuddy een volgende,
+geldige tekstzin niet meer onmiddellijk als **Fout** door een tijdelijk
+volle capaciteit. De app houdt die nog niet ingediende opdracht in de
+**RAM-wachtrij**. Alleen wanneer een werkelijk lopende ML Kit-taak
+terugmeldt dat zij is afgerond, probeert Tuddy de volgende wachtende
+opdracht te starten. Een onvoltooide of vastgelopen Android-taak wordt
+niet kunstmatig als vrijgekomen geteld. Daardoor ontstaan geen extra
+onbegrensde modelverzoeken. Een gebruiker hoeft niet opnieuw op
+Vertaal te tikken omdat een andere zin nét in verwerking was.
+
+De eerdere voorrang voor expliciet door jou aangevraagde correcties
+blijft gelden: hoogstens twee handmatige starts vóór de volgende
+automatische spraakvertaling, als beide typen wachten. Binnen een
+categorie blijft FIFO gelden. Is de fysieke capaciteit op, dan wordt
+niemand alvast uit de wachtrij gehaald en wordt er ook geen
+prioriteitsbeurt verspild.
+
+De bestaande **30-secondenlimiet per gespreksregel loopt tijdens het
+wachten gewoon door**. Reageert Android niet, dan krijgt de betreffende
+regel een duidelijke herstelbare fout, en kan de gebruiker zelf
+opnieuw proberen. Dit zorgt er niet voor dat een vastgelopen
+ML Kit-provider gedwongen wordt gestopt; het is bewust een
+veiligheidslimiet. Stop, wis en verlaten verwijderen eventuele
+wachtende verwijzingen, zonder transcript op schijf of cloudfallback.
+Het gesprekscherm en de tijdelijke offline-diagnostiek tonen het
+aantal wachtende regels en het aantal écht lopende modeltaken apart.
+
 ## Eerlijke voorrang op expliciete vertalingen
 
 Wanneer er een reeks nieuwe spraakzinnen in de **lokale wachtrij**
