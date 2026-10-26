@@ -622,6 +622,21 @@ class MainActivity : ComponentActivity() {
  * exceeds the 64 KiB limit for its generated composable method.
  */
 @Composable
+private fun TuddyConversationNotices(
+    favoriteNotice: String,
+    directionNotice: String
+) {
+    if (favoriteNotice.isNotBlank()) {
+        Text(favoriteNotice, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary)
+    }
+    if (directionNotice.isNotBlank()) {
+        Text(directionNotice, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable
 private fun LatestPrivateCaptionAccessibilityAction(
     lines: List<Line>,
     speaker: LocalCaptionSpeaker,
@@ -10000,14 +10015,7 @@ private fun TuddyScreen(
                         }
                     }
                 }
-                if (favoritesNotice.isNotBlank()) {
-                    Text(favoritesNotice, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary)
-                }
-                if (directionNotice.isNotBlank()) {
-                    Text(directionNotice, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary)
-                }
+                TuddyConversationNotices(favoritesNotice, directionNotice)
                 OutlinedButton(
                     onClick = {
                         conversationToolsOpen = !conversationToolsOpen
