@@ -48,6 +48,12 @@ internal class PrivateOfflineBackTranslationReview {
     ) {
         close()
         val version = revision
+        fun finishUnavailable(message: String) {
+            if (revision != version) return
+            deadline?.let(main::removeCallbacks)
+            deadline = null
+            callback(LocalBackReviewReceipt(LocalBackReviewStage.UNAVAILABLE, message))
+        }
         val safeOriginal = LocalTranslationReviewPolicy.normalize(original)
         val safeTranslation = LocalTranslationReviewPolicy.normalize(translation)
         if (sourceCode == targetCode ||
@@ -66,6 +72,21 @@ internal class PrivateOfflineBackTranslationReview {
             LocalBackReviewStage.CHECKING,
             "Geïnstalleerde offline modellen voor $reverseFrom → $reverseTo controleren…"
         ))
+        // The deadline spans read-only inventory plus the actual reverse
+        // model task; a provider that never reports inventory also recovers.
+        val timer = Runnable {
+            if (revision != version) return@Runnable
+            deadline = null
+            revision++
+            inventory.invalidate()
+            callback(LocalBackReviewReceipt(
+                LocalBackReviewStage.UNAVAILABLE,
+                "De lokale modelcontrole of terugvertaling duurde te lang. " +
+                    "Een late uitkomst wordt niet meer getoond."
+            ))
+        }
+        deadline = timer
+        main.postDelayed(timer, TIMEOUT_MS)
         inventory.check(reverseFrom, reverseTo, TargetCatalog.codes) { receipt ->
             if (revision != version) return@check
             when (receipt.stage) {
@@ -73,10 +94,9 @@ internal class PrivateOfflineBackTranslationReview {
                 OfflineTextStage.READY -> {
                     val budget = LocalMlKitWorkBudget.shared.acquire()
                     if (budget == null) {
-                        callback(LocalBackReviewReceipt(
-                            LocalBackReviewStage.UNAVAILABLE,
+                        finishUnavailable(
                             "Alle lokale vertaalplaatsen zijn bezet. Probeer later opnieuw; niets verzonden."
-                        ))
+                        )
                         return@check
                     }
                     val translator = try {
@@ -86,29 +106,13 @@ internal class PrivateOfflineBackTranslationReview {
                             .build())
                     } catch (_: Exception) {
                         budget.release()
-                        callback(LocalBackReviewReceipt(
-                            LocalBackReviewStage.UNAVAILABLE,
-                            "Lokale terugvertaler kon niet worden geopend."
-                        ))
+                        finishUnavailable("Lokale terugvertaler kon niet worden geopend.")
                         return@check
                     }
                     callback(LocalBackReviewReceipt(
                         LocalBackReviewStage.TRANSLATING,
                         "Terugvertaling loopt op dit toestel. Je oorspronkelijke zin blijft ongewijzigd."
                     ))
-                    val timer = Runnable {
-                        if (revision != version) return@Runnable
-                        deadline = null
-                        // Never release the physical ML Kit budget here: the
-                        // underlying Android Task may still be running.
-                        revision++
-                        callback(LocalBackReviewReceipt(
-                            LocalBackReviewStage.UNAVAILABLE,
-                            "Terugvertalen duurde te lang. Het oude modelwerk mag niets meer tonen; probeer later opnieuw."
-                        ))
-                    }
-                    deadline = timer
-                    main.postDelayed(timer, TIMEOUT_MS)
                     try {
                         translator.translate(safeTranslation).addOnCompleteListener { task ->
                             runCatching { translator.close() }
@@ -139,17 +143,13 @@ internal class PrivateOfflineBackTranslationReview {
                         deadline = null
                         runCatching { translator.close() }
                         budget.release()
-                        if (revision == version) callback(LocalBackReviewReceipt(
-                            LocalBackReviewStage.UNAVAILABLE,
-                            "De lokale vertaaltaak kon niet worden gestart."
-                        ))
+                        finishUnavailable("De lokale vertaaltaak kon niet worden gestart.")
                     }
                 }
-                else -> callback(LocalBackReviewReceipt(
-                    LocalBackReviewStage.UNAVAILABLE,
+                else -> finishUnavailable(
                     "Omgekeerde offline tekstmodellen zijn niet bevestigd. " +
                         "Bereid ze desgewenst apart en bewust via wifi voor in Offline startcheck."
-                ))
+                )
             }
         }
     }
