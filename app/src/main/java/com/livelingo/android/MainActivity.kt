@@ -612,6 +612,7 @@ class MainActivity : ComponentActivity() {
 private fun LatestPrivateCaptionAccessibilityAction(
     lines: List<Line>,
     speaker: LocalCaptionSpeaker,
+    recallSpeech: PrivateRecallSpeechAttempt,
     listening: Boolean,
     privateCurtainOpen: Boolean,
     confirmClearConversation: Boolean
@@ -645,6 +646,7 @@ private fun LatestPrivateCaptionAccessibilityAction(
         sourceCode = recent.sourceCode,
         targetCode = recent.targetCode,
         speaker = speaker,
+        recallSpeech = recallSpeech,
         enabled = true
     )
 }
@@ -757,6 +759,9 @@ private fun TuddyScreen(
     var pinnedSubtitleOptions by remember { mutableStateOf(SubtitleDraftOptions()) }
     var pendingPinnedExport by remember { mutableStateOf<PendingPinnedCaptionExport?>(null) }
     val captionSpeaker = remember(context) { LocalCaptionSpeaker(context) }
+    // A single foreground recall mic owner prevents the live caption
+    // recognizer and private one-shot answer mic from recording in parallel.
+    val recallSpeech = remember(context) { PrivateRecallSpeechAttempt(context) }
     // Protected system screen-off complements Activity ON_PAUSE on Android
     // vendors that deliver focus callbacks after the device starts locking.
     val screenLockGate = remember(context) { LocalScreenLockPrivacyGate(context) }
@@ -2506,6 +2511,7 @@ private fun TuddyScreen(
     }
 
     fun stop() {
+        recallSpeech.cancel()
         headsetMicrophoneGuard.disarm() // No route observers after Stop/background.
         speechPowerGuard.disarm() // No thermal/battery listeners without an active microphone.
         microphonePrivacyGuard.disarm() // No privacy polls after Stop/background.
@@ -2737,6 +2743,7 @@ private fun TuddyScreen(
     }
 
     fun start(forceRestart: Boolean = false) {
+        recallSpeech.cancel() // Live capture supersedes any one-shot recall mic.
         if (privateCurtainOpen) return // Never restart the microphone under the cover.
         if (pendingSingleSpeechReview != null) {
             error = "Bevestig of gooi eerst het herkende zinsvoorstel weg."
@@ -10004,7 +10011,7 @@ private fun TuddyScreen(
                 }
                 if (conversationToolsOpen) {
                     LatestPrivateCaptionAccessibilityAction(
-                        lines, captionSpeaker, listening, privateCurtainOpen,
+                        lines, captionSpeaker, recallSpeech, listening, privateCurtainOpen,
                         confirmClearConversation
                     )
                     translationMemoryRevision // Reflect the count after opt-in or deletion.
