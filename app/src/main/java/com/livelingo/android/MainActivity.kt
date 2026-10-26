@@ -451,6 +451,19 @@ private data class PendingLauncherShortcut(
 )
 
 class MainActivity : ComponentActivity() {
+    // Kept off TuddyScreen's enormous Compose lambda (JVM 64 KiB cap).
+    // A cancelled one-shot mic cannot survive a MainActivity teardown.
+    private var recallSpeechOwner: PrivateRecallSpeechAttempt? = null
+
+    internal fun recallSpeechOwner(): PrivateRecallSpeechAttempt =
+        recallSpeechOwner ?: PrivateRecallSpeechAttempt(this).also {
+            recallSpeechOwner = it
+        }
+
+    internal fun cancelRecallSpeech() {
+        recallSpeechOwner?.cancel()
+    }
+
     // The timer receives only foreground user-interaction events, never text.
     private val idleCurtain = PrivateIdleConversationCurtain(this)
 
@@ -609,6 +622,46 @@ class MainActivity : ComponentActivity() {
  * exceeds the 64 KiB limit for its generated composable method.
  */
 @Composable
+private fun TuddySpeakerQuickJump(
+    countA: Int,
+    countB: Int,
+    onJumpA: () -> Unit,
+    onJumpB: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
+                "De labels zijn geen stemherkenning, worden niet geëxporteerd en " +
+                "verdwijnen wanneer deze gesprekssessie wordt gewist.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(enabled = countA > 0, onClick = onJumpA) {
+                Text("Volgende A ($countA)")
+            }
+            TextButton(enabled = countB > 0, onClick = onJumpB) {
+                Text("Volgende B ($countB)")
+            }
+        }
+    }
+}
+
+@Composable
+private fun TuddyConversationNotices(
+    favoriteNotice: String,
+    directionNotice: String
+) {
+    if (favoriteNotice.isNotBlank()) {
+        Text(favoriteNotice, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary)
+    }
+    if (directionNotice.isNotBlank()) {
+        Text(directionNotice, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable
 private fun LatestPrivateCaptionAccessibilityAction(
     lines: List<Line>,
     speaker: LocalCaptionSpeaker,
@@ -617,6 +670,8 @@ private fun LatestPrivateCaptionAccessibilityAction(
     confirmClearConversation: Boolean
 ) {
     if (listening || privateCurtainOpen || confirmClearConversation) return
+    val activity = LocalContext.current as? MainActivity ?: return
+    val recallSpeech = remember(activity) { activity.recallSpeechOwner() }
     val latest = lines.lastOrNull {
         it.status == "Lokaal vertaald" || it.status == "Lokaal"
     } ?: return
@@ -645,6 +700,7 @@ private fun LatestPrivateCaptionAccessibilityAction(
         sourceCode = recent.sourceCode,
         targetCode = recent.targetCode,
         speaker = speaker,
+        recallSpeech = recallSpeech,
         enabled = true
     )
 }
@@ -2506,6 +2562,7 @@ private fun TuddyScreen(
     }
 
     fun stop() {
+        (context as? MainActivity)?.cancelRecallSpeech()
         headsetMicrophoneGuard.disarm() // No route observers after Stop/background.
         speechPowerGuard.disarm() // No thermal/battery listeners without an active microphone.
         microphonePrivacyGuard.disarm() // No privacy polls after Stop/background.
@@ -2737,6 +2794,8 @@ private fun TuddyScreen(
     }
 
     fun start(forceRestart: Boolean = false) {
+        (context as? MainActivity)?.cancelRecallSpeech()
+        // Live capture supersedes any one-shot recall mic.
         if (privateCurtainOpen) return // Never restart the microphone under the cover.
         if (pendingSingleSpeechReview != null) {
             error = "Bevestig of gooi eerst het herkende zinsvoorstel weg."
@@ -9981,14 +10040,7 @@ private fun TuddyScreen(
                         }
                     }
                 }
-                if (favoritesNotice.isNotBlank()) {
-                    Text(favoritesNotice, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary)
-                }
-                if (directionNotice.isNotBlank()) {
-                    Text(directionNotice, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary)
-                }
+                TuddyConversationNotices(favoritesNotice, directionNotice)
                 OutlinedButton(
                     onClick = {
                         conversationToolsOpen = !conversationToolsOpen
@@ -10020,24 +10072,12 @@ private fun TuddyScreen(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        "Sprekers zelf markeren: tik op ‘Wijzig spreker’ bij een uitspraak. " +
-                            "De labels zijn geen stemherkenning, worden niet geëxporteerd en " +
-                            "verdwijnen wanneer deze gesprekssessie wordt gewist.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val countA = lines.count { manuallyAssignedSpeakers[it.id] == "A" }
-                        val countB = lines.count { manuallyAssignedSpeakers[it.id] == "B" }
-                        TextButton(enabled = countA > 0, onClick = { jumpToSpeaker("A") }) {
-                            Text("Volgende A ($countA)")
-                        }
-                        TextButton(enabled = countB > 0, onClick = { jumpToSpeaker("B") }) {
-                            Text("Volgende B ($countB)")
-                        }
-                    }
-                }
+                TuddySpeakerQuickJump(
+                    countA = lines.count { manuallyAssignedSpeakers[it.id] == "A" },
+                    countB = lines.count { manuallyAssignedSpeakers[it.id] == "B" },
+                    onJumpA = { jumpToSpeaker("A") },
+                    onJumpB = { jumpToSpeaker("B") }
+                )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically

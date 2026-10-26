@@ -25,6 +25,7 @@ import com.livelingo.android.BilingualReplayCaption
 import com.livelingo.android.BilingualReplayOrder
 import com.livelingo.android.BilingualReplayPacing
 import com.livelingo.android.LocalCaptionSpeaker
+import com.livelingo.android.PrivateRecallSpeechAttempt
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.PrivateBilingualConversationReplay
 
@@ -40,6 +41,7 @@ internal fun PrivateBilingualConversationReplayAction(
     sourceCode: String,
     targetCode: String,
     speaker: LocalCaptionSpeaker,
+    recallSpeech: PrivateRecallSpeechAttempt,
     enabled: Boolean
 ) {
     var notice by remember { mutableStateOf("") }
@@ -77,7 +79,7 @@ internal fun PrivateBilingualConversationReplayAction(
     // snapshot rather than narrating content the user already changed.
     // The owner retains the TTS adapter; this only releases its session.
     DisposableEffect(speaker, eligible) {
-        onDispose { speaker.stop() }
+        onDispose { speaker.stop().also { recallSpeech.cancel() } }
     }
     // A deleted or revised caption can shrink the available snapshot while
     // this control remains composed. Never claim a stale start still exists.
@@ -128,7 +130,7 @@ internal fun PrivateBilingualConversationReplayAction(
                             )
                         },
                         onClick = {
-                            speaker.stop()
+                            speaker.stop().also { recallSpeech.cancel() }
                             selectedDirection = direction.sourceCode to direction.targetCode
                             choosingDirection = false
                             notice = "Taalrichting ${direction.sourceCode.uppercase()} → " +
@@ -152,7 +154,7 @@ internal fun PrivateBilingualConversationReplayAction(
                         contentDescription = "Laatste $count zinnen oefenen"
                     },
                     onClick = {
-                        speaker.stop()
+                        speaker.stop().also { recallSpeech.cancel() }
                         selectedCount = count
                         notice = "Aantal oefenzinnen gekozen: " +
                             "${minOf(count, eligible.size)}. Tik op afspelen."
@@ -184,7 +186,7 @@ internal fun PrivateBilingualConversationReplayAction(
                 DropdownMenuItem(
                     text = { Text("Automatisch · laatste zinnen") },
                     onClick = {
-                        speaker.stop()
+                        speaker.stop().also { recallSpeech.cancel() }
                         selectedStart = null
                         choosingStart = false
                         notice = "Standaard de laatste zinnen gekozen."
@@ -200,7 +202,7 @@ internal fun PrivateBilingualConversationReplayAction(
                             )
                         },
                         onClick = {
-                            speaker.stop()
+                            speaker.stop().also { recallSpeech.cancel() }
                             selectedStart = index
                             choosingStart = false
                             notice = "Oefenreeks start bij zin ${index + 1}."
@@ -214,7 +216,7 @@ internal fun PrivateBilingualConversationReplayAction(
                 selected = selectedOrder == BilingualReplayOrder.SOURCE_FIRST,
                 enabled = enabled && practice.isNotEmpty(),
                 onClick = {
-                    speaker.stop()
+                    speaker.stop().also { recallSpeech.cancel() }
                     selectedOrder = BilingualReplayOrder.SOURCE_FIRST
                     notice = "Oefenvolgorde: eerst origineel, dan de vertaling."
                 },
@@ -224,7 +226,7 @@ internal fun PrivateBilingualConversationReplayAction(
                 selected = selectedOrder == BilingualReplayOrder.TRANSLATION_FIRST,
                 enabled = enabled && practice.isNotEmpty(),
                 onClick = {
-                    speaker.stop()
+                    speaker.stop().also { recallSpeech.cancel() }
                     selectedOrder = BilingualReplayOrder.TRANSLATION_FIRST
                     notice = "Oefenvolgorde: eerst vertaling, dan het origineel."
                 },
@@ -247,7 +249,7 @@ internal fun PrivateBilingualConversationReplayAction(
                             ". Kies een pauze voor de volgende offline luisteroefening."
                     },
                     onClick = {
-                        speaker.stop()
+                        speaker.stop().also { recallSpeech.cancel() }
                         selectedPacing = pacing
                         notice = "Oefenpauze gekozen: ${pacing.label}. " +
                             "Tik op afspelen; Stop onderbreekt ook een pauze."
@@ -267,6 +269,7 @@ internal fun PrivateBilingualConversationReplayAction(
             sourceCode = activeSource,
             targetCode = activeTarget,
             speaker = speaker,
+            recallSpeech = recallSpeech,
             enabled = enabled
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -275,6 +278,7 @@ internal fun PrivateBilingualConversationReplayAction(
                     enabled = enabled && practice.isNotEmpty(),
                     onClick = {
                         if (enabled && practice.isNotEmpty()) {
+                            recallSpeech.cancel()
                             speaker.speakBilingualConversation(
                                 practice, activeSource, activeTarget, pace,
                                 onProgress = { done, total ->
@@ -297,7 +301,7 @@ internal fun PrivateBilingualConversationReplayAction(
             }
         }
         TextButton(onClick = {
-            speaker.stop()
+            speaker.stop().also { recallSpeech.cancel() }
             notice = "Tweetalig voorlezen gestopt."
         }) { Text("■ Stop tweetalig voorlezen") }
         if (notice.isNotBlank()) {

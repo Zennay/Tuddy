@@ -1,5 +1,13 @@
 package com.livelingo.android.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.compose.runtime.LaunchedEffect
+import com.livelingo.android.PrivateRecallSpeechAttempt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,6 +52,7 @@ internal fun PrivateBilingualRecallPanel(
     sourceCode: String,
     targetCode: String,
     speaker: LocalCaptionSpeaker,
+    recallSpeech: PrivateRecallSpeechAttempt,
     enabled: Boolean
 ) {
     // When a caption is edited/deleted or the selected language, start or
@@ -67,6 +76,27 @@ internal fun PrivateBilingualRecallPanel(
     var typedAnswer by remember(practice, sourceCode, targetCode) {
         mutableStateOf("")
     }
+    // Only final local ASR text enters this temporary Compose state, never the
+    // Android keyboard's EditText, ML Kit translation, scoring or disk storage.
+    var spokenAnswer by remember(practice, sourceCode, targetCode) {
+        mutableStateOf("")
+    }
+    var recordingAnswer by remember(practice, sourceCode, targetCode) {
+        mutableStateOf(false)
+    }
+    var speechNotice by remember(practice, sourceCode, targetCode) {
+        mutableStateOf("")
+    }
+    var permissionNotice by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        // Never start automatically from a delayed Android permission dialog.
+        permissionNotice = if (granted)
+            "Microfoon toegestaan. Tik opnieuw op 'Spreek mijn antwoord in' om lokaal te beginnen."
+        else "Microfoon niet toegestaan. Je kunt gewoon typen of nadenken."
+    }
     var promptSide by remember(practice, sourceCode, targetCode) {
         mutableStateOf(RecallPromptSide.ORIGINAL)
     }
@@ -78,7 +108,10 @@ internal fun PrivateBilingualRecallPanel(
                 // Clear the learner's unsubmitted answer before Android may
                 // snapshot the screen or another app becomes foreground.
                 speaker.stop()
+                recallSpeech.cancel()
+                recordingAnswer = false
                 typedAnswer = ""
+                spokenAnswer = ""
                 revealed = false
             }
         }
@@ -86,7 +119,17 @@ internal fun PrivateBilingualRecallPanel(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             speaker.stop()
+            recallSpeech.cancel()
             typedAnswer = ""
+            spokenAnswer = ""
+            recordingAnswer = false
+        }
+    }
+    LaunchedEffect(enabled) {
+        if (!enabled) {
+            recallSpeech.cancel()
+            recordingAnswer = false
+            spokenAnswer = ""
         }
     }
 
@@ -96,6 +139,10 @@ internal fun PrivateBilingualRecallPanel(
 
     fun begin() {
         speaker.stop()
+        recallSpeech.cancel()
+        recordingAnswer = false
+        spokenAnswer = ""
+        speechNotice = ""
         started = true
         position = 0
         revealed = false
@@ -110,6 +157,10 @@ internal fun PrivateBilingualRecallPanel(
     fun choosePrompt(side: RecallPromptSide) {
         if (promptSide == side) return
         speaker.stop()
+        recallSpeech.cancel()
+        recordingAnswer = false
+        spokenAnswer = ""
+        speechNotice = ""
         promptSide = side
         started = false
         position = 0
@@ -125,6 +176,10 @@ internal fun PrivateBilingualRecallPanel(
     fun mark(tryAgain: Boolean) {
         val index = currentIndices.getOrNull(position) ?: return
         speaker.stop()
+        recallSpeech.cancel()
+        recordingAnswer = false
+        spokenAnswer = ""
+        speechNotice = ""
         if (tryAgain) missed = missed + index
         position++
         revealed = false
@@ -215,6 +270,59 @@ internal fun PrivateBilingualRecallPanel(
             )
             Text(question, style = MaterialTheme.typography.bodyLarge)
             if (!revealed) {
+                Text("Je kunt typen, zelf nadenken of bewust één lokaal antwoord inspreken. " +
+                    "Niet automatisch beoordeeld; geen cloudspraak of modeldownload.",
+                    style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(
+                        enabled = enabled && !recordingAnswer,
+                        onClick = {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+                                PackageManager.PERMISSION_GRANTED) {
+                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            } else {
+                                speaker.stop()
+                                spokenAnswer = ""
+                                speechNotice = ""
+                                recordingAnswer = recallSpeech.start(
+                                    answerLanguage,
+                                    onNotice = { notice ->
+                                        speechNotice = notice
+                                        if (!recallSpeech.isRecording()) recordingAnswer = false
+                                    },
+                                    onFinalAnswer = { answer ->
+                                        spokenAnswer = answer
+                                        recordingAnswer = false
+                                    }
+                                )
+                            }
+                        }
+                    ) { Text("🎙 Spreek mijn antwoord in") }
+                    if (recordingAnswer) {
+                        TextButton(onClick = {
+                            recallSpeech.cancel()
+                            recordingAnswer = false
+                            spokenAnswer = ""
+                            speechNotice = "Opname gestopt. Geen gesproken antwoord bewaard."
+                        }) { Text("■ Stop opname") }
+                    }
+                }
+                if (permissionNotice.isNotBlank()) {
+                    Text(permissionNotice, style = MaterialTheme.typography.bodySmall)
+                }
+                if (speechNotice.isNotBlank()) {
+                    Text(speechNotice, style = MaterialTheme.typography.bodySmall)
+                }
+                if (spokenAnswer.isNotBlank()) {
+                    Text("Mijn gesproken poging · alleen tijdelijk",
+                        style = MaterialTheme.typography.labelMedium)
+                    Text(spokenAnswer, style = MaterialTheme.typography.bodyLarge)
+                    TextButton(onClick = {
+                        spokenAnswer = ""
+                        recallSpeech.cancel()
+                        recordingAnswer = false
+                    }) { Text("Wis mijn gesproken poging") }
+                }
                 Text("Mijn eigen antwoord · alleen tijdelijk",
                     style = MaterialTheme.typography.labelMedium)
                 PrivateRecallAnswerField(
@@ -250,6 +358,8 @@ internal fun PrivateBilingualRecallPanel(
                 OutlinedButton(
                     onClick = {
                         speaker.stop()
+                        recallSpeech.cancel()
+                        recordingAnswer = false
                         revealed = true
                         audioNotice = ""
                     },
@@ -260,6 +370,11 @@ internal fun PrivateBilingualRecallPanel(
                     }
                 ) { Text("Onthul referentie") }
             } else {
+                if (spokenAnswer.isNotBlank()) {
+                    Text("Mijn eerder gesproken poging · niet automatisch beoordeeld",
+                        style = MaterialTheme.typography.labelMedium)
+                    Text(spokenAnswer, style = MaterialTheme.typography.bodyLarge)
+                }
                 if (typedAnswer.isNotBlank()) {
                     Text("Mijn getypte poging · niet automatisch beoordeeld",
                         style = MaterialTheme.typography.labelMedium)
@@ -290,6 +405,8 @@ internal fun PrivateBilingualRecallPanel(
                 TextButton(
                     enabled = enabled,
                     onClick = {
+                        recallSpeech.cancel()
+                        recordingAnswer = false
                         speaker.speak(
                             question, promptLanguage, LocalSpeechPace.NORMAL
                         ) { audioNotice = it }
@@ -299,6 +416,8 @@ internal fun PrivateBilingualRecallPanel(
                     TextButton(
                         enabled = enabled,
                         onClick = {
+                            recallSpeech.cancel()
+                            recordingAnswer = false
                             speaker.speak(
                                 reference, answerLanguage, LocalSpeechPace.NORMAL
                             ) { audioNotice = it }
