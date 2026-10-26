@@ -23,6 +23,8 @@ internal fun LocalCaptionPlaybackMenu(
     enabled: Boolean,
     headphonesOnly: Boolean,
     onHeadphonesOnlyChange: (Boolean) -> Unit,
+    respectQuietMode: Boolean,
+    onRespectQuietModeChange: (Boolean) -> Unit,
     onPlayOriginal: (LocalSpeechPace) -> Unit,
     onPlayTranslation: (LocalSpeechPace) -> Unit,
     onPlayBilingual: (LocalSpeechPace) -> Unit,
@@ -53,6 +55,19 @@ internal fun LocalCaptionPlaybackMenu(
                 onClick = {
                     expanded = false
                     onHeadphonesOnlyChange(!headphonesOnly)
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (respectQuietMode)
+                            "✓ Stil/trillen respecteren · uitschakelen"
+                        else "○ Stil/trillen respecteren · inschakelen"
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onRespectQuietModeChange(!respectQuietMode)
                 }
             )
             DropdownMenuItem(
