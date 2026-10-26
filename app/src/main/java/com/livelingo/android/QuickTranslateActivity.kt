@@ -45,6 +45,7 @@ import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import java.util.Locale
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
+import com.livelingo.android.ui.ExplicitAccessibilityCaptionAction
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.InstalledDeviceVoiceCatalogDialog
 
@@ -1273,6 +1274,16 @@ private fun QuickTranslateScreen(
                     style = MaterialTheme.typography.bodyLarge.copy(
                         textDirection = TextDirection.ContentOrRtl
                     )
+                )
+            }
+            if (!reviewingTranslation && inputNotice.isBlank()) {
+                ExplicitAccessibilityCaptionAction(
+                    title = "Eenmalig voorlezen via Android-schermlezer",
+                    original = text,
+                    translation = result,
+                    sourceCode = sourceCode,
+                    targetCode = targetCode,
+                    enabled = !busy && !detectingSource && !reviewingTranslation
                 )
             }
             if (reviewingTranslation) {
