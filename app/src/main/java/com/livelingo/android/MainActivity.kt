@@ -364,20 +364,24 @@ private data class OriginalCaptionEditBaseline(
     val generation: Int,
     val revision: Int,
     val original: String,
+    val translated: String,
+    val status: String,
     val sourceCode: String,
     val targetCode: String
 ) {
     fun matches(row: Line?, currentGeneration: Int): Boolean =
         row != null && currentGeneration == generation &&
             row.id == id && row.translationRevision == revision &&
-            row.original == original &&
+            row.original == original && row.translated == translated &&
+            row.status == status &&
             row.sourceCode == sourceCode && row.targetCode == targetCode
 
     companion object {
         fun capture(row: Line, generation: Int): OriginalCaptionEditBaseline =
             OriginalCaptionEditBaseline(
                 row.id, generation, row.translationRevision,
-                row.original, row.sourceCode, row.targetCode
+                row.original, row.translated, row.status,
+                row.sourceCode, row.targetCode
             )
     }
 }
