@@ -560,10 +560,14 @@ private fun TuddyScreen(
     // Keep a small, session-scoped cache of already-authorized local translators.
     val localTranslatorPool = remember { LocalTranslatorPool() }
     val captionPairReadiness = remember { OfflinePairReadinessBroker() }
-    val captionTranslationQueue = remember { OfflineCaptionTranslationQueue() }
     // Process-wide admission persists across Activity recreation while
     // already-submitted ML Kit Tasks can still be running on that process.
     val physicalMlKitBudget = LocalMlKitWorkBudget.shared
+    val captionTranslationQueue = remember(physicalMlKitBudget) {
+        OfflineCaptionTranslationQueue {
+            physicalMlKitBudget.activeCount() < LocalMlKitWorkBudget.MAX_SUBMITTED_TASKS
+        }
+    }
     var physicalMlKitTasks by remember { mutableIntStateOf(physicalMlKitBudget.activeCount()) }
     val screenActivity = remember(context) { PrivateScreenShield.activity(context) }
     var privateScreenShieldOn by remember(context) {
@@ -1405,6 +1409,8 @@ private fun TuddyScreen(
                     // User corrections/retries are admitted before waiting
                     // automatic captions, with a hard fairness budget.
                     // Already-started Android tasks are never preempted.
+                    // The queue now also waits for ACTUAL device slots;
+                    // a UI timeout is not enough to claim the provider ended.
                     // The existing 30-second row deadline includes queue time.
                     val queued = captionTranslationQueue.enqueue(
                         id, revision,
@@ -1422,11 +1428,15 @@ private fun TuddyScreen(
                         } else {
                             val deviceSlot = physicalMlKitBudget.acquire()
                             if (deviceSlot == null) {
+                                // Defensive last resort if a provider acquired
+                                // capacity outside our queue's main-thread
+                                // admission. The ordinary full-capacity path
+                                // stays in the bounded RAM waiting queue.
                                 updateLine(
                                     id,
-                                    "Android verwerkt al ${LocalMlKitWorkBudget.MAX_SUBMITTED_TASKS} " +
-                                        "lokale modeltaken. Wacht op afronding of open Tuddy " +
-                                        "opnieuw als een model niet reageert; geen online fallback.",
+                                    "Alle lokale modelslots zijn onverwacht nog bezet. " +
+                                        "Deze zin is niet online verzonden; probeer " +
+                                        "later bewust opnieuw.",
                                     "Fout", token, revision
                                 )
                             } else {
@@ -1922,6 +1932,9 @@ private fun TuddyScreen(
             appendLine("Physical in-flight ML Kit translations: $physicalMlKitTasks / " +
                 LocalMlKitWorkBudget.MAX_SUBMITTED_TASKS +
                 " (includes any cancelled or expired tasks awaiting provider callback)")
+            appendLine("Captions waiting for a local translator slot: " +
+                captionTranslationQueue.waitingCount() +
+                " (RAM only; no user text in this diagnostic)")
             sessionDiagnostics.asReportLines().forEach { appendLine(it) }
             appendLine("Transcript/audio included: no")
         }
@@ -4344,8 +4357,14 @@ private fun TuddyScreen(
         }
     }
 
-    DisposableEffect(physicalMlKitBudget) {
-        val unsubscribe = physicalMlKitBudget.subscribe { physicalMlKitTasks = it }
+    DisposableEffect(physicalMlKitBudget, captionTranslationQueue) {
+        val unsubscribe = physicalMlKitBudget.subscribe { count ->
+            physicalMlKitTasks = count
+            // Only completion of actual provider work unlocks pending starts.
+            // UI timeout, cancel, and Activity recreation never fake a free
+            // physical task slot; user-requested fairness still applies.
+            captionTranslationQueue.onPhysicalCapacityChanged()
+        }
         onDispose { unsubscribe() }
     }
 
@@ -10042,9 +10061,13 @@ private fun TuddyScreen(
                 }
                 val pendingLocalCaptions = lines.count { it.status == "Bezig" }
                 if (pendingLocalCaptions > 0) {
+                    val waitingForLocalSlot = captionTranslationQueue.waitingCount()
                     Text(
-                        "$pendingLocalCaptions lokale vertaling(en) in verwerking of wachtrij. " +
-                            "Maximaal 3 tegelijk; na 30 seconden is herstellen mogelijk.",
+                        "$pendingLocalCaptions lokale vertaling(en) onderweg; " +
+                            "$waitingForLocalSlot in de tijdelijke wachtrij. " +
+                            "Tuddy wacht op echt vrijgekomen ML Kit-capaciteit " +
+                            "(maximaal 3 modeltaken tegelijk). Na 30 seconden " +
+                            "kun je een onvoltooide zin bewust herstellen.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

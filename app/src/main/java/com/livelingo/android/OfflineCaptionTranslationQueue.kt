@@ -14,7 +14,9 @@ import java.util.ArrayDeque
  */
 internal enum class CaptionTranslationPriority { AUTOMATIC, USER_REQUESTED }
 
-internal class OfflineCaptionTranslationQueue {
+internal class OfflineCaptionTranslationQueue(
+    private val physicalSlotAvailable: () -> Boolean = { true }
+) {
     private data class Request(
         val id: Long, val revision: Int, val begin: () -> Unit,
         val onStartError: () -> Unit
@@ -72,6 +74,12 @@ internal class OfflineCaptionTranslationQueue {
         if (removeMatching(id)) drain()
     }
 
+    /** Device budget calls this only when real ML Kit tasks release slots. */
+    fun onPhysicalCapacityChanged() = drain()
+
+    /** RAM-only count; captions themselves continue to own their text. */
+    fun waitingCount(): Int = automatic.size + userRequested.size
+
     fun clear() {
         automatic.clear()
         userRequested.clear()
@@ -103,6 +111,13 @@ internal class OfflineCaptionTranslationQueue {
         try {
             while (active.size < MAX_ACTIVE &&
                 (automatic.isNotEmpty() || userRequested.isNotEmpty())) {
+                // Only a REAL released on-device provider task grants another
+                // physical slot. A UI timeout/retry merely frees a logical
+                // queue position; it must never trigger a burst of failed
+                // translator starts while Android is still at its hard cap.
+                // Leave both priority queues intact when saturated, so the
+                // fairness budget is not spent before actual admission.
+                if (!runCatching { physicalSlotAvailable() }.getOrDefault(false)) break
                 val item = pick()
                 active[item.id] = item.revision
                 try {
