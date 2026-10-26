@@ -72,20 +72,46 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
         return tags.any { it.lowercase(Locale.ROOT) == canonical }
     }
 
-    private fun report(tag: String, support: RecognitionSupport): SpeechPackReceipt {
-        if (includesRequestedTag(support.installedOnDeviceLanguages, tag)) {
-            return SpeechPackReceipt(tag, SpeechPackStage.READY,
-                "Android meldt een geïnstalleerd offline spraakpakket voor $tag. Geen garantie op nauwkeurigheid.")
+    private fun report(
+        tag: String,
+        support: RecognitionSupport,
+        allowLanguageVariant: Boolean = false
+    ): SpeechPackReceipt {
+        // Recall uses ML Kit TEXT language codes such as "nl" and "en",
+        // whereas Android installed SPEECH packs usually carry region tags
+        // such as "nl-NL" and "en-US". A confirmed installed variant is
+        // useful for a voluntary one-shot local practice attempt, but it is
+        // NOT evidence that the regionless requested locale itself is an
+        // exact installed model. Strict live speech checks stay unchanged.
+        fun reported(tags: Collection<String>): Boolean {
+            if (includesRequestedTag(tags, tag)) return true
+            if (!allowLanguageVariant || '-' in tag) return false
+            val language = Locale.forLanguageTag(tag).language
+            return language.isNotBlank() && language != "und" &&
+                tags.any {
+                    val observed = Locale.forLanguageTag(it)
+                    observed.language.equals(language, ignoreCase = true) &&
+                        observed.country.isNotBlank()
+                }
         }
-        if (includesRequestedTag(support.pendingOnDeviceLanguages, tag)) {
+        if (reported(support.installedOnDeviceLanguages)) {
+            return SpeechPackReceipt(tag, SpeechPackStage.READY,
+                if (allowLanguageVariant && '-' !in tag)
+                    "Android meldt minstens één geïnstalleerde regionale offline " +
+                        "spraakvariant voor $tag. De exacte regio is niet bevestigd; " +
+                        "geen garantie op herkenning of nauwkeurigheid."
+                else "Android meldt een geïnstalleerd offline spraakpakket voor $tag. " +
+                    "Geen garantie op nauwkeurigheid.")
+        }
+        if (reported(support.pendingOnDeviceLanguages)) {
             return SpeechPackReceipt(tag, SpeechPackStage.PENDING,
                 "Android bereidt het spraakpakket voor $tag nog voor. Controleer straks opnieuw.")
         }
-        if (includesRequestedTag(support.supportedOnDeviceLanguages, tag)) {
+        if (reported(support.supportedOnDeviceLanguages)) {
             return SpeechPackReceipt(tag, SpeechPackStage.DOWNLOADABLE,
                 "Offline spraak voor $tag wordt door dit toestel aangeboden; het pakket ontbreekt nog.")
         }
-        if (includesRequestedTag(support.onlineLanguages, tag)) {
+        if (reported(support.onlineLanguages)) {
             return SpeechPackReceipt(tag, SpeechPackStage.ONLINE_ONLY,
                 "Voor $tag biedt de herkenningsdienst alleen online spraak. Tuddy gebruikt die niet.")
         }
@@ -93,7 +119,22 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
             "Geen bevestigd offline spraakpakket voor $tag op dit toestel. Geen cloudfallback.")
     }
 
+    // Preserve the existing public call shape so every live speech caller
+    // retains its exact-region recognition contract and trailing lambda.
     fun check(tag: String, callback: (SpeechPackReceipt) -> Unit) {
+        checkInternal(tag, callback, allowLanguageVariant = false)
+    }
+
+    /** Only voluntary one-shot recall accepts an installed regional variant. */
+    fun checkRecallLanguage(tag: String, callback: (SpeechPackReceipt) -> Unit) {
+        checkInternal(tag, callback, allowLanguageVariant = true)
+    }
+
+    private fun checkInternal(
+        tag: String,
+        callback: (SpeechPackReceipt) -> Unit,
+        allowLanguageVariant: Boolean
+    ) {
         if (Build.VERSION.SDK_INT < 33) {
             cancel()
             callback(SpeechPackReceipt(tag, SpeechPackStage.UNKNOWN,
@@ -112,7 +153,7 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
                 object : RecognitionSupportCallback {
                     override fun onSupportResult(support: RecognitionSupport) {
                         if (token != epoch) return
-                        val result = report(tag, support)
+                        val result = report(tag, support, allowLanguageVariant)
                         cancel()
                         callback(result)
                     }

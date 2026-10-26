@@ -8,12 +8,50 @@ tikken. De app vraagt zo nodig de bestaande Android-microfoontoestemming;
 de gebruiker tikt na de toestemmingsdialoog bewust opnieuw. Er wordt
 nooit automatisch opgenomen na terugkeer van Android-instellingen.
 
+### Pakketcontrole vóór de oefenmicrofoon
+
+Op **Android 13+** controleert Tuddy bij een expliciete tik eerst met
+Androids `checkRecognitionSupport` of voor de **antwoordtaal** een
+offline spraakpakket is geïnstalleerd. Dit is een **read-only** vraag:
+geen microfoon, herkenningsresultaat, modeldownload of cloudspraak.
+De vraag heeft een grens van **12 seconden**. Tijdens de controle kan
+de gebruiker via **Stop controle/opname** annuleren, waarna zowel de
+controle als latere callbacks hun geldigheid verliezen.
+
+De oefening gebruikt taalcodes als `nl` en `en`, terwijl Android
+geïnstalleerde regionale varianten als `nl-NL` en `en-US` kan melden.
+Alleen **voor deze vrijwillige eenmalige oefening** mag een werkelijk
+geïnstalleerde regionale variant van een kale taalcode tellen als
+*voorzichtig beschikbare lokale spraak*. Dit is geen bewijs dat de
+juiste dialectvariant voor de gevraagde zin beschikbaar is. De
+bestaande controle van exacte taal-/regiotags voor live spraak blijft
+ongewijzigd.
+
+Meldt Android een pakket als ontbrekend, in behandeling, alleen online
+of niet ondersteund, dan opent Tuddy **geen microfoon**. Het paneel
+verwijst naar de bewuste pakketvoorbereiding via **Offline startcheck**
+of het getypte antwoord. Bij een onleesbare status blijft een strikt
+`createOnDeviceSpeechRecognizer`-verzoek mogelijk, met expliciete
+waarschuwing dat de herkenning alsnog kan mislukken. Er is nooit een
+fallback naar een netwerkherkenner.
+
+**Android 12** heeft geen per-taal-pakketinventaris; Tuddy houdt
+daarom de bestaande on-device-only opname met de expliciete beperking
+dat lokale ondersteuning voor de gekozen taal niet vooraf kan worden
+bevestigd.
+
+Na een geslaagde controle blijven de bestaande toestel-, microfoon-,
+headset-, stroom-, schermvergrendeling- en optionele vliegtuigmodus-
+beschermingen gelden, en worden ze **opnieuw gecontroleerd** vóór
+Androids microfoon werkelijk start. Ook een terugkeer naar de
+achtergrond maakt een lopende controle ongeldig.
+
 Tuddy start uitsluitend `SpeechRecognizer.createOnDeviceSpeechRecognizer`
-met de exact gekozen **antwoordtaal** en `EXTRA_PREFER_OFFLINE`.
+met de gekozen **antwoordtaal** en `EXTRA_PREFER_OFFLINE`.
 Er is geen fallback naar `createSpeechRecognizer`, geen server-ASR,
 modeldownload of automatisch taalherkennen. Als het toestel voor deze
-taal geen bruikbare lokale herkenning biedt, kan de poging mislukken;
-de schrijf- en denkoefening blijven gewoon mogelijk. Dit levert
+taal geen bruikbare lokale herkenning biedt, kan de poging alsnog
+mislukken; de schrijf- en denkoefening blijven beschikbaar. Dit levert
 **geen** nieuwe ondersteuning voor Kurmanji, Sorani of Pasjtoe.
 
 De tijdelijke microfoonsessie wordt uiterlijk na **20 seconden** gestopt.
