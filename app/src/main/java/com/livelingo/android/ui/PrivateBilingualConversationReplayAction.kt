@@ -42,17 +42,33 @@ internal fun PrivateBilingualConversationReplayAction(
     enabled: Boolean
 ) {
     var notice by remember { mutableStateOf("") }
-    var selectedCount by remember(sourceCode, targetCode) { mutableStateOf(3) }
-    var selectedOrder by remember(sourceCode, targetCode) {
+    val directions = PrivateBilingualConversationReplay.directions(captions)
+    var selectedDirection by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var choosingDirection by remember { mutableStateOf(false) }
+    val recommended = (sourceCode to targetCode).takeIf { pair ->
+        directions.any { it.sourceCode == pair.first && it.targetCode == pair.second }
+    }
+    // Retain the user's deliberate direction if newer captions appear in
+    // another language; fall back safely when the chosen pair disappears.
+    val activeDirection = selectedDirection?.takeIf { pair ->
+        directions.any { it.sourceCode == pair.first && it.targetCode == pair.second }
+    } ?: recommended ?: directions.firstOrNull()?.let { it.sourceCode to it.targetCode }
+    val activeSource = activeDirection?.first ?: sourceCode
+    val activeTarget = activeDirection?.second ?: targetCode
+    var selectedCount by remember(activeSource, activeTarget) { mutableStateOf(3) }
+    var selectedOrder by remember(activeSource, activeTarget) {
         mutableStateOf(BilingualReplayOrder.SOURCE_FIRST)
     }
-    var selectedStart by remember(sourceCode, targetCode, captions) {
+    val eligible = PrivateBilingualConversationReplay.available(
+        captions, activeSource, activeTarget
+    )
+    // Only reset an explicit start if *this chosen direction's* playable
+    // captions changed. New conversations in a different language must
+    // not quietly turn a selected start into "latest N" again.
+    var selectedStart by remember(activeSource, activeTarget, eligible) {
         mutableStateOf<Int?>(null)
     }
-    var choosingStart by remember(sourceCode, targetCode) { mutableStateOf(false) }
-    val eligible = PrivateBilingualConversationReplay.available(
-        captions, sourceCode, targetCode
-    )
+    var choosingStart by remember(activeSource, activeTarget) { mutableStateOf(false) }
     // If a caption is edited or removed while replay is active, stop the
     // snapshot rather than narrating content the user already changed.
     // The owner retains the TTS adapter; this only releases its session.
@@ -70,17 +86,55 @@ internal fun PrivateBilingualConversationReplayAction(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            "Tweetalig terugluisteren · ${sourceCode.uppercase()} → " +
-                "${targetCode.uppercase()} · ${eligible.size} afgeronde zinnen (maximaal 8)",
+            "Tweetalig terugluisteren · ${activeSource.uppercase()} → " +
+                "${activeTarget.uppercase()} · ${eligible.size} afgeronde zinnen (maximaal 8)",
             style = MaterialTheme.typography.bodySmall
         )
         Text(
             "Alleen bestaande lokale vertalingen, op verzoek. " +
-                "Kies zelf origineel of vertaling eerst. " +
+                "Kies een aanwezige taalrichting en origineel of vertaling eerst. " +
                 "Vereist twee geïnstalleerde offline Android-stemmen. " +
                 "Microfoonstart en verlaten van deze tools stoppen de replay.",
             style = MaterialTheme.typography.bodySmall
         )
+        Text(
+            "${directions.size} afspeelbare taalrichtingen in dit tijdelijke gesprek " +
+                "(maximaal ${PrivateBilingualConversationReplay.MAX_DIRECTIONS} getoond). " +
+                "Een richting kiezen verandert de microfoontaal of bestaande zinnen niet.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Box {
+            TextButton(
+                enabled = enabled && directions.isNotEmpty(),
+                onClick = { choosingDirection = true }
+            ) {
+                Text("Kies taalrichting · ${activeSource.uppercase()} → ${activeTarget.uppercase()}")
+            }
+            DropdownMenu(
+                expanded = choosingDirection,
+                onDismissRequest = { choosingDirection = false }
+            ) {
+                directions.forEach { direction ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                "${direction.sourceCode.uppercase()} → " +
+                                    "${direction.targetCode.uppercase()} · " +
+                                    "${direction.playableCount} bestaande zinnen"
+                            )
+                        },
+                        onClick = {
+                            speaker.stop()
+                            selectedDirection = direction.sourceCode to direction.targetCode
+                            choosingDirection = false
+                            notice = "Taalrichting ${direction.sourceCode.uppercase()} → " +
+                                "${direction.targetCode.uppercase()} gekozen. " +
+                                "Kies nu een startzin of aantal en tik bewust op afspelen."
+                        }
+                    )
+                }
+            }
+        }
         Text(
             "Kies hoeveel afgeronde zinnen je wilt oefenen " +
                 "(beschikbaar: ${eligible.size}).",
@@ -180,7 +234,7 @@ internal fun PrivateBilingualConversationReplayAction(
                     onClick = {
                         if (enabled && practice.isNotEmpty()) {
                             speaker.speakBilingualConversation(
-                                practice, sourceCode, targetCode, pace,
+                                practice, activeSource, activeTarget, pace,
                                 onProgress = { done, total ->
                                     notice = "Tweetalige oefening: $done/$total zinnen voltooid."
                                 },
