@@ -132,7 +132,8 @@ internal fun ExplicitAccessibilityCaptionAction(
                             "Scherm niet langer actief; privétekst niet doorgegeven."
                         currentText != candidate.text || currentCode != candidate.languageTag ->
                             "De regel is inmiddels gewijzigd; bevestig de nieuwe tekst opnieuw."
-                        manager?.isEnabled != true || !manager.isTouchExplorationEnabled ->
+                        manager?.isEnabled != true ||
+                            manager.isTouchExplorationEnabled != true ->
                             "Android heeft geen actieve schermlezer met aanraakverkenning. " +
                                 "Schakel TalkBack via Android-instellingen in als je dit wilt."
                         else -> {
