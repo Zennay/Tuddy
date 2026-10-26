@@ -75,6 +75,7 @@ import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.LiveMicrophonePermissionControls
+import com.livelingo.android.ui.ExplicitAccessibilityCaptionAction
 import com.livelingo.android.ui.PrivateConversationCurtainDialog
 import com.livelingo.android.ui.PrivateProtectionSettingsPanel
 import com.livelingo.android.ui.SubtitleDraftControls
@@ -600,6 +601,32 @@ class MainActivity : ComponentActivity() {
         if (intent.action == Intent.ACTION_SEND) intent.clipData = null
         setIntent(intent)
     }
+}
+
+/**
+ * Kept outside TuddyScreen's giant Compose call graph. Kotlin/JVM otherwise
+ * exceeds the 64 KiB limit for its generated composable method.
+ */
+@Composable
+private fun LatestPrivateCaptionAccessibilityAction(
+    lines: List<Line>,
+    listening: Boolean,
+    privateCurtainOpen: Boolean,
+    confirmClearConversation: Boolean
+) {
+    if (listening || privateCurtainOpen || confirmClearConversation) return
+    val latest = lines.lastOrNull {
+        it.status == "Lokaal vertaald" || it.status == "Lokaal"
+    } ?: return
+    if (latest.original.isBlank()) return
+    ExplicitAccessibilityCaptionAction(
+        title = "Laatste voltooide gespreksregel · Android-schermlezer",
+        original = latest.original,
+        translation = latest.translated,
+        sourceCode = latest.sourceCode,
+        targetCode = latest.targetCode,
+        enabled = true
+    )
 }
 
 @Composable
@@ -9956,6 +9983,9 @@ private fun TuddyScreen(
                         else "Gesprekstools · export, sprekers en archief")
                 }
                 if (conversationToolsOpen) {
+                    LatestPrivateCaptionAccessibilityAction(
+                        lines, listening, privateCurtainOpen, confirmClearConversation
+                    )
                     translationMemoryRevision // Reflect the count after opt-in or deletion.
                     OutlinedButton(
                         onClick = { translationMemoryOpen = true },
