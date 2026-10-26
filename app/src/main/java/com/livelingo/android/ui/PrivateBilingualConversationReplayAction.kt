@@ -56,8 +56,11 @@ internal fun PrivateBilingualConversationReplayAction(
     val eligible = PrivateBilingualConversationReplay.available(
         captions, sourceCode, targetCode
     )
+    // A deleted or revised caption can shrink the available snapshot while
+    // this control remains composed. Never claim a stale start still exists.
+    val currentStart = selectedStart?.takeIf { it in eligible.indices }
     val practice = PrivateBilingualConversationReplay.window(
-        eligible, selectedCount, selectedStart
+        eligible, selectedCount, currentStart
     )
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -76,7 +79,7 @@ internal fun PrivateBilingualConversationReplayAction(
             style = MaterialTheme.typography.bodySmall
         )
         Text(
-            "Kies hoeveel van de laatste afgeronde zinnen je wilt oefenen " +
+            "Kies hoeveel afgeronde zinnen je wilt oefenen " +
                 "(beschikbaar: ${eligible.size}).",
             style = MaterialTheme.typography.bodySmall
         )
@@ -100,9 +103,9 @@ internal fun PrivateBilingualConversationReplayAction(
         }
         Text(
             "Oefenbereik: ${practice.size} tweetalige zinnen. " +
-                if (selectedStart == null)
+                (if (currentStart == null)
                     "Standaard vanaf de laatste ${minOf(selectedCount, eligible.size)} zinnen."
-                else "Vanaf gesprekszin ${selectedStart!! + 1} van ${eligible.size}.",
+                else "Vanaf gesprekszin ${currentStart + 1} van ${eligible.size}."),
             style = MaterialTheme.typography.bodySmall
         )
         Box {
@@ -110,8 +113,8 @@ internal fun PrivateBilingualConversationReplayAction(
                 enabled = enabled && eligible.isNotEmpty(),
                 onClick = { choosingStart = true }
             ) {
-                Text(if (selectedStart == null) "Kies startzin · laatste eerst"
-                     else "Kies startzin · zin ${selectedStart!! + 1}")
+                Text(if (currentStart == null) "Kies startzin · laatste eerst"
+                     else "Kies startzin · zin ${currentStart + 1}")
             }
             DropdownMenu(
                 expanded = choosingStart,
@@ -126,9 +129,15 @@ internal fun PrivateBilingualConversationReplayAction(
                         notice = "Standaard de laatste zinnen gekozen."
                     }
                 )
-                eligible.forEachIndexed { index, _ ->
+                eligible.forEachIndexed { index, pair ->
                     DropdownMenuItem(
-                        text = { Text("Vanaf zin ${index + 1} van ${eligible.size}") },
+                        text = {
+                            Text(
+                                "Zin ${index + 1} · ${pair.original.take(48)}" +
+                                    if (pair.original.length > 48) "…" else "",
+                                maxLines = 1
+                            )
+                        },
                         onClick = {
                             speaker.stop()
                             selectedStart = index
