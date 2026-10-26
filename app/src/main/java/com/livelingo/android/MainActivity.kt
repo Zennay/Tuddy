@@ -87,6 +87,7 @@ import com.livelingo.android.ui.OfflineStarterPhraseboard
 import com.livelingo.android.ui.OfflinePersonalPhraseTurnsDialog
 import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
+import com.livelingo.android.ui.PrivateBilingualConversationReplayAction
 import com.livelingo.android.ui.PrivateCaptionDeletionUndoControl
 import com.livelingo.android.ui.PrivateCaptionDeleteConfirmDialog
 import com.livelingo.android.ui.PrivateOfflineBackTranslationDialog
@@ -9986,73 +9987,39 @@ private fun TuddyScreen(
                     LatestPrivateCaptionAccessibilityAction(
                         lines, listening, privateCurtainOpen, confirmClearConversation
                     )
-                    // Snapshot only completed captions of the *current*
-                    // language direction. Never launch a model task or reuse
-                    // stale translations from a changed source/target pair.
-                    val bilingualPractice = PrivateBilingualConversationReplay.available(
-                        lines.map { line ->
+                    PrivateBilingualConversationReplayAction(
+                        captions = lines.map { line ->
                             BilingualReplayCaption(
                                 line.original, line.translated,
                                 line.sourceCode, line.targetCode, line.status
                             )
                         },
-                        source.translateCode, target.translateCode
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            "Tweetalig terugluisteren · ${source.translateCode.uppercase()} → " +
-                                "${target.translateCode.uppercase()} · " +
-                                "${bilingualPractice.size} afgeronde zinnen (maximaal 8)",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            "Alleen bestaande lokale vertalingen, op verzoek. " +
-                                "Eerst het origineel, dan de vertaling. " +
-                                "Vereist twee geïnstalleerde offline Android-stemmen.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for (pace in listOf(LocalSpeechPace.NORMAL, LocalSpeechPace.SLOW)) {
-                                TextButton(
-                                    enabled = !listening && !privateCurtainOpen &&
-                                        bilingualPractice.isNotEmpty(),
-                                    onClick = {
-                                        if (!listening && !privateCurtainOpen) {
-                                            captionSpeaker.speakBilingualConversation(
-                                                bilingualPractice,
-                                                source.translateCode,
-                                                target.translateCode,
-                                                pace,
-                                                onProgress = { done, total ->
-                                                    pronunciationNotice =
-                                                        "Tweetalige oefening: $done/$total zinnen voltooid."
-                                                },
-                                                feedback = { pronunciationNotice = it },
-                                                onFinished = { completed ->
-                                                    if (!completed && pronunciationNotice.isBlank()) {
-                                                        pronunciationNotice =
-                                                            "Voorlezen gestopt. Geen online fallback."
-                                                    }
-                                                }
-                                            )
+                        sourceCode = source.translateCode,
+                        targetCode = target.translateCode,
+                        enabled = !listening && !privateCurtainOpen,
+                        notice = pronunciationNotice,
+                        onPlay = { pairs, pace ->
+                            if (!listening && !privateCurtainOpen) {
+                                captionSpeaker.speakBilingualConversation(
+                                    pairs, source.translateCode, target.translateCode, pace,
+                                    onProgress = { done, total ->
+                                        pronunciationNotice =
+                                            "Tweetalige oefening: $done/$total zinnen voltooid."
+                                    },
+                                    feedback = { pronunciationNotice = it },
+                                    onFinished = { completed ->
+                                        if (!completed && pronunciationNotice.isBlank()) {
+                                            pronunciationNotice = "Voorlezen gestopt."
                                         }
                                     }
-                                ) {
-                                    Text(if (pace == LocalSpeechPace.NORMAL)
-                                        "▶ Tweetalig" else "▶ Rustig")
-                                }
+                                )
                             }
+                        },
+                        onStop = {
+                            captionSpeaker.stop()
+                            pronunciationNotice = "Tweetalig voorlezen gestopt."
                         }
-                        TextButton(
-                            onClick = {
-                                captionSpeaker.stop()
-                                pronunciationNotice = "Tweetalig voorlezen gestopt."
-                            }
-                        ) { Text("■ Stop tweetalig voorlezen") }
-                        if (pronunciationNotice.isNotBlank()) {
-                            Text(pronunciationNotice, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
+                    )
                     translationMemoryRevision // Reflect the count after opt-in or deletion.
                     OutlinedButton(
                         onClick = { translationMemoryOpen = true },
