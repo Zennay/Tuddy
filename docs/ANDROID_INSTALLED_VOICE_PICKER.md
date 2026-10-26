@@ -41,6 +41,34 @@ Het venster vraagt nooit zelf een stem- of modeldownload aan.
 Een taal zonder geschikte lokale stem blijft tekst-only. Tekstvertaling
 en Android-spraakherkenning worden door deze instelling niet geactiveerd.
 
+## Alle op dit toestel beschikbare offline stemmen bekijken
+
+Naast de brontaal- en doeltaalknoppen kun je in het hoofdgesprek en de
+snelle Android-tekstvertaler **Bekijk alle geïnstalleerde offline
+Android-stemmen** openen. Dat is een expliciete, apparaatbrede
+inventarisatie: de gebruiker kan op naam, taal of Android-taalcode zoeken,
+ook als de stemtaal niet het huidige vertaalpaar is. Tuddy toont maximaal
+128 verschillende, door Android als geïnstalleerd en niet-netwerkafhankelijk
+gemelde stemmen. De lijst wordt niet opgeslagen.
+
+Bij **▶ Voorbeeld** wordt uitsluitend een korte ingebouwde voorbeeldzin
+met de exacte gekozen, opnieuw lokaal gecontroleerde stem aangeboden.
+Deze stemproef gebruikt de bestaande Android-audiofocus- en
+headsetbeveiliging, stopt bij audioverlies en wordt na hoogstens 20
+seconden afgebroken als de Android-TTS-dienst zwijgt. **Kies** bewaart
+alleen de apparaatgebonden stemnaam per *taal* en geldt direct voor
+de andere Tuddy-voorleesfuncties. **Herstel** schakelt voor die taal
+terug naar de veilige automatische stemkeuze.
+
+Een niet-reagerende Android-steminventaris wordt na maximaal 15 seconden
+afgebroken; de gebruiker krijgt dan opnieuw **Ververs**. Bij sluiten
+of naar de achtergrond gaan worden de tijdelijke TTS-engines,
+callbackgeneraties en deadlines beëindigd. Er zijn geen nieuwe
+machtigingen, accountgegevens, opnamen, automatische downloads of
+cloudspraakfallbacks. Dat er voor een taal een lokale **voorleesstem**
+aanwezig is, betekent nadrukkelijk niet dat er voor die taal vrije
+offline spraakherkenning of tekstvertaling geïnstalleerd is.
+
 ## Android-audiofocus en bescherming bij wisselende headset
 
 Wanneer je bewust een oorspronkelijke zin, vertaling, stemvoorbeeld of
