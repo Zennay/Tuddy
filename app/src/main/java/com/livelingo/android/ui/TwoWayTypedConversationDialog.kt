@@ -177,7 +177,9 @@ internal fun TwoWayTypedConversationDialog(
             speaker.close()
         }
     }
-    LaunchedEffect(from, to, recentLines) {
+    // Transcript changes must NOT cancel an unrelated user-approved model
+    // preparation, nor recheck Android model storage after every new turn.
+    LaunchedEffect(from, to) {
         clearSpeech()
         models.invalidate()
         modelStatus = OfflineTextReceipt(from, to, OfflineTextStage.UNCHECKED,
@@ -510,7 +512,10 @@ internal fun TwoWayTypedConversationDialog(
                     if (from != to && receipt?.stage != OfflineTextStage.READY) {
                         TextButton(enabled = !preparing, onClick = {
                             preparing = true
-                            info = "Alleen na deze tik probeert Tuddy via wifi de modellen te downloaden."
+                            info = "Alleen na jouw tik start ML Kit een wifi-modeldownload. " +
+                                "Na twee minuten zonder terugmelding stopt het wachten in de " +
+                                "app, niet noodzakelijk Androids lopende download. " +
+                                "Er start nooit automatisch een tweede download."
                             models.prepareViaWifi(from, to) { message, verified ->
                                 preparing = false
                                 info = message

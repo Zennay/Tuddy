@@ -85,9 +85,12 @@ internal fun TypedFavoriteOfflineModelsDialog(
                         Text("${pair.from.uppercase()} → ${pair.to.uppercase()}",
                             style = MaterialTheme.typography.labelMedium)
                     }
-                    Text("Bij een mislukte of onzekere modelcontrole stopt Tuddy " +
-                        "de reeks. Sluiten stopt het starten van nieuwe downloads; " +
-                        "een al door ML Kit begonnen download kan nog afronden. " +
+                    Text("Een modelcontrole heeft maximaal 12 seconden voor een antwoord. " +
+                        "Na twee minuten wachten op een download meldt Tuddy de " +
+                        "status als onbekend en stopt de reeks. De al door ML Kit " +
+                        "gestarte download kan nog doorgaan. Tuddy start geen tweede " +
+                        "download totdat de echte vorige Android-taak is afgerond. " +
+                        "Sluiten stopt alleen nieuwe voorbereidingen. " +
                         "Dit installeert GEEN offline spraakherkenning.",
                         style = MaterialTheme.typography.bodySmall)
                 }
