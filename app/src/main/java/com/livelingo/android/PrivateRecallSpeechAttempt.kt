@@ -35,14 +35,24 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
     private val headsetGuard = LocalHeadsetMicrophoneGuard(app)
     private val powerGuard = LocalSpeechPowerGuard(app)
     private val strictRadioGuard = StrictOfflineRadioSessionMonitor(app)
+    // Read-only exact-language pack check is separate from the mic service.
+    // Android 12 lacks per-language inventory APIs; never claim it is READY.
+    private val speechPackCheck = OnDeviceSpeechPackController(app)
+    private var checkingSpeechPack = false
+    private var packTimeout: Runnable? = null
     private var recognizer: SpeechRecognizer? = null
     private var watchdog: Runnable? = null
     private var epoch = 0L
 
-    fun isRecording(): Boolean = recognizer != null
+    /** Includes preflight so the UI can show Stop while Android checks a pack. */
+    fun isRecording(): Boolean = recognizer != null || checkingSpeechPack
 
     fun cancel() {
         epoch++
+        checkingSpeechPack = false
+        speechPackCheck.cancel()
+        packTimeout?.let(main::removeCallbacks)
+        packTimeout = null
         watchdog?.let(main::removeCallbacks)
         watchdog = null
         micGuard.disarm()
@@ -84,6 +94,82 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
             onNotice("Deze antwoordtaal is niet geschikt voor lokaal inspreken.")
             return false
         }
+        // Never start a microphone from an unverified *known absent* pack.
+        // Android 13+ can report exact installed/downloadable/online-only
+        // speech languages; this is a READ-ONLY probe, never a download.
+        if (Build.VERSION.SDK_INT >= 33) {
+            val version = epoch
+            checkingSpeechPack = true
+            val timeout = Runnable {
+                if (version != epoch) return@Runnable
+                cancel()
+                onNotice("Android reageerde niet op de lokale spraakpakketcontrole. " +
+                    "Geen antwoordmicrofoon gestart; probeer later of typ zelf.")
+            }
+            packTimeout = timeout
+            if (!main.postDelayed(timeout, PACK_CHECK_LIMIT_MS)) {
+                cancel()
+                onNotice("De lokale spraakpakketcontrole kon niet veilig worden bewaakt. " +
+                    "Geen antwoordmicrofoon gestart.")
+                return false
+            }
+            speechPackCheck.check(languageTag) { receipt ->
+                if (version != epoch) return@check
+                when (receipt.stage) {
+                    SpeechPackStage.CHECKING -> onNotice(
+                        "Android controleert het geïnstalleerde offline pakket voor $languageTag…")
+                    SpeechPackStage.READY, SpeechPackStage.UNKNOWN -> {
+                        packTimeout?.let(main::removeCallbacks)
+                        packTimeout = null
+                        checkingSpeechPack = false
+                        // UNKNOWN never means confirmed installed. Only the
+                        // actual on-device SpeechRecognizer may be attempted.
+                        val unknown = receipt.stage == SpeechPackStage.UNKNOWN
+                        val started = beginCapture(
+                            languageTag, strictOfflineRadioOnly, version,
+                            onNotice, onFinalAnswer
+                        )
+                        if (started && unknown) {
+                            onNotice("Pakketstatus voor $languageTag onbekend; " +
+                                "uitsluitend de on-device herkenner is gestart. " +
+                                "Android kan deze taal alsnog weigeren. Geen cloudfallback.")
+                        }
+                    }
+                    else -> {
+                        cancel()
+                        onNotice("Geen geïnstalleerd lokaal spraakpakket voor $languageTag " +
+                            "bevestigd (${receipt.stage}). Geen opname of download gestart. " +
+                            "Controleer het spraakpakket in Offline startcheck " +
+                            "of typ je oefenantwoord zelf.")
+                    }
+                }
+            }
+            return isRecording()
+        }
+        // Android 12 cannot enumerate installed speech languages. Preserve
+        // the prior on-device-only path without claiming per-language support.
+        return beginCapture(languageTag, strictOfflineRadioOnly, epoch,
+            onNotice, onFinalAnswer)
+    }
+
+    private fun beginCapture(
+        languageTag: String,
+        strictOfflineRadioOnly: Boolean,
+        version: Long,
+        onNotice: (String) -> Unit,
+        onFinalAnswer: (String) -> Unit
+    ): Boolean {
+        if (version != epoch ||
+            ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) !=
+                PackageManager.PERMISSION_GRANTED ||
+            !runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(app) }
+                .getOrDefault(false)
+        ) {
+            cancel()
+            onNotice("De toestel- of microfoontoestemming is gewijzigd tijdens " +
+                "de pakketcontrole. Geen antwoordopname gestart.")
+            return false
+        }
         val micBlocker = micGuard.currentBlocker()
         if (micBlocker != null) {
             onNotice("$micBlocker Geen antwoordopname gestart.")
@@ -117,7 +203,6 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
             onNotice("Android is vergrendeld of de schermbewaking ontbreekt. Microfoon blijft uit.")
             return false
         }
-        val version = epoch
         val gate = SpeechTurnCompletionGate()
         // One-shot capture never restarts itself. Install each available
         // Android observer BEFORE starting the recognizer, and refuse on
@@ -236,6 +321,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
     }
 
     companion object {
+        private const val PACK_CHECK_LIMIT_MS = 12_000L
         private const val MAX_CAPTURE_MS = 20_000L
         private const val MAX_SPOKEN_CHARACTERS = 400
     }
