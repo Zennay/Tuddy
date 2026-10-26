@@ -1,10 +1,13 @@
 package com.livelingo.android.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -19,6 +22,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.BilingualReplayCaption
+import com.livelingo.android.BilingualReplayOrder
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.PrivateBilingualConversationReplay
@@ -38,7 +42,12 @@ internal fun PrivateBilingualConversationReplayAction(
     enabled: Boolean
 ) {
     var notice by remember { mutableStateOf("") }
-    var selectedCount by remember { mutableStateOf(3) }
+    var selectedCount by remember(sourceCode, targetCode) { mutableStateOf(3) }
+    var selectedOrder by remember(sourceCode, targetCode) {
+        mutableStateOf(BilingualReplayOrder.SOURCE_FIRST)
+    }
+    var selectedStart by remember(sourceCode, targetCode) { mutableStateOf<Int?>(null) }
+    var choosingStart by remember(sourceCode, targetCode) { mutableStateOf(false) }
     // The Activity owns and closes this engine on background/microphone Stop.
     // When this tool is hidden, cancel only playback, never close its owner.
     DisposableEffect(speaker) {
@@ -46,6 +55,9 @@ internal fun PrivateBilingualConversationReplayAction(
     }
     val eligible = PrivateBilingualConversationReplay.available(
         captions, sourceCode, targetCode
+    )
+    val practice = PrivateBilingualConversationReplay.window(
+        eligible, selectedCount, selectedStart
     )
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -58,7 +70,7 @@ internal fun PrivateBilingualConversationReplayAction(
         )
         Text(
             "Alleen bestaande lokale vertalingen, op verzoek. " +
-                "Eerst het origineel, dan de vertaling. " +
+                "Kies zelf origineel of vertaling eerst. " +
                 "Vereist twee geïnstalleerde offline Android-stemmen. " +
                 "Microfoonstart en verlaten van deze tools stoppen de replay.",
             style = MaterialTheme.typography.bodySmall
@@ -86,14 +98,77 @@ internal fun PrivateBilingualConversationReplayAction(
                 )
             }
         }
+        Text(
+            "Oefenbereik: ${practice.size} tweetalige zinnen. " +
+                if (selectedStart == null)
+                    "Standaard vanaf de laatste ${minOf(selectedCount, eligible.size)} zinnen."
+                else "Vanaf gesprekszin ${selectedStart!! + 1} van ${eligible.size}.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Box {
+            TextButton(
+                enabled = enabled && eligible.isNotEmpty(),
+                onClick = { choosingStart = true }
+            ) {
+                Text(if (selectedStart == null) "Kies startzin · laatste eerst"
+                     else "Kies startzin · zin ${selectedStart!! + 1}")
+            }
+            DropdownMenu(
+                expanded = choosingStart,
+                onDismissRequest = { choosingStart = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Automatisch · laatste zinnen") },
+                    onClick = {
+                        speaker.stop()
+                        selectedStart = null
+                        choosingStart = false
+                        notice = "Standaard de laatste zinnen gekozen."
+                    }
+                )
+                eligible.forEachIndexed { index, _ ->
+                    DropdownMenuItem(
+                        text = { Text("Vanaf zin ${index + 1} van ${eligible.size}") },
+                        onClick = {
+                            speaker.stop()
+                            selectedStart = index
+                            choosingStart = false
+                            notice = "Oefenreeks start bij zin ${index + 1}."
+                        }
+                    )
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(
+                selected = selectedOrder == BilingualReplayOrder.SOURCE_FIRST,
+                enabled = enabled && practice.isNotEmpty(),
+                onClick = {
+                    speaker.stop()
+                    selectedOrder = BilingualReplayOrder.SOURCE_FIRST
+                    notice = "Oefenvolgorde: eerst origineel, dan de vertaling."
+                },
+                label = { Text("Origineel eerst") }
+            )
+            FilterChip(
+                selected = selectedOrder == BilingualReplayOrder.TRANSLATION_FIRST,
+                enabled = enabled && practice.isNotEmpty(),
+                onClick = {
+                    speaker.stop()
+                    selectedOrder = BilingualReplayOrder.TRANSLATION_FIRST
+                    notice = "Oefenvolgorde: eerst vertaling, dan het origineel."
+                },
+                label = { Text("Vertaling eerst") }
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (pace in listOf(LocalSpeechPace.NORMAL, LocalSpeechPace.SLOW)) {
                 TextButton(
-                    enabled = enabled && eligible.isNotEmpty(),
+                    enabled = enabled && practice.isNotEmpty(),
                     onClick = {
-                        if (enabled) {
+                        if (enabled && practice.isNotEmpty()) {
                             speaker.speakBilingualConversation(
-                                eligible.takeLast(selectedCount), sourceCode, targetCode, pace,
+                                practice, sourceCode, targetCode, pace,
                                 onProgress = { done, total ->
                                     notice = "Tweetalige oefening: $done/$total zinnen voltooid."
                                 },
@@ -102,7 +177,8 @@ internal fun PrivateBilingualConversationReplayAction(
                                     if (!complete && notice.isBlank()) {
                                         notice = "Voorlezen gestopt."
                                     }
-                                }
+                                },
+                                order = selectedOrder
                             )
                         }
                     }
