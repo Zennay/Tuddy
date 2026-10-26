@@ -140,9 +140,11 @@ internal fun InstalledDeviceVoiceCatalogDialog(onDismiss: () -> Unit) {
                     items(shown, key = { it.voiceName + ":" + it.languageTag }) { entry ->
                         // Preferences deliberately use the language, not an
                         // invented claim that a dialect-specific ASR model exists.
-                        val selected = LocalSpeechVoicePreferences.selectedVoiceName(
-                            context, entry.languageTag
-                        ) == entry.voiceName
+                        val selected = remember(choiceRevision, entry.voiceName, entry.languageTag) {
+                            LocalSpeechVoicePreferences.selectedVoiceName(
+                                context, entry.languageTag
+                            ) == entry.voiceName
+                        }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
                                 "${entry.displayName} · ${entry.languageTag}",
