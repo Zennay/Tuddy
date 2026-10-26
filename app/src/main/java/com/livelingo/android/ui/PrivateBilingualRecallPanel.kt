@@ -85,6 +85,11 @@ internal fun PrivateBilingualRecallPanel(
     var spokenAnswer by remember(practice, sourceCode, targetCode) {
         mutableStateOf("")
     }
+    // Explicit post-reveal compare of exactly one currently visible answer.
+    // Not persisted and never feeds the learner's manual self-mark.
+    var comparisonSource by remember(practice, sourceCode, targetCode) {
+        mutableStateOf<String?>(null)
+    }
     var recordingAnswer by remember(practice, sourceCode, targetCode) {
         mutableStateOf(false)
     }
@@ -125,6 +130,7 @@ internal fun PrivateBilingualRecallPanel(
                 recordingAnswer = false
                 typedAnswer = ""
                 spokenAnswer = ""
+                comparisonSource = null
                 revealed = false
             }
         }
@@ -135,6 +141,7 @@ internal fun PrivateBilingualRecallPanel(
             recallSpeech.cancel()
             typedAnswer = ""
             spokenAnswer = ""
+            comparisonSource = null
             recordingAnswer = false
         }
     }
@@ -143,6 +150,7 @@ internal fun PrivateBilingualRecallPanel(
             recallSpeech.cancel()
             recordingAnswer = false
             spokenAnswer = ""
+            comparisonSource = null
         }
     }
 
@@ -155,6 +163,7 @@ internal fun PrivateBilingualRecallPanel(
         recallSpeech.cancel()
         recordingAnswer = false
         spokenAnswer = ""
+        comparisonSource = null
         speechNotice = ""
         started = true
         position = 0
@@ -173,6 +182,7 @@ internal fun PrivateBilingualRecallPanel(
         recallSpeech.cancel()
         recordingAnswer = false
         spokenAnswer = ""
+        comparisonSource = null
         speechNotice = ""
         promptSide = side
         started = false
@@ -192,6 +202,7 @@ internal fun PrivateBilingualRecallPanel(
         recallSpeech.cancel()
         recordingAnswer = false
         spokenAnswer = ""
+        comparisonSource = null
         speechNotice = ""
         if (tryAgain) missed = missed + index
         position++
@@ -252,6 +263,8 @@ internal fun PrivateBilingualRecallPanel(
                         speaker.stop()
                         retryIndices = missed.sorted()
                         retryOnly = true
+                        comparisonSource = null
+                        spokenAnswer = ""
                         missed = emptySet()
                         position = 0
                         revealed = false
@@ -323,6 +336,7 @@ internal fun PrivateBilingualRecallPanel(
                             } else {
                                 speaker.stop()
                                 spokenAnswer = ""
+                                comparisonSource = null
                                 speechNotice = ""
                                 recordingAnswer = recallSpeech.start(
                                     chosenAnswerSpeechTag ?: answerLanguage,
@@ -335,6 +349,7 @@ internal fun PrivateBilingualRecallPanel(
                                     },
                                     onFinalAnswer = { answer ->
                                         spokenAnswer = answer
+                                        comparisonSource = null
                                         recordingAnswer = false
                                     },
                                     onVariantSelectionRequired = { installedTags ->
@@ -355,6 +370,7 @@ internal fun PrivateBilingualRecallPanel(
                             recallSpeech.cancel()
                             recordingAnswer = false
                             spokenAnswer = ""
+                            comparisonSource = null
                             speechNotice = "Spraakpakketcontrole of opname gestopt. " +
                                 "Geen gesproken antwoord bewaard."
                         }) { Text("■ Stop controle/opname") }
@@ -372,6 +388,7 @@ internal fun PrivateBilingualRecallPanel(
                     Text(spokenAnswer, style = MaterialTheme.typography.bodyLarge)
                     TextButton(onClick = {
                         spokenAnswer = ""
+                        comparisonSource = null
                         recallSpeech.cancel()
                         recordingAnswer = false
                     }) { Text("Wis mijn gesproken poging") }
@@ -385,6 +402,7 @@ internal fun PrivateBilingualRecallPanel(
                         // before calling us; revalidate at this RAM boundary.
                         typedAnswer = candidate.replace('\n', ' ').replace('\r', ' ')
                             .filterNot { it.isISOControl() }.take(400)
+                        comparisonSource = null
                     },
                     enabled = enabled
                 )
@@ -398,6 +416,7 @@ internal fun PrivateBilingualRecallPanel(
                     TextButton(
                         onClick = {
                             typedAnswer = ""
+                            comparisonSource = null
                             speaker.stop()
                         },
                         enabled = enabled
@@ -414,6 +433,7 @@ internal fun PrivateBilingualRecallPanel(
                         recallSpeech.cancel()
                         recordingAnswer = false
                         revealed = true
+                        comparisonSource = null
                         audioNotice = ""
                     },
                     enabled = enabled,
@@ -443,8 +463,45 @@ internal fun PrivateBilingualRecallPanel(
                     style = MaterialTheme.typography.labelMedium
                 )
                 Text(reference, style = MaterialTheme.typography.bodyLarge)
-                Text("Vergelijk zelf; de app geeft geen automatische score of antwoordanalyse.",
-                    style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Jij beoordeelt het antwoord. Je kunt daarnaast vrijwillig de " +
+                        "letterlijke woorden vergelijken; dat is geen betekenis- of " +
+                        "uitspraakcontrole.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (typedAnswer.isNotBlank() || spokenAnswer.isNotBlank()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (typedAnswer.isNotBlank()) {
+                            TextButton(onClick = {
+                                comparisonSource = if (comparisonSource == "typed") null else "typed"
+                            }, enabled = enabled) {
+                                Text(if (comparisonSource == "typed")
+                                    "Verberg getypte woordvergelijking" else "Vergelijk getypte woorden")
+                            }
+                        }
+                        if (spokenAnswer.isNotBlank()) {
+                            TextButton(onClick = {
+                                comparisonSource = if (comparisonSource == "spoken") null else "spoken"
+                            }, enabled = enabled) {
+                                Text(if (comparisonSource == "spoken")
+                                    "Verberg gesproken woordvergelijking" else "Vergelijk gesproken woorden")
+                            }
+                        }
+                    }
+                    if (comparisonSource == "typed" && typedAnswer.isNotBlank()) {
+                        PrivateRecallWordComparisonCard(
+                            learnerAttempt = typedAnswer,
+                            revealedReference = reference,
+                            attemptLabel = "getypt"
+                        )
+                    } else if (comparisonSource == "spoken" && spokenAnswer.isNotBlank()) {
+                        PrivateRecallWordComparisonCard(
+                            learnerAttempt = spokenAnswer,
+                            revealedReference = reference,
+                            attemptLabel = "lokaal herkende spraak"
+                        )
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { mark(false) }, enabled = enabled) {
                         Text("Zelf goed")
