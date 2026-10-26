@@ -272,7 +272,9 @@ internal fun PrivateBilingualRecallPanel(
             Text(question, style = MaterialTheme.typography.bodyLarge)
             if (!revealed) {
                 Text("Je kunt typen, zelf nadenken of bewust één lokaal antwoord inspreken. " +
-                    "Niet automatisch beoordeeld; geen cloudspraak of modeldownload." +
+                    "Android 13+ controleert eerst het lokale spraakpakket voor deze " +
+                    "antwoordtaal, zonder download. Android 12 kan de pakketstatus " +
+                    "niet bewijzen. Niet automatisch beoordeeld; geen cloudspraak." +
                         if (strictOfflineRadioOnly)
                             " Strikte vliegtuigmodus geldt ook voor je antwoordmicrofoon."
                         else " Androids oproep-, mute- en headsetmicrofoonbeleid gelden ook hier.",
@@ -293,7 +295,9 @@ internal fun PrivateBilingualRecallPanel(
                                     strictOfflineRadioOnly = strictOfflineRadioOnly,
                                     onNotice = { notice ->
                                         speechNotice = notice
-                                        if (!recallSpeech.isRecording()) recordingAnswer = false
+                                        // Admission is asynchronous on Android 13+;
+                                        // reflect both preflight and actual mic state.
+                                        recordingAnswer = recallSpeech.isRecording()
                                     },
                                     onFinalAnswer = { answer ->
                                         spokenAnswer = answer
@@ -308,8 +312,9 @@ internal fun PrivateBilingualRecallPanel(
                             recallSpeech.cancel()
                             recordingAnswer = false
                             spokenAnswer = ""
-                            speechNotice = "Opname gestopt. Geen gesproken antwoord bewaard."
-                        }) { Text("■ Stop opname") }
+                            speechNotice = "Spraakpakketcontrole of opname gestopt. " +
+                                "Geen gesproken antwoord bewaard."
+                        }) { Text("■ Stop controle/opname") }
                     }
                 }
                 if (permissionNotice.isNotBlank()) {
