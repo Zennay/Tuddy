@@ -258,8 +258,9 @@ de oorspronkelijke selectie alleen-lezen is.
   ML Kit-uitkomst blijft apart **alleen in het werkgeheugen** beschikbaar.
 - **Neem correctie over** accepteert uitsluitend niet-lege tekst van
   maximaal **8.000 UTF-16-eenheden**, met geldige Unicode en zonder
-  verborgen besturingstekens. Er wordt nooit stilzwijgend een lange
-  correctie afgekapt. De gecorrigeerde versie wordt de tekst voor
+  verborgen besturingstekens of Unicode-richtingsoverschrijvingen.
+  De interface toont direct waarom een correctie niet kan worden
+  overgenomen. Er wordt nooit stilzwijgend een lange correctie afgekapt. De gecorrigeerde versie wordt de tekst voor
   de bestaande uitvoeracties, pas als de gebruiker die daarna
   afzonderlijk aanklikt.
 - **Annuleer** laat de al beschikbare vertaling onveranderd.
@@ -274,6 +275,33 @@ de oorspronkelijke selectie alleen-lezen is.
 - Een alleen-lezen Android-bronapp kan nog steeds niet via
   `ACTION_PROCESS_TEXT` worden overschreven; kopiëren of delen blijven
   afzonderlijke, bewuste keuzes met de gebruikelijke Android-privacyrisico's.
+
+## Eenduidige Unicode-controle bij verbeteren en overdragen
+
+Een handmatige correctie moet aan **precies dezelfde Unicode-grens**
+voldoen als binnenkomende Android-tekst en lokale ML Kit-resultaten.
+Sommige verborgen Unicode-richtingsoverrides (`U+202A` tot en met
+`U+202E`) zijn *geen* gewone ASCII-besturingstekens, maar kunnen een
+vertaling anders laten ogen dan de werkelijke tekenvolgorde. Tuddy
+weigert zulke overrides nu ook in handmatige correcties en toont
+tijdens het typen een concrete foutmelding naast het veld, met een
+uitgeschakelde overneemknop zolang de tekst ongeldig is.
+
+Gewone rechts-naar-linkslettertekens, Arabische en Koerdische/
+Pasjtoe-schriften, normale verbindings- en isolatietekens en
+alinea-afbrekingen blijven toegestaan. Er worden geen woorden
+vervangen, tekenreeksen verkort of onzichtbare tekens stilzwijgend
+verwijderd.
+
+**Alle** uitgaande routes controleren de definitieve huidige
+vertaling nogmaals met dezelfde grens: klembord, Android-deelmenu
+en `PROCESS_TEXT`-vervanging. Ook de tweetalige bron-plus-vertaling
+wordt alleen opgebouwd als beide teksten veilig zijn. Bij een
+afwijzing geeft Tuddy een verklaring in plaats van ogenschijnlijk
+niets te doen; er wordt dan niets doorgegeven. De daadwerkelijke
+inhoud of afgewezen tekens worden niet naar logbestanden,
+analyseservices of een netwerk gestuurd. Bewuste externe
+overdracht blijft per actie vereist.
 
 ## Privacy en grenzen
 
