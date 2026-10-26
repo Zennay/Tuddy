@@ -19,7 +19,8 @@ import java.util.Locale
  * from Tuddy's continuous caption mic. No online recognizer or model download,
  * no partial text handoff, no persistence, no automated grading.
  * The one-shot input honors live capture's call/mute/permission monitor,
- * optional headset-microphone policy and opt-in strict offline radio gate.
+ * optional headset-microphone and thermal/battery policies and opt-in strict
+ * offline radio gate.
  *
  * Owned by a foreground recall panel. Cancellation invalidates callbacks
  * before destroying the recognizer, including on screen lock/background.
@@ -32,6 +33,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
     // mid-session safety boundaries as Tuddy's ordinary live microphone.
     private val micGuard = LocalMicrophonePrivacyGuard(app)
     private val headsetGuard = LocalHeadsetMicrophoneGuard(app)
+    private val powerGuard = LocalSpeechPowerGuard(app)
     private val strictRadioGuard = StrictOfflineRadioSessionMonitor(app)
     private var recognizer: SpeechRecognizer? = null
     private var watchdog: Runnable? = null
@@ -45,6 +47,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
         watchdog = null
         micGuard.disarm()
         headsetGuard.disarm()
+        powerGuard.disarm()
         strictRadioGuard.disarm()
         lockGate.disarm()
         val old = recognizer
@@ -91,6 +94,13 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
             onNotice("$headsetBlocker Geen antwoordopname gestart.")
             return false
         }
+        if (powerGuard.enabled()) {
+            val powerBlocker = powerGuard.currentBlocker()
+            if (powerBlocker != null) {
+                onNotice("$powerBlocker Geen antwoordopname gestart.")
+                return false
+            }
+        }
         if (strictOfflineRadioOnly &&
             !StrictOfflineRadioSessionMonitor.strictlyOffline(
                 OfflineRadioSnapshot.capture(app)
@@ -132,6 +142,17 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
             cancel()
             onNotice("Een vereiste headsetmicrofoon ontbreekt of de bewaking " +
                 "kon niet starten. Geen antwoordopname.")
+            return false
+        }
+        if (!powerGuard.arm { reason ->
+                if (version == epoch) {
+                    cancel()
+                    onNotice("$reason Lokale antwoordopname direct gestopt.")
+                }
+            }) {
+            cancel()
+            onNotice("Toestelbescherming voor accu/temperatuur kon niet " +
+                "worden gestart. Geen antwoordopname.")
             return false
         }
         if (strictOfflineRadioOnly && !strictRadioGuard.arm { reason ->
