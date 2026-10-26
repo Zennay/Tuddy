@@ -204,16 +204,43 @@ internal fun PrivateBilingualRecallPanel(
                 Text("Begin volledige ronde opnieuw")
             }
         } else if (current != null) {
+            val promptIsOriginal = promptSide == RecallPromptSide.ORIGINAL
+            val promptLanguage = if (promptIsOriginal) sourceCode else targetCode
+            val answerLanguage = if (promptIsOriginal) targetCode else sourceCode
+            val question = if (promptIsOriginal) current.original else current.translated
+            val reference = if (promptIsOriginal) current.translated else current.original
             Text(
                 "Ronde $round · zin ${position + 1}/${currentIndices.size}" +
-                    " · ${sourceCode.uppercase()} → ${targetCode.uppercase()}",
+                    " · ${promptLanguage.uppercase()} → ${answerLanguage.uppercase()}",
                 style = MaterialTheme.typography.labelMedium
             )
-            Text(current.original, style = MaterialTheme.typography.bodyLarge)
+            Text(question, style = MaterialTheme.typography.bodyLarge)
             if (!revealed) {
+                OutlinedTextField(
+                    value = typedAnswer,
+                    onValueChange = { candidate ->
+                        // No automatic upload, model call or persistence. Pasted
+                        // multiline content is reduced to a bounded draft.
+                        typedAnswer = candidate.replace('\n', ' ').replace('\r', ' ')
+                            .filterNot { it.isISOControl() }.take(400)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Mijn eigen antwoord · alleen tijdelijk") },
+                    placeholder = { Text("Typ of denk zelf de vertaling…") },
+                    supportingText = {
+                        Text("Maximaal 400 tekens. Androids toetsenbord heeft eigen privacyinstellingen.")
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        autoCorrectEnabled = false,
+                        imeAction = ImeAction.Done
+                    ),
+                    maxLines = 3,
+                    enabled = enabled
+                )
                 Text(
-                    "Denk eerst zelf aan de vertaling. De antwoordtekst blijft " +
-                        "hier verborgen totdat je op Onthul tikt.",
+                    "Je eigen antwoord wordt niet nagekeken of opgeslagen. " +
+                        "De referentie blijft verborgen tot jij op Onthul tikt.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 OutlinedButton(
@@ -224,15 +251,28 @@ internal fun PrivateBilingualRecallPanel(
                     },
                     enabled = enabled,
                     modifier = Modifier.semantics {
-                        contentDescription = "Onthul bestaande lokale vertaling voor zin ${position + 1}"
+                        contentDescription =
+                            "Onthul bestaande referentie voor zin ${position + 1}"
                     }
-                ) { Text("Onthul vertaling") }
+                ) { Text("Onthul referentie") }
             } else {
+                if (typedAnswer.isNotBlank()) {
+                    Text("Mijn getypte poging · niet automatisch beoordeeld",
+                        style = MaterialTheme.typography.labelMedium)
+                    Text(typedAnswer, style = MaterialTheme.typography.bodyLarge)
+                } else {
+                    Text("Geen getypt antwoord · alleen in gedachten geoefend.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 Text(
-                    "Bestaande lokale vertaling · kan fouten bevatten",
+                    if (promptIsOriginal)
+                        "Bestaande lokale vertaling · kan fouten bevatten"
+                    else "Oorspronkelijke zin · referentie, geen beoordeling",
                     style = MaterialTheme.typography.labelMedium
                 )
-                Text(current.translated, style = MaterialTheme.typography.bodyLarge)
+                Text(reference, style = MaterialTheme.typography.bodyLarge)
+                Text("Vergelijk zelf; de app geeft geen automatische score of antwoordanalyse.",
+                    style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { mark(false) }, enabled = enabled) {
                         Text("Zelf goed")
@@ -247,19 +287,19 @@ internal fun PrivateBilingualRecallPanel(
                     enabled = enabled,
                     onClick = {
                         speaker.speak(
-                            current.original, sourceCode, LocalSpeechPace.NORMAL
+                            question, promptLanguage, LocalSpeechPace.NORMAL
                         ) { audioNotice = it }
                     }
-                ) { Text("▶ Luister origineel") }
+                ) { Text("▶ Luister vraag") }
                 if (revealed) {
                     TextButton(
                         enabled = enabled,
                         onClick = {
                             speaker.speak(
-                                current.translated, targetCode, LocalSpeechPace.NORMAL
+                                reference, answerLanguage, LocalSpeechPace.NORMAL
                             ) { audioNotice = it }
                         }
-                    ) { Text("▶ Luister antwoord") }
+                    ) { Text("▶ Luister referentie") }
                 }
             }
             if (audioNotice.isNotBlank()) {
