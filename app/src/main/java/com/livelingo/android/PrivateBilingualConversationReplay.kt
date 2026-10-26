@@ -32,6 +32,21 @@ internal enum class BilingualReplayOrder {
     SOURCE_FIRST, TRANSLATION_FIRST
 }
 
+/**
+ * User-chosen pause between the two spoken languages and before the next
+ * translated caption pair. The replay has no live mic or model downloads.
+ * Pauses are RAM-only and cancelled by the owning LocalCaptionSpeaker.stop().
+ */
+internal enum class BilingualReplayPacing(
+    val thinkingGapMs: Long,
+    val nextPairGapMs: Long,
+    val label: String
+) {
+    CONTINUOUS(0L, 0L, "Direct achter elkaar"),
+    LISTEN_AND_ANSWER(2_500L, 750L, "2,5 s zelf antwoorden"),
+    REFLECT(5_000L, 1_500L, "5 s nadenken")
+}
+
 internal object PrivateBilingualConversationReplay {
     const val MAX_PAIRS = 8
     const val MAX_DIRECTIONS = 16
