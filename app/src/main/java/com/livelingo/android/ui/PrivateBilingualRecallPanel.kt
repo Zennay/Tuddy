@@ -4,18 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.ImeAction
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -77,7 +73,10 @@ internal fun PrivateBilingualRecallPanel(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(speaker, practice, sourceCode, targetCode, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
+            if (event == Lifecycle.Event.ON_PAUSE ||
+                event == Lifecycle.Event.ON_STOP) {
+                // Clear the learner's unsubmitted answer before Android may
+                // snapshot the screen or another app becomes foreground.
                 speaker.stop()
                 typedAnswer = ""
                 revealed = false
@@ -216,27 +215,23 @@ internal fun PrivateBilingualRecallPanel(
             )
             Text(question, style = MaterialTheme.typography.bodyLarge)
             if (!revealed) {
-                OutlinedTextField(
+                Text("Mijn eigen antwoord · alleen tijdelijk",
+                    style = MaterialTheme.typography.labelMedium)
+                PrivateRecallAnswerField(
                     value = typedAnswer,
                     onValueChange = { candidate ->
-                        // No automatic upload, model call or persistence. Pasted
-                        // multiline content is reduced to a bounded draft.
+                        // The native Android EditText constrains the buffer
+                        // before calling us; revalidate at this RAM boundary.
                         typedAnswer = candidate.replace('\n', ' ').replace('\r', ' ')
                             .filterNot { it.isISOControl() }.take(400)
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Mijn eigen antwoord · alleen tijdelijk") },
-                    placeholder = { Text("Typ of denk zelf de vertaling…") },
-                    supportingText = {
-                        Text("Maximaal 400 tekens. Androids toetsenbord heeft eigen privacyinstellingen.")
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.None,
-                        autoCorrectEnabled = false,
-                        imeAction = ImeAction.Done
-                    ),
-                    maxLines = 3,
                     enabled = enabled
+                )
+                Text(
+                    "Maximaal 400 tekens. Autocorrectie en persoonlijk " +
+                        "toetsenbordleren zijn voor dit veld uitgevraagd bij Android; " +
+                        "toetsenbordapps kunnen hun eigen privacybeleid hebben.",
+                    style = MaterialTheme.typography.bodySmall
                 )
                 if (typedAnswer.isNotEmpty()) {
                     TextButton(
