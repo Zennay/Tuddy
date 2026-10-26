@@ -8,6 +8,33 @@ vertaling mislukt. Tuddy bewaart dan de oorspronkelijke regel in het
 tijdelijke gesprek, met status **Model ontbreekt** of **Fout**. De gebruiker
 hoeft die oorspronkelijke zin niet opnieuw in te spreken.
 
+## Eerlijke voorrang op expliciete vertalingen
+
+Wanneer er een reeks nieuwe spraakzinnen in de **lokale wachtrij**
+staat, krijgen zinnen die de gebruiker *zelf* vertaalt, corrigeert,
+opnieuw probeert of na transcript-only bewust selecteert **voorrang**
+op nog wachtende automatische spraakzinnen. Dit voorkomt dat een
+bewust gecorrigeerde zin moet wachten tot de hele spraakbuffer is
+weggewerkt. Die voorrang is bewust begrensd:
+
+- Maximaal drie ingediende caption-translaties tegelijk, zoals vóór
+  deze mijlpaal. Al aan Android/ML Kit gegeven taken worden **nooit
+  onderbroken of verplaatst** voor een nieuwe gebruikersactie.
+- Als er óók automatische spraakvertalingen wachten, starten na
+  maximaal twee expliciete gebruikersverzoeken weer minimaal één
+  automatische caption. Zo kan een reeks handmatige bewerkingen de
+  live conversatie niet oneindig blokkeren.
+- Binnen iedere groep blijft de aanvraagvolgorde behouden. Een
+  herpoging vervangt een oudere aanvraag voor precies dezelfde
+  tijdelijk opgeslagen regel zonder eerst een vrij modelslot weg te
+  geven. Bij annulering, wissen, verwijderen en verlopen revisies
+  gelden dezelfde bestaande callback-/geheugenbeschermingen.
+- Het is **geen snellere vertaalmotor en geen garantie op een
+  voltooiingstijd**. De bestaande per-regel time-out, fysieke
+  ML Kit-taaklimiet, read-only modelcontrole en expliciete
+  wifi-downloadtoestemming blijven onveranderd. Er wordt geen
+  tekst, wachtrij of gebruikersactie opgeslagen op schijf.
+
 ## Geen permanent vastgelopen vertaalregels
 
 De lokale tekstvertaling heeft nu één **30-seconden-bovengrens** vanaf
