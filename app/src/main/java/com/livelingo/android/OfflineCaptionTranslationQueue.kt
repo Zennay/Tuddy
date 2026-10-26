@@ -3,31 +3,49 @@ package com.livelingo.android
 import java.util.ArrayDeque
 
 /**
- * Session-local fair FIFO admission for expensive Android ML Kit translation.
- * At most three completed captions can actively request translation at once.
- * Requests are not stored, persisted, sent online, or retried automatically;
- * each holds only the existing temporary row's pending launch closure.
+ * Explicit human correction/retry/typed caption requests may jump ahead of
+ * waiting automatic live speech captions; *already submitted* Android model
+ * tasks are never preempted. To prevent a busy typist from starving live
+ * conversation, at most two explicit starts precede the next automatic start
+ * whenever an automatic request is waiting.
  *
- * Every terminal outcome, row expiry, explicit correction, wipe or removal
- * releases its slot; outdated completions cannot free a newer revision.
+ * The queue retains only in-process callbacks and existing RAM caption IDs,
+ * never text, models, audio, user identities, or persistent history.
  */
+internal enum class CaptionTranslationPriority { AUTOMATIC, USER_REQUESTED }
+
 internal class OfflineCaptionTranslationQueue {
     private data class Request(
         val id: Long, val revision: Int, val begin: () -> Unit,
         val onStartError: () -> Unit
     )
-    private val waiting = ArrayDeque<Request>()
+    private val automatic = ArrayDeque<Request>()
+    private val userRequested = ArrayDeque<Request>()
     private val active = mutableMapOf<Long, Int>()
+    private var consecutiveUserStarts = 0
     private var draining = false
     private var closed = false
 
     fun enqueue(
-        id: Long, revision: Int, onStartError: () -> Unit, begin: () -> Unit
+        id: Long,
+        revision: Int,
+        priority: CaptionTranslationPriority = CaptionTranslationPriority.AUTOMATIC,
+        onStartError: () -> Unit,
+        begin: () -> Unit
     ): Boolean {
         if (closed) return false
-        cancel(id)
-        if (waiting.size >= CaptionRetentionPolicy.MAX_CAPTIONS) return false
-        waiting.addLast(Request(id, revision, begin, onStartError))
+        // A retry replacing its own old revision must be admitted before
+        // draining the freed active slot; otherwise an automatic caption can
+        // jump ahead between cancellation and insertion.
+        removeMatching(id)
+        if (automatic.size + userRequested.size >= CaptionRetentionPolicy.MAX_CAPTIONS) {
+            return false
+        }
+        val request = Request(id, revision, begin, onStartError)
+        when (priority) {
+            CaptionTranslationPriority.AUTOMATIC -> automatic.addLast(request)
+            CaptionTranslationPriority.USER_REQUESTED -> userRequested.addLast(request)
+        }
         drain()
         return true
     }
@@ -36,20 +54,29 @@ internal class OfflineCaptionTranslationQueue {
         if (active[id] == revision) {
             active.remove(id)
             drain()
-        } else if (waiting.removeIf { it.id == id && it.revision == revision }) {
-            drain()
+        } else {
+            val a = automatic.removeIf { it.id == id && it.revision == revision }
+            val b = userRequested.removeIf { it.id == id && it.revision == revision }
+            if (a || b) drain()
         }
     }
 
+    private fun removeMatching(id: Long): Boolean {
+        val activeRemoved = active.remove(id) != null
+        val autoRemoved = automatic.removeIf { it.id == id }
+        val humanRemoved = userRequested.removeIf { it.id == id }
+        return activeRemoved || autoRemoved || humanRemoved
+    }
+
     fun cancel(id: Long) {
-        val removed = active.remove(id) != null
-        val dequeued = waiting.removeIf { it.id == id }
-        if (removed || dequeued) drain()
+        if (removeMatching(id)) drain()
     }
 
     fun clear() {
-        waiting.clear()
+        automatic.clear()
+        userRequested.clear()
         active.clear()
+        consecutiveUserStarts = 0
     }
 
     fun close() {
@@ -57,12 +84,26 @@ internal class OfflineCaptionTranslationQueue {
         clear()
     }
 
+    private fun pick(): Request {
+        val useHuman = userRequested.isNotEmpty() &&
+            (automatic.isEmpty() || consecutiveUserStarts < MAX_CONSECUTIVE_USER_STARTS)
+        return if (useHuman) {
+            consecutiveUserStarts = (consecutiveUserStarts + 1)
+                .coerceAtMost(MAX_CONSECUTIVE_USER_STARTS)
+            userRequested.removeFirst()
+        } else {
+            consecutiveUserStarts = 0
+            automatic.removeFirst()
+        }
+    }
+
     private fun drain() {
         if (draining || closed) return
         draining = true
         try {
-            while (active.size < MAX_ACTIVE && waiting.isNotEmpty()) {
-                val item = waiting.removeFirst()
+            while (active.size < MAX_ACTIVE &&
+                (automatic.isNotEmpty() || userRequested.isNotEmpty())) {
+                val item = pick()
                 active[item.id] = item.revision
                 try {
                     item.begin()
@@ -78,5 +119,6 @@ internal class OfflineCaptionTranslationQueue {
 
     companion object {
         const val MAX_ACTIVE = 3
+        const val MAX_CONSECUTIVE_USER_STARTS = 2
     }
 }

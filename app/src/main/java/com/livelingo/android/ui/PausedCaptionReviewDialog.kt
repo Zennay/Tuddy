@@ -56,7 +56,9 @@ internal fun PausedCaptionReviewDialog(
                     "Selecteer zelf maximaal 6 oorspronkelijke zinnen uit één " +
                         "taalrichting. Tuddy controleert eerst de al geïnstalleerde " +
                         "lokale tekstmodellen. Er volgt geen modeldownload, " +
-                        "automatische hervatting of cloudvertaling.",
+                        "automatische hervatting of cloudvertaling. " +
+                        "Je gekozen zinnen krijgen eerlijke voorrang in de wachtrij, " +
+                        "zonder al gestarte lokale vertalingen te onderbreken.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (notice.isNotBlank()) {
