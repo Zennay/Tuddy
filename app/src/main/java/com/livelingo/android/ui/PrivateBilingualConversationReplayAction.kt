@@ -5,50 +5,41 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.BilingualReplayCaption
 import com.livelingo.android.LocalCaptionSpeaker
 import com.livelingo.android.LocalSpeechPace
 import com.livelingo.android.PrivateBilingualConversationReplay
 
 /**
- * Isolated Compose/action lifecycle to keep both TuddyScreen's bytecode and
- * the Activity's existing microphone cleanup policy unchanged.
- * Holds only a private RAM-only practice selection and ephemeral TTS engine.
+ * Kept outside TuddyScreen's bytecode-heavy Compose body.
+ * Uses the same private TTS engine as ordinary captions, so the screen's
+ * microphone Start/Stop immediately ends any replay before live capture.
+ * The only independent state is a transient user-selected replay length.
  */
 @Composable
 internal fun PrivateBilingualConversationReplayAction(
     captions: List<BilingualReplayCaption>,
     sourceCode: String,
     targetCode: String,
+    speaker: LocalCaptionSpeaker,
     enabled: Boolean
 ) {
-    val context = LocalContext.current
-    val owner = LocalLifecycleOwner.current
-    val speaker = remember(context) { LocalCaptionSpeaker(context) }
-    var notice by remember { mutableStateOf("") }
-    DisposableEffect(owner, speaker) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) speaker.stop()
-        }
-        owner.lifecycle.addObserver(observer)
-        onDispose {
-            owner.lifecycle.removeObserver(observer)
-            speaker.close()
-        }
+    var notice by androidx.compose.runtime.remember { mutableStateOf("") }
+    var selectedCount by androidx.compose.runtime.remember { mutableStateOf(3) }
+    // The Activity owns and closes this engine on background/microphone Stop.
+    // When this tool is hidden, cancel only playback, never close its owner.
+    DisposableEffect(speaker) {
+        onDispose { speaker.stop() }
     }
     val eligible = PrivateBilingualConversationReplay.available(
         captions, sourceCode, targetCode
@@ -65,9 +56,30 @@ internal fun PrivateBilingualConversationReplayAction(
         Text(
             "Alleen bestaande lokale vertalingen, op verzoek. " +
                 "Eerst het origineel, dan de vertaling. " +
-                "Vereist twee geïnstalleerde offline Android-stemmen.",
+                "Vereist twee geïnstalleerde offline Android-stemmen. " +
+                "Microfoonstart en verlaten van deze tools stoppen de replay.",
             style = MaterialTheme.typography.bodySmall
         )
+        Text(
+            "Kies hoeveel van de laatste afgeronde zinnen je wilt oefenen " +
+                "(beschikbaar: ${eligible.size}).",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (count in listOf(1, 3, 5, 8)) {
+                FilterChip(
+                    selected = selectedCount == count,
+                    onClick = {
+                        speaker.stop()
+                        selectedCount = count
+                        notice = "Aantal oefenzinnen gekozen: " +
+                            "${minOf(count, eligible.size)}. Tik op afspelen."
+                    },
+                    enabled = enabled && eligible.isNotEmpty(),
+                    label = { Text("${count}") }
+                )
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (pace in listOf(LocalSpeechPace.NORMAL, LocalSpeechPace.SLOW)) {
                 TextButton(
@@ -75,7 +87,7 @@ internal fun PrivateBilingualConversationReplayAction(
                     onClick = {
                         if (enabled) {
                             speaker.speakBilingualConversation(
-                                eligible, sourceCode, targetCode, pace,
+                                eligible.takeLast(selectedCount), sourceCode, targetCode, pace,
                                 onProgress = { done, total ->
                                     notice = "Tweetalige oefening: $done/$total zinnen voltooid."
                                 },
@@ -89,7 +101,7 @@ internal fun PrivateBilingualConversationReplayAction(
                         }
                     }
                 ) {
-                    Text(if (pace == LocalSpeechPace.NORMAL) "▶ Tweetalig" else "▶ Rustig")
+                    Text(if (pace == LocalSpeechPace.NORMAL) "▶ Oefen zinnen" else "▶ Rustig")
                 }
             }
         }
