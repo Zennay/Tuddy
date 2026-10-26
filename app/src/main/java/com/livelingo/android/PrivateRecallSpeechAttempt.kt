@@ -114,8 +114,8 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
                 return false
             }
             try {
-                speechPackCheck.check(languageTag, { receipt ->
-                    if (version != epoch) return@check
+                speechPackCheck.checkRecallLanguage(languageTag) { receipt ->
+                    if (version != epoch) return@checkRecallLanguage
                     when (receipt.stage) {
                     SpeechPackStage.CHECKING -> onNotice(
                         "Android controleert het geïnstalleerde offline pakket voor $languageTag…")
@@ -144,7 +144,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
                             "of typ je oefenantwoord zelf.")
                     }
                     }
-                }, allowLanguageVariant = true)
+                }
             } catch (_: Exception) {
                 cancel()
                 onNotice("De lokale pakketcontrole kon niet veilig worden gestart. " +
