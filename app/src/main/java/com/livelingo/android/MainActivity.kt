@@ -88,6 +88,7 @@ import com.livelingo.android.ui.OfflineStudyFlashcards
 import com.livelingo.android.ui.LocalCaptionPlaybackMenu
 import com.livelingo.android.ui.PrivateCaptionDeletionUndoControl
 import com.livelingo.android.ui.PrivateCaptionDeleteConfirmDialog
+import com.livelingo.android.ui.PrivateOfflineBackTranslationDialog
 import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.InstalledDeviceVoiceCatalogDialog
@@ -1124,6 +1125,9 @@ private fun TuddyScreen(
     var sessionCaptionStudyOpen by remember { mutableStateOf(false) }
     var sessionCaptionStudyStartId by remember { mutableStateOf<Long?>(null) }
     var presentedCaptionId by remember { mutableStateOf<Long?>(null) }
+    // A single user-selected completed row is held only while its private
+    // local comparison dialog is visible; never saved, exported or edited.
+    var backTranslationReviewRow by remember { mutableStateOf<Line?>(null) }
     // Local search stays in memory, never persisted or sent to an API.
     // Editing is opt-in and ephemeral: never persist drafts or silently rewrite audio.
     var editingCaptionId by remember { mutableStateOf<Long?>(null) }
@@ -4896,6 +4900,19 @@ private fun TuddyScreen(
     }
 
     MaterialTheme(colorScheme = colors) {
+        backTranslationReviewRow?.let { snapshot ->
+            if (!listening && lines.any { it.id == snapshot.id && it == snapshot } &&
+                snapshot.status == "Lokaal vertaald" &&
+                snapshot.sourceCode != snapshot.targetCode) {
+                PrivateOfflineBackTranslationDialog(
+                    original = snapshot.original,
+                    translation = snapshot.translated,
+                    sourceCode = snapshot.sourceCode,
+                    targetCode = snapshot.targetCode,
+                    onDismiss = { backTranslationReviewRow = null }
+                )
+            }
+        }
         if (uncertainSpeechReviewOpen && !listening) {
             UncertainSpeechReviewDialog(
                 candidates = uncertainSpeechChoices,
@@ -10779,6 +10796,21 @@ private fun TuddyScreen(
                                         pronunciationNotice = "Lokaal voorlezen gestopt."
                                     }
                                 )
+                                if (line.status == "Lokaal vertaald" &&
+                                    line.sourceCode != line.targetCode &&
+                                    line.original.length <= PrivateOfflineBackTranslationReview.MAX_UNITS &&
+                                    line.translated.length <= PrivateOfflineBackTranslationReview.MAX_UNITS) {
+                                    TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = !listening,
+                                        onClick = {
+                                            if (!listening && lines.any { it == line }) {
+                                                captionSpeaker.stop()
+                                                backTranslationReviewRow = line
+                                            }
+                                        }
+                                    ) { Text("⇄ Vergelijk via lokale terugvertaling…") }
+                                }
                                 Text(line.status, style = MaterialTheme.typography.labelSmall)
                                 TextButton(onClick = {
                                     val before = captionPins
