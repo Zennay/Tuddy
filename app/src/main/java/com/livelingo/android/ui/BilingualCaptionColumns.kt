@@ -33,6 +33,9 @@ internal fun BilingualCaptionColumns(
     val translated = status == "Lokaal vertaald" || status == "Lokaal"
     val originalStyle = MaterialTheme.typography.titleLarge.copy(
         fontSize = MaterialTheme.typography.titleLarge.fontSize * fontScale,
+        // Keep physical line height proportional when Android system text
+        // scaling and the user-selected reader zoom are both enlarged.
+        lineHeight = MaterialTheme.typography.titleLarge.fontSize * fontScale * 1.35f,
         textDirection = TextDirection.ContentOrRtl
     )
     val translatedStyle = originalStyle.copy(color = MaterialTheme.colorScheme.primary)
