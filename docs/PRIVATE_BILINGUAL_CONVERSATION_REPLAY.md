@@ -15,18 +15,30 @@ stembeoordeling of export.
    Handmatige vertaalvoorstellen, verlopen taken, ontbrekende modellen,
    onzekere foutstatussen of regels uit een andere taalrichting worden
    niet automatisch in deze oefening meegenomen.
-4. Kies expliciet **1, 3, 5 of 8** meest recente zinnen. Er worden
-   nooit meer regels geselecteerd dan werkelijk afgerond en beschikbaar
-   zijn. De keuze bestaat alleen zolang dit paneel open is. Een gewijzigde
-   keuze stopt eventueel lopend voorlezen.
-5. Tik op **▶ Oefen zinnen** of **▶ Rustig**. Tuddy controleert **beide**
+4. Kies expliciet een maximum van **1, 3, 5 of 8** zinnen. Zonder
+   verdere keuze neemt Tuddy zoals voorheen de laatste afgeronde zinnen.
+   Via **Kies startzin** kun je in hetzelfde actuele gesprek ook
+   **vanaf een specifieke van de acht beschikbare zinnen** oefenen.
+   Wanneer er vanaf die zin minder dan het gekozen aantal overblijven,
+   oefent Tuddy alleen die bestaande zinnen: er wordt niets herhaald,
+   opgevuld of uit een andere taalrichting gehaald. **Automatisch ·
+   laatste zinnen** herstelt de standaardselectie.
+5. Kies daarnaast **Origineel eerst** of **Vertaling eerst**. De tweede
+   optie is een oefening in actieve herinnering: de al aanwezige lokale
+   vertaling wordt vóór het originele antwoord voorgelezen. Beide
+   volgordes vereisen dezelfde geïnstalleerde offline stem voor *beide*
+   talen; bij het wisselen van volgorde stopt lopende playback.
+6. Tik op **▶ Oefen zinnen** of **▶ Rustig**. Tuddy controleert **beide**
    Android-stemmen voordat enige private tekst wordt voorgelezen.
    Er wordt niets gedownload, opnieuw vertaald of online verzonden.
-6. Elke regel volgt in oorspronkelijke gespreksvolgorde: eerst het
-   origineel, vervolgens de bestaande lokale vertaling. Na elk paar
+   Het gekozen bereik verschijnt vooraf zichtbaar in het paneel.
+7. De geselecteerde paren blijven in hun oorspronkelijke
+   gespreksvolgorde. Binnen elk paar wordt de gekozen taalvolgorde
+   toegepast: de bronzin met de bronstem en de vertaling met de
+   doelstem, ook als **Vertaling eerst** actief is. Na elk paar
    verschijnt de voortgang. Bij volledige afronding of **■ Stop**
    sluit de app de tijdelijke TTS-engine en geeft de audiofocus vrij.
-7. De replay en de overige voorleesknoppen delen vanaf nu exact **één
+8. De replay en de overige voorleesknoppen delen vanaf nu exact **één
    lokale TTS-engine per hoofdscherm**. Daardoor stopt een microfoonstart
    de replay **vóór** Android begint met luisteren: de microfoon hoort
    niet per ongeluk zijn eigen synthetic speech. Andere expliciete
@@ -38,7 +50,8 @@ stembeoordeling of export.
 ## Veiligheidsgrenzen
 
 De oefening behoudt alleen een tijdelijke snapshot van bestaande
-gespreksregels in RAM. Het maximum is acht tweetalige paren (zestien
+gespreksregels in RAM. Startzin, aantal en volgorde worden alleen in
+het huidige scherm bijgehouden; niets daarvan gaat naar een bestand. Het maximum is acht tweetalige paren (zestien
 uitgesproken segmenten), elk maximaal 400 veilig leesbare tekens.
 Er zijn geen audiobestanden, geschiedenis, analytics of voorkeurswijzigingen.
 De Android-spraakdienst moet voor beide talen een geïnstalleerde,
