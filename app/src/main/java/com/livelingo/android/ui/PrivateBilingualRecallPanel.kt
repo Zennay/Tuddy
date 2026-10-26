@@ -238,6 +238,15 @@ internal fun PrivateBilingualRecallPanel(
                     maxLines = 3,
                     enabled = enabled
                 )
+                if (typedAnswer.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            typedAnswer = ""
+                            speaker.stop()
+                        },
+                        enabled = enabled
+                    ) { Text("Wis mijn getypte antwoord") }
+                }
                 Text(
                     "Je eigen antwoord wordt niet nagekeken of opgeslagen. " +
                         "De referentie blijft verborgen tot jij op Onthul tikt.",
