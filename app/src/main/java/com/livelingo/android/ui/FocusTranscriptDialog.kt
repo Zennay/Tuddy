@@ -663,6 +663,7 @@ internal fun FocusTranscriptDialog(
                                     SessionCaptionSearchText(own, captionQuery,
                                         MaterialTheme.typography.titleMedium.copy(
                                             fontSize = MaterialTheme.typography.titleMedium.fontSize * readerTextScale,
+                                            lineHeight = MaterialTheme.typography.titleMedium.fontSize * readerTextScale * 1.35f,
                                             textDirection = TextDirection.ContentOrRtl
                                         ))
                                 }
@@ -678,6 +679,7 @@ internal fun FocusTranscriptDialog(
                                         line.original,
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             fontSize = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale,
+                                            lineHeight = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale * 1.35f,
                                             textDirection = TextDirection.ContentOrRtl
                                         )
                                     )
@@ -693,6 +695,7 @@ internal fun FocusTranscriptDialog(
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             color = MaterialTheme.colorScheme.primary,
                                             fontSize = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale,
+                                            lineHeight = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale * 1.35f,
                                             textDirection = TextDirection.ContentOrRtl
                                         )
                                     )
@@ -714,6 +717,7 @@ internal fun FocusTranscriptDialog(
                                     SessionCaptionSearchText(line.original, captionQuery,
                                     style = MaterialTheme.typography.headlineSmall.copy(
                                         fontSize = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale,
+                                            lineHeight = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale * 1.35f,
                                         textDirection = TextDirection.ContentOrRtl
                                     ),
                                     enableOfflineWordCards = true,
@@ -726,6 +730,7 @@ internal fun FocusTranscriptDialog(
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             color = MaterialTheme.colorScheme.primary,
                                             fontSize = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale,
+                                            lineHeight = MaterialTheme.typography.headlineSmall.fontSize * readerTextScale * 1.35f,
                                             textDirection = TextDirection.ContentOrRtl
                                         ),
                                         enableOfflineWordCards = true,
@@ -763,7 +768,7 @@ internal fun FocusTranscriptDialog(
                                     } else {
                                         LiveInterimWordFocus(
                                         text = interimOriginal,
-                                        fontScale = fontScale
+                                        fontScale = readerTextScale
                                     )
                                     Text(
                                         "Laatste tekstwoord benadrukt · geen audio-tijdsynchronisatie.",
@@ -772,7 +777,7 @@ internal fun FocusTranscriptDialog(
                                     )
                                     if (interimTranslated.isNotBlank()) {
                                         LiveInterimWordFocus(
-                                            text = interimTranslated, fontScale = fontScale
+                                            text = interimTranslated, fontScale = readerTextScale
                                         )
                                         Text("Laatste tekstwoord in lokale voorlopige " +
                                             "vertaling · geen audio-woordtiming.",
