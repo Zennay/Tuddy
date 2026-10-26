@@ -119,10 +119,21 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
             "Geen bevestigd offline spraakpakket voor $tag op dit toestel. Geen cloudfallback.")
     }
 
-    fun check(
+    // Preserve the existing public call shape so every live speech caller
+    // retains its exact-region recognition contract and trailing lambda.
+    fun check(tag: String, callback: (SpeechPackReceipt) -> Unit) {
+        checkInternal(tag, callback, allowLanguageVariant = false)
+    }
+
+    /** Only voluntary one-shot recall accepts an installed regional variant. */
+    fun checkRecallLanguage(tag: String, callback: (SpeechPackReceipt) -> Unit) {
+        checkInternal(tag, callback, allowLanguageVariant = true)
+    }
+
+    private fun checkInternal(
         tag: String,
         callback: (SpeechPackReceipt) -> Unit,
-        allowLanguageVariant: Boolean = false
+        allowLanguageVariant: Boolean
     ) {
         if (Build.VERSION.SDK_INT < 33) {
             cancel()
