@@ -75,6 +75,7 @@ import com.livelingo.android.ui.LocalSubtitleAudioPreviewDialog
 import com.livelingo.android.ui.FaceToFaceConversationDialog
 import com.livelingo.android.ui.FocusTranscriptDialog
 import com.livelingo.android.ui.LiveMicrophonePermissionControls
+import com.livelingo.android.ui.ExplicitAccessibilityCaptionAction
 import com.livelingo.android.ui.PrivateConversationCurtainDialog
 import com.livelingo.android.ui.PrivateProtectionSettingsPanel
 import com.livelingo.android.ui.SubtitleDraftControls
@@ -9956,6 +9957,24 @@ private fun TuddyScreen(
                         else "Gesprekstools · export, sprekers en archief")
                 }
                 if (conversationToolsOpen) {
+                    // Accessibility services may belong to third parties.
+                    // Only a deliberate, confirmed tap may disclose one current
+                    // completed RAM caption; never announce live microphone text.
+                    val mostRecentCompleted = lines.lastOrNull {
+                        it.status in setOf("Lokaal vertaald", "Lokaal") &&
+                            it.original.isNotBlank()
+                    }
+                    if (mostRecentCompleted != null && !listening && !privateCurtainOpen) {
+                        ExplicitAccessibilityCaptionAction(
+                            title = "Laatste voltooide gespreksregel · Android-schermlezer",
+                            original = mostRecentCompleted.original,
+                            translation = mostRecentCompleted.translated,
+                            sourceCode = mostRecentCompleted.sourceCode,
+                            targetCode = mostRecentCompleted.targetCode,
+                            enabled = !listening && !privateCurtainOpen &&
+                                !confirmClearConversation
+                        )
+                    }
                     translationMemoryRevision // Reflect the count after opt-in or deletion.
                     OutlinedButton(
                         onClick = { translationMemoryOpen = true },
