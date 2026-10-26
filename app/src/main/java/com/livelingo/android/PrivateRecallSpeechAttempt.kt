@@ -50,7 +50,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
     fun cancel() {
         epoch++
         checkingSpeechPack = false
-        speechPackCheck.cancel()
+        runCatching { speechPackCheck.cancel() }
         packTimeout?.let(main::removeCallbacks)
         packTimeout = null
         watchdog?.let(main::removeCallbacks)
@@ -113,9 +113,10 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
                     "Geen antwoordmicrofoon gestart.")
                 return false
             }
-            speechPackCheck.check(languageTag) { receipt ->
-                if (version != epoch) return@check
-                when (receipt.stage) {
+            try {
+                speechPackCheck.check(languageTag, { receipt ->
+                    if (version != epoch) return@check
+                    when (receipt.stage) {
                     SpeechPackStage.CHECKING -> onNotice(
                         "Android controleert het geïnstalleerde offline pakket voor $languageTag…")
                     SpeechPackStage.READY, SpeechPackStage.UNKNOWN -> {
@@ -142,7 +143,12 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
                             "Controleer het spraakpakket in Offline startcheck " +
                             "of typ je oefenantwoord zelf.")
                     }
-                }
+                }, allowLanguageVariant = true)
+            } catch (_: Exception) {
+                cancel()
+                onNotice("De lokale pakketcontrole kon niet veilig worden gestart. " +
+                    "Geen antwoordmicrofoon gestart; typ eventueel je antwoord zelf.")
+                return false
             }
             return isRecording()
         }
