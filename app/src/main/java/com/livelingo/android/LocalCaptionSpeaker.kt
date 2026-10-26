@@ -202,6 +202,9 @@ internal class LocalCaptionSpeaker(context: Context) {
         }
 
         val version = generation
+        // One exact callback ID and terminal state for each sequence line.
+        // The same engine may report a late onError for a previous line.
+        val turnGate = OfflineSpeechSequenceTurnGate(version, safeLines.size)
         var sequenceIndex = 0
         feedback("Geïnstalleerde lokale Android-stem controleren…")
 
@@ -224,8 +227,12 @@ internal class LocalCaptionSpeaker(context: Context) {
 
         fun speakAt(tts: TextToSpeech, index: Int) {
             if (generation != version) return
+            if (!turnGate.queueNext(index)) {
+                fail("Android-voorleesreeks kon de volgende regel niet veilig starten. " +
+                    "Resterende audio gestopt.")
+                return
+            }
             sequenceIndex = index
-            onLineStarted(index)
             playbackDeadline.awaitUtterance(safeLines[index].length, pace) {
                 if (generation == version && sequenceIndex == index) {
                     fail("Android bevestigde het einde van voorleesregel ${index + 1} niet. " +
@@ -238,7 +245,7 @@ internal class LocalCaptionSpeaker(context: Context) {
                     safeLines[index],
                     TextToSpeech.QUEUE_FLUSH,
                     null,
-                    "tuddy-offline-sequence-$version-$index"
+                    turnGate.activeId(index)
                 )
             }.getOrDefault(TextToSpeech.ERROR)
             if (result != TextToSpeech.SUCCESS) {
@@ -268,7 +275,12 @@ internal class LocalCaptionSpeaker(context: Context) {
                             return@post
                         }
                         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                            override fun onStart(utteranceId: String?) = Unit
+                            override fun onStart(utteranceId: String?) {
+                                main.post {
+                                    if (generation != version) return@post
+                                    turnGate.started(utteranceId)?.let(onLineStarted)
+                                }
+                            }
 
                             override fun onRangeStart(
                                 utteranceId: String?,
@@ -276,35 +288,30 @@ internal class LocalCaptionSpeaker(context: Context) {
                                 end: Int,
                                 frame: Int
                             ) {
-                                val spokenIndex = utteranceId
-                                    ?.substringAfterLast('-')
-                                    ?.toIntOrNull() ?: return
                                 main.post {
-                                    if (generation != version || spokenIndex != sequenceIndex) {
-                                        return@post
-                                    }
-                                    val line = safeLines.getOrNull(spokenIndex) ?: return@post
-                                    if (start >= 0 && end > start && end <= line.length) {
-                                        onWordRange(spokenIndex, start, end)
-                                    }
+                                    if (generation != version) return@post
+                                    val index = sequenceIndex
+                                    val line = safeLines.getOrNull(index) ?: return@post
+                                    val range = turnGate.range(
+                                        utteranceId, start, end, line.length
+                                    ) ?: return@post
+                                    onWordRange(index, range.first, range.second)
                                 }
                             }
 
                             override fun onDone(utteranceId: String?) {
-                                val finishedIndex = utteranceId
-                                    ?.substringAfterLast('-')
-                                    ?.toIntOrNull() ?: return
                                 main.post {
-                                    if (generation != version || finishedIndex != sequenceIndex) {
-                                        return@post
-                                    }
+                                    if (generation != version) return@post
+                                    val finishedIndex =
+                                        turnGate.completed(utteranceId) ?: return@post
                                     playbackDeadline.clear()
                                     onProgress(finishedIndex + 1, safeLines.size)
+                                    if (generation != version) return@post
                                     if (finishedIndex + 1 >= safeLines.size) {
                                         stop()
                                         feedback("Voorlezen voltooid: ${safeLines.size} regels lokaal afgespeeld.")
                                         onFinished(true)
-                                    } else {
+                                    } else if (turnGate.readyForNext()) {
                                         speakAt(tts, finishedIndex + 1)
                                     }
                                 }
@@ -312,9 +319,13 @@ internal class LocalCaptionSpeaker(context: Context) {
 
                             override fun onError(utteranceId: String?) {
                                 main.post {
-                                    if (generation == version) {
-                                        fail("Lokale spraakfout; de resterende regels zijn gestopt. Geen online fallback.")
+                                    if (generation == version && turnGate.failed(utteranceId)) {
+                                        fail("Lokale spraakfout in de huidige regel; " +
+                                            "de resterende reeks is gestopt. Geen online fallback.")
                                     }
+                                    // Android sometimes reports an old line's
+                                    // error after the NEXT line has started.
+                                    // Ignore it; that line has its own deadline.
                                 }
                             }
                         })
