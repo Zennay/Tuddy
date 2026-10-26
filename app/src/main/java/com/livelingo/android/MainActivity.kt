@@ -628,54 +628,22 @@ private fun LatestPrivateCaptionAccessibilityAction(
         targetCode = latest.targetCode,
         enabled = true
     )
-    // A separate composer and independent transient playback engine keep
-    // TuddyScreen's already-full Kotlin/JVM method exactly at its baseline.
-    // When tools close, microphone starts, privacy cover activates, or the
-    // Activity stops, this component releases its playback and audio focus.
-    val recentPair = lines.lastOrNull {
+    // This helper stays outside the giant TuddyScreen Compose lambda.
+    // The separate action owns its own Android TTS cleanup and user state;
+    // no extra onDispose before the Activity's existing microphone lifecycle.
+    val recent = lines.lastOrNull {
         it.status == "Lokaal vertaald" && it.sourceCode != it.targetCode
     } ?: return
-    val context = LocalContext.current
-    val owner = LocalLifecycleOwner.current
-    val speaker = remember(context) { LocalCaptionSpeaker(context) }
-    var notice by remember { mutableStateOf("") }
-    DisposableEffect(owner, speaker) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) speaker.stop()
-        }
-        owner.lifecycle.addObserver(observer)
-        onDispose {
-            owner.lifecycle.removeObserver(observer)
-            speaker.close()
-        }
-    }
     PrivateBilingualConversationReplayAction(
-        captions = lines.map { row ->
+        captions = lines.map { line ->
             BilingualReplayCaption(
-                row.original, row.translated,
-                row.sourceCode, row.targetCode, row.status
+                line.original, line.translated,
+                line.sourceCode, line.targetCode, line.status
             )
         },
-        sourceCode = recentPair.sourceCode,
-        targetCode = recentPair.targetCode,
-        enabled = true,
-        notice = notice,
-        onPlay = { pairs, pace ->
-            speaker.speakBilingualConversation(
-                pairs, recentPair.sourceCode, recentPair.targetCode, pace,
-                onProgress = { done, total ->
-                    notice = "Tweetalige oefening: $done/$total zinnen voltooid."
-                },
-                feedback = { notice = it },
-                onFinished = { completed ->
-                    if (!completed && notice.isBlank()) notice = "Voorlezen gestopt."
-                }
-            )
-        },
-        onStop = {
-            speaker.stop()
-            notice = "Tweetalig voorlezen gestopt."
-        }
+        sourceCode = recent.sourceCode,
+        targetCode = recent.targetCode,
+        enabled = true
     )
 }
 
