@@ -611,6 +611,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun LatestPrivateCaptionAccessibilityAction(
     lines: List<Line>,
+    speaker: LocalCaptionSpeaker,
     listening: Boolean,
     privateCurtainOpen: Boolean,
     confirmClearConversation: Boolean
@@ -629,8 +630,8 @@ private fun LatestPrivateCaptionAccessibilityAction(
         enabled = true
     )
     // This helper stays outside the giant TuddyScreen Compose lambda.
-    // The separate action owns its own Android TTS cleanup and user state;
-    // no extra onDispose before the Activity's existing microphone lifecycle.
+    // The replay now shares TuddyScreen's existing TTS owner, so microphone
+    // Start/Stop and its lifecycle close that engine before live capture.
     val recent = lines.lastOrNull {
         it.status == "Lokaal vertaald" && it.sourceCode != it.targetCode
     } ?: return
@@ -643,6 +644,7 @@ private fun LatestPrivateCaptionAccessibilityAction(
         },
         sourceCode = recent.sourceCode,
         targetCode = recent.targetCode,
+        speaker = speaker,
         enabled = true
     )
 }
@@ -10002,7 +10004,8 @@ private fun TuddyScreen(
                 }
                 if (conversationToolsOpen) {
                     LatestPrivateCaptionAccessibilityAction(
-                        lines, listening, privateCurtainOpen, confirmClearConversation
+                        lines, captionSpeaker, listening, privateCurtainOpen,
+                        confirmClearConversation
                     )
                     translationMemoryRevision // Reflect the count after opt-in or deletion.
                     OutlinedButton(
