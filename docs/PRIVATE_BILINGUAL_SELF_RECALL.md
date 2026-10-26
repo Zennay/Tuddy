@@ -16,6 +16,37 @@ ongevraagd het antwoord voorzegt; buiten dit paneel blijft het bestaande
 gesprek wel toegankelijk. De lokale vertaling kan inhoudelijke fouten
 bevatten en is geen onafhankelijke beoordeling.
 
+### Antwoord zelf typen en twee richtingen oefenen
+
+Boven **Begin stille overhoorronde** kun je nu expliciet kiezen:
+**oorspronkelijke taal → vertaling** of **vertaalde taal → oorspronkelijke
+taal**. De tweede richting gebruikt uitsluitend hetzelfde bestaande
+tweetalige zinspaar, maar verwisselt vraag en referentie. Er ontstaat
+geen nieuwe ML Kit-vertaling of claim over de kwaliteit van een
+terugvertaling. Wissel je van richting, dan stopt eventuele audio en
+wordt een lopende overhoorronde volledig opnieuw gestart.
+
+Tijdens de vraag kan je je eigen antwoord **in een tijdelijk
+tekstveld typen** (maximaal 400 afdrukbare tekens). Ook
+denken zonder typen blijft mogelijk. **Wis mijn getypte antwoord**
+gooit je concept direct weg. Na **Onthul referentie** toont Tuddy je
+eigen poging naast de al bestaande lokale tekst: de app corrigeert
+niet automatisch, maakt geen correctievoorstel en slaat geen oordeel
+van een model op. De vraag en referentie kunnen desgewenst afzonderlijk
+worden voorgelezen via al lokaal geïnstalleerde Android-stemmen, op
+een expliciete tik, ook bij omgekeerde oefenrichting.
+
+**Privacy:** ingevoerde antwoorden staan alleen in tijdelijke
+Compose-toestand; er is geen Android SavedState, back-up, netwerk,
+cloudmodel, woordenboekopslag of synchronisatie. Bij de volgende
+vraag, een nieuwe ronde, richting wisselen, sluiten of Android
+naar de achtergrond wordt gebracht, wordt het antwoord gewist.
+Tuddy zet autocorrectie uit voor dit tekstveld, maar het
+**door de gebruiker ingestelde Android-toetsenbord** kan eigen
+woordenleer-, netwerk- en privacysinstellingen hebben; Tuddy kan
+die externe toetsenbordapp niet controleren. Gebruik geen gevoelige
+persoonsgegevens in je oefenantwoord.
+
 Daarna kun je de zin zelf markeren als **Zelf goed** of **Nog oefenen**.
 De app houdt alleen tijdens deze actieve UI-sessie de indexen van de
 zinnen bij die je zelf nog wilde oefenen. Na de ronde kun je uitsluitend
@@ -26,8 +57,8 @@ vertaalkwaliteit, taalvaardigheid of een geslaagde offline toestelproef.
 
 ### Audio is nooit automatisch
 
-De knoppen **Luister origineel** en, pas na onthulling, **Luister
-antwoord** zijn afzonderlijke acties. Alleen als je erop tikt gebruikt
+De knoppen **Luister vraag** en, pas na onthulling, **Luister
+referentie** zijn afzonderlijke acties. Alleen als je erop tikt gebruikt
 Tuddy zijn bestaande gecontroleerde offline Android-voorleesstemmen
 met audiofocus en uitvoerapparaatbewaking. Verdergaan, opnieuw
 beginnen, een andere taalrichting/zin kiezen, het scherm verlaten
