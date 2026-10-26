@@ -613,7 +613,12 @@ private fun LatestPrivateCaptionAccessibilityAction(
     lines: List<Line>,
     listening: Boolean,
     privateCurtainOpen: Boolean,
-    confirmClearConversation: Boolean
+    confirmClearConversation: Boolean,
+    sourceCode: String,
+    targetCode: String,
+    speaker: LocalCaptionSpeaker,
+    notice: String,
+    onNotice: (String) -> Unit
 ) {
     if (listening || privateCurtainOpen || confirmClearConversation) return
     val latest = lines.lastOrNull {
@@ -627,6 +632,34 @@ private fun LatestPrivateCaptionAccessibilityAction(
         sourceCode = latest.sourceCode,
         targetCode = latest.targetCode,
         enabled = true
+    )
+    PrivateBilingualConversationReplayAction(
+        captions = lines.map { row ->
+            BilingualReplayCaption(
+                row.original, row.translated,
+                row.sourceCode, row.targetCode, row.status
+            )
+        },
+        sourceCode = sourceCode,
+        targetCode = targetCode,
+        enabled = true,
+        notice = notice,
+        onPlay = { pairs, pace ->
+            speaker.speakBilingualConversation(
+                pairs, sourceCode, targetCode, pace,
+                onProgress = { done, total ->
+                    onNotice("Tweetalige oefening: $done/$total zinnen voltooid.")
+                },
+                feedback = onNotice,
+                onFinished = { completed ->
+                    if (!completed && notice.isBlank()) onNotice("Voorlezen gestopt.")
+                }
+            )
+        },
+        onStop = {
+            speaker.stop()
+            onNotice("Tweetalig voorlezen gestopt.")
+        }
     )
 }
 
@@ -9985,40 +10018,10 @@ private fun TuddyScreen(
                 }
                 if (conversationToolsOpen) {
                     LatestPrivateCaptionAccessibilityAction(
-                        lines, listening, privateCurtainOpen, confirmClearConversation
-                    )
-                    PrivateBilingualConversationReplayAction(
-                        captions = lines.map { line ->
-                            BilingualReplayCaption(
-                                line.original, line.translated,
-                                line.sourceCode, line.targetCode, line.status
-                            )
-                        },
-                        sourceCode = source.translateCode,
-                        targetCode = target.translateCode,
-                        enabled = !listening && !privateCurtainOpen,
-                        notice = pronunciationNotice,
-                        onPlay = { pairs, pace ->
-                            if (!listening && !privateCurtainOpen) {
-                                captionSpeaker.speakBilingualConversation(
-                                    pairs, source.translateCode, target.translateCode, pace,
-                                    onProgress = { done, total ->
-                                        pronunciationNotice =
-                                            "Tweetalige oefening: $done/$total zinnen voltooid."
-                                    },
-                                    feedback = { pronunciationNotice = it },
-                                    onFinished = { completed ->
-                                        if (!completed && pronunciationNotice.isBlank()) {
-                                            pronunciationNotice = "Voorlezen gestopt."
-                                        }
-                                    }
-                                )
-                            }
-                        },
-                        onStop = {
-                            captionSpeaker.stop()
-                            pronunciationNotice = "Tweetalig voorlezen gestopt."
-                        }
+                        lines, listening, privateCurtainOpen, confirmClearConversation,
+                        source.translateCode, target.translateCode,
+                        captionSpeaker, pronunciationNotice,
+                        onNotice = { pronunciationNotice = it }
                     )
                     translationMemoryRevision // Reflect the count after opt-in or deletion.
                     OutlinedButton(
