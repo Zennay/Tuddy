@@ -53,7 +53,8 @@ internal fun PrivateBilingualRecallPanel(
     targetCode: String,
     speaker: LocalCaptionSpeaker,
     recallSpeech: PrivateRecallSpeechAttempt,
-    enabled: Boolean
+    enabled: Boolean,
+    strictOfflineRadioOnly: Boolean
 ) {
     // When a caption is edited/deleted or the selected language, start or
     // count changes, discard every old answer/review index and stop old audio.
@@ -271,7 +272,10 @@ internal fun PrivateBilingualRecallPanel(
             Text(question, style = MaterialTheme.typography.bodyLarge)
             if (!revealed) {
                 Text("Je kunt typen, zelf nadenken of bewust één lokaal antwoord inspreken. " +
-                    "Niet automatisch beoordeeld; geen cloudspraak of modeldownload.",
+                    "Niet automatisch beoordeeld; geen cloudspraak of modeldownload." +
+                        if (strictOfflineRadioOnly)
+                            " Strikte vliegtuigmodus geldt ook voor je antwoordmicrofoon."
+                        else " Androids oproep-, mute- en headsetmicrofoonbeleid gelden ook hier.",
                     style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(
@@ -286,6 +290,7 @@ internal fun PrivateBilingualRecallPanel(
                                 speechNotice = ""
                                 recordingAnswer = recallSpeech.start(
                                     answerLanguage,
+                                    strictOfflineRadioOnly = strictOfflineRadioOnly,
                                     onNotice = { notice ->
                                         speechNotice = notice
                                         if (!recallSpeech.isRecording()) recordingAnswer = false
