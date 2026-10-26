@@ -18,6 +18,9 @@ import java.util.Locale
  * User-triggered, one-shot on-device answer rehearsal; deliberately separate
  * from Tuddy's continuous caption mic. No online recognizer or model download,
  * no partial text handoff, no persistence, no automated grading.
+ * The one-shot input honors live capture's call/mute/permission monitor,
+ * optional headset-microphone and thermal/battery policies and opt-in strict
+ * offline radio gate.
  *
  * Owned by a foreground recall panel. Cancellation invalidates callbacks
  * before destroying the recognizer, including on screen lock/background.
@@ -26,6 +29,12 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
     private val app = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
     private val lockGate = LocalScreenLockPrivacyGate(app)
+    // The short one-shot learner microphone must obey the SAME admission and
+    // mid-session safety boundaries as Tuddy's ordinary live microphone.
+    private val micGuard = LocalMicrophonePrivacyGuard(app)
+    private val headsetGuard = LocalHeadsetMicrophoneGuard(app)
+    private val powerGuard = LocalSpeechPowerGuard(app)
+    private val strictRadioGuard = StrictOfflineRadioSessionMonitor(app)
     private var recognizer: SpeechRecognizer? = null
     private var watchdog: Runnable? = null
     private var epoch = 0L
@@ -36,6 +45,10 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
         epoch++
         watchdog?.let(main::removeCallbacks)
         watchdog = null
+        micGuard.disarm()
+        headsetGuard.disarm()
+        powerGuard.disarm()
+        strictRadioGuard.disarm()
         lockGate.disarm()
         val old = recognizer
         recognizer = null
@@ -48,6 +61,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
     /** Returns false with a safe notice if Android may not start recording. */
     fun start(
         languageTag: String,
+        strictOfflineRadioOnly: Boolean,
         onNotice: (String) -> Unit,
         onFinalAnswer: (String) -> Unit
     ): Boolean {
@@ -70,6 +84,31 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
             onNotice("Deze antwoordtaal is niet geschikt voor lokaal inspreken.")
             return false
         }
+        val micBlocker = micGuard.currentBlocker()
+        if (micBlocker != null) {
+            onNotice("$micBlocker Geen antwoordopname gestart.")
+            return false
+        }
+        val headsetBlocker = headsetGuard.currentBlocker()
+        if (headsetBlocker != null) {
+            onNotice("$headsetBlocker Geen antwoordopname gestart.")
+            return false
+        }
+        if (powerGuard.enabled()) {
+            val powerBlocker = powerGuard.currentBlocker()
+            if (powerBlocker != null) {
+                onNotice("$powerBlocker Geen antwoordopname gestart.")
+                return false
+            }
+        }
+        if (strictOfflineRadioOnly &&
+            !StrictOfflineRadioSessionMonitor.strictlyOffline(
+                OfflineRadioSnapshot.capture(app)
+            )) {
+            onNotice("Strikte vliegtuigmodus gekozen: Android meldt een " +
+                "actieve of onbekende radio of verbinding. Antwoordmicrofoon blijft uit.")
+            return false
+        }
         if (!lockGate.arm {
                 cancel()
                 onNotice("Scherm vergrendeld: lokale antwoordopname afgebroken en gewist.")
@@ -80,6 +119,53 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
         }
         val version = epoch
         val gate = SpeechTurnCompletionGate()
+        // One-shot capture never restarts itself. Install each available
+        // Android observer BEFORE starting the recognizer, and refuse on
+        // unknown status or failed registration. Callbacks are epoch-fenced.
+        if (!micGuard.arm { reason ->
+                if (version == epoch) {
+                    cancel()
+                    onNotice("$reason Lokale antwoordopname direct gestopt.")
+                }
+            }) {
+            cancel()
+            onNotice("Androids microfoon-/oproepbewaking kon niet veilig starten. " +
+                "Geen antwoordopname.")
+            return false
+        }
+        if (!headsetGuard.arm { reason ->
+                if (version == epoch) {
+                    cancel()
+                    onNotice("$reason Lokale antwoordopname direct gestopt.")
+                }
+            }) {
+            cancel()
+            onNotice("Een vereiste headsetmicrofoon ontbreekt of de bewaking " +
+                "kon niet starten. Geen antwoordopname.")
+            return false
+        }
+        if (!powerGuard.arm { reason ->
+                if (version == epoch) {
+                    cancel()
+                    onNotice("$reason Lokale antwoordopname direct gestopt.")
+                }
+            }) {
+            cancel()
+            onNotice("Toestelbescherming voor accu/temperatuur kon niet " +
+                "worden gestart. Geen antwoordopname.")
+            return false
+        }
+        if (strictOfflineRadioOnly && !strictRadioGuard.arm { reason ->
+                if (version == epoch) {
+                    cancel()
+                    onNotice("$reason Strikte offline antwoordopname direct gestopt.")
+                }
+            }) {
+            cancel()
+            onNotice("Strikte offline-radiobewaking kon niet starten of " +
+                "Android meldt verbinding. Geen antwoordopname.")
+            return false
+        }
         try {
             val local = SpeechRecognizer.createOnDeviceSpeechRecognizer(app)
             recognizer = local

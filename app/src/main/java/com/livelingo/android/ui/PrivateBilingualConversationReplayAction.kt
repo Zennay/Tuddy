@@ -42,7 +42,8 @@ internal fun PrivateBilingualConversationReplayAction(
     targetCode: String,
     speaker: LocalCaptionSpeaker,
     recallSpeech: PrivateRecallSpeechAttempt,
-    enabled: Boolean
+    enabled: Boolean,
+    strictOfflineRadioOnly: Boolean
 ) {
     var notice by remember { mutableStateOf("") }
     val directions = PrivateBilingualConversationReplay.directions(captions)
@@ -270,7 +271,8 @@ internal fun PrivateBilingualConversationReplayAction(
             targetCode = activeTarget,
             speaker = speaker,
             recallSpeech = recallSpeech,
-            enabled = enabled
+            enabled = enabled,
+            strictOfflineRadioOnly = strictOfflineRadioOnly
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (pace in listOf(LocalSpeechPace.NORMAL, LocalSpeechPace.SLOW)) {

@@ -70,3 +70,40 @@ en release-goedkeuring blijven vereist.
 
 Dit is uitsluitend device-/app-integratiewerk, geen toestemming voor
 een uitrol en geen wijziging in de offline modelondersteuning.
+
+## Ook bij eenmalig ingesproken oefenantwoord
+
+De tweetalige **Zelf overhoren**-functie kan een bestaand vertaald
+gespreksfragment als kaart tonen. Met **Spreek mijn antwoord in** start
+de gebruiker bewust één aparte Android on-device herkenningsronde.
+
+Dat oefenantwoord gebruikt nu ook de microfoonbeveiliging van de gewone
+live gesprekssessie. De app weigert de start bij een ingetrokken
+microfoonmachtiging, gedempte microfoon, oproep-/communicatiemodus of
+onleesbare microfoonstatus. Bij een tijdens de opname veranderende
+status wordt de herkenner direct afgebroken en de tijdelijke poging
+geannuleerd. Hetzelfde geldt voor een ingeschakelde verplichting
+voor een aanwezige headsetmicrofoon of de optionele bewaking van
+ernstige hitte/kritieke acculading.
+
+Wanneer **Strikte vliegtuigmodus voor luisteren** in deze sessie is
+gekozen, geldt die ook voor de eenmalige oefenopname: vóór het
+starten wordt Androids radio-/netwerkstatus gelezen; tijdens de
+opname volgen dezelfde gebeurtenislisteners en periodieke
+controle als bij live luisteren. Een blokkade of mislukte
+listenerregistratie betekent géén opname. De gebruiker moet na
+herstel zelf opnieuw op de opnameknop tikken. Dat doet de app nooit
+automatisch en schakelt ook geen telefooninstellingen om.
+
+Bij stoppen, een voltooid antwoord, 20 seconden zonder resultaat,
+een fout, schermvergrendeling, app-pauze en scherm verlaten worden
+de tijdelijke guards uitgeschakeld en de on-device recognizer
+vernietigd. Ingesproken tekst blijft alleen in het RAM van de
+oefenkaarten tot die door de gebruiker wordt gewist of de
+oefening sluit. Geen cloudfallback, beoordeling of persistent
+gesproken-oefengeschiedenis.
+
+Ook deze toestelstatussen zijn Android-signalen, geen bewijs van
+fysieke radiostilte, headsetbron, herkenningskwaliteit of
+rechtenvrij offline taalgebruik. De aparte fysieke Android 12+
+acceptatie blijft noodzakelijk.
