@@ -1378,7 +1378,7 @@ private fun TuddyScreen(
      */
     fun translateResolved(
         text: String, id: Long, from: String, targetCode: String,
-        token: Int, revision: Int
+        token: Int, revision: Int, userRequested: Boolean
     ) {
         if (!translationStillRelevant(id, token, revision)) return
         if (from !in TargetCatalog.codes || targetCode !in TargetCatalog.codes) {
@@ -1399,10 +1399,16 @@ private fun TuddyScreen(
             when (receipt.stage) {
                 OfflineTextStage.CHECKING -> Unit
                 OfflineTextStage.READY -> {
-                    // Bound tracked local ML Kit work to three FIFO requests.
+                    // Three concurrent local ML Kit requests maximum.
+                    // User corrections/retries are admitted before waiting
+                    // automatic captions, with a hard fairness budget.
+                    // Already-started Android tasks are never preempted.
                     // The existing 30-second row deadline includes queue time.
                     val queued = captionTranslationQueue.enqueue(
                         id, revision,
+                        priority = if (userRequested)
+                            CaptionTranslationPriority.USER_REQUESTED
+                        else CaptionTranslationPriority.AUTOMATIC,
                         onStartError = {
                             updateLine(id, SafeLocalFailureText.TRANSLATION,
                                 "Fout", token, revision)
@@ -1513,7 +1519,8 @@ private fun TuddyScreen(
 
     fun translate(
         text: String, id: Long, targetCode: String, sourceCode: String,
-        token: Int, explicitlyChosenSource: Boolean = false
+        token: Int, explicitlyChosenSource: Boolean = false,
+        userRequested: Boolean = false
     ) {
         val snapshot = lines.firstOrNull { it.id == id } ?: return
         val revision = snapshot.translationRevision
@@ -1559,7 +1566,9 @@ private fun TuddyScreen(
                 "Fout", token, revision)
             return
         }
-        translateResolved(text, id, catalogSource, targetCode, token, revision)
+        translateResolved(
+            text, id, catalogSource, targetCode, token, revision, userRequested
+        )
     }
 
     /**
@@ -1618,7 +1627,7 @@ private fun TuddyScreen(
                     )
                     translate(
                         snapshot.original, snapshot.id, snapshot.targetCode,
-                        snapshot.sourceCode, token, explicitlyChosenSource = true
+                        snapshot.sourceCode, token, explicitlyChosenSource = true, userRequested = true
                     )
                     submitted++
                 }
@@ -1685,7 +1694,7 @@ private fun TuddyScreen(
                         translationRevision = snapshot.translationRevision + 1
                     )
                     translate(snapshot.original, snapshot.id, snapshot.targetCode,
-                        snapshot.sourceCode, token, explicitlyChosenSource = true)
+                        snapshot.sourceCode, token, explicitlyChosenSource = true, userRequested = true)
                     started++
                 }
             }
@@ -3152,7 +3161,7 @@ private fun TuddyScreen(
         // as a different detected language before private local translation.
         if (!transcriptOnly) {
             translate(sentence, id, targetCode, sourceCode, token,
-                explicitlyChosenSource = true)
+                explicitlyChosenSource = true, userRequested = true)
         }
         return true
     }
@@ -4997,7 +5006,7 @@ private fun TuddyScreen(
                                     status = "Bezig",
                                     translationRevision = row.translationRevision + 1)
                                 translate(row.original, row.id, to, from, generation,
-                                    explicitlyChosenSource = true)
+                                    explicitlyChosenSource = true, userRequested = true)
                             }
                         }
                         candidates.size
@@ -6172,7 +6181,7 @@ private fun TuddyScreen(
                         // Explicit source choice overrules automatic short-text
                         // language detection; no model download is performed.
                         translate(previous.original, previous.id, newTarget, newSource,
-                            generation, explicitlyChosenSource = true)
+                            generation, explicitlyChosenSource = true, userRequested = true)
                         correctionNotice = "Taalrichting voor deze zin gewijzigd; " +
                             "lokale vertaling aangevraagd."
                         true
@@ -6266,7 +6275,7 @@ private fun TuddyScreen(
                                 )
                                 translate(corrected, previous.id, previous.targetCode,
                                     previous.sourceCode, generation,
-                                    explicitlyChosenSource = true)
+                                    explicitlyChosenSource = true, userRequested = true)
                                 correctionNotice = "Correctie opgeslagen in dit gesprek; " +
                                     "vertaling opnieuw gestart."
                             }
@@ -9177,7 +9186,7 @@ private fun TuddyScreen(
                                 }
                             }
                             manualText = ""
-                            translate(sentence, id, selectedTarget, selectedSource, token)
+                            translate(sentence, id, selectedTarget, selectedSource, token, userRequested = true)
                             follow = true
                         },
                         enabled = OfflineTypedCaptionPolicy.normalize(manualText) != null
@@ -10211,7 +10220,7 @@ private fun TuddyScreen(
                                 translate(
                                     restored.original, restored.id,
                                     restored.targetCode, restored.sourceCode,
-                                    generation, explicitlyChosenSource = true
+                                    generation, explicitlyChosenSource = true, userRequested = true
                                 )
                                 correctionNotice =
                                     "Vorige oorspronkelijke zin hersteld; vertaling opnieuw lokaal aangevraagd."
@@ -10494,7 +10503,7 @@ private fun TuddyScreen(
                                                     )
                                                     translate(old.original, old.id, old.targetCode,
                                                         old.sourceCode, generation,
-                                                        explicitlyChosenSource = true)
+                                                        explicitlyChosenSource = true, userRequested = true)
                                                     correctionNotice = "Lokale vertaling opnieuw aangevraagd."
                                                 }
                                             }
