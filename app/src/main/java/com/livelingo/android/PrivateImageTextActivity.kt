@@ -69,6 +69,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     private var draft by mutableStateOf("")
     private var textBlocks by mutableStateOf<List<PrivateImageTextBlock>>(emptyList())
     private var selectedBlockIds by mutableStateOf<Set<Int>>(emptySet())
+    // Temporary order is explicit user preference for this one OCR review.
+    private var blockOrder by mutableStateOf<List<Int>>(emptyList())
     private var notice by mutableStateOf(
         "Kies zelf een afbeelding. Alleen Latijns schrift wordt met " +
             "een ingebouwd offline OCR-model herkend. Controleer de tekst."
@@ -240,9 +242,10 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             )
                             Text(
                                 "Je kunt meerdere stukken kiezen, tot samen 8.000 tekens. " +
-                                    "Je ziet en corrigeert de samengevoegde tekst voordat " +
-                                    "de offline vertaler opent. Selectie wijzigen vervangt " +
-                                    "eventuele handmatige aanpassingen in het tekstveld.",
+                                    "Zet bij een meerkolomsfoto de blokken handmatig in de " +
+                                    "juiste leesvolgorde. Controleer de volledige tekst " +
+                                    "voordat de offline vertaler opent. Selectie of volgorde " +
+                                    "wijzigen vervangt je aanpassingen in het tekstveld.",
                                 style = MaterialTheme.typography.bodySmall
                             )
                             OutlinedButton(
@@ -253,11 +256,22 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = { clearBlockSelection() }
                             ) { Text("Wis blokselectie") }
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = blockOrder != textBlocks.map { it.index },
+                                onClick = { restoreBlockOrder() }
+                            ) { Text("Herstel oorspronkelijke OCR-volgorde") }
                             LazyColumn(
                                 modifier = Modifier.fillMaxWidth().height(250.dp)
                             ) {
-                                items(textBlocks, key = { it.index }) { block ->
+                                items(
+                                    blockOrder.mapNotNull { id ->
+                                        textBlocks.firstOrNull { it.index == id }
+                                    },
+                                    key = { it.index }
+                                ) { block ->
                                     val selected = block.index in selectedBlockIds
+                                    val orderIndex = blockOrder.indexOf(block.index)
                                     val oversized = block.text.length >
                                         PrivateImageTextBlocks.MAX_HANDOFF_CHARS
                                     Column {
@@ -271,7 +285,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                             )
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    "Blok ${block.index + 1} · ${block.text.length} tekens" +
+                                                    "Positie ${orderIndex + 1} · OCR-blok ${block.index + 1} · " +
+                                                        "${block.text.length} tekens" +
                                                         if (oversized) " · te lang" else "",
                                                     style = MaterialTheme.typography.labelMedium
                                                 )
@@ -280,6 +295,22 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                                         if (block.text.length > 160) "…" else "",
                                                     style = MaterialTheme.typography.bodySmall
                                                 )
+                                                androidx.compose.foundation.layout.Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    OutlinedButton(
+                                                        enabled = orderIndex > 0,
+                                                        onClick = {
+                                                            moveReviewedBlock(block.index, -1)
+                                                        }
+                                                    ) { Text("↑ Omhoog") }
+                                                    OutlinedButton(
+                                                        enabled = orderIndex < blockOrder.lastIndex,
+                                                        onClick = {
+                                                            moveReviewedBlock(block.index, 1)
+                                                        }
+                                                    ) { Text("↓ Omlaag") }
+                                                }
                                             }
                                         }
                                         HorizontalDivider()
@@ -409,6 +440,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             return@addOnCompleteListener
                         }
                         textBlocks = admitted
+                        blockOrder = admitted.map { it.index }
                         val allIds = admitted.map { it.index }.toSet()
                         val combined = PrivateImageTextBlocks.assemble(admitted, allIds)
                         if (combined != null) {
@@ -455,6 +487,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         draft = ""
         textBlocks = emptyList()
         selectedBlockIds = emptySet()
+        blockOrder = emptyList()
     }
 
     private fun toggleBlock(index: Int, checked: Boolean) {
@@ -465,7 +498,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
             notice = "Geen blokken geselecteerd. Kies eerst de relevante tekst."
             return
         }
-        val assembled = PrivateImageTextBlocks.assemble(textBlocks, next)
+        val assembled = PrivateImageTextBlocks.assemble(textBlocks, next, blockOrder)
         if (assembled == null) {
             notice = "Selectie overschrijdt 8.000 tekens. " +
                 "Laat een blok weg of kies een kleinere uitsnede."
@@ -488,17 +521,39 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         // Preserve the user's deliberate block choices. Only append other
         // whole blocks that fit, rather than replacing their selection.
         val accepted = selectedBlockIds.toMutableSet()
-        textBlocks.forEach { block ->
+        blockOrder.mapNotNull { id ->
+            textBlocks.firstOrNull { it.index == id }
+        }.forEach { block ->
             val candidate = accepted + block.index
-            if (PrivateImageTextBlocks.assemble(textBlocks, candidate) != null) {
+            if (PrivateImageTextBlocks.assemble(textBlocks, candidate, blockOrder) != null) {
                 accepted.add(block.index)
             }
         }
         selectedBlockIds = accepted
-        draft = PrivateImageTextBlocks.assemble(textBlocks, accepted).orEmpty()
+        draft = PrivateImageTextBlocks.assemble(textBlocks, accepted, blockOrder).orEmpty()
         notice = if (accepted.isEmpty()) "Geen blok past binnen de 8.000-tekengrens."
             else "${accepted.size} van ${textBlocks.size} blokken geselecteerd. " +
                 "Mogelijk zijn blokken overgeslagen; controleer wat is meegenomen."
+    }
+
+    /** No content export or model work until user has reviewed this order. */
+    private fun moveReviewedBlock(id: Int, direction: Int) {
+        val next = PrivateImageTextBlocks.move(textBlocks, blockOrder, id, direction)
+            ?: return
+        blockOrder = next
+        // Preserve exactly the chosen blocks; do not resurrect unselected ones.
+        draft = PrivateImageTextBlocks.assemble(textBlocks, selectedBlockIds, next).orEmpty()
+        notice = "Leesvolgorde aangepast. Controleer de samengevoegde tekst opnieuw; " +
+            "handmatige tekstcorrecties zijn opnieuw samengesteld."
+    }
+
+    private fun restoreBlockOrder() {
+        blockOrder = textBlocks.map { it.index }
+        draft = PrivateImageTextBlocks.assemble(
+            textBlocks, selectedBlockIds, blockOrder
+        ).orEmpty()
+        notice = "Oorspronkelijke OCR-volgorde hersteld. " +
+            "Controleer de tekst opnieuw vóór vertalen."
     }
 
     private fun openLocalTranslator() {
