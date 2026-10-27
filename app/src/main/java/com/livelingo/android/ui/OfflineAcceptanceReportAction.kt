@@ -325,6 +325,41 @@ internal fun OfflineAcceptanceReportAction(
         return report.toByteArray(Charsets.UTF_8).takeIf { it.size in 1..16384 }
     }
 
+    /**
+     * Creates exactly the same bounded manual report as the existing SAF export.
+     * Sharing is a distinct user choice after a full preview and a second
+     * device/radio check. This is never an automated reviewer approval.
+     */
+    fun prepareReviewShare(): Pair<ByteArray, ByteArray>? {
+        val initialInstalled = installedApkDigest(baseline)
+        val fresh = deviceSnapshot()
+        if (initialInstalled == null ||
+            installedApkDigest(fresh) != initialInstalled) {
+            attemptMessage = "Delen geweigerd: geïnstalleerde APK gewijzigd of onleesbaar. " +
+                "De ingevoerde waarnemingen blijven bewaard."
+            return null
+        }
+        if (!reportsOfflineRadioState(fresh)) {
+            attemptMessage = "Delen geweigerd: vliegtuigmodus, uitgeschakelde wifi " +
+                "en afwezige Android-netwerktransporten zijn niet bevestigd."
+            return null
+        }
+        baseline = fresh!!.copyOf()
+        val report = reportBytes()
+        if (report == null) {
+            attemptMessage = "Er is geen geldig proefrapport om te delen."
+            return null
+        }
+        attemptMessage = ""
+        return fresh.copyOf() to report.copyOf()
+    }
+
+    fun reviewShareStillValid(snapshot: ByteArray): Boolean {
+        val fresh = deviceSnapshot() ?: return false
+        return fresh.contentEquals(snapshot) && reportsOfflineRadioState(fresh) &&
+            installedApkDigest(fresh) == installedApkDigest(baseline)
+    }
+
     fun resetDraft() {
         confirmDiscard = false
         baseline = null
@@ -843,7 +878,15 @@ internal fun OfflineAcceptanceReportAction(
                 }
             },
             confirmButton = {
-                TextButton(
+                Column {
+                    OfflineAcceptanceReviewShareAction(
+                        enabled = enabled && readyReport != null,
+                        prepare = ::prepareReviewShare,
+                        stillValid = ::reviewShareStillValid,
+                        onExternalStarted = onPickerStarted,
+                        onExternalFinished = onPickerFinished
+                    )
+                    TextButton(
                     enabled = readyReport != null,
                     onClick = {
                         val oldInstalled = installedApkDigest(baseline)
@@ -873,6 +916,7 @@ internal fun OfflineAcceptanceReportAction(
                         }
                     }
                 ) { Text("Bewaar rapport…") }
+                }
             },
             dismissButton = {
                 Column {

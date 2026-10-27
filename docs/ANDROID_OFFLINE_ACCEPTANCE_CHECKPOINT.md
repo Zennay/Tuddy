@@ -49,3 +49,23 @@ Een onafhankelijke reviewer moet nog steeds de fysieke Android 12+-
 proef, de exacte geïnstalleerde APK, echte netwerkisolatie, de
 spraak-/vertalingsuitkomsten en een ondertekende release beoordelen.
 GitHub source-merge en CI vormen daarvoor op zichzelf geen bewijs.
+
+## Handmatig rapport naar een onafhankelijke reviewer delen
+
+Na het expliciet controleren van de observaties kan de operator nu via
+**Bekijk en deel rapport met beoordelaar…** een tweede, volledige preview
+openen. Het rapport is identiek aan de bestaande tekstexport. Pas na een
+afzonderlijke toestemming opent Android Delen; Tuddy kiest nooit zelf een
+ontvanger en uploadt niets. Vlak voor het deelvenster controleert de app
+de geïnstalleerde APK-/apparaatstaat en radiosnapshot opnieuw. Als die
+status wijzigt, wordt delen geweigerd en blijft het proefconcept bestaan.
+
+Het gedeelde bericht bevat toestelstatus, APK-checksum en alleen de
+handmatig geregistreerde uitkomstaggregaten, geen gesproken woorden
+of audio. De gekozen ontvangende app kan de informatie wel opslaan,
+synchroniseren of verzenden. Verlaat je Tuddy voor dat deelvenster,
+dan wordt de rapportpreview gesloten. Het openen van een andere app
+onderbreekt de lopende proef; de operator mag geen doorlopende fysieke
+radiostilte of onafhankelijke review claimen op grond van dit delen.
+Het formulier blijft beschikbaar na annuleren of terugkeren uit het
+deelvenster. Een mislukte verzending geeft geen fictieve succesmelding.
