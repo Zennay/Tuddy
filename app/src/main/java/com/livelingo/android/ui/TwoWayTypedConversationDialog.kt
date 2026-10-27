@@ -103,6 +103,7 @@ internal fun TwoWayTypedConversationDialog(
     val speaker = remember(context) { LocalCaptionSpeaker(context) }
     var speechNotice by remember { mutableStateOf("") }
     var activeSpeechLineIndex by remember { mutableStateOf<Int?>(null) }
+    var activeSpeechLineId by remember { mutableStateOf<Long?>(null) }
     var activeSpeechSide by remember { mutableStateOf<String?>(null) }
     var activeSpeechText by remember { mutableStateOf<String?>(null) }
     var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -114,6 +115,7 @@ internal fun TwoWayTypedConversationDialog(
     fun clearSpeech() {
         speaker.stop()
         activeSpeechLineIndex = null
+        activeSpeechLineId = null
         activeSpeechSide = null
         activeSpeechText = null
         activeSpeechRange = null
@@ -122,6 +124,7 @@ internal fun TwoWayTypedConversationDialog(
 
     fun pronounceLine(
         lineIndex: Int,
+        lineId: Long,
         text: String,
         language: String,
         side: String,
@@ -136,6 +139,7 @@ internal fun TwoWayTypedConversationDialog(
             return
         }
         activeSpeechLineIndex = lineIndex
+        activeSpeechLineId = lineId.takeIf { it != 0L }
         activeSpeechSide = side
         activeSpeechText = safe
         activeSpeechRange = null
@@ -150,6 +154,7 @@ internal fun TwoWayTypedConversationDialog(
             feedback = { speechNotice = it },
             onFinished = { completed ->
                 activeSpeechLineIndex = null
+                activeSpeechLineId = null
                 activeSpeechSide = null
                 activeSpeechText = null
                 activeSpeechRange = null
@@ -189,6 +194,31 @@ internal fun TwoWayTypedConversationDialog(
             "Controleer de lokale tekstmodellen voor deze richting.")
         models.check(from, to) { receipt ->
             if (receipt.source == from && receipt.target == to) modelStatus = receipt
+        }
+    }
+
+    LaunchedEffect(recentLines) {
+        // A new turn may evict an older row from the rolling RAM window.
+        // Continue the user's chosen voice while that same caption exists,
+        // but stop safely when its source text or translation changes.
+        val index = activeSpeechLineIndex
+        val spoken = activeSpeechText
+        if (index != null && spoken != null) {
+            val current = if (activeSpeechLineId != null) {
+                recentLines.firstOrNull { it.id == activeSpeechLineId }
+            } else {
+                recentLines.getOrNull(index)
+            }
+            val currentText = when (activeSpeechSide) {
+                "original" -> current?.original
+                "translated" -> current
+                    ?.takeIf { it.status == "Lokaal vertaald" || it.status == "Lokaal" }
+                    ?.translated
+                else -> null
+            }
+            if (currentText?.replace('\n', ' ')?.replace('\r', ' ')?.trim() != spoken) {
+                clearSpeech()
+            }
         }
     }
 
@@ -626,9 +656,14 @@ internal fun TwoWayTypedConversationDialog(
                 val firstVisibleLineIndex = (recentLines.size - 6).coerceAtLeast(0)
                 recentLines.takeLast(6).forEachIndexed { visibleIndex, row ->
                     val lineIndex = firstVisibleLineIndex + visibleIndex
-                    val originalActive = activeSpeechLineIndex == lineIndex &&
+                    val matchesActiveLine = if (activeSpeechLineId != null) {
+                        row.id == activeSpeechLineId
+                    } else {
+                        activeSpeechLineIndex == lineIndex
+                    }
+                    val originalActive = matchesActiveLine &&
                         activeSpeechSide == "original" && activeSpeechText != null
-                    val translatedActive = activeSpeechLineIndex == lineIndex &&
+                    val translatedActive = matchesActiveLine &&
                         activeSpeechSide == "translated" && activeSpeechText != null
                     Text(row.source.uppercase() + " → " + row.target.uppercase() +
                         " · " + row.status, style = MaterialTheme.typography.labelSmall)
@@ -669,7 +704,7 @@ internal fun TwoWayTypedConversationDialog(
                             row.original.length <= 400,
                         onClick = {
                             pronounceLine(
-                                lineIndex, row.original, row.source, "original",
+                                lineIndex, row.id, row.original, row.source, "original",
                                 LocalSpeechPace.NORMAL
                             )
                         }
@@ -716,7 +751,7 @@ internal fun TwoWayTypedConversationDialog(
                                     enabled = activeSpeechText == null && row.translated.length <= 400,
                                     onClick = {
                                         pronounceLine(
-                                            lineIndex, row.translated, row.target, "translated",
+                                            lineIndex, row.id, row.translated, row.target, "translated",
                                             LocalSpeechPace.NORMAL
                                         )
                                     }
@@ -725,7 +760,7 @@ internal fun TwoWayTypedConversationDialog(
                                     enabled = activeSpeechText == null && row.translated.length <= 400,
                                     onClick = {
                                         pronounceLine(
-                                            lineIndex, row.translated, row.target, "translated",
+                                            lineIndex, row.id, row.translated, row.target, "translated",
                                             LocalSpeechPace.SLOW
                                         )
                                     }
