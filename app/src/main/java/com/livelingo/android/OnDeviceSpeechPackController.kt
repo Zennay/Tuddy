@@ -220,6 +220,11 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
             callback(SpeechPackReceipt(tag, SpeechPackStage.ERROR, networkBlocker))
             return
         }
+        LocalModelStorageAdmission.blocker()?.let { blocker ->
+            callback(SpeechPackReceipt(tag, SpeechPackStage.ERROR,
+                blocker + " De systeemdienst heeft geen nieuwe downloadopdracht gekregen."))
+            return
+        }
         val (token, engine) = fresh(tag) ?: run {
             callback(SpeechPackReceipt(tag, SpeechPackStage.UNSUPPORTED,
                 "Geen lokale spraakdienst om een pakket aan te vragen."))

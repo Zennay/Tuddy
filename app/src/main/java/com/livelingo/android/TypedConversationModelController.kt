@@ -99,6 +99,12 @@ internal class TypedConversationModelController {
             }
             OfflinePairDecision.MODEL_REQUIRED -> Unit
         }
+        // Covers single typed pair and all user-approved favorite-pair batches.
+        // Re-read storage before every successive download, not only batch start.
+        LocalModelStorageAdmission.blocker()?.let { blocker ->
+            result(blocker, null)
+            return
+        }
         invalidate()
         val request = epoch.begin()
         val lease = LocalTextModelDownloadAdmission.shared.acquire()
