@@ -2073,6 +2073,12 @@ private fun TuddyScreen(
                     " Bestaande vertalingen en lokale modellen blijven beschikbaar."
                 return@check
             }
+            LocalModelNetworkAdmission.blocker(context)?.let { blocker ->
+                failedCaptionRecoveryBusy = false
+                failedCaptionRecoveryNotice = blocker +
+                    " Geen modeldownload gestart; eerdere gespreksregels blijven staan."
+                return@check
+            }
             val translator = runCatching {
                 Translation.getClient(TranslatorOptions.Builder()
                     .setSourceLanguage(from).setTargetLanguage(to).build())
@@ -2415,6 +2421,10 @@ private fun TuddyScreen(
             OfflinePairDecision.MODEL_REQUIRED -> Unit
         }
         LocalModelStorageAdmission.blocker()?.let { blocker ->
+            offlineModelStatus = blocker
+            return
+        }
+        LocalModelNetworkAdmission.blocker(context)?.let { blocker ->
             offlineModelStatus = blocker
             return
         }
