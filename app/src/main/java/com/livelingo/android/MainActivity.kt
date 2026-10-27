@@ -1376,6 +1376,7 @@ private fun TuddyScreen(
     var pendingManualCaptionUndo by remember { mutableStateOf<PendingManualCaptionUndo?>(null) }
     var historySearchOpen by remember { mutableStateOf(false) }
     var historySearchQuery by remember { mutableStateOf("") }
+    var historyStatusFilter by remember { mutableStateOf(SessionCaptionStatusFilter.ALL) }
     var generation by remember { mutableIntStateOf(0) }
     fun beginOriginalCorrection(row: Line) {
         editingCaptionId = row.id
@@ -1408,16 +1409,21 @@ private fun TuddyScreen(
     // Apply the same search-only script folding as the private phrasebook.
     // Stored captions and translations are never normalized or rewritten.
     val normalizedHistoryQuery = PrivateOfflineSearch.fold(historySearchQuery.trim())
+    fun historyTextMatches(line: Line): Boolean =
+        PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
+            PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery) ||
+            line.personalMeaning?.let {
+                PrivateOfflineSearch.contains(it, normalizedHistoryQuery)
+            } == true
     fun historySearchMatches(line: Line): Boolean =
-        normalizedHistoryQuery.isNotBlank() && (
-            PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
-                PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery) ||
-                line.personalMeaning?.let {
-                    PrivateOfflineSearch.contains(it, normalizedHistoryQuery)
-                } == true
-        )
-    val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
-        else lines.indices.filter { historySearchMatches(lines[it]) }
+        SessionCaptionStatusNavigation.isActive(historyStatusFilter, normalizedHistoryQuery) &&
+            SessionCaptionStatusNavigation.matches(line.status, historyStatusFilter) &&
+            (normalizedHistoryQuery.isBlank() || historyTextMatches(line))
+    // The existing LazyColumn keeps all captions in their original order.
+    // Matching row indexes are only for highlighting and manual navigation.
+    val historyMatches = SessionCaptionStatusNavigation.matchingIndexes(
+        lines.map { it.status }, historyStatusFilter, normalizedHistoryQuery
+    ) { index -> historyTextMatches(lines[index]) }
 
     fun captureCombinedStudyBook(): ByteArray? =
         PrivateCombinedStudyBook.snapshot(
@@ -5032,6 +5038,7 @@ private fun TuddyScreen(
         if (follow) {
             historySearchOpen = false
             historySearchQuery = ""
+            historyStatusFilter = SessionCaptionStatusFilter.ALL
         }
     }
 
@@ -8918,6 +8925,7 @@ private fun TuddyScreen(
                         pinsNotice = ""
                         historySearchQuery = ""
                         historySearchOpen = false
+                        historyStatusFilter = SessionCaptionStatusFilter.ALL
                         directionNotice = ""
                         previewInput = ""
                         manualText = ""
@@ -10499,9 +10507,12 @@ private fun TuddyScreen(
                     TextButton(onClick = {
                         historySearchOpen = !historySearchOpen
                         if (historySearchOpen) follow = false
-                        else historySearchQuery = ""
+                        else {
+                            historySearchQuery = ""
+                            historyStatusFilter = SessionCaptionStatusFilter.ALL
+                        }
                     }, enabled = lines.isNotEmpty()) {
-                        Text(if (historySearchOpen) "Sluit zoeken" else "Zoek in gesprek")
+                        Text(if (historySearchOpen) "Sluit zoeken" else "Zoek / status in gesprek")
                     }
                     TextButton(
                         enabled = captionPins.isNotEmpty(),
@@ -10587,26 +10598,19 @@ private fun TuddyScreen(
                     Text(captionDeleteNotice, style = MaterialTheme.typography.bodySmall)
                 }
                 if (historySearchOpen) {
-                    OutlinedTextField(
-                        value = historySearchQuery,
-                        onValueChange = { historySearchQuery = it.take(80) },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Zoek tekst, vertaling of eigen uitleg") },
-                        supportingText = {
-                            Text("Zoekt ook met veelvoorkomende Arabisch/Perzische toetsenbordvarianten; opgeslagen tekst blijft exact behouden.")
-                        },
-                        singleLine = true
+                    SessionCaptionHistorySearchControls(
+                        statuses = lines.map { it.status },
+                        currentFilter = historyStatusFilter,
+                        onFilterChange = { historyStatusFilter = it },
+                        query = historySearchQuery,
+                        onQueryChange = { historySearchQuery = it.take(80) },
+                        searchActive = SessionCaptionStatusNavigation.isActive(
+                            historyStatusFilter, normalizedHistoryQuery
+                        ),
+                        matchingCount = historyMatches.size,
+                        onPrevious = { jumpToHistoryMatch(false) },
+                        onNext = { jumpToHistoryMatch(true) }
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = { jumpToHistoryMatch(false) },
-                            enabled = historyMatches.isNotEmpty()
-                        ) { Text("← Vorige") }
-                        OutlinedButton(
-                            onClick = { jumpToHistoryMatch(true) },
-                            enabled = historyMatches.isNotEmpty()
-                        ) { Text("Volgende →") }
-                    }
                 }
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
                 if (correctionNotice.isNotBlank()) {
