@@ -1,5 +1,8 @@
 package com.livelingo.android.ui
 
+import android.content.Intent
+import android.provider.Settings
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -81,6 +84,7 @@ internal fun OfflineReadinessDialog(
     var networkReceipt by remember(context) {
         mutableStateOf(LocalModelNetworkAdmission.inspect(context))
     }
+    var networkSettingsNotice by remember { mutableStateOf("") }
     // Android settings is outside Tuddy. Refresh when the user returns.
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
@@ -155,6 +159,21 @@ internal fun OfflineReadinessDialog(
                     onClick = { networkReceipt = LocalModelNetworkAdmission.inspect(context) },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Controleer wifi-toelating opnieuw") }
+                OutlinedButton(
+                    onClick = {
+                        runCatching {
+                            context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                        }.onFailure {
+                            networkSettingsNotice =
+                                "Android-wifiinstellingen konden niet worden geopend. " +
+                                    "Open wifi handmatig via je telefooninstellingen."
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Open Android-wifiinstellingen") }
+                if (networkSettingsNotice.isNotBlank()) {
+                    Text(networkSettingsNotice, style = MaterialTheme.typography.bodySmall)
+                }
                 Text(
                     "Ook een wifi-hotspot kan mobiele databundels kosten. " +
                         "Tuddy vraagt nieuwe modellen alleen aan op door Android " +
