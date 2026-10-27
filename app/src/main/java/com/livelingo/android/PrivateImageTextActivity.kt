@@ -213,9 +213,20 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 "ook cloudfoto's van jouw provider aanbieden.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        if (LocalOcrWorkBudget.shared.isBusy()) {
+                            Text(
+                                if (busy) "Android verwerkt momenteel één offline afbeelding."
+                                else "De vorige offline afbeelding wordt nog door Android " +
+                                    "afgerond. Foto- en camerakeuze zijn tijdelijk gesloten " +
+                                    "om geheugenproblemen te voorkomen. Er start geen " +
+                                    "tweede zware OCR-taak.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         if (sharedImageUri != null) {
                             OutlinedButton(
-                                enabled = !busy,
+                                enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     val selected = sharedImageUri
@@ -225,7 +236,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             ) { Text("Herken gedeelde afbeelding · lokaal") }
                         }
                         OutlinedButton(
-                            enabled = !busy,
+                            enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 // The external camera owns its camera permission;
@@ -265,7 +276,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Button(
-                                enabled = !busy,
+                                enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     val image = pendingCameraPreview
@@ -283,7 +294,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             ) { Text("Verwerp camerafoto") }
                         }
                         OutlinedButton(
-                            enabled = !busy,
+                            enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 pendingCameraPreview = null
