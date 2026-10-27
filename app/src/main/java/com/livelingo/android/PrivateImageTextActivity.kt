@@ -213,9 +213,20 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 "ook cloudfoto's van jouw provider aanbieden.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        if (LocalOcrWorkBudget.shared.isBusy()) {
+                            Text(
+                                if (busy) "Android verwerkt momenteel één offline afbeelding."
+                                else "De vorige offline afbeelding wordt nog door Android " +
+                                    "afgerond. Foto- en camerakeuze zijn tijdelijk gesloten " +
+                                    "om geheugenproblemen te voorkomen. Er start geen " +
+                                    "tweede zware OCR-taak.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         if (sharedImageUri != null) {
                             OutlinedButton(
-                                enabled = !busy,
+                                enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     val selected = sharedImageUri
@@ -225,7 +236,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             ) { Text("Herken gedeelde afbeelding · lokaal") }
                         }
                         OutlinedButton(
-                            enabled = !busy,
+                            enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 // The external camera owns its camera permission;
@@ -265,7 +276,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Button(
-                                enabled = !busy,
+                                enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     val image = pendingCameraPreview
@@ -283,7 +294,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             ) { Text("Verwerp camerafoto") }
                         }
                         OutlinedButton(
-                            enabled = !busy,
+                            enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 pendingCameraPreview = null
@@ -608,6 +619,22 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         deadline?.let(handler::removeCallbacks)
         deadline = null
         clearReviewedImage()
+        // A previous ML Kit request may still own a bitmap/recognizer after
+        // its visible timeout or Activity pause. Never queue more heavy OCR.
+        if (LocalMemoryPressurePolicy.isSystemLowMemory(this)) {
+            busy = false
+            notice = "Android meldt weinig werkgeheugen. Geen nieuwe afbeelding " +
+                "verwerkt; sluit andere zware apps en probeer later opnieuw."
+            return
+        }
+        val ocrLease = LocalOcrWorkBudget.shared.acquire()
+        if (ocrLease == null) {
+            busy = false
+            notice = "De vorige offline afbeeldingherkenning draait nog op dit toestel. " +
+                "Wacht tot Android deze werkelijk afrondt voordat je opnieuw herkent. " +
+                "Geen tweede OCR-taak gestart."
+            return
+        }
         busy = true
         notice = "De gekozen afbeelding wordt lokaal gelezen…"
         val timeout = Runnable {
@@ -622,86 +649,102 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         deadline = timeout
         if (!handler.postDelayed(timeout, 20_000L)) {
             generation++
+            ocrLease.release()
             busy = false
             notice = "Android kon de tijdslimiet niet instellen. Geen OCR gestart."
             return
         }
         decodeJob = lifecycleScope.launch {
-            val bitmap = if (cameraBitmap != null) cameraBitmap
-                else withContext(Dispatchers.IO) {
-                    runCatching { decodeBounded(requireNotNull(uri)) }.getOrNull()
-                }
-            if (request != generation || isFinishing) {
-                bitmap?.recycle()
-                return@launch
-            }
-            if (bitmap == null) {
-                clearDeadline()
-                busy = false
-                notice = "Android kon de gekozen afbeelding niet veilig lezen. " +
-                    "Gebruik een ondersteunde lokale afbeelding."
-                return@launch
-            }
-            val recognizer = runCatching {
-                TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-            }.getOrNull()
-            if (recognizer == null) {
-                bitmap.recycle()
-                clearDeadline()
-                busy = false
-                notice = "Het ingebouwde offline OCR-model kon niet worden geopend."
-                return@launch
-            }
+            // The lease stays owned by ML Kit even after the Activity is
+            // paused or a visual deadline expires. A coroutine cancellation
+            // releases it only if provider work was NOT submitted.
+            var providerSubmitted = false
             try {
-                recognizer.process(InputImage.fromBitmap(bitmap, 0))
-                    .addOnCompleteListener { task ->
-                        bitmap.recycle()
-                        recognizer.close()
-                        if (request != generation || isFinishing) return@addOnCompleteListener
-                        clearDeadline()
-                        busy = false
-                        if (!task.isSuccessful) {
-                            notice = "Offline OCR kon de afbeelding niet verwerken."
-                            return@addOnCompleteListener
-                        }
-                        val rawBlocks = task.result.textBlocks
-                            .map { it.text }
-                            .ifEmpty { listOf(task.result.text) }
-                        val admitted = PrivateImageTextBlocks.admit(rawBlocks)
-                        if (admitted == null) {
-                            notice = if (task.result.text.isBlank())
-                                "Geen herkenbare Latijnse tekst gevonden. " +
-                                    "Probeer een scherpere afbeelding."
-                            else "Te veel of ongeldige OCR-tekst om veilig te tonen. " +
-                                "Kies een kleinere uitsnede."
-                            return@addOnCompleteListener
-                        }
-                        textBlocks = admitted
-                        blockOrder = admitted.map { it.index }
-                        val allIds = admitted.map { it.index }.toSet()
-                        val combined = PrivateImageTextBlocks.assemble(admitted, allIds)
-                        if (combined != null) {
-                            selectedBlockIds = allIds
-                            draft = combined
-                            notice = "Tekst lokaal herkend en geselecteerd. Controleer " +
-                                "de blokken en pas de tekst aan vóór vertalen."
-                        } else {
-                            selectedBlockIds = emptySet()
-                            draft = ""
-                            notice = "Meer dan 8.000 tekens herkend. Kies hieronder " +
-                                "zelf de relevante tekstblokken; niets is doorgegeven."
-                        }
-                        reviewHistory.reset(reviewSnapshot())
-                        reviewVersion++
+                val bitmap = if (cameraBitmap != null) cameraBitmap
+                    else withContext(Dispatchers.IO) {
+                        runCatching { decodeBounded(requireNotNull(uri)) }.getOrNull()
                     }
-            } catch (_: Exception) {
-                bitmap.recycle()
-                recognizer.close()
-                if (request == generation) {
+                if (request != generation || isFinishing) {
+                    bitmap?.recycle()
+                    return@launch
+                }
+                if (bitmap == null) {
                     clearDeadline()
                     busy = false
-                    notice = "Offline OCR kon niet worden gestart."
+                    notice = "Android kon de gekozen afbeelding niet veilig lezen. " +
+                        "Gebruik een ondersteunde lokale afbeelding."
+                    return@launch
                 }
+                val recognizer = runCatching {
+                    TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                }.getOrNull()
+                if (recognizer == null) {
+                    bitmap.recycle()
+                    clearDeadline()
+                    busy = false
+                    notice = "Het ingebouwde offline OCR-model kon niet worden geopend."
+                    return@launch
+                }
+                try {
+                    val operation = recognizer.process(InputImage.fromBitmap(bitmap, 0))
+                    providerSubmitted = true
+                    operation.addOnCompleteListener { task ->
+                        try {
+                            bitmap.recycle()
+                            recognizer.close()
+                            if (request != generation || isFinishing) return@addOnCompleteListener
+                            clearDeadline()
+                            busy = false
+                            if (!task.isSuccessful) {
+                                notice = "Offline OCR kon de afbeelding niet verwerken."
+                                return@addOnCompleteListener
+                            }
+                            val rawBlocks = task.result.textBlocks
+                                .map { it.text }
+                                .ifEmpty { listOf(task.result.text) }
+                            val admitted = PrivateImageTextBlocks.admit(rawBlocks)
+                            if (admitted == null) {
+                                notice = if (task.result.text.isBlank())
+                                    "Geen herkenbare Latijnse tekst gevonden. " +
+                                        "Probeer een scherpere afbeelding."
+                                else "Te veel of ongeldige OCR-tekst om veilig te tonen. " +
+                                    "Kies een kleinere uitsnede."
+                                return@addOnCompleteListener
+                            }
+                            textBlocks = admitted
+                            blockOrder = admitted.map { it.index }
+                            val allIds = admitted.map { it.index }.toSet()
+                            val combined = PrivateImageTextBlocks.assemble(admitted, allIds)
+                            if (combined != null) {
+                                selectedBlockIds = allIds
+                                draft = combined
+                                notice = "Tekst lokaal herkend en geselecteerd. Controleer " +
+                                    "de blokken en pas de tekst aan vóór vertalen."
+                            } else {
+                                selectedBlockIds = emptySet()
+                                draft = ""
+                                notice = "Meer dan 8.000 tekens herkend. Kies hieronder " +
+                                    "zelf de relevante tekstblokken; niets is doorgegeven."
+                            }
+                            reviewHistory.reset(reviewSnapshot())
+                            reviewVersion++
+                        } finally {
+                            // Task actually completed, even if the owner has been
+                            // destroyed or the result callback throws.
+                            ocrLease.release()
+                        }
+                    }
+                } catch (_: Exception) {
+                    bitmap.recycle()
+                    recognizer.close()
+                    if (request == generation) {
+                        clearDeadline()
+                        busy = false
+                        notice = "Offline OCR kon niet worden gestart."
+                    }
+                }
+            } finally {
+                if (!providerSubmitted) ocrLease.release()
             }
         }
     }
