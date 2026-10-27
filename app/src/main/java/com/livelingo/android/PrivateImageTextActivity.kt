@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.heightIn
 import android.net.Uri
@@ -38,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -65,9 +67,11 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     private var deadline: Runnable? = null
     private var busy by mutableStateOf(false)
     private var sharedImageUri by mutableStateOf<Uri?>(null)
-    // Transient camera result held only until the user explicitly approves OCR.
-    // Never put the picture into saved state, Intent extras or external storage.
+    // RAM-only preview for camera, picked and shared images; not saved in
+    // Activity state, Intent extras or private/external storage.
     private var pendingCameraPreview by mutableStateOf<Bitmap?>(null)
+    private var previewRotationDegrees by mutableIntStateOf(0)
+    private var previewOrigin by mutableStateOf("camerafoto")
     private var draft by mutableStateOf("")
     private var textBlocks by mutableStateOf<List<PrivateImageTextBlock>>(emptyList())
     private var selectedBlockIds by mutableStateOf<Set<Int>>(emptySet())
@@ -164,8 +168,10 @@ internal class PrivateImageTextActivity : ComponentActivity() {
             clearReviewedImage()
             sharedImageUri = null
             pendingCameraPreview = bitmap
+            previewRotationDegrees = 0
+            previewOrigin = "camerafoto"
             notice = "Cameravoorvertoning ontvangen, nog niets herkend. " +
-                "Controleer eerst de foto en tik bewust op ‘Herken deze camerafoto’."
+                "Draai indien nodig en tik bewust op ‘Herken deze afbeelding’."
         }
     }
 
@@ -185,7 +191,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
             }
             notice = if (sharedImageUri != null) {
                 "Eén afbeelding ontvangen. Er is nog niets gelezen. " +
-                    "Tik bewust op ‘Herken gedeelde afbeelding’ om offline OCR te starten."
+                    "Open de privévoorvertoning om de foto eerst te bekijken " +
+                    "en de leesrichting te kiezen."
             } else {
                 "De gedeelde afbeelding had geen veilige tijdelijke leesrechten " +
                     "of bevatte meerdere items. Kies hieronder zelf een afbeelding."
@@ -231,9 +238,11 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 onClick = {
                                     val selected = sharedImageUri
                                     sharedImageUri = null
-                                    if (selected != null) readSelectedImage(selected)
+                                    if (selected != null) stageSelectedImage(
+                                        selected, "gedeelde afbeelding"
+                                    )
                                 }
-                            ) { Text("Herken gedeelde afbeelding · lokaal") }
+                            ) { Text("Bekijk gedeelde afbeelding vóór OCR") }
                         }
                         OutlinedButton(
                             enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
@@ -260,38 +269,61 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                         ) { Text("Maak foto met Android-camera") }
                         pendingCameraPreview?.let { preview ->
                             Text(
-                                "Camerafoto controleren · nog niet uitgelezen",
+                                "${previewOrigin.replaceFirstChar { it.uppercase() }} controleren · nog niet uitgelezen",
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Image(
                                 bitmap = preview.asImageBitmap(),
-                                contentDescription = "Voorvertoning van de net gemaakte camerafoto",
+                                contentDescription = "Tijdelijke privévoorvertoning van ${previewOrigin}, " +
+                                    "gedraaid ${previewRotationDegrees} graden",
                                 contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
+                                modifier = Modifier.fillMaxWidth().height(280.dp)
+                                    .graphicsLayer { rotationZ = previewRotationDegrees.toFloat() }
                             )
                             Text(
-                                "Dit is de kleinere camera-voorvertoning, geen foto op " +
-                                    "volledige resolutie. Voor kleine letters kun je " +
-                                    "beter een bestaande scherpe foto kiezen.",
+                                "De voorvertoning is in RAM verkleind en nooit opgeslagen. " +
+                                    "Draai 90° voordat je zelf offline OCR start. " +
+                                    "Voor kleine letters kan een scherpere foto helpen.",
                                 style = MaterialTheme.typography.bodySmall
                             )
+                            androidx.compose.foundation.layout.Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
+                                    onClick = {
+                                        previewRotationDegrees =
+                                            (previewRotationDegrees + 270) % 360
+                                    }
+                                ) { Text("↶ 90° links") }
+                                OutlinedButton(
+                                    enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
+                                    onClick = {
+                                        previewRotationDegrees =
+                                            (previewRotationDegrees + 90) % 360
+                                    }
+                                ) { Text("↷ 90° rechts") }
+                            }
                             Button(
                                 enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     val image = pendingCameraPreview
+                                    val rotation = previewRotationDegrees
                                     pendingCameraPreview = null
-                                    if (image != null) readCapturedImage(image)
+                                    previewRotationDegrees = 0
+                                    if (image != null) readCapturedImage(image, rotation)
                                 }
-                            ) { Text("Herken deze camerafoto · lokaal") }
+                            ) { Text("Herken deze afbeelding · lokaal") }
                             OutlinedButton(
                                 enabled = !busy,
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     pendingCameraPreview = null
-                                    notice = "Camerafoto weggegooid zonder OCR."
+                                    previewRotationDegrees = 0
+                                    notice = "Afbeelding weggegooid zonder OCR of opslag."
                                 }
-                            ) { Text("Verwerp camerafoto") }
+                            ) { Text("Verwerp afbeelding") }
                         }
                         OutlinedButton(
                             enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
