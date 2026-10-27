@@ -1,33 +1,34 @@
 # Actuele fysieke Android-overdracht · 27 oktober 2026
 
-**Huidige kandidaat voor fysieke Android 12+-acceptatie:** [Tuddy `main` 714f9337ad9a](https://github.com/Zennay/Tuddy/commit/714f9337ad9a4fee6443226715fecf4744ebfeff), Git-tree `878dc8b3faf56d41bb38051a036c82f578f2f67d`. [PR #569](https://github.com/Zennay/Tuddy/pull/569) en [PR #571](https://github.com/Zennay/Tuddy/pull/571) zijn beide gemerged. Deze kandidaat bevat nu óók de gecontroleerde, RAM-only foto-preview en 90°-rotatie vóór expliciet bevestigde offline OCR. De [self-hosted main-push workflow #40466819777](https://github.com/Zennay/Tuddy/actions/runs/40466819777) bouwde precies deze commit: `build` geslaagd; de PR-only `source-head` wordt bij een push correct overgeslagen. Het exacte PR #571-hoofd had succesvolle verplichte checks in [#40465553601](https://github.com/Zennay/Tuddy/actions/runs/40465553601), poging 2.
+**Huidige, onafhankelijk geverifieerde debug-APK-kandidaat voor fysieke Android 12+-acceptatie:** [Tuddy `main@59c4642007c07c802f807f0801e4096fe840118c`](https://github.com/Zennay/Tuddy/commit/59c4642007c07c802f807f0801e4096fe840118c). Dit is de versie ná de toevoeging van de **bewust gekozen foto-uitsnede voor offline OCR** in gemergede [PR #572](https://github.com/Zennay/Tuddy/pull/572). De afzonderlijke [self-hosted `main` push-workflow #40472751935](https://github.com/Zennay/Tuddy/actions/runs/40472751935) is op deze exacte SHA **completed / success**. Het `source-head`-onderdeel wordt bij een push correct overgeslagen; de PR-only source-head-gate was bij de product-PR gecontroleerd.
 
 | Controlepunt | Actuele kandidaat |
 |---|---|
-| APK-artifact | [Tuddy-debug-apk #12717800173](https://github.com/Zennay/Tuddy/actions/runs/40466819777/artifacts/12717800173) — verloopt 10 november 2026 07:29 UTC |
-| Buildbron en manifest-`source_sha` | `714f9337ad9a4fee6443226715fecf4744ebfeff` |
-| Artifact ZIP SHA-256 (GitHub en onafhankelijk berekend) | `b632bc03a150e1c605353431c2da2d685bb7f3138ae514fa4e3bad90a0522f96` |
-| APK SHA-256 (uitgepakt en onafhankelijk berekend) | `cc8241b89337622685da7504cb358bd954332418dbebc38e1ac033818f8516f1` |
-| Artifact ZIP omvang | 63.158.686 bytes |
-| APK-naam en bytes | `app-debug.apk`, **150.789.448 bytes** (debug, niet productie-ondertekend) |
-| Android 12+-installatie, echte vliegtuigmodus, 10+10 spraak/vertaling, onafhankelijke review | **NOG NIET UITGEVOERD / NIET BEWEZEN** |
+| GitHub artifact | [`Tuddy-debug-apk` #12718923072](https://github.com/Zennay/Tuddy/actions/runs/40472751935/artifacts/12718923072) |
+| Exacte APK-bron (`source-commit.txt` en `build-manifest.txt`) | `59c4642007c07c802f807f0801e4096fe840118c` |
+| ZIP SHA-256 — GitHub en onafhankelijk berekend | `916304b59abbb0467dbc2696803afda1b4d115575b5ee6db571b423b1c62bf64` |
+| ZIP-bytes | `63167345` |
+| Uitgepakt `app-debug.apk` SHA-256 — onafhankelijk en sidecar | `dd3eb205ddf01d40e21b07d3c15dabc2a90288d06be6432c62999171cbaf701d` |
+| APK-bytes | `150805832` |
+| Workflow / identiteit | `40472751935`; `event_name=push`; `ref=refs/heads/main` |
+| Fysieke installatie, echte radiostilte, 10 NL→EN + 10 EN→NL waarnemingen en onafhankelijke review | **NIET BEWEZEN / NIET AFGEROND** |
 
-**Onafhankelijke artifactcontrole uitgevoerd op 27 oktober 2026.** Het rechtstreeks via GitHub gedownloade ZIP-artifact (#12717800173) is afzonderlijk byte-voor-byte gehasht: **63.158.686 bytes** en SHA-256 `b632bc03a150e1c605353431c2da2d685bb7f3138ae514fa4e3bad90a0522f96`. De daarin uitgepakte `app-debug.apk` bevat **150.789.448 bytes**, SHA-256 `cc8241b89337622685da7504cb358bd954332418dbebc38e1ac033818f8516f1`. Deze lokaal berekende waarden komen exact overeen met GitHub ZIP-metadata en de meegeleverde `app-debug.apk.sha256`, `build-manifest.txt` en `source-commit.txt`. Het manifest bevestigt bovendien `source_sha=714f9337ad9a4fee6443226715fecf4744ebfeff`, `workflow_run_id=40466819777`, `event_name=push` en `ref=refs/heads/main`. Daarmee is uitsluitend de bouwherkomst van deze **debug-APK** gecontroleerd, niet de daadwerkelijke installatie, radiostatus of vertaalkwaliteit.
+**Onafhankelijke artifactcontrole van 27 oktober 2026:** de ZIP is rechtstreeks van GitHub gedownload en lokaal met SHA-256 gehasht. De uitgepakte APK is afzonderlijk in blokken gehasht. Hashes en byteaantallen komen overeen met de GitHub ZIP-digest en het in dezelfde ZIP meegeleverde `app-debug.apk.sha256`, `build-manifest.txt` en `source-commit.txt`. Dit is **bouwherkomst**, geen fysieke veiligheids-, privacy- of vertaalkwaliteitsacceptatie.
 
-Een tweede operator kan dit vóór installatie op een bevoegd fysiek toestel opnieuw controleren met de bestaande repository-verifier:
+Voor een operator die de exacte oorspronkelijke APK vóór installatie op een bevoegd toestel opnieuw wil vergelijken:
 
 ```sh
-bash scripts/verify-tuddy-apk-artifact.sh \\
-  artifact.zip \\
-  b632bc03a150e1c605353431c2da2d685bb7f3138ae514fa4e3bad90a0522f96 \\
-  cc8241b89337622685da7504cb358bd954332418dbebc38e1ac033818f8516f1 \\
-  714f9337ad9a4fee6443226715fecf4744ebfeff \\
-  40466819777
+bash scripts/verify-tuddy-apk-artifact.sh \
+  artifact.zip \
+  916304b59abbb0467dbc2696803afda1b4d115575b5ee6db571b423b1c62bf64 \
+  dd3eb205ddf01d40e21b07d3c15dabc2a90288d06be6432c62999171cbaf701d \
+  59c4642007c07c802f807f0801e4096fe840118c \
+  40472751935
 ```
 
-Vergelijk daarna de daadwerkelijk **geïnstalleerde** APK-hash in de app, controleer echte netwerkisolatie in vliegtuigmodus en registreer alleen zelf geobserveerde tien NL→EN plus tien EN→NL lokale spraak- en vertaalsessies. Vraag onafhankelijke beoordeling. De overige modelrechten, native-speakerbeoordeling, release-signing en productie-admission blijven aparte gates. [P1 #1](https://github.com/Zennay/Tuddy/issues/1) en [P1 #2](https://github.com/Zennay/Tuddy/issues/2) blijven open. Een groene build bewijst dit alles niet.
+De operator moet **de werkelijk geïnstalleerde APK-hash** controleren en in vliegtuigmodus met aantoonbaar uitgeschakelde verbindingen tien **daadwerkelijk waargenomen** NL→EN en tien EN→NL on-device spraak- én lokale tekstvertaalpogingen registreren, inclusief mislukkingen en meetbare vertragingen, en onafhankelijke menselijke beoordeling vragen. **Sluit P1 #1 niet.** De rechten-/runtime-/native-speaker-gate voor volledige offline Kurmanji/Sorani/Pasjtoe ASR+MT (**#2**) en de getekende release/productie-admission blijven apart.
 
-**Voorgaande kandidaat:** `79b96fa123d4daab9302719a5e8d942b2af895c4`, artifact #12714712900 / run #40461652744, is inmiddels historisch wegens nieuwe app-code in PR #571.
+**Historische voorganger:** `main@714f9337ad9a4fee6443226715fecf4744ebfeff`, workflow `40466819777`, ZIP-artifact `#12717800173`, APK SHA-256 `cc8241b89337622685da7504cb358bd954332418dbebc38e1ac033818f8516f1` is **vervangen** vanwege PR #572. Een volgende app-code-merge maakt ook de huidige debug-APK kandidaat historisch; pin dan de nieuwere exact-`main` build opnieuw vóór fysieke acceptatie.
 
 ---
 
