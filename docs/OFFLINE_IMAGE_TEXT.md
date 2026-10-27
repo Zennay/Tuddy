@@ -94,6 +94,40 @@ automatische export toegevoegd. De vertaalroute blijft de bestaande
 einmalige RAM-handoff en is volledig onafhankelijk van de drie
 uitgaande Android-acties.
 
+## Geselecteerde afbeeldingstekst lokaal terugluisteren
+
+Na OCR en de handmatige blokselectie kun je je **gecontroleerde tekst
+lokaal laten voorlezen** zonder een vertaling, kopie, Android-export of
+netwerkactie. Kies eerst de taal waarin de tekst daadwerkelijk geschreven
+is (Nederlands, Engels, Duits, Frans of Spaans) en tik daarna bewust op
+**Lees na · normaal** of **Lees na · langzaam**. Die keuze is een
+gebruikersinstelling voor deze tijdelijke OCR-weergave, geen automatisch
+herkende taal of bewijs van een beschikbare stem.
+
+De voorleesactie accepteert maximaal **2.400 tekens** van de actuele,
+veilig gevalideerde OCR-tekst en deelt deze in ten hoogste 12 stukken
+van maximaal 360 tekens op woordgrenzen. Een te lange tekst of een
+afzonderlijk woord dat niet veilig past, wordt **geweigerd**: Tuddy
+speelt niet stilzwijgend alleen de eerste helft af. Selecteer minder
+OCR-blokken of kort het tekstveld zelf in en probeer opnieuw.
+Het paneel toont de voortgang en biedt **Stop lokaal voorlezen**.
+
+De bestaande `LocalCaptionSpeaker` staat uitsluitend al geïnstalleerde,
+door Android als niet-netwerkafhankelijk gemelde TTS-stemmen toe. De
+gedeelde Android-audiofocus- en headsetbewaking stopt de uitvoer bij
+gemelde route- of focuswijzigingen; deze best-effort metadata garandeert
+niet dat op een echt toestel nooit luidsprekeraudio hoorbaar is.
+De gekozen tekst blijft in de RAM-only OCR-weergave. Er worden geen
+audiobestanden, tekstvoorkeuren of inhoudslogs bewaard, en er wordt
+geen offline model automatisch gedownload.
+
+**Tekst wijzigen, OCR-blokken selecteren/verplaatsen, een nieuwe
+afbeelding openen, het scherm verlaten of naar de achtergrond gaan**
+stopt het voorlezen en laat late Android-TTS-callbacks niets meer
+wijzigen. Dit is een luisterhulpmiddel voor de beoordeelde oorspronkelijke
+tekst, geen vertaal- of herkenningsnauwkeurigheidsclaim en geen bewijs
+van de nog vereiste fysieke Android 12+-vliegtuigmodusproef.
+
 ## Van foto naar vertaling
 
 1. Kies een afbeelding of bevestig expliciet de gedeelde afbeelding.

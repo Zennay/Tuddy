@@ -79,6 +79,15 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     private var pendingDocumentText: String? = null
     private var documentWriteJob: Job? = null
     private var pendingShareText by mutableStateOf<String?>(null)
+    // OCR remains the owner's RAM-only draft. Audio is another explicit
+    // action on the reviewed text, not a new sharing or translation route.
+    private var readbackSpeaker: LocalCaptionSpeaker? = null
+    private var readbackEpoch = 0L
+    private var readbackPlaying by mutableStateOf(false)
+    private var readbackLanguageTag by mutableStateOf("nl")
+    private var readbackCompleted by mutableStateOf(0)
+    private var readbackTotal by mutableStateOf(0)
+    private var readbackMessage by mutableStateOf("")
     private var notice by mutableStateOf(
         "Kies zelf een afbeelding. Alleen Latijns schrift wordt met " +
             "een ingebouwd offline OCR-model herkend. Controleer de tekst."
@@ -378,6 +387,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 value = draft,
                                 onValueChange = {
                                     if (it.length <= MAX_TEXT) {
+                                        stopReadback("Voorlezen gestopt: tekst is aangepast.")
                                         draft = it
                                         notice = "Handmatig aangepast. Controleer tekst en taalrichting."
                                     }
@@ -393,6 +403,23 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             ) {
                                 Text("Controleer taal en vertaal lokaal…")
                             }
+                            PrivateImageTextReadbackPanel(
+                                canRead = !busy && !isFinishing &&
+                                    PrivateImageTextReadbackPolicy.prepare(draft) != null,
+                                playing = readbackPlaying,
+                                languageTag = readbackLanguageTag,
+                                completed = readbackCompleted,
+                                total = readbackTotal,
+                                message = readbackMessage,
+                                onLanguageChange = { code ->
+                                    stopReadback("Uitspraaktaal gewijzigd. Tik zelf op voorlezen.")
+                                    readbackLanguageTag = code
+                                },
+                                onPlay = { pace -> startReadback(pace) },
+                                onStop = {
+                                    stopReadback("Lokaal voorlezen bewust gestopt.")
+                                }
+                            )
                             PrivateImageTextOutboundPanel(
                                 enabled = !busy &&
                                     PrivateImageTextOutboundPolicy.reviewedText(draft) != null,
@@ -597,6 +624,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     private fun clearReviewedImage() {
+        stopReadback("Voorlezen gestopt: afbeeldingstekst gewist.")
         draft = ""
         textBlocks = emptyList()
         selectedBlockIds = emptySet()
@@ -604,6 +632,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     private fun toggleBlock(index: Int, checked: Boolean) {
+        stopReadback("Voorlezen gestopt: tekstblokselectie of volgorde gewijzigd.")
         val next = if (checked) selectedBlockIds + index else selectedBlockIds - index
         if (next.isEmpty()) {
             selectedBlockIds = emptySet()
@@ -623,12 +652,14 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     private fun clearBlockSelection() {
+        stopReadback("Voorlezen gestopt: tekstblokselectie of volgorde gewijzigd.")
         selectedBlockIds = emptySet()
         draft = ""
         notice = "Blokselectie gewist. De herkende blokken blijven tijdelijk beschikbaar."
     }
 
     private fun selectAllBlocks() {
+        stopReadback("Voorlezen gestopt: tekstblokselectie of volgorde gewijzigd.")
         // Include whole blocks in OCR order while staying under
         // 8,000 characters. Oversized blocks are skipped, never truncated.
         // Preserve the user's deliberate block choices. Only append other
@@ -651,6 +682,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
 
     /** No content export or model work until user has reviewed this order. */
     private fun moveReviewedBlock(id: Int, direction: Int) {
+        stopReadback("Voorlezen gestopt: tekstblokselectie of volgorde gewijzigd.")
         val next = PrivateImageTextBlocks.move(textBlocks, blockOrder, id, direction)
             ?: return
         blockOrder = next
@@ -661,12 +693,71 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     private fun restoreBlockOrder() {
+        stopReadback("Voorlezen gestopt: tekstblokselectie of volgorde gewijzigd.")
         blockOrder = textBlocks.map { it.index }
         draft = PrivateImageTextBlocks.assemble(
             textBlocks, selectedBlockIds, blockOrder
         ).orEmpty()
         notice = "Oorspronkelijke OCR-volgorde hersteld. " +
             "Controleer de tekst opnieuw vóór vertalen."
+    }
+
+    private fun stopReadback(reason: String = "") {
+        // Generation guard applies even to delayed TTS initialization or
+        // utterance callbacks after a new image, edit, Stop or background.
+        readbackEpoch++
+        readbackSpeaker?.stop()
+        readbackPlaying = false
+        readbackCompleted = 0
+        readbackTotal = 0
+        readbackMessage = reason
+    }
+
+    private fun startReadback(pace: LocalSpeechPace) {
+        if (busy || isFinishing || isDestroyed) return
+        stopReadback()
+        val snapshot = draft
+        val chunks = PrivateImageTextReadbackPolicy.prepare(snapshot)
+        if (chunks == null) {
+            readbackMessage = "Selecteer en controleer maximaal 2.400 tekens " +
+                "met gewone woorden. Langere tekst kun je eerst inkorten; " +
+                "Tuddy leest nooit stilzwijgend slechts een deel voor."
+            return
+        }
+        val language = readbackLanguageTag
+        val epoch = readbackEpoch
+        readbackPlaying = true
+        readbackTotal = chunks.size
+        readbackCompleted = 0
+        readbackMessage = "Geïnstalleerde lokale Android-stem controleren…"
+        val speaker = readbackSpeaker ?: LocalCaptionSpeaker(this).also {
+            readbackSpeaker = it
+        }
+        fun current(): Boolean =
+            readbackEpoch == epoch && draft == snapshot && !isFinishing && !isDestroyed
+        speaker.speakSequence(
+            lines = chunks,
+            languageTag = language,
+            pace = pace,
+            onProgress = { done, total ->
+                if (current()) {
+                    readbackCompleted = done
+                    readbackTotal = total
+                }
+            },
+            feedback = { message ->
+                if (current()) readbackMessage = message
+            },
+            onFinished = { completed ->
+                if (current()) {
+                    readbackPlaying = false
+                    if (completed) {
+                        readbackCompleted = chunks.size
+                        readbackMessage = "Gecontroleerde afbeeldingstekst lokaal voorgelezen."
+                    }
+                }
+            }
+        )
     }
 
     private fun copyReviewedText() {
@@ -722,6 +813,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        stopReadback()
         // Also cover picker/overlay transitions which may not reach onStop.
         // The selected content is never kept in an Android task snapshot.
         generation++
@@ -737,6 +829,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        stopReadback()
         generation++
         decodeJob?.cancel()
         decodeJob = null
@@ -749,6 +842,9 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        stopReadback()
+        readbackSpeaker?.close()
+        readbackSpeaker = null
         documentWriteJob?.cancel()
         documentWriteJob = null
         pendingDocumentText = null
