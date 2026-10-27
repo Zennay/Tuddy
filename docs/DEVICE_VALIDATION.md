@@ -26,6 +26,18 @@
    opnieuw een actuele APK-/apparaatmomentopname gemaakt, zodat gewijzigde
    RAM-sessietellers na echte pogingen geen verouderde status opleveren.
 
+Tijdens dit fysieke proefconcept activeert Tuddy de bestaande strikte
+microfoonbewaking (start-/herstartweigering bij netwerk, Android-radio-observers
+en periodieke controle). De gebruiker kan deze instelling niet uitschakelen
+tot het concept bewust wordt gewist of geëxporteerd. Ook kunnen RAM-
+sessietellers tijdens een lopend concept niet worden gewist. Voor **nieuwe**
+handmatig gemarkeerde successen moet Tuddy een aanvullende definitieve
+on-device herkenning respectievelijk lokale vertaling in de juiste richting
+hebben geteld sinds de start van het concept. Pogingen die mislukten, blijven
+handmatig geobserveerd; na een geïmporteerd concept worden eerdere pogingen
+niet ten onrechte als live tellerbewijs meegeteld. Deze controles bewijzen
+noch herkenningskwaliteit, noch echte radio-isolatie tijdens een gesproken zin.
+
 Na een activiteit- of procesherstart gaat het RAM-concept verloren. Een
 bewust via Android Documenten geëxporteerd, transcriptvrij proefconcept kan
 later handmatig worden heropend; een import **herstelt nooit** netwerk-,

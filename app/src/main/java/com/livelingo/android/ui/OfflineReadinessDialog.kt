@@ -68,6 +68,7 @@ internal fun OfflineReadinessDialog(
     onCopyDiagnostics: () -> Boolean,
     sessionDiagnostics: OfflineSessionDiagnostics,
     acceptanceDraft: OfflineAcceptanceDraft,
+    onArmStrictOffline: () -> Unit,
     onReturnToConversation: () -> Unit,
     onResetSessionCounters: () -> Unit,
     onReportSnapshot: () -> ByteArray?,
@@ -324,10 +325,12 @@ internal fun OfflineReadinessDialog(
                 )
                 OutlinedButton(
                     onClick = { onSetRequireOfflineRadio(!requireOfflineRadioBeforeListening) },
-                    enabled = !isListening,
+                    enabled = !isListening && acceptanceDraft.baseline.value == null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (requireOfflineRadioBeforeListening)
+                    Text(if (acceptanceDraft.baseline.value != null)
+                        "Fysieke proef actief · strikte bewaking vergrendeld"
+                    else if (requireOfflineRadioBeforeListening)
                         "Strikte vliegtuigmodus: aan · uitschakelen"
                     else "Strikte vliegtuigmodus voor luisteren inschakelen")
                 }
@@ -367,7 +370,7 @@ internal fun OfflineReadinessDialog(
                 }
                 OutlinedButton(
                     onClick = onResetSessionCounters,
-                    enabled = !isListening,
+                    enabled = !isListening && acceptanceDraft.baseline.value == null,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Wis sessietellers") }
                 OfflineReadinessFileExportAction(
@@ -380,6 +383,8 @@ internal fun OfflineReadinessDialog(
                     enabled = !isListening,
                     deviceSnapshot = onReportSnapshot,
                     draft = acceptanceDraft,
+                    sessionDiagnostics = sessionDiagnostics,
+                    onArmStrictOffline = onArmStrictOffline,
                     onReturnToConversation = onReturnToConversation,
                     onPickerStarted = onReportPickerStarted,
                     onPickerFinished = onReportPickerFinished

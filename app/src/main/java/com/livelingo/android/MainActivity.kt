@@ -5367,7 +5367,9 @@ private fun TuddyScreen(
                 onOpenSpeechSettings = { openSpeechSettings() },
                 requireOfflineRadioBeforeListening = requireOfflineRadioBeforeListening,
                 onSetRequireOfflineRadio = { enabled ->
-                    if (!listening) requireOfflineRadioBeforeListening = enabled
+                    if (!listening && (enabled || acceptanceDraft.baseline.value == null)) {
+                        requireOfflineRadioBeforeListening = enabled
+                    }
                 },
                 onOpenAirplaneSettings = {
                     if (!listening) {
@@ -5386,10 +5388,11 @@ private fun TuddyScreen(
                 onCopyDiagnostics = { copyOfflineReadinessReport() },
                 sessionDiagnostics = sessionDiagnostics,
                 acceptanceDraft = acceptanceDraft,
+                onArmStrictOffline = { if (!listening) requireOfflineRadioBeforeListening = true },
                 onReturnToConversation = { offlineReadinessOpen = false },
                 onResetSessionCounters = {
                     // Reset is manual and blocked during active recording by the dialog.
-                    if (!listening) {
+                    if (!listening && acceptanceDraft.baseline.value == null) {
                         sessionDiagnostics = OfflineSessionDiagnostics()
                         speechTranslationStarted.clear()
                     }
