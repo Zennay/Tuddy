@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.OfflineRadioSnapshot
 import com.livelingo.android.LocalModelStorageAdmission
 import com.livelingo.android.LocalModelNetworkAdmission
+import com.livelingo.android.LocalSpeechPackDownloadAdmission
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OfflineTextReceipt
@@ -85,6 +86,9 @@ internal fun OfflineReadinessDialog(
         mutableStateOf(LocalModelNetworkAdmission.inspect(context))
     }
     var networkSettingsNotice by remember { mutableStateOf("") }
+    // Observe on every recomposition after the existing speech-pack receipt.
+    // The slot itself is process-wide and survives dialog/activity dismissal.
+    val pendingSpeechDownloadTag = LocalSpeechPackDownloadAdmission.pendingTag()
     // Android settings is outside Tuddy. Refresh when the user returns.
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
@@ -203,9 +207,22 @@ internal fun OfflineReadinessDialog(
                         Button(
                             onClick = onDownloadSpeech,
                             enabled = canInspect && speechServicePresent &&
-                                storageReceipt.canBegin && networkReceipt.canBegin,
+                                storageReceipt.canBegin && networkReceipt.canBegin &&
+                                pendingSpeechDownloadTag == null,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Spraak via wifi") }
+                    }
+                    if (pendingSpeechDownloadTag != null) {
+                        Text(
+                            "Android heeft nog een onbevestigd spraakpakketverzoek " +
+                                "voor $pendingSpeechDownloadTag. Tuddy start geen " +
+                                "tweede aanvraag, ook niet na het sluiten van dit " +
+                                "venster. Controleer de daadwerkelijk geïnstalleerde " +
+                                "pakketten opnieuw; een eerdere aanvraag is geen " +
+                                "bewijs van een bruikbaar lokaal spraakmodel.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                     if (checkingSpeech) {
                         OutlinedButton(
