@@ -96,13 +96,17 @@ internal fun OfflineAcceptanceLiveGuide(
                     style = MaterialTheme.typography.bodySmall)
                 val previous = draft.lastRecordedDiagnostics.value ?: started
                 val freshVoiceEvent = previous != null &&
-                    diagnostics.hasNewVoiceAttemptSince(previous)
+                    diagnostics.hasNewVoiceAttemptInDirectionSince(
+                        previous,
+                        if (expected == OfflineObservationDirection.NL_EN) "nl" else "en",
+                        if (expected == OfflineObservationDirection.NL_EN) "en" else "nl"
+                    )
                 Text(
                     if (freshVoiceEvent)
-                        "Nieuwe lokale opname-/herkenningsactiviteit gezien sinds de " +
-                            "vorige registratie. Controleer zelf de echte uitkomst."
-                    else "Nog geen nieuwe lokale opname-/herkenningsactiviteit " +
-                        "sinds de vorige registratie. Doe eerst een echte spraakpoging.",
+                        "Nieuwe opname-/herkenningsactiviteit in deze taalrichting " +
+                            "gezien sinds de vorige registratie. Controleer de echte uitkomst."
+                    else "Nog geen nieuwe opname-/herkenningsactiviteit in deze " +
+                        "taalrichting sinds de vorige registratie. Doe eerst een echte spraakpoging.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (current != expected) {
