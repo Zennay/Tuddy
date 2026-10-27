@@ -105,7 +105,7 @@ internal fun TwoWayTypedConversationDialog(
     var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var readerOpen by remember { mutableStateOf(false) }
     var studyOpen by remember { mutableStateOf(false) }
-    val models = remember { TypedConversationModelController() }
+    val models = remember(context) { TypedConversationModelController(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     fun clearSpeech() {

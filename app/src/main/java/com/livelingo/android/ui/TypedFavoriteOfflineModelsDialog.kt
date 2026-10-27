@@ -1,5 +1,7 @@
 package com.livelingo.android.ui
 
+import androidx.compose.ui.platform.LocalContext
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,7 +41,8 @@ internal fun TypedFavoriteOfflineModelsDialog(
     onDismiss: () -> Unit
 ) {
     val pairs = remember(savedPairs) { savedPairs.take(6).toList() }
-    val modelBatch = remember { TypedFavoriteModelBatchController() }
+    val context = LocalContext.current
+    val modelBatch = remember(context) { TypedFavoriteModelBatchController(context) }
     val receipts = remember { mutableStateMapOf<TypedLanguagePair, OfflineTextReceipt>() }
     var busy by remember { mutableStateOf(false) }
     var confirmWifi by remember { mutableStateOf(false) }
