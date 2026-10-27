@@ -357,7 +357,9 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     private fun selectAllBlocks() {
         // Include whole blocks in OCR order while staying under
         // 8,000 characters. Oversized blocks are skipped, never truncated.
-        val accepted = mutableSetOf<Int>()
+        // Preserve the user's deliberate block choices. Only append other
+        // whole blocks that fit, rather than replacing their selection.
+        val accepted = selectedBlockIds.toMutableSet()
         textBlocks.forEach { block ->
             val candidate = accepted + block.index
             if (PrivateImageTextBlocks.assemble(textBlocks, candidate) != null) {
