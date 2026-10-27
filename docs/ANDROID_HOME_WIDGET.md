@@ -24,6 +24,15 @@ directe pinondersteuning mag het handmatige Widgets-menu blijven aanbieden.
 De aanvraag werkt alleen als expliciete actie in de voorgrond en wordt niet
 automatisch herhaald.
 
+## Vergroten of verkleinen
+
+Houd de geplaatste widget ingedrukt om hem via je launcher kleiner of
+groter te maken. Android 12+ kiest automatisch de compacte indeling
+(korte knoppen, volledige schermlezerlabels) of de normale indeling.
+Beide formaten behouden **Typ**, **Offline check** en **Eén zin**.
+Er is geen achtergrondverversing of extra netwerkverkeer voor resize.
+De kleinste widgetgrootte hangt af van de launcher.
+
 De widget zelf vraagt geen microfoontoestemming, toont geen privétekst en
 bewaart geen gesproken audio, vertalingen, geschiedenis of klembordwaarden.
 Iedere knop gebruikt dezelfde gecontroleerde ingang als de bestaande
@@ -31,6 +40,9 @@ Android-appsnelkoppelingen. Het is geen offline-modelinstallatie of
 toestelacceptatie.
 
 ## Nog fysiek te beoordelen
+
+Controleer op een geautoriseerd toestel ook compact/normaal
+resizen, portret/landschap, alle drie de knoppen en schermlezerlabels.
 
 Controleer op een geautoriseerd toestel ook de zichtbare pin-aanvraag,
 het onderscheid tussen aangevraagd en daadwerkelijk geplaatst, het

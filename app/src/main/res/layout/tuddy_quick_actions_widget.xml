@@ -3,7 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="10dp"
+    android:gravity="center_vertical"
     android:background="@drawable/tuddy_widget_panel">
 
     <TextView
@@ -11,15 +12,15 @@
         android:layout_height="wrap_content"
         android:text="@string/tuddy_widget_title"
         android:textStyle="bold"
-        android:textSize="18sp"
+        android:textSize="16sp"
         android:textColor="#FFFFFF"/>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
+        android:layout_marginBottom="6dp"
         android:text="@string/tuddy_widget_subtitle"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:maxLines="1"
         android:ellipsize="end"
         android:textColor="#D9E6EF"/>
@@ -31,36 +32,43 @@
 
         <TextView
             android:id="@+id/tuddy_widget_type"
+            android:contentDescription="@string/tuddy_widget_type"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="38dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:gravity="center"
             android:background="@drawable/tuddy_widget_action"
             android:text="@string/tuddy_widget_type"
             android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:textStyle="bold"
             android:textSize="14sp"/>
 
         <TextView
             android:id="@+id/tuddy_widget_check"
+            android:contentDescription="@string/tuddy_widget_check"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="38dp"
             android:layout_weight="1"
             android:layout_marginStart="4dp"
             android:gravity="center"
             android:background="@drawable/tuddy_widget_action"
             android:text="@string/tuddy_widget_check"
             android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:textStyle="bold"
             android:textSize="14sp"/>
     </LinearLayout>
 
     <TextView
         android:id="@+id/tuddy_widget_sentence"
+        android:contentDescription="@string/tuddy_widget_sentence"
         android:layout_width="match_parent"
-        android:layout_height="44dp"
-        android:layout_marginTop="8dp"
+        android:layout_height="38dp"
+        android:layout_marginTop="6dp"
         android:gravity="center"
         android:background="@drawable/tuddy_widget_action"
         android:text="@string/tuddy_widget_sentence"
