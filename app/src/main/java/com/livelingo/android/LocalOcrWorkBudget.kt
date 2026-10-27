@@ -1,5 +1,9 @@
 package com.livelingo.android
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
 /**
  * Process-scoped admission for heavy, uncancellable on-device OCR tasks.
  *
@@ -14,7 +18,10 @@ package com.livelingo.android
  * No image, recognized text, URI, language or user identity is stored.
  */
 internal class LocalOcrWorkBudget private constructor() {
-    private var inFlight = false
+    // Compose only observes an anonymous busy bit, never an image or URI.
+    // This lets the picker/camera buttons become available again precisely
+    // when the actual provider callback releases the physical OCR slot.
+    private var inFlight by mutableStateOf(false)
 
     internal inner class Lease {
         private var released = false
