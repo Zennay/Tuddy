@@ -304,6 +304,34 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                     }
                                 ) { Text("↷ 90° rechts") }
                             }
+                            Text(
+                                "Uitsnede toepassen vóór OCR · kies alleen het deel " +
+                                    "met relevante tekst. Tuddy toont daarna de echte " +
+                                    "uitgesneden foto voor je zelf herkenning start. " +
+                                    "Kies de oorspronkelijke foto opnieuw om de uitsnede te herstellen.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            listOf(
+                                PrivateOcrCropArea.UPPER_HALF to PrivateOcrCropArea.LOWER_HALF,
+                                PrivateOcrCropArea.LEFT_HALF to PrivateOcrCropArea.RIGHT_HALF
+                            ).forEach { pair ->
+                                androidx.compose.foundation.layout.Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    listOf(pair.first, pair.second).forEach { area ->
+                                        OutlinedButton(
+                                            enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
+                                            modifier = Modifier.weight(1f),
+                                            onClick = { cropReviewedPreview(area) }
+                                        ) { Text(area.title) }
+                                    }
+                                }
+                            }
+                            OutlinedButton(
+                                enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { cropReviewedPreview(PrivateOcrCropArea.CENTER) }
+                            ) { Text("Snijd middelste helft uit") }
                             Button(
                                 enabled = !busy && !LocalOcrWorkBudget.shared.isBusy(),
                                 modifier = Modifier.fillMaxWidth(),
@@ -699,6 +727,60 @@ internal class PrivateImageTextActivity : ComponentActivity() {
             previewRotationDegrees = 0
             notice = "Afbeelding geladen, nog geen tekst herkend. " +
                 "Controleer de leesrichting en tik pas dan op ‘Herken deze afbeelding’."
+        }
+    }
+
+    /**
+     * Only a user's explicit selection may transform the RAM preview.
+     * Decode/crop on a worker to keep the Android UI responsive. Never send
+     * the original image to OCR after a failed or cancelled crop.
+     */
+    private fun cropReviewedPreview(area: PrivateOcrCropArea) {
+        val source = pendingCameraPreview ?: return
+        if (busy || LocalOcrWorkBudget.shared.isBusy() ||
+            LocalMemoryPressurePolicy.isSystemLowMemory(this) || source.isRecycled) {
+            notice = "Uitsnede nu niet mogelijk: Android meldt weinig geheugen " +
+                "of een eerdere afbeeldingtaak loopt nog."
+            return
+        }
+        val rotation = previewRotationDegrees
+        val request = ++generation
+        busy = true
+        notice = "Alleen ${area.title.lowercase()} van de voorvertoning " +
+            "tijdelijk in het toestelgeheugen voorbereiden…"
+        decodeJob?.cancel()
+        decodeJob = lifecycleScope.launch {
+            val cropped = withContext(Dispatchers.Default) {
+                runCatching {
+                    PrivateOcrPreviewCrop.create(source, rotation, area)
+                }.getOrNull()
+            }
+            if (request != generation || isFinishing || isDestroyed) {
+                cropped?.recycle()
+                return@launch
+            }
+            busy = false
+            if (cropped == null || cropped.width !in 32..1600 ||
+                cropped.height !in 32..1600 ||
+                runCatching { cropped.byteCount > MAX_CAMERA_PREVIEW_BYTES }.getOrDefault(true)) {
+                cropped?.recycle()
+                notice = "De uitsnede is te klein of kon niet veilig worden gemaakt. " +
+                    "De hele voorvertoning blijft ongewijzigd; kies eventueel opnieuw."
+                return@launch
+            }
+            if (pendingCameraPreview !== source) {
+                cropped.recycle()
+                notice = "De afbeelding is intussen gewijzigd; de uitsnede is weggegooid."
+                return@launch
+            }
+            clearReviewedImage()
+            pendingCameraPreview = cropped
+            previewRotationDegrees = 0
+            previewOrigin = "uitsnede van ${previewOrigin}"
+            source.recycle()
+            notice = "${area.title} toegepast. Alleen deze zichtbare foto " +
+                "gaat naar offline OCR zodra je op Herken tikt. " +
+                "Kies de oorspronkelijke foto opnieuw voor een nieuwe uitsnede."
         }
     }
 
