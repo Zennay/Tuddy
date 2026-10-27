@@ -9,6 +9,12 @@ package com.livelingo.android
  */
 internal data class OfflineSessionDiagnostics(
     val listeningStarts: Int = 0,
+    // Counts are scoped to the explicitly selected NL/EN direction. They
+    // prevent a failed turn in the OTHER direction from being recorded here.
+    val nlEnCaptureStarts: Int = 0,
+    val enNlCaptureStarts: Int = 0,
+    val nlEnRecognizerFailures: Int = 0,
+    val enNlRecognizerFailures: Int = 0,
     val interimUpdates: Int = 0,
     val finalUtterances: Int = 0,
     val nlEnFinalUtterances: Int = 0,
@@ -42,8 +48,42 @@ internal data class OfflineSessionDiagnostics(
             quietBudgetStops > previous.quietBudgetStops ||
             terminalSpeechErrors > previous.terminalSpeechErrors
 
+    fun withDirectionalRecognizerFailure(sourceCode: String, targetCode: String):
+        OfflineSessionDiagnostics = when {
+        sourceCode == "nl" && targetCode == "en" ->
+            copy(nlEnRecognizerFailures = nlEnRecognizerFailures + 1)
+        sourceCode == "en" && targetCode == "nl" ->
+            copy(enNlRecognizerFailures = enNlRecognizerFailures + 1)
+        else -> this
+    }
+
+    /**
+     * Admission signal for a *new* manual observation in one direction.
+     * A generic microphone tap/error from the other direction is insufficient.
+     * The user must still observe the outcome and actual radio isolation.
+     */
+    fun hasNewVoiceAttemptInDirectionSince(
+        previous: OfflineSessionDiagnostics,
+        sourceCode: String,
+        targetCode: String
+    ): Boolean = when {
+        sourceCode == "nl" && targetCode == "en" ->
+            nlEnCaptureStarts > previous.nlEnCaptureStarts ||
+                nlEnRecognizerFailures > previous.nlEnRecognizerFailures ||
+                nlEnFinalUtterances > previous.nlEnFinalUtterances
+        sourceCode == "en" && targetCode == "nl" ->
+            enNlCaptureStarts > previous.enNlCaptureStarts ||
+                enNlRecognizerFailures > previous.enNlRecognizerFailures ||
+                enNlFinalUtterances > previous.enNlFinalUtterances
+        else -> false
+    }
+
     fun asReportLines(): List<String> = listOf(
         "Listening starts (user taps): $listeningStarts",
+        "NL -> EN explicit microphone starts: $nlEnCaptureStarts",
+        "EN -> NL explicit microphone starts: $enNlCaptureStarts",
+        "NL -> EN recognizer failure events: $nlEnRecognizerFailures",
+        "EN -> NL recognizer failure events: $enNlRecognizerFailures",
         "Changed nonempty interim hypotheses: $interimUpdates",
         "Nonempty final on-device hypotheses: $finalUtterances",
         "NL -> EN final on-device hypotheses (not 10-attempt acceptance): $nlEnFinalUtterances",
