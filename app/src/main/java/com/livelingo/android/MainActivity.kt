@@ -10513,7 +10513,7 @@ private fun TuddyScreen(
                             historyStatusFilter = SessionCaptionStatusFilter.ALL
                         }
                     }, enabled = lines.isNotEmpty()) {
-                        Text(if (historySearchOpen) "Sluit zoeken" else "Zoek in gesprek")
+                        Text(if (historySearchOpen) "Sluit zoeken" else "Zoek / status in gesprek")
                     }
                     TextButton(
                         enabled = captionPins.isNotEmpty(),
