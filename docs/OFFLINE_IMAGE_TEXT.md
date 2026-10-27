@@ -54,6 +54,35 @@ een modeldownload op het toestel, nieuwe camera-/fotopermissies, opname
 of Tuddy-netwerkverzoek. We ondersteunen hier alleen **Latijns schrift**;
 geen betrouwbare Sorani, Arabische-schrift Kurmanji of Pasjtoe OCR-claim.
 
+## Geen stapeling van zware OCR-taken bij time-out of schermwissel
+
+Een OCR-scan heeft al een zichtbare **20-secondenlimiet**. Die limiet
+betekent echter niet dat de onderliggende Android/ML Kit-herkenning
+daadwerkelijk is geannuleerd; de provider kan nog een afbeelding in
+geheugen verwerken wanneer je een nieuwe kiest of het scherm sluit.
+
+Tuddy laat daarom nog maar **één echt ingediende OCR-taak tegelijk
+binnen dit app-proces** toe. De grens geldt ook wanneer een
+Activity opnieuw wordt aangemaakt. Pas wanneer ML Kit een echte
+voltooiingscallback terugstuurt (zowel succes als fout) komt de plek
+vrij. Verlaat je het scherm of is de 20-secondenlimiet verlopen,
+dan verdwijnen de oude tekst en voorvertoning direct zoals voorheen,
+maar een nieuwe zware scan wordt duidelijk **geweigerd zolang de
+oude taak nog actief is**. Dat voorkomt herhaald aanmelden van
+grote afbeeldingen op een krap toestel, zonder te veinzen dat de
+oude verwerking fysiek gestopt is.
+
+Als de herkenning nog bezig is, krijg je de melding dat de vorige
+offline-afbeeldingstaak eerst moet afronden. Ook als Android zelf
+een **laag-geheugensignaal** geeft, begint er geen nieuwe scan.
+Een bestand-leesfout of annulering voordat ML Kit echt aan de slag
+ging, geeft de plek meteen vrij. Alle toelatingsinformatie is
+uitsluitend anoniem en tijdelijk in RAM; de grens slaat **geen
+beelden, OCR-tekst, URI's of gebruikersinformatie** op. Wanneer een
+provider definitief geen callback levert, blijft die ene plek
+gesloten tot de app opnieuw wordt gestart. Dat is een bewuste
+fail-closed grens, geen bewijs van een geslaagde scan.
+
 ## Van gecontroleerde foto naar tekstbestand, klembord of Android-delen
 
 De afbeeldingstekst hoeft niet eerst vertaald te worden om bruikbaar te
