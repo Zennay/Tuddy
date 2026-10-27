@@ -116,7 +116,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                         Text(notice, style = MaterialTheme.typography.bodySmall)
                         if (textBlocks.isNotEmpty()) {
                             Text(
-                                "Kies de relevante tekstblokken · ${textBlocks.size} gevonden",
+                                "Kies relevante tekstblokken · ${textBlocks.size} gevonden · ${selectedBlockIds.size} gekozen",
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Text(
@@ -129,7 +129,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             OutlinedButton(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = { selectAllBlocks() }
-                            ) { Text("Selecteer alle passende blokken") }
+                            ) { Text("Vul selectie aan tot maximaal 8.000 tekens") }
                             OutlinedButton(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = { clearBlockSelection() }
@@ -355,8 +355,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     private fun selectAllBlocks() {
-        // For long documents admit only an exact contiguous prefix of whole
-        // blocks that fits. Never silently truncate a selected block's text.
+        // Include whole blocks in OCR order while staying under
+        // 8,000 characters. Oversized blocks are skipped, never truncated.
         val accepted = mutableSetOf<Int>()
         textBlocks.forEach { block ->
             val candidate = accepted + block.index
@@ -367,7 +367,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         selectedBlockIds = accepted
         draft = PrivateImageTextBlocks.assemble(textBlocks, accepted).orEmpty()
         notice = if (accepted.isEmpty()) "Geen blok past binnen de 8.000-tekengrens."
-            else "${accepted.size} blokken geselecteerd; controleer de tekst vóór vertalen."
+            else "${accepted.size} van ${textBlocks.size} blokken geselecteerd. " +
+                "Mogelijk zijn blokken overgeslagen; controleer wat is meegenomen."
     }
 
     private fun openLocalTranslator() {
