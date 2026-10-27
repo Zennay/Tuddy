@@ -111,7 +111,11 @@ internal object PrivateOcrReplacePolicy {
             pos = next + needle.length
         }
         val revised = result.toString()
-        return if (found in 1..100 && revised.length <= 8_000 && revised != text)
+        // Reuse the same UTF-16/control/bidi admission as the existing
+        // explicit translate/copy/save/share path. A replacement must never
+        // manufacture a broken surrogate or unsafe output string.
+        return if (found in 1..100 && revised.length <= 8_000 &&
+            revised != text && LocalTextBoundaryPolicy.selectedTranslation(revised) != null)
             PrivateOcrReplacePlan(text, revised, found) else null
     }
 }
