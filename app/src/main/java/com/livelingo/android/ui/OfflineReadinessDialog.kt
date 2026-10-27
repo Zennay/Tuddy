@@ -24,6 +24,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.OfflineRadioSnapshot
+import com.livelingo.android.LocalModelStorageAdmission
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OfflineTextReceipt
@@ -75,11 +76,13 @@ internal fun OfflineReadinessDialog(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var radioStatus by remember { mutableStateOf(OfflineRadioSnapshot.capture(context)) }
+    var storageReceipt by remember { mutableStateOf(LocalModelStorageAdmission.inspect()) }
     // Android settings is outside Tuddy. Refresh when the user returns.
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 radioStatus = OfflineRadioSnapshot.capture(context)
+                storageReceipt = LocalModelStorageAdmission.inspect()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -117,6 +120,26 @@ internal fun OfflineReadinessDialog(
                     color = MaterialTheme.colorScheme.primary
                 )
                 HorizontalDivider()
+                Text("Vrije ruimte vóór een nieuwe offline modeldownload",
+                    style = MaterialTheme.typography.titleSmall)
+                Text(
+                    storageReceipt.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (storageReceipt.canBegin)
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.error
+                )
+                OutlinedButton(
+                    onClick = { storageReceipt = LocalModelStorageAdmission.inspect() },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Controleer interne opslag opnieuw") }
+                Text(
+                    "Bestaande lokale vertalingen en modelcontroles werken ook " +
+                        "bij weinig ruimte. Een geslaagde opslagcheck garandeert " +
+                        "niet dat een nieuw Android-/ML Kit-model past.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                HorizontalDivider()
                 Text("1 · Spraakherkenning op dit toestel",
                     style = MaterialTheme.typography.titleSmall)
                 Text(
@@ -137,7 +160,8 @@ internal fun OfflineReadinessDialog(
                     if (speechCurrent && speech.canDownload) {
                         Button(
                             onClick = onDownloadSpeech,
-                            enabled = canInspect && speechServicePresent,
+                            enabled = canInspect && speechServicePresent &&
+                                storageReceipt.canBegin,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Spraak via wifi") }
                     }
@@ -185,7 +209,8 @@ internal fun OfflineReadinessDialog(
                         Text("Controleer tekst")
                     }
                     if (!textReady && sourceTextCode != targetTextCode) {
-                        Button(onClick = onPrepareText, enabled = canInspect,
+                        Button(onClick = onPrepareText,
+                            enabled = canInspect && storageReceipt.canBegin,
                             modifier = Modifier.fillMaxWidth()) {
                             Text("Tekst via wifi")
                         }
