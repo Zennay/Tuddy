@@ -334,7 +334,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 // Never keep a previous image's text across picks.
                                 generation++
                                 clearReviewedImage()
-                                notice = "Kies een afbeelding; geen OCR tot je die selecteert."
+                                notice = "Kies een afbeelding; daarna verschijnt eerst de privévoorvertoning."
                                 picker.launch(
                                     PickVisualMediaRequest(
                                         ActivityResultContracts.PickVisualMedia.ImageOnly
@@ -637,14 +637,86 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         }
     }
 
-    private fun readSelectedImage(uri: Uri) = processSelectedImage(uri = uri)
+    /**
+     * The Android picker can return a provider-backed image. Decode a bounded
+     * thumbnail on IO into temporary RAM, never run OCR until the user sees
+     * and explicitly approves its orientation. No bitmap or content URI is
+     * persisted or attached to a new external Intent.
+     */
+    private fun stageSelectedImage(uri: Uri, origin: String = "gekozen afbeelding") {
+        if (uri.scheme != "content" || busy || LocalOcrWorkBudget.shared.isBusy() ||
+            LocalMemoryPressurePolicy.isSystemLowMemory(this)) {
+            notice = "Afbeelding niet geopend: ongeldige provider, weinig geheugen " +
+                "of een vorige afbeeldingstaak is nog bezig."
+            return
+        }
+        val request = ++generation
+        decodeJob?.cancel()
+        clearDeadline()
+        clearReviewedImage()
+        pendingCameraPreview = null
+        previewRotationDegrees = 0
+        sharedImageUri = null
+        busy = true
+        notice = "Veilige privévoorvertoning van de ${origin} laden; nog geen OCR…"
+        val timeout = Runnable {
+            if (request == generation) {
+                generation++
+                busy = false
+                decodeJob?.cancel()
+                notice = "De afbeeldingsprovider antwoordde niet binnen 12 seconden. " +
+                    "Er is geen OCR gestart. Kies de foto opnieuw."
+            }
+        }
+        deadline = timeout
+        if (!handler.postDelayed(timeout, 12_000L)) {
+            generation++
+            busy = false
+            clearDeadline()
+            notice = "Voorvertoning geweigerd: Android kon geen tijdslimiet instellen."
+            return
+        }
+        decodeJob = lifecycleScope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                runCatching { decodeBounded(uri) }.getOrNull()
+            }
+            if (request != generation || isFinishing || isDestroyed) {
+                bitmap?.recycle()
+                return@launch
+            }
+            clearDeadline()
+            busy = false
+            if (bitmap == null || bitmap.width !in 1..1600 ||
+                bitmap.height !in 1..1600 ||
+                runCatching { bitmap.byteCount > MAX_CAMERA_PREVIEW_BYTES }.getOrDefault(true)) {
+                bitmap?.recycle()
+                notice = "De afbeelding kon niet veilig als voorvertoning worden gelezen. " +
+                    "Kies een kleinere, lokale afbeelding."
+                return@launch
+            }
+            pendingCameraPreview = bitmap
+            previewOrigin = origin
+            previewRotationDegrees = 0
+            notice = "Afbeelding geladen, nog geen tekst herkend. " +
+                "Controleer de leesrichting en tik pas dan op ‘Herken deze afbeelding’."
+        }
+    }
 
-    private fun readCapturedImage(bitmap: Bitmap) =
-        processSelectedImage(cameraBitmap = bitmap)
+    private fun readSelectedImage(uri: Uri) = stageSelectedImage(uri)
 
-    private fun processSelectedImage(uri: Uri? = null, cameraBitmap: Bitmap? = null) {
+    private fun readCapturedImage(bitmap: Bitmap, rotationDegrees: Int) =
+        processSelectedImage(cameraBitmap = bitmap, rotationDegrees = rotationDegrees)
+
+    private fun processSelectedImage(
+        uri: Uri? = null,
+        cameraBitmap: Bitmap? = null,
+        rotationDegrees: Int = 0
+    ) {
         require((uri == null) != (cameraBitmap == null)) {
             "Exactly one explicitly chosen source"
+        }
+        require(rotationDegrees in setOf(0, 90, 180, 270)) {
+            "Only right-angle orientation choices can reach the offline OCR engine"
         }
         val request = ++generation
         decodeJob?.cancel()
@@ -718,7 +790,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                     return@launch
                 }
                 try {
-                    val operation = recognizer.process(InputImage.fromBitmap(bitmap, 0))
+                    val operation = recognizer.process(InputImage.fromBitmap(bitmap, rotationDegrees))
                     providerSubmitted = true
                     operation.addOnCompleteListener { task ->
                         try {
