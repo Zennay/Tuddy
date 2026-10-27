@@ -3140,7 +3140,7 @@ private fun TuddyScreen(
                         consecutiveQuietTurns++
                         sessionDiagnostics = sessionDiagnostics.copy(
                             retryableSpeechErrors = sessionDiagnostics.retryableSpeechErrors + 1
-                        )
+                        ).withDirectionalRecognizerFailure(selectedSource, selectedTarget)
                         if (ContinuousSpeechRestartPolicy.quietRetryExhausted(consecutiveQuietTurns)) {
                             // Stop also releases current Android recorder, all
                             // observers, recognizer callbacks and queued restarts.
@@ -3162,7 +3162,7 @@ private fun TuddyScreen(
                         liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
                         sessionDiagnostics = sessionDiagnostics.copy(
                             terminalSpeechErrors = sessionDiagnostics.terminalSpeechErrors + 1
-                        )
+                        ).withDirectionalRecognizerFailure(selectedSource, selectedTarget)
                         error = "Offline spraakherkenning niet beschikbaar of onderbroken (code $code). Controleer het gedownloade spraakpakket."
                     }
                 }
@@ -3382,7 +3382,7 @@ private fun TuddyScreen(
                     consecutiveSpeechStalls++
                     sessionDiagnostics = sessionDiagnostics.copy(
                         stalledSpeechTurns = sessionDiagnostics.stalledSpeechTurns + 1
-                    )
+                    ).withDirectionalRecognizerFailure(selectedSource, selectedTarget)
                     if (captureMode == LocalSpeechCaptureMode.SINGLE_SENTENCE) {
                         stop()
                         liveSpeechPhase = LiveSpeechPhase.INTERRUPTED
@@ -3417,7 +3417,11 @@ private fun TuddyScreen(
             listening = true
             if (!forceRestart) {
                 sessionDiagnostics = sessionDiagnostics.copy(
-                    listeningStarts = sessionDiagnostics.listeningStarts + 1
+                    listeningStarts = sessionDiagnostics.listeningStarts + 1,
+                    nlEnCaptureStarts = sessionDiagnostics.nlEnCaptureStarts +
+                        (if (selectedSource == "nl" && selectedTarget == "en") 1 else 0),
+                    enNlCaptureStarts = sessionDiagnostics.enNlCaptureStarts +
+                        (if (selectedSource == "en" && selectedTarget == "nl") 1 else 0)
                 )
             }
             // Continuous speech recognizer restarts must NOT extend a

@@ -64,16 +64,35 @@ internal data class OfflineRadioSnapshot(
             val network = runCatching {
                 val manager = context.getSystemService(ConnectivityManager::class.java)
                 requireNotNull(manager)
-                manager.allNetworks.mapNotNull { manager.getNetworkCapabilities(it) }
-                    .flatMap { capabilities ->
-                        listOfNotNull(
-                            "wifi".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) },
-                            "mobiel".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) },
-                            "ethernet".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) },
-                            "vpn".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) },
-                            "bluetooth-netwerk".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) }
-                        )
-                    }.toSet()
+                // allNetworks includes more than the five familiar transports.
+                // Never silently drop a network if Android cannot read its
+                // capabilities: a temporary null is *unknown*, not offline.
+                manager.allNetworks.flatMap { network ->
+                    val capabilities = requireNotNull(manager.getNetworkCapabilities(network)) {
+                        "Android kon de netwerktransporten niet lezen"
+                    }
+                    val transports = listOfNotNull(
+                        "wifi".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) },
+                        "mobiel".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) },
+                        "ethernet".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) },
+                        "vpn".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) },
+                        "bluetooth-netwerk".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) },
+                        "wifi-aware".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI_AWARE) },
+                        "lowpan".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_LOWPAN) },
+                        "usb-netwerk".takeIf { capabilities.hasTransport(NetworkCapabilities.TRANSPORT_USB) },
+                        "thread".takeIf {
+                            android.os.Build.VERSION.SDK_INT >= 34 &&
+                                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_THREAD)
+                        },
+                        "satelliet".takeIf {
+                            android.os.Build.VERSION.SDK_INT >= 35 &&
+                                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_SATELLITE)
+                        }
+                    )
+                    // Even a future or vendor-specific transport must prevent
+                    // strict-offline recording; no recognized label is needed.
+                    transports.ifEmpty { listOf("onbekend netwerktransport") }
+                }.toSet()
             }
             return OfflineRadioSnapshot(
                 airplaneModeOn = airplane,
