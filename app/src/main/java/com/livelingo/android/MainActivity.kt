@@ -94,6 +94,9 @@ import com.livelingo.android.ui.PrivateCaptionDeleteConfirmDialog
 import com.livelingo.android.ui.PrivateOfflineBackTranslationDialog
 import com.livelingo.android.ui.OfflineReadinessDialog
 import com.livelingo.android.ui.OfflineAcceptanceDraft
+import com.livelingo.android.ui.OfflineAcceptanceLiveGuide
+import com.livelingo.android.ui.OfflineObservationLedger
+import com.livelingo.android.ui.OfflineObservationDirection
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.InstalledDeviceVoiceCatalogDialog
 import com.livelingo.android.ui.FailedCaptionPair
@@ -9142,6 +9145,51 @@ private fun TuddyScreen(
                         }
                     }
                 }
+                val reverseForOfflineGuide: () -> Unit = {
+                            val reversed = reverseDirection
+                            val previousSource = source
+                            val nextSource = reversed?.let { next ->
+                                spoken.firstOrNull { it.speechCode == next.sourceSpeechTag }
+                            }
+                            if (reversed != null && nextSource != null) {
+                                stop()
+                                modelStorage.invalidate()
+                                installedTextModels = null
+                                pendingBulkModelDeletion = null
+                                selectedModelCleanupCodes = emptySet()
+                                pendingCaptionShare = null
+                                pendingSpeakerExport = null
+                                pendingTranscriptExport = null
+                                source = nextSource
+                                target = LanguageChoice(
+                                    previousSource.label, reversed.targetTextCode,
+                                    reversed.targetTextCode
+                                )
+                                val persisted = runCatching {
+                                    languageSettings.edit()
+                                        .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, nextSource.speechCode)
+                                        .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, reversed.targetTextCode)
+                                        .commit()
+                                }.getOrDefault(false)
+                                textReceipt = OfflineTextReceipt(
+                                    nextSource.translateCode, reversed.targetTextCode,
+                                    OfflineTextStage.UNCHECKED,
+                                    "Gespreksrichting gewijzigd: controleer beide tekstmodellen."
+                                )
+                                speechPackReceipt = SpeechPackReceipt(
+                                    nextSource.speechCode, SpeechPackStage.UNCHECKED,
+                                    "Nieuwe spreekrichting: controleer het lokale Android-spraakpakket."
+                                )
+                                offlineModelStatus = ""
+                                error = ""
+                                showSettings = true
+                                conversationToolsOpen = false
+                                directionNotice = "Richting: ${nextSource.label} → ${previousSource.label}. " +
+                                    "Microfoon gestopt. Controleer spraak- en tekstmodellen, " +
+                                    "tik daarna opnieuw op Luister." +
+                                    if (persisted) "" else " Deze keuze geldt alleen voor deze sessie."
+                            }
+                }
                 val currentSpeechReady = offlineAvailable &&
                     speechPackReceipt.tag == source.speechCode &&
                     speechPackReceipt.stage == SpeechPackStage.READY
@@ -9173,6 +9221,30 @@ private fun TuddyScreen(
                         MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                if (acceptanceDraft.baseline.value != null) {
+                    OfflineAcceptanceLiveGuide(
+                        draft = acceptanceDraft,
+                        diagnostics = sessionDiagnostics,
+                        currentSourceCode = source.translateCode,
+                        currentTargetCode = target.translateCode,
+                        isListening = listening,
+                        strictRadioArmed = requireOfflineRadioBeforeListening,
+                        canReverse = reverseDirection != null && !modelStorageBusy,
+                        onReverse = reverseForOfflineGuide,
+                        onOpenReport = {
+                            val nlCount = OfflineObservationLedger.totals(
+                                acceptanceDraft.attempts.value,
+                                OfflineObservationDirection.NL_EN
+                            ).attempts
+                            acceptanceDraft.chosenDirection.value =
+                                if (nlCount < OfflineObservationLedger.REQUIRED_ATTEMPTS_PER_DIRECTION)
+                                    OfflineObservationDirection.NL_EN
+                                else OfflineObservationDirection.EN_NL
+                            offlineReadinessOpen = true
+                        }
+                    )
+                }
                 LiveMicrophonePermissionControls(
                     listening = listening,
                     offlineAvailable = offlineAvailable,
@@ -9230,51 +9302,7 @@ private fun TuddyScreen(
                     OutlinedButton(onClick = { focusMode = true }) { Text("⛶ Leesmodus") }
                     OutlinedButton(
                         enabled = reverseDirection != null && !modelStorageBusy,
-                        onClick = {
-                            val reversed = reverseDirection
-                            val previousSource = source
-                            val nextSource = reversed?.let { next ->
-                                spoken.firstOrNull { it.speechCode == next.sourceSpeechTag }
-                            }
-                            if (reversed != null && nextSource != null) {
-                                stop()
-                                modelStorage.invalidate()
-                                installedTextModels = null
-                                pendingBulkModelDeletion = null
-                                selectedModelCleanupCodes = emptySet()
-                                pendingCaptionShare = null
-                                pendingSpeakerExport = null
-                                pendingTranscriptExport = null
-                                source = nextSource
-                                target = LanguageChoice(
-                                    previousSource.label, reversed.targetTextCode,
-                                    reversed.targetTextCode
-                                )
-                                val persisted = runCatching {
-                                    languageSettings.edit()
-                                        .putString(PrivateLanguageSelectionPolicy.SOURCE_KEY, nextSource.speechCode)
-                                        .putString(PrivateLanguageSelectionPolicy.TARGET_KEY, reversed.targetTextCode)
-                                        .commit()
-                                }.getOrDefault(false)
-                                textReceipt = OfflineTextReceipt(
-                                    nextSource.translateCode, reversed.targetTextCode,
-                                    OfflineTextStage.UNCHECKED,
-                                    "Gespreksrichting gewijzigd: controleer beide tekstmodellen."
-                                )
-                                speechPackReceipt = SpeechPackReceipt(
-                                    nextSource.speechCode, SpeechPackStage.UNCHECKED,
-                                    "Nieuwe spreekrichting: controleer het lokale Android-spraakpakket."
-                                )
-                                offlineModelStatus = ""
-                                error = ""
-                                showSettings = true
-                                conversationToolsOpen = false
-                                directionNotice = "Richting: ${nextSource.label} → ${previousSource.label}. " +
-                                    "Microfoon gestopt. Controleer spraak- en tekstmodellen, " +
-                                    "tik daarna opnieuw op Luister." +
-                                    if (persisted) "" else " Deze keuze geldt alleen voor deze sessie."
-                            }
-                        }
+                        onClick = reverseForOfflineGuide
                     ) { Text("⇄ Wissel richting") }
                 }
                 TextButton(
