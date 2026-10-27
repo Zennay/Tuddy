@@ -551,8 +551,10 @@ exacte APK-identiteit, onafhankelijke menselijke beoordeling en releasegate.
 
 De Android-buildworkflow gebruikt de bestaande repositorygebonden
 **self-hosted Linux x64 Tuddy-runner** met lokaal aanwezige Android SDK 35,
-in plaats van GitHub-hosted Ubuntu-runners. Beide controles (voorgestelde
-PR-mergeboom en exacte bron-HEAD) blijven gescheiden en produceren
-alleen bij geslaagde checks een traceerbaar debug-APK met SHA-256-manifest.
+in plaats van GitHub-hosted Ubuntu-runners. De zware Android-build draait één keer op de voorgestelde PR-mergeboom;
+de onafhankelijke bron-HEAD-job controleert de precieze Git-identiteit
+zonder nogmaals Gradle te starten. Een expliciete vrije-RAM/swap-check
+weigert de APK-build bij te hoge VPS-druk om andere workers te beschermen.
+Alleen de geslaagde build produceert een traceerbaar debug-APK met SHA-256-manifest.
 De gebruiker moet nog steeds het **exacte main-push artefact** installeren:
 een groene PR-build of een bron-merge alleen is geen fysieke validatie.
