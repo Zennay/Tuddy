@@ -26,8 +26,9 @@ internal fun PrivateImageTextEntryPanel(enabled: Boolean) {
         Text("Lees tekst uit afbeelding · volledig lokaal")
     }
     Text(
-        "Kies één foto, controleer de privévoorvertoning en draai indien " +
-            "nodig 90° vóór je expliciet offline tekstherkenning start. " +
+        "Kies één foto, draai indien nodig en snijd vóór OCR bewust " +
+            "een helft of het midden uit. Alleen de nieuwe privévoorvertoning " +
+            "kan na jouw tweede tik lokaal worden herkend. " +
             "Beoordeel daarna de Latijnse OCR-tekst vóór vertalen. " +
             "Geen automatische opname, upload of opslag van de afbeelding.",
         style = MaterialTheme.typography.bodySmall
