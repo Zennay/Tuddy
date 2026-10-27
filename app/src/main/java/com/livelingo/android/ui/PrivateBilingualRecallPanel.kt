@@ -115,8 +115,12 @@ internal fun PrivateBilingualRecallPanel(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        // Never start automatically from a delayed Android permission dialog.
-        permissionNotice = if (granted)
+        // A permission result can arrive after the learner concealed this
+        // exercise or after another panel took over. Never resurface the
+        // previous draft or expose the screen from this asynchronous callback.
+        if (privateRoundConcealed || !enabled) {
+            permissionNotice = ""
+        } else permissionNotice = if (granted)
             "Microfoon toegestaan. Tik opnieuw op 'Spreek mijn antwoord in' om lokaal te beginnen."
         else "Microfoon niet toegestaan. Je kunt gewoon typen of nadenken."
     }
