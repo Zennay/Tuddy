@@ -1,6 +1,6 @@
 # Tuddy Android-startschermwidget
 
-Deze optionele widget biedt drie veilige, snelle ingangen op Android 12+:
+Deze optionele widget biedt vier veilige, snelle ingangen op Android 12+:
 
 1. **Typ lokaal** opent Tuddy met een lege, expliciete tekstinvoer.
 2. **Offline check** opent het bestaande overzicht van lokale spraak- en
@@ -8,6 +8,9 @@ Deze optionele widget biedt drie veilige, snelle ingangen op Android 12+:
 3. **Eén zin klaarzetten** kiest de eenmalige spraakmodus. Opname begint pas
    nadat de gebruiker in de app zelf op **Luister** tikt en de bestaande
    toestel-/privacycontroles dit toestaan.
+4. **Afbeeldingstekst** opent alleen de privé-OCR-Activity. Kies daarna
+   bewust een foto of maak zelf een camerafoto; keur vervolgens afzonderlijk
+   de lokale herkenning goed. De widget start geen camera of OCR.
 
 ## Toevoegen
 
@@ -29,7 +32,8 @@ automatisch herhaald.
 Houd de geplaatste widget ingedrukt om hem via je launcher kleiner of
 groter te maken. Android 12+ kiest automatisch de compacte indeling
 (korte knoppen, volledige schermlezerlabels) of de normale indeling.
-Beide formaten behouden **Typ**, **Offline check** en **Eén zin**.
+Beide formaten behouden **Typ**, **Offline check**, **Eén zin** en
+**OCR** (compact label voor Afbeeldingstekst).
 Er is geen achtergrondverversing of extra netwerkverkeer voor resize.
 De kleinste widgetgrootte hangt af van de launcher.
 
@@ -42,14 +46,14 @@ toestelacceptatie.
 ## Nog fysiek te beoordelen
 
 Controleer op een geautoriseerd toestel ook compact/normaal
-resizen, portret/landschap, alle drie de knoppen en schermlezerlabels.
+resizen, portret/landschap, alle vier de knoppen en schermlezerlabels.
 
 Controleer op een geautoriseerd toestel ook de zichtbare pin-aanvraag,
 het onderscheid tussen aangevraagd en daadwerkelijk geplaatst, het
 geplaatste-widgetaantal na terugkeer uit de launcher en de handmatige
 fallback bij ontbrekende ondersteuning.
 
-Controleer op een geautoriseerd Android 12+-toestel of alle drie de knoppen
+Controleer op een geautoriseerd Android 12+-toestel of alle vier de knoppen
 hun eigen scherm openen, ook na koude start en wanneer Tuddy al openstaat;
 controleer met vliegtuigmodus dat één zin geen opname begint zonder een
 aparte tap. Noteer eventuele afwijkingen zonder issue #1 als afgerond te
@@ -86,3 +90,8 @@ tegelplaatsing (Android 12) als de systeemaanvraag (Android 13+) waar
 beschikbaar, een tik na koude/warmestart, vergrendeld toestel,
 toegankelijkheidslabel en terugkeer naar de app worden beoordeeld.
 Een succesvolle CI-debugbuild bewijst die toestelervaring niet.
+Controleer ook de OCR-knop als vastgepinde appsnelkoppeling en als widget:
+een koud en warm startpunt moet het privé-OCR-scherm openen, zonder
+automatische camera, beeldlezing of vertaling. Niet elke launcher heeft
+ruimte voor vier dynamische snelkoppelingen; handmatig vastpinnen blijft
+een zelfstandige optie.

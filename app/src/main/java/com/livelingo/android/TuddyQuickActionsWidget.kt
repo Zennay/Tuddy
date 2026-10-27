@@ -10,7 +10,7 @@ import android.widget.RemoteViews
 /**
  * Optional private Android 12+ launcher surface. Android selects the compact
  * or regular RemoteViews without waking the app merely to redraw a resize.
- * Both layouts expose the same three explicit, user-initiated destinations.
+ * Both layouts expose four explicit, user-initiated destinations.
  *
  * No captions, clipboard, spoken audio, translation or network state is read,
  * cached, rendered or sent by this widget.
@@ -52,6 +52,10 @@ internal class TuddyQuickActionsWidget : AppWidgetProvider() {
                 context, this, widgetId, R.id.tuddy_widget_sentence,
                 TuddyLauncherDestination.ONE_SENTENCE
             )
+            bindAction(
+                context, this, widgetId, R.id.tuddy_widget_image,
+                TuddyLauncherDestination.IMAGE_TEXT
+            )
         }
 
     private fun bindAction(
@@ -63,8 +67,8 @@ internal class TuddyQuickActionsWidget : AppWidgetProvider() {
     ) {
         // PendingIntent equality ignores extras. Separate each installed
         // widget/action and never allow mutable/externally supplied payloads.
-        val requestCode = widgetId * TuddyLauncherDestination.entries.size +
-            destination.ordinal
+        // Stable stride prevents collisions as the shortcut list grows.
+        val requestCode = widgetId * 16 + destination.ordinal
         val pending = PendingIntent.getActivity(
             context,
             requestCode,
