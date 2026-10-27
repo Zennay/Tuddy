@@ -126,6 +126,9 @@ internal fun FaceToFaceConversationDialog(
     var activeSpeechSide by remember { mutableStateOf<String?>(null) }
     var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var slowVoice by remember { mutableStateOf(false) }
+    // Hide BOTH viewers immediately without deleting the in-memory transcript.
+    // Revealing requires an explicit tap; incoming lines never uncover it.
+    var covered by remember { mutableStateOf(false) }
     DisposableEffect(speaker, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE) {
@@ -198,6 +201,25 @@ internal fun FaceToFaceConversationDialog(
     ) {
         Surface(modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.surface) {
+            if (covered) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("🔒 Gesprek afgedekt",
+                        style = MaterialTheme.typography.headlineMedium)
+                    Text("Beide kanten zijn verborgen. Nieuwe gespreksregels " +
+                        "blijven ook afgedekt. De lokale stem is gestopt.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 16.dp))
+                    Button(onClick = { covered = false }) {
+                        Text("Toon gesprek opnieuw")
+                    }
+                    TextButton(onClick = onBack) { Text("Terug") }
+                }
+            } else {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Rotate the ENTIRE far-side text block, not individual letters.
                 // The phone is placed flat between two people, without rotating
@@ -280,15 +302,17 @@ internal fun FaceToFaceConversationDialog(
                         TextButton(onClick = {
                             followNewest = true
                         }) { Text("↓ Nieuwste") }
-                        if (onCover != null) {
-                            TextButton(onClick = {
-                                speaker.stop()
-                                activeSpeechText = null
-                                activeSpeechSide = null
-                                activeSpeechRange = null
-                                onCover()
-                            }) { Text("🔒 Afdekken") }
-                        }
+                        TextButton(onClick = {
+                            // A privacy curtain is available even if no external
+                            // cover handler was supplied by this entry point.
+                            speaker.stop()
+                            activeSpeechText = null
+                            activeSpeechSide = null
+                            activeSpeechRange = null
+                            audioNotice = ""
+                            covered = true
+                            onCover?.invoke()
+                        }) { Text("🔒 Afdekken") }
                         TextButton(onClick = onBack) { Text("Terug") }
                     }
                     if (selected != null) {
@@ -438,6 +462,7 @@ internal fun FaceToFaceConversationDialog(
                             modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
                     }
                 }
+            }
             }
         }
     }
