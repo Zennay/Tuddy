@@ -17,6 +17,33 @@ tekstbestand/export en expliciete vertaalhandoff intact. De gecorrigeerde
 tekst wordt niet opnieuw uit de bitmap afgeleid door roteren: eerst de
 foto beoordelen, daarna één OCR-poging op precies die oriëntatie.
 
+## Eerst een deel van de foto uitsnijden
+
+Als een screenshot of een foto veel irrelevante tekst bevat, kun je vóór
+tekstherkenning bewust **Bovenste helft**, **Onderste helft**, **Linkerhelft**,
+**Rechterhelft** of **Middelste helft** kiezen. Dat zijn tijdelijke en
+duidelijk benoemde uitsneden, geen automatisch bepaalde OCR-regio's. De
+uitsnede wordt op een werkthread gemaakt van de reeds gecontroleerde,
+maximaal 1600 × 1600 RAM-preview. Tuddy past eerst de gekozen draaihoek
+fysiek toe, zodat boven/links bij de uitsnede overeenkomt met wat je
+zojuist op het scherm zag.
+
+**De voorvertoning wordt vervangen door de echte uitgesneden bitmap.**
+Controleer de nieuwe uitsnede vóór je afzonderlijk op
+**Herken deze afbeelding · lokaal** tikt. De draaihoek staat na een
+toegepaste uitsnede weer op nul. Je kunt de uitsnede nogmaals verkleinen;
+wil je terug naar de oorspronkelijke hele foto, kies die dan zelf
+opnieuw met Android. Te kleine/ongeldige of door geheugendruk geweigerde
+uitsneden veranderen de getoonde foto niet. Er is nooit een onzichtbare
+fallback waarbij de hele foto alsnog wordt herkend.
+
+De afbeelding blijft alleen tijdelijk in RAM; na geslaagde uitsnede
+wordt het eerdere, grotere bitmapobject vrijgegeven. Geen crop-data,
+coördinaten, afbeelding, provider-URI of uitgeknipte inhoud worden door
+Tuddy opgeslagen of geüpload. Achtergrond, verlaten en een andere foto
+ongeldig maken nog lopend previewwerk. De bestaande OCR-werkbudgetten
+en de daaropvolgende menselijke tekstcontrole blijven intact.
+
 ## Toestel-, privacy- en geheugenbegrenzingen
 
 - De fotokiezer mag een provider met cloudopslag aanbieden; dat bepaalt de
