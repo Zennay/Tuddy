@@ -66,9 +66,18 @@ geen betrouwbare Sorani, Arabische-schrift Kurmanji of Pasjtoe OCR-claim.
    document blijft de selectie leeg: tik alleen de relevante stukken aan.
    Je kunt maximaal **8.000 tekens totaal** selecteren. De knoppen
    **Vul selectie aan** en **Wis blokselectie** helpen bij het kiezen.
-   Als je de selectie wijzigt, verschijnt opnieuw de letterlijk herkende
-   tekst; eventuele eerdere handmatige edits in het tekstveld worden
-   vervangen. Controleer na iedere wijziging de samengestelde tekst.
+   Voor een meerkolomsdocument of kassabon bepaalt Androids OCR niet
+   altijd de juiste volgorde. Gebruik per blok **↑ Omhoog** of
+   **↓ Omlaag** om een expliciete leesvolgorde te maken, zonder
+   ongevraagde tekstcorrectie of netwerkwerk. De getoonde positie is
+   de huidige leespositie; het oorspronkelijke OCR-bloknummer blijft
+   zichtbaar. **Herstel oorspronkelijke OCR-volgorde** zet de volgorde
+   terug zonder de huidige blokselectie te wissen.
+   Als je de selectie of volgorde wijzigt, verschijnt opnieuw de
+   letterlijk herkende tekst in precies die volgorde; eventuele eerdere
+   handmatige edits in het tekstveld worden vervangen. Controleer na
+   iedere wijziging de samengestelde tekst en pas pas daarna woorden aan.
+   De limiet van 8.000 tekens geldt ook na herschikken.
 3. Verbeter zelf verkeerde woorden in het bewerkbare tekstveld. De app
    kan maximaal **100 OCR-tekstblokken / 80.000 ruwe OCR-tekens**
    tijdelijk tonen; een afzonderlijk blok van meer dan 8.000 tekens
@@ -88,7 +97,8 @@ geen betrouwbare Sorani, Arabische-schrift Kurmanji of Pasjtoe OCR-claim.
    stilzwijgend in terug te schrijven.
 
 Achtergrondzetten, verlaten of een nieuwe afbeelding kiezen wist de
-blokselectie, eventueel bewerkte tekst en voorvertoning; het scherm
+blokselectie, gekozen leesvolgorde, eventueel bewerkte tekst en
+voorvertoning; het scherm
 bewaart geen afbeeldingen, OCR-blokken of transcripties.
 Een reeds gestarte native OCR-taak kan nog uitlopen, maar verouderde
 callbacks mogen geen tekst meer tonen of overdragen.
