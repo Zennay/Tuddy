@@ -1,5 +1,6 @@
 package com.livelingo.android
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import com.google.mlkit.common.model.DownloadConditions
@@ -16,7 +17,8 @@ import com.google.mlkit.nl.translate.TranslatorOptions
  * stay alive until Android actually reports a terminal result. No automatic
  * retry, cancel assumption, network speech, or inferred model availability.
  */
-internal class TypedConversationModelController {
+internal class TypedConversationModelController(context: Context) {
+    private val appContext = context.applicationContext
     private val inventory = OfflineTextModelInventory()
     private val epoch = OfflinePreparationEpoch()
     private val main = Handler(Looper.getMainLooper())
@@ -103,6 +105,10 @@ internal class TypedConversationModelController {
         // Re-read storage before every successive download, not only batch start.
         LocalModelStorageAdmission.blocker()?.let { blocker ->
             result(blocker, null)
+            return
+        }
+        LocalModelNetworkAdmission.blocker(appContext)?.let { blocker ->
+            result(blocker + " Bestaande lokale modellen blijven beschikbaar.", null)
             return
         }
         invalidate()
