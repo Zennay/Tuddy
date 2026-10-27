@@ -6,13 +6,15 @@
 |---|---|
 | APK-artifact | [Tuddy-debug-apk #12717800173](https://github.com/Zennay/Tuddy/actions/runs/40466819777/artifacts/12717800173) — verloopt 10 november 2026 07:29 UTC |
 | Buildbron en manifest-`source_sha` | `714f9337ad9a4fee6443226715fecf4744ebfeff` |
-| Artifact ZIP SHA-256 (GitHub-metadata en CI-upload) | `b632bc03a150e1c605353431c2da2d685bb7f3138ae514fa4e3bad90a0522f96` |
-| APK SHA-256 (CI-buildlog en gecontroleerde sidecar) | `cc8241b89337622685da7504cb358bd954332418dbebc38e1ac033818f8516f1` |
+| Artifact ZIP SHA-256 (GitHub en onafhankelijk berekend) | `b632bc03a150e1c605353431c2da2d685bb7f3138ae514fa4e3bad90a0522f96` |
+| APK SHA-256 (uitgepakt en onafhankelijk berekend) | `cc8241b89337622685da7504cb358bd954332418dbebc38e1ac033818f8516f1` |
 | Artifact ZIP omvang | 63.158.686 bytes |
-| APK-naam | `app-debug.apk` (debug, niet productie-ondertekend) |
+| APK-naam en bytes | `app-debug.apk`, **150.789.448 bytes** (debug, niet productie-ondertekend) |
 | Android 12+-installatie, echte vliegtuigmodus, 10+10 spraak/vertaling, onafhankelijke review | **NOG NIET UITGEVOERD / NIET BEWEZEN** |
 
-Deze ZIP- en APK-digests zijn door GitHub artifactmetadata respectievelijk het geslaagde CI-uploadlog en de CI-sidecarcheck bevestigd. **Onafhankelijke lokale verificatie van een gedownloade ZIP en uitgepakte APK is voor deze nieuwe kandidaat nog niet uitgevoerd.** Gebruik vóór installatie op een bevoegd fysiek toestel de bestaande repository-verifier:
+**Onafhankelijke artifactcontrole uitgevoerd op 27 oktober 2026.** Het rechtstreeks via GitHub gedownloade ZIP-artifact (#12717800173) is afzonderlijk byte-voor-byte gehasht: **63.158.686 bytes** en SHA-256 `b632bc03a150e1c605353431c2da2d685bb7f3138ae514fa4e3bad90a0522f96`. De daarin uitgepakte `app-debug.apk` bevat **150.789.448 bytes**, SHA-256 `cc8241b89337622685da7504cb358bd954332418dbebc38e1ac033818f8516f1`. Deze lokaal berekende waarden komen exact overeen met GitHub ZIP-metadata en de meegeleverde `app-debug.apk.sha256`, `build-manifest.txt` en `source-commit.txt`. Het manifest bevestigt bovendien `source_sha=714f9337ad9a4fee6443226715fecf4744ebfeff`, `workflow_run_id=40466819777`, `event_name=push` en `ref=refs/heads/main`. Daarmee is uitsluitend de bouwherkomst van deze **debug-APK** gecontroleerd, niet de daadwerkelijke installatie, radiostatus of vertaalkwaliteit.
+
+Een tweede operator kan dit vóór installatie op een bevoegd fysiek toestel opnieuw controleren met de bestaande repository-verifier:
 
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \\
