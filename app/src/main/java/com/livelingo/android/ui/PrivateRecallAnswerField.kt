@@ -91,6 +91,16 @@ internal fun PrivateRecallAnswerField(
                 }
             }
         },
+        // The native Android EditText has its own buffer, independent of
+        // Compose remember/state. Wipe it at removal (privacy curtain,
+        // Activity background or direction switch), and dismiss any IME
+        // surface that might still show the user's unsubmitted draft.
+        onRelease = { edit ->
+            edit.clearFocus()
+            edit.setText("")
+            (edit.context.getSystemService(Context.INPUT_METHOD_SERVICE)
+                as? InputMethodManager)?.hideSoftInputFromWindow(edit.windowToken, 0)
+        },
         update = { edit ->
             edit.isEnabled = enabled
             edit.setTextColor(textColor)

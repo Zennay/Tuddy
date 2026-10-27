@@ -105,12 +105,22 @@ internal fun PrivateBilingualRecallPanel(
         mutableStateOf("")
     }
     var permissionNotice by remember { mutableStateOf("") }
+    // The previous recall marks/position may survive concealment, but neither
+    // the current answer nor its revealed reference is shown until the learner
+    // consciously resumes the private round from this foreground screen.
+    var privateRoundConcealed by remember(practice, sourceCode, targetCode) {
+        mutableStateOf(false)
+    }
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        // Never start automatically from a delayed Android permission dialog.
-        permissionNotice = if (granted)
+        // A permission result can arrive after the learner concealed this
+        // exercise or after another panel took over. Never resurface the
+        // previous draft or expose the screen from this asynchronous callback.
+        if (privateRoundConcealed || !enabled) {
+            permissionNotice = ""
+        } else permissionNotice = if (granted)
             "Microfoon toegestaan. Tik opnieuw op 'Spreek mijn antwoord in' om lokaal te beginnen."
         else "Microfoon niet toegestaan. Je kunt gewoon typen of nadenken."
     }
@@ -127,20 +137,28 @@ internal fun PrivateBilingualRecallPanel(
         practice, sourceCode, targetCode, promptSide
     ) { mutableStateOf<String?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    fun concealPrivateRecall() {
+        speaker.stop()
+        recallSpeech.cancel()
+        recordingAnswer = false
+        typedAnswer = ""
+        spokenAnswer = ""
+        speechChoices = emptyList()
+        comparisonSource = null
+        audioNotice = ""
+        speechNotice = ""
+        permissionNotice = ""
+        revealed = false
+        privateRoundConcealed = true
+    }
     DisposableEffect(speaker, practice, sourceCode, targetCode, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE ||
                 event == Lifecycle.Event.ON_STOP) {
-                // Clear the learner's unsubmitted answer before Android may
-                // snapshot the screen or another app becomes foreground.
-                speaker.stop()
-                recallSpeech.cancel()
-                recordingAnswer = false
-                typedAnswer = ""
-                spokenAnswer = ""
-                speechChoices = emptyList()
-                comparisonSource = null
-                revealed = false
+                // The entire prompt, reference and native IME must be hidden
+                // before another app / lock screen may become foreground.
+                // Preserve only the user's self-marked round progress.
+                concealPrivateRecall()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -157,16 +175,55 @@ internal fun PrivateBilingualRecallPanel(
     }
     LaunchedEffect(enabled) {
         if (!enabled) {
-            // Losing interactive control must also stop any already queued
-            // private A/B audio, not just the one-shot answer microphone.
-            speaker.stop()
-            recallSpeech.cancel()
-            recordingAnswer = false
-            spokenAnswer = ""
-            speechChoices = emptyList()
-            comparisonSource = null
-            audioNotice = ""
+            // Even if the panel remains composed beneath another screen,
+            // remove the visible reference, current prompt and native IME.
+            concealPrivateRecall()
         }
+    }
+
+    if (privateRoundConcealed || !enabled) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            HorizontalDivider()
+            Text(
+                "Privé overhoorronde afgeschermd",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                "De oefenzin, onthulde referentie en tijdelijke getypte of " +
+                    "gesproken antwoorden zijn verborgen. Audio en microfoon " +
+                    "zijn gestopt. Eerder zelf beoordeelde zinnen blijven " +
+                    "alleen in de huidige RAM-ronde beschikbaar.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(
+                enabled = enabled &&
+                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED),
+                onClick = {
+                    // A deliberate foreground tap resumes on the same
+                    // position. No previous answer or reference is restored.
+                    revealed = false
+                    privateRoundConcealed = false
+                }
+            ) { Text("Hervat privé oefening bewust") }
+            TextButton(
+                enabled = enabled,
+                onClick = {
+                    // Delete even self-reported grades and sequence position,
+                    // with NO briefly revealed prompt or attempted answer.
+                    concealPrivateRecall()
+                    started = false
+                    position = 0
+                    review = PrivateRecallRoundReview()
+                    retryOnly = false
+                    retryIndices = emptyList()
+                    round = 1
+                }
+            ) { Text("Wis deze tijdelijke oefenronde") }
+        }
+        return
     }
 
     val currentIndices = if (retryOnly) retryIndices else practice.indices.toList()
@@ -257,10 +314,16 @@ internal fun PrivateBilingualRecallPanel(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         HorizontalDivider()
-        Text(
-            "Zelf overhoren · eerst herinneren, daarna antwoord onthullen",
-            style = MaterialTheme.typography.titleSmall
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                "Zelf overhoren · eerst herinneren, daarna antwoord onthullen",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = { concealPrivateRecall() }) {
+                Text("Verberg privé oefening")
+            }
+        }
         Text(
             "Dezelfde ${practice.size} afgeronde lokale vertaalparen, alleen in " +
                 "het huidige RAM-gesprek. Jij bepaalt wanneer je kijkt of luistert. " +
