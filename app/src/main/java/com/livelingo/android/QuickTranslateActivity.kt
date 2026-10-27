@@ -123,6 +123,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
         return accepted
     }
 
+    private var fromImage by mutableStateOf(false)
     private var incomingText by mutableStateOf("")
     private var inputNotice by mutableStateOf("")
     private var selectionReadOnly by mutableStateOf(true)
@@ -168,6 +169,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
         val supplied = if (acceptedAction) runCatching {
             intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
         }.getOrNull() else null
+        // Internal OCR handoff has no text in Intent extras and no external
+        // origin to receive a replacement selection. Consume it once.
+        val imageText = PrivateImageTextHandoff.consume(intent)
         val textReadOnly = intent.getBooleanExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, true)
         val incoming = if (acceptedAction) SharedPlainTextIntent.read(intent) else null
 
@@ -201,10 +205,12 @@ internal class QuickTranslateActivity : ComponentActivity() {
         targetCode = hintedTarget ?: defaults.second
         intent.removeExtra(QUICK_SOURCE_CODE_EXTRA)
         intent.removeExtra(QUICK_TARGET_CODE_EXTRA)
-        selectionReadOnly = textReadOnly
-        incomingText = incoming?.draft.orEmpty()
-        inputNotice = incoming?.notice ?: if (!acceptedAction) {
-            "Deze actie verwacht geselecteerde platte tekst uit een Android-app."
+        fromImage = imageText != null
+        selectionReadOnly = textReadOnly || fromImage
+        incomingText = imageText ?: incoming?.draft.orEmpty()
+        inputNotice = if (fromImage) "" else incoming?.notice ?: if (!acceptedAction) {
+            "Geen geldige tekstselectie of tijdelijke afbeeldingstekst ontvangen. " +
+                "Kies de afbeelding opnieuw in Tuddy."
         } else {
             ""
         }
@@ -213,6 +219,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
             MaterialTheme {
                 QuickTranslateScreen(
                     text = incomingText,
+                    imageSource = fromImage,
                     inputNotice = inputNotice,
                     readOnly = selectionReadOnly,
                     sourceCode = sourceCode,
@@ -962,7 +969,9 @@ internal class QuickTranslateActivity : ComponentActivity() {
             incomingText = ""
             translationResult = null
             discardReview()
-            status = "De selectie is gewist toen Tuddy naar de achtergrond ging. Selecteer de tekst opnieuw."
+            status = if (fromImage)
+                "De afbeeldingstekst is gewist bij achtergrondgebruik. Kies opnieuw een afbeelding."
+            else "De selectie is gewist toen Tuddy naar de achtergrond ging. Selecteer de tekst opnieuw."
         }
         super.onStop()
     }
@@ -983,6 +992,7 @@ internal class QuickTranslateActivity : ComponentActivity() {
 @Composable
 private fun QuickTranslateScreen(
     text: String,
+    imageSource: Boolean,
     inputNotice: String,
     readOnly: Boolean,
     sourceCode: String,
@@ -1053,7 +1063,17 @@ private fun QuickTranslateScreen(
             .padding(20.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Vertaal geselecteerde tekst", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            if (imageSource) "Vertaal gecontroleerde afbeeldingstekst"
+            else "Vertaal geselecteerde tekst",
+            style = MaterialTheme.typography.headlineSmall
+        )
+        if (imageSource) Text(
+            "Dit is door jou nagekeken OCR-tekst uit een gekozen afbeelding, " +
+                "geen originele systeemtekstselectie. Er is geen bronapp om " +
+                "automatisch te wijzigen; vertaal alleen na je eigen tik.",
+            style = MaterialTheme.typography.bodySmall
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)

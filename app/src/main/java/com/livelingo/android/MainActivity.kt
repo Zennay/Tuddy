@@ -9282,6 +9282,7 @@ private fun TuddyScreen(
                         }
                         // Native Android widget placement remains explicitly
                         // user-requested and never starts speech capture.
+                        PrivateImageTextEntryPanel(enabled = !listening)
                         TuddyHomeWidgetPinPanel(enabled = !listening)
                 OutlinedButton(
                     onClick = {
