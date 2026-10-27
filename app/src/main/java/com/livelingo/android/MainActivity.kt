@@ -27,6 +27,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -1376,6 +1377,7 @@ private fun TuddyScreen(
     var pendingManualCaptionUndo by remember { mutableStateOf<PendingManualCaptionUndo?>(null) }
     var historySearchOpen by remember { mutableStateOf(false) }
     var historySearchQuery by remember { mutableStateOf("") }
+    var historyStatusFilter by remember { mutableStateOf(SessionCaptionStatusFilter.ALL) }
     var generation by remember { mutableIntStateOf(0) }
     fun beginOriginalCorrection(row: Line) {
         editingCaptionId = row.id
@@ -1408,16 +1410,21 @@ private fun TuddyScreen(
     // Apply the same search-only script folding as the private phrasebook.
     // Stored captions and translations are never normalized or rewritten.
     val normalizedHistoryQuery = PrivateOfflineSearch.fold(historySearchQuery.trim())
+    fun historyTextMatches(line: Line): Boolean =
+        PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
+            PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery) ||
+            line.personalMeaning?.let {
+                PrivateOfflineSearch.contains(it, normalizedHistoryQuery)
+            } == true
     fun historySearchMatches(line: Line): Boolean =
-        normalizedHistoryQuery.isNotBlank() && (
-            PrivateOfflineSearch.contains(line.original, normalizedHistoryQuery) ||
-                PrivateOfflineSearch.contains(line.translated, normalizedHistoryQuery) ||
-                line.personalMeaning?.let {
-                    PrivateOfflineSearch.contains(it, normalizedHistoryQuery)
-                } == true
-        )
-    val historyMatches = if (normalizedHistoryQuery.isBlank()) emptyList<Int>()
-        else lines.indices.filter { historySearchMatches(lines[it]) }
+        SessionCaptionStatusNavigation.isActive(historyStatusFilter, normalizedHistoryQuery) &&
+            SessionCaptionStatusNavigation.matches(line.status, historyStatusFilter) &&
+            (normalizedHistoryQuery.isBlank() || historyTextMatches(line))
+    // The existing LazyColumn keeps all captions in their original order.
+    // Matching row indexes are only for highlighting and manual navigation.
+    val historyMatches = SessionCaptionStatusNavigation.matchingIndexes(
+        lines.map { it.status }, historyStatusFilter, normalizedHistoryQuery
+    ) { index -> historyTextMatches(lines[index]) }
 
     fun captureCombinedStudyBook(): ByteArray? =
         PrivateCombinedStudyBook.snapshot(
@@ -5032,6 +5039,7 @@ private fun TuddyScreen(
         if (follow) {
             historySearchOpen = false
             historySearchQuery = ""
+            historyStatusFilter = SessionCaptionStatusFilter.ALL
         }
     }
 
@@ -8918,6 +8926,7 @@ private fun TuddyScreen(
                         pinsNotice = ""
                         historySearchQuery = ""
                         historySearchOpen = false
+                        historyStatusFilter = SessionCaptionStatusFilter.ALL
                         directionNotice = ""
                         previewInput = ""
                         manualText = ""
@@ -10499,7 +10508,10 @@ private fun TuddyScreen(
                     TextButton(onClick = {
                         historySearchOpen = !historySearchOpen
                         if (historySearchOpen) follow = false
-                        else historySearchQuery = ""
+                        else {
+                            historySearchQuery = ""
+                            historyStatusFilter = SessionCaptionStatusFilter.ALL
+                        }
                     }, enabled = lines.isNotEmpty()) {
                         Text(if (historySearchOpen) "Sluit zoeken" else "Zoek in gesprek")
                     }
@@ -10587,6 +10599,26 @@ private fun TuddyScreen(
                     Text(captionDeleteNotice, style = MaterialTheme.typography.bodySmall)
                 }
                 if (historySearchOpen) {
+                    Text(
+                        "Spring naar gespreksregels op tekst én status. " +
+                            "Alle regels blijven zichtbaar; er wordt niets verwijderd of opgeslagen.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        SessionCaptionStatusFilter.entries.forEach { filter ->
+                            val count = lines.count {
+                                SessionCaptionStatusNavigation.matches(it.status, filter)
+                            }
+                            FilterChip(
+                                selected = historyStatusFilter == filter,
+                                onClick = { historyStatusFilter = filter },
+                                label = { Text("${filter.label} ($count)") }
+                            )
+                        }
+                    }
                     OutlinedTextField(
                         value = historySearchQuery,
                         onValueChange = { historySearchQuery = it.take(80) },
@@ -10597,6 +10629,17 @@ private fun TuddyScreen(
                         },
                         singleLine = true
                     )
+                    if (SessionCaptionStatusNavigation.isActive(
+                            historyStatusFilter, normalizedHistoryQuery
+                        )) {
+                        Text(
+                            "${historyMatches.size} van ${lines.size} gespreksregels passen " +
+                                "bij jouw selectie. Tik op Vorige of Volgende om een " +
+                                "bestaande regel te openen.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = { jumpToHistoryMatch(false) },
