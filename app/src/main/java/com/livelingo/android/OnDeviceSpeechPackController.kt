@@ -171,6 +171,12 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
                     override fun onSupportResult(support: RecognitionSupport) {
                         if (token != epoch) return
                         val result = report(tag, support, allowLanguageVariant)
+                        // Only an EXACT Android-installed tag, never a
+                        // broad/recall regional match, releases a submitted
+                        // physical speech-model download request.
+                        if (!allowLanguageVariant && result.stage == SpeechPackStage.READY) {
+                            LocalSpeechPackDownloadAdmission.verifiedInstalled(tag)
+                        }
                         cancel()
                         callback(result)
                     }
@@ -230,14 +236,32 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
                 blocker + " De Android-spraakdienst kreeg geen nieuwe downloadopdracht."))
             return
         }
+        // A user can close or reopen this screen while Android's system
+        // service continues a previously accepted download. Never start a
+        // second overlapping request merely because the observer was destroyed.
+        if (!LocalSpeechPackDownloadAdmission.acquire(tag)) {
+            val pending = LocalSpeechPackDownloadAdmission.pendingTag()
+            callback(SpeechPackReceipt(tag, SpeechPackStage.PENDING,
+                "Android heeft in dit app-proces al een onbevestigd offline " +
+                    "spraakpakketverzoek voor ${pending ?: "een andere taal"}. " +
+                    "Geen tweede verzoek gestart. Controleer later de " +
+                    "daadwerkelijk geïnstalleerde modellen."))
+            return
+        }
         val (token, engine) = fresh(tag) ?: run {
+            LocalSpeechPackDownloadAdmission.releaseBeforeSubmission(tag)
             callback(SpeechPackReceipt(tag, SpeechPackStage.UNSUPPORTED,
                 "Geen lokale spraakdienst om een pakket aan te vragen."))
             return
         }
         callback(SpeechPackReceipt(tag, SpeechPackStage.DOWNLOADING,
-            "Offline spraakpakket $tag aangevraagd via Android; installatie nog niet bevestigd."))
+            "Android-spraakpakketverzoek voor $tag voorbereiden. Installatie niet bevestigd."))
         try {
+            // The Android service may accept a model request even if its
+            // invocation or callback registration later throws. Mark the
+            // slot as submitted BEFORE invoking that external service;
+            // uncertain completion remains blocked, not assumed canceled.
+            LocalSpeechPackDownloadAdmission.markSubmitted(tag)
             if (Build.VERSION.SDK_INT >= 34) {
                 engine.triggerModelDownload(requestedLanguage(tag), context.mainExecutor,
                     object : ModelDownloadListener {
@@ -248,20 +272,28 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
                         }
 
                         override fun onSuccess() {
+                            // Physical system completion is authoritative even
+                            // when this UI's observer was canceled. Never
+                            // present READY until a separate installed check.
+                            LocalSpeechPackDownloadAdmission.systemCompleted(tag)
                             if (token != epoch) return
-                            // Never declare a downloaded model READY from a download
-                            // receipt alone; ask Android for real installed coverage.
                             check(tag, callback)
                         }
 
                         override fun onScheduled() {
+                            // Scheduled != installed or physically completed:
+                            // keep the process slot until exact installed
+                            // verification, even after the screen closes.
                             if (token != epoch) return
                             cancel()
                             callback(SpeechPackReceipt(tag, SpeechPackStage.PENDING,
-                                "Android heeft de modeldownload ingepland. Controleer later opnieuw."))
+                                "Android heeft de modeldownload ingepland. " +
+                                    "Geen nieuwe spraakpakketaanvraag zolang het " +
+                                    "eerdere verzoek niet als voltooid is bevestigd."))
                         }
 
                         override fun onError(error: Int) {
+                            LocalSpeechPackDownloadAdmission.systemCompleted(tag)
                             if (token != epoch) return
                             cancel()
                             callback(SpeechPackReceipt(tag, SpeechPackStage.ERROR,
@@ -272,13 +304,19 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
                 engine.triggerModelDownload(requestedLanguage(tag))
                 cancel()
                 callback(SpeechPackReceipt(tag, SpeechPackStage.REQUESTED,
-                    "Android 13 heeft het verzoek ontvangen. Controleer later of het pakket is geïnstalleerd."))
+                    "Android 13 heeft het verzoek ontvangen. Android meldt " +
+                        "niet wanneer de download echt klaar is. " +
+                        "Controleer het geïnstalleerde spraakpakket later " +
+                        "bewust; geen tweede verzoek in dit app-proces."))
             }
         } catch (_: Exception) {
             if (token != epoch) return
             cancel()
             callback(SpeechPackReceipt(tag, SpeechPackStage.ERROR,
-                "De lokale Android-spraakdienst kon het pakket niet aanvragen."))
+                "Android kon de spraakpakketaanvraag niet betrouwbaar afronden. " +
+                    "Als de systeemdienst het verzoek al aannam, kan de download " +
+                    "doorgaan. Geen tweede aanvraag in dit app-proces; " +
+                    "controleer later de geïnstalleerde spraakpakketten."))
         }
     }
 }
