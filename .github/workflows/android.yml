@@ -127,6 +127,8 @@ jobs:
         run: |
           bash -n scripts/verify-current-tuddy-main-apk.sh
           bash -n scripts/verify-tuddy-apk-artifact.sh
+      - name: Parse independent artifact-download verifier without filesystem writes
+        run: python3 -B -c 'import ast,pathlib; ast.parse(pathlib.Path("tools/verify_current_main_artifact.py").read_text(encoding="utf-8"))'
       - name: Protect shared VPS memory before HEAD validation
         shell: bash
         run: |

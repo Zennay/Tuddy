@@ -1,0 +1,28 @@
+name: Tuddy APK artifact integrity (self-hosted)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: tuddy-current-main-artifact-integrity
+  cancel-in-progress: false
+jobs:
+  verify-current-main-artifact:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify immutable current-main checkout identity
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -z "$(git status --porcelain)"
+      - name: Independently download and verify current main APK via GitHub
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 -B tools/verify_current_main_artifact.py
