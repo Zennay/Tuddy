@@ -44,6 +44,8 @@ internal fun OfflineAcceptanceReportAction(
     deviceSnapshot: () -> ByteArray?,
     draft: OfflineAcceptanceDraft,
     sessionDiagnostics: OfflineSessionDiagnostics,
+    currentSourceCode: String,
+    currentTargetCode: String,
     onArmStrictOffline: () -> Unit,
     onReturnToConversation: () -> Unit,
     onPickerStarted: () -> Unit,
@@ -75,6 +77,7 @@ internal fun OfflineAcceptanceReportAction(
     var checkpointImported by draft.checkpointImported
     var checkpointNotice by draft.checkpointNotice
     var startedDiagnostics by draft.startedDiagnostics
+    var lastRecordedDiagnostics by draft.lastRecordedDiagnostics
     var newAttemptFlags by draft.newAttemptFlags
 
     fun installedApkDigest(bytes: ByteArray?): String? {
@@ -125,6 +128,17 @@ internal fun OfflineAcceptanceReportAction(
         }
 
     fun recordAttempt() {
+        val selectedMatchesActive = when (chosenDirection) {
+            OfflineObservationDirection.NL_EN ->
+                currentSourceCode == "nl" && currentTargetCode == "en"
+            OfflineObservationDirection.EN_NL ->
+                currentSourceCode == "en" && currentTargetCode == "nl"
+        }
+        if (!selectedMatchesActive) {
+            attemptMessage = "Poging niet vastgelegd: de huidige gesprekstalen komen niet " +
+                "overeen met de geselecteerde proefrichting. Wissel eerst de talen."
+            return
+        }
         // A user must return to actual offline mode for EACH entered attempt.
         // This check samples radios at entry, not during microphone capture.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
@@ -153,6 +167,13 @@ internal fun OfflineAcceptanceReportAction(
         if (started == null || newAttemptFlags.size != attempts.size) {
             attemptMessage = "Geen geldige live-proefbasis. Bewaar of wis dit concept " +
                 "en start opnieuw vóór de volgende microfoonsessie."
+            return
+        }
+        val previouslyRecorded = lastRecordedDiagnostics ?: started
+        if (!sessionDiagnostics.hasNewVoiceAttemptSince(previouslyRecorded)) {
+            attemptMessage = "Geen nieuwe lokale microfoonstart of definitieve " +
+                "spraak-/foutgebeurtenis sinds de vorige geregistreerde poging. " +
+                "Doe eerst een nieuwe echte spraakpoging in het gesprek."
             return
         }
         if (sessionDiagnostics.strictRadioInterruptions > started.strictRadioInterruptions) {
@@ -208,6 +229,7 @@ internal fun OfflineAcceptanceReportAction(
         }
         attempts = attempts + proposed
         newAttemptFlags = newAttemptFlags + true
+        lastRecordedDiagnostics = sessionDiagnostics
         attemptMessage = "Poging opgeslagen in tijdelijk appgeheugen."
         observedSpeech = false
         observedTranslation = false
@@ -261,6 +283,7 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("No strict radio watchdog interruption since current draft started: $strictRadioUninterrupted")
             appendLine("Radio status rechecked before each NEW manually entered attempt: yes (not proof during utterance; imports excluded)")
             appendLine("New on-device-counter-gated attempts in current app session: ${newAttemptFlags.count { it }}")
+            appendLine("Each new attempt needed fresh local capture or recognizer activity since the last record: yes (counter consistency only)")
             appendLine("Previously imported manual attempts not matched to live counters: ${newAttemptFlags.count { !it }}")
             appendLine("RAM source-language ASR and local MT counters used only as consistency checks, not human quality or radio proof")
             appendLine("Session recorded at epoch milliseconds UTC: $recordedAt")
@@ -316,6 +339,7 @@ internal fun OfflineAcceptanceReportAction(
         attempts = emptyList()
         newAttemptFlags = emptyList()
         startedDiagnostics = null
+        lastRecordedDiagnostics = null
         chosenDirection = OfflineObservationDirection.NL_EN
         observedSpeech = false
         observedTranslation = false
@@ -455,6 +479,7 @@ internal fun OfflineAcceptanceReportAction(
                     attempts = parsed.attempts
                     newAttemptFlags = List(parsed.attempts.size) { false }
                     startedDiagnostics = sessionDiagnostics
+                    lastRecordedDiagnostics = sessionDiagnostics
                     onArmStrictOffline()
                     chosenDirection = OfflineObservationDirection.entries.firstOrNull {
                         OfflineObservationLedger.totals(attempts, it).attempts <
@@ -539,7 +564,10 @@ internal fun OfflineAcceptanceReportAction(
                             "en verbreek alle Android-netwerktransporten."
                     else -> {
                         onArmStrictOffline()
-                        if (startedDiagnostics == null) startedDiagnostics = sessionDiagnostics
+                        if (startedDiagnostics == null) {
+                            startedDiagnostics = sessionDiagnostics
+                            lastRecordedDiagnostics = sessionDiagnostics
+                        }
                         baseline = captured.copyOf()
                         if (recordedAt == 0L) recordedAt = System.currentTimeMillis()
                         opened = true
@@ -710,7 +738,11 @@ internal fun OfflineAcceptanceReportAction(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "Tijdens dit concept blijft de strikte radio-/microfoonbewaking " +
+                        "Registreer elke poging direct na een nieuwe microfoonstart, " +
+                            "herkenning of herkenningsfout. Zonder nieuwe lokale " +
+                            "activiteit of met een verkeerde taalrichting weigert Tuddy de poging. " +
+                            "Deze tellercheck is geen bewijs van uitgesproken woorden. " +
+                            "Tijdens dit concept blijft de strikte radio-/microfoonbewaking " +
                             "ingeschakeld. Nieuwe claims van geslaagde herkenning en " +
                             "vertaling vereisen ook overeenkomstige lokale RAM-tellerstappen. " +
                             "Dit bewijst niet dat een zin correct of fysiek offline was.",

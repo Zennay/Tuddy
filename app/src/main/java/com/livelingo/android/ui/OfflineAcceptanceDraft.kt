@@ -36,6 +36,8 @@ internal class OfflineAcceptanceDraft {
     val checkpointNotice = mutableStateOf<String>("")
     // Baseline of actual on-device event counters at the START of the draft.
     val startedDiagnostics = mutableStateOf<OfflineSessionDiagnostics?>(null)
+    // Require a new local microphone/recognizer outcome for every NEW row.
+    val lastRecordedDiagnostics = mutableStateOf<OfflineSessionDiagnostics?>(null)
     // Imported checkpoint rows cannot be represented as freshly observed turns.
     val newAttemptFlags = mutableStateOf<List<Boolean>>(emptyList())
 }
