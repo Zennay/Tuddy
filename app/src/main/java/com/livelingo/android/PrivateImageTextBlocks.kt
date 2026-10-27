@@ -33,15 +33,44 @@ internal object PrivateImageTextBlocks {
         return admitted.takeIf { it.isNotEmpty() }
     }
 
+    /**
+     * Exact RAM-only reading order, never reorder OCR text silently.
+     * Reject unknown/duplicate IDs; selected text may only be reassembled
+     * after an explicit user tap on the review screen.
+     */
+    fun move(
+        blocks: List<PrivateImageTextBlock>,
+        order: List<Int>,
+        id: Int,
+        delta: Int
+    ): List<Int>? {
+        if (delta != -1 && delta != 1) return null
+        val available = blocks.map { it.index }
+        if (order.size != available.size || order.toSet() != available.toSet()) return null
+        val current = order.indexOf(id)
+        val next = current + delta
+        if (current < 0 || next !in order.indices) return null
+        return order.toMutableList().apply {
+            this[current] = order[next]
+            this[next] = id
+        }
+    }
+
     fun assemble(
         blocks: List<PrivateImageTextBlock>,
-        selected: Set<Int>
+        selected: Set<Int>,
+        orderedIds: List<Int> = blocks.map { it.index }
     ): String? {
         if (selected.isEmpty()) return null
-        if (selected.any { id -> blocks.none { it.index == id } }) return null
+        val blockById = blocks.associateBy { it.index }
+        if (blockById.size != blocks.size ||
+            orderedIds.size != blocks.size ||
+            orderedIds.toSet() != blockById.keys ||
+            selected.any { id -> id !in blockById }) return null
         val output = StringBuilder()
-        for (block in blocks) {
-            if (block.index !in selected) continue
+        for (id in orderedIds) {
+            if (id !in selected) continue
+            val block = blockById[id] ?: return null
             // Avoid allocating an oversized string for every checkbox tap.
             val added = block.text.length + if (output.isNotEmpty()) 2 else 0
             if (added > MAX_HANDOFF_CHARS - output.length) return null
