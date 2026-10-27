@@ -15,10 +15,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -54,6 +59,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     private var deadline: Runnable? = null
     private var busy by mutableStateOf(false)
     private var draft by mutableStateOf("")
+    private var textBlocks by mutableStateOf<List<PrivateImageTextBlock>>(emptyList())
+    private var selectedBlockIds by mutableStateOf<Set<Int>>(emptySet())
     private var notice by mutableStateOf(
         "Kies zelf een afbeelding. Alleen Latijns schrift wordt met " +
             "een ingebouwd offline OCR-model herkend. Controleer de tekst."
@@ -94,7 +101,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             onClick = {
                                 // Never keep a previous image's text across picks.
                                 generation++
-                                draft = ""
+                                clearReviewedImage()
                                 notice = "Kies een afbeelding; geen OCR tot je die selecteert."
                                 picker.launch(
                                     PickVisualMediaRequest(
@@ -107,12 +114,71 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth()
                         )
                         Text(notice, style = MaterialTheme.typography.bodySmall)
+                        if (textBlocks.isNotEmpty()) {
+                            Text(
+                                "Kies de relevante tekstblokken · ${textBlocks.size} gevonden",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                "Je kunt meerdere stukken kiezen, tot samen 8.000 tekens. " +
+                                    "Je ziet en corrigeert de samengevoegde tekst voordat " +
+                                    "de offline vertaler opent. Selectie wijzigen vervangt " +
+                                    "eventuele handmatige aanpassingen in het tekstveld.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { selectAllBlocks() }
+                            ) { Text("Selecteer alle passende blokken") }
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { clearBlockSelection() }
+                            ) { Text("Wis blokselectie") }
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth().height(250.dp)
+                            ) {
+                                items(textBlocks, key = { it.index }) { block ->
+                                    val selected = block.index in selectedBlockIds
+                                    val oversized = block.text.length >
+                                        PrivateImageTextBlocks.MAX_HANDOFF_CHARS
+                                    Column {
+                                        androidx.compose.foundation.layout.Row {
+                                            Checkbox(
+                                                checked = selected,
+                                                enabled = !oversized,
+                                                onCheckedChange = { checked ->
+                                                    toggleBlock(block.index, checked)
+                                                }
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    "Blok ${block.index + 1} · ${block.text.length} tekens" +
+                                                        if (oversized) " · te lang" else "",
+                                                    style = MaterialTheme.typography.labelMedium
+                                                )
+                                                Text(
+                                                    block.text.replace('\n', ' ').take(160) +
+                                                        if (block.text.length > 160) "…" else "",
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                        }
+                                        HorizontalDivider()
+                                    }
+                                }
+                            }
+                        }
                         if (draft.isNotEmpty()) {
                             Text("Controleer en corrigeer de herkende tekst",
                                 style = MaterialTheme.typography.titleSmall)
                             OutlinedTextField(
                                 value = draft,
-                                onValueChange = { if (it.length <= MAX_TEXT) draft = it },
+                                onValueChange = {
+                                    if (it.length <= MAX_TEXT) {
+                                        draft = it
+                                        notice = "Handmatig aangepast. Controleer tekst en taalrichting."
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 5,
                                 label = { Text("Afbeeldingstekst · max. 8.000 tekens") }
@@ -146,14 +212,14 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         decodeJob?.cancel()
         deadline?.let(handler::removeCallbacks)
         deadline = null
-        draft = ""
+        clearReviewedImage()
         busy = true
         notice = "De gekozen afbeelding wordt lokaal gelezen…"
         val timeout = Runnable {
             if (request == generation) {
                 generation++
                 busy = false
-                draft = ""
+                clearReviewedImage()
                 notice = "OCR duurde langer dan 20 seconden. " +
                     "Kies een andere of kleinere afbeelding."
             }
@@ -198,21 +264,35 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                         if (request != generation || isFinishing) return@addOnCompleteListener
                         clearDeadline()
                         busy = false
-                        val text = if (task.isSuccessful) task.result.text.trim() else ""
-                        when {
-                            !task.isSuccessful ->
-                                notice = "Offline OCR kon de afbeelding niet verwerken."
-                            text.isBlank() ->
-                                notice = "Geen herkenbare Latijnse tekst gevonden. " +
+                        if (!task.isSuccessful) {
+                            notice = "Offline OCR kon de afbeelding niet verwerken."
+                            return@addOnCompleteListener
+                        }
+                        val rawBlocks = task.result.textBlocks
+                            .map { it.text }
+                            .ifEmpty { listOf(task.result.text) }
+                        val admitted = PrivateImageTextBlocks.admit(rawBlocks)
+                        if (admitted == null) {
+                            notice = if (task.result.text.isBlank())
+                                "Geen herkenbare Latijnse tekst gevonden. " +
                                     "Probeer een scherpere afbeelding."
-                            text.length > MAX_TEXT ->
-                                notice = "Meer dan 8.000 tekens herkend. " +
-                                    "Kies een kleinere uitsnede; er is niets overgenomen."
-                            else -> {
-                                draft = text
-                                notice = "Tekst lokaal herkend. Controleer fouten en " +
-                                    "kies daarna bewust de vertaalrichting."
-                            }
+                            else "Te veel of ongeldige OCR-tekst om veilig te tonen. " +
+                                "Kies een kleinere uitsnede."
+                            return@addOnCompleteListener
+                        }
+                        textBlocks = admitted
+                        val allIds = admitted.map { it.index }.toSet()
+                        val combined = PrivateImageTextBlocks.assemble(admitted, allIds)
+                        if (combined != null) {
+                            selectedBlockIds = allIds
+                            draft = combined
+                            notice = "Tekst lokaal herkend en geselecteerd. Controleer " +
+                                "de blokken en pas de tekst aan vóór vertalen."
+                        } else {
+                            selectedBlockIds = emptySet()
+                            draft = ""
+                            notice = "Meer dan 8.000 tekens herkend. Kies hieronder " +
+                                "zelf de relevante tekstblokken; niets is doorgegeven."
                         }
                     }
             } catch (_: Exception) {
@@ -243,6 +323,53 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         }
     }
 
+    private fun clearReviewedImage() {
+        draft = ""
+        textBlocks = emptyList()
+        selectedBlockIds = emptySet()
+    }
+
+    private fun toggleBlock(index: Int, checked: Boolean) {
+        val next = if (checked) selectedBlockIds + index else selectedBlockIds - index
+        if (next.isEmpty()) {
+            selectedBlockIds = emptySet()
+            draft = ""
+            notice = "Geen blokken geselecteerd. Kies eerst de relevante tekst."
+            return
+        }
+        val assembled = PrivateImageTextBlocks.assemble(textBlocks, next)
+        if (assembled == null) {
+            notice = "Selectie overschrijdt 8.000 tekens. " +
+                "Laat een blok weg of kies een kleinere uitsnede."
+            return
+        }
+        selectedBlockIds = next
+        draft = assembled
+        notice = "Blokselectie bijgewerkt. Controleer de samengevoegde tekst."
+    }
+
+    private fun clearBlockSelection() {
+        selectedBlockIds = emptySet()
+        draft = ""
+        notice = "Blokselectie gewist. De herkende blokken blijven tijdelijk beschikbaar."
+    }
+
+    private fun selectAllBlocks() {
+        // For long documents admit only an exact contiguous prefix of whole
+        // blocks that fits. Never silently truncate a selected block's text.
+        val accepted = mutableSetOf<Int>()
+        textBlocks.forEach { block ->
+            val candidate = accepted + block.index
+            if (PrivateImageTextBlocks.assemble(textBlocks, candidate) != null) {
+                accepted.add(block.index)
+            }
+        }
+        selectedBlockIds = accepted
+        draft = PrivateImageTextBlocks.assemble(textBlocks, accepted).orEmpty()
+        notice = if (accepted.isEmpty()) "Geen blok past binnen de 8.000-tekengrens."
+            else "${accepted.size} blokken geselecteerd; controleer de tekst vóór vertalen."
+    }
+
     private fun openLocalTranslator() {
         val opaque = PrivateImageTextHandoff.offer(draft) ?: run {
             notice = "Geen geldige tekst om door te geven. Controleer je invoer."
@@ -266,7 +393,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         decodeJob = null
         clearDeadline()
         busy = false
-        draft = ""
+        clearReviewedImage()
         super.onPause()
     }
 
@@ -276,7 +403,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         decodeJob = null
         clearDeadline()
         busy = false
-        draft = ""
+        clearReviewedImage()
         super.onStop()
     }
 
@@ -284,7 +411,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         generation++
         decodeJob?.cancel()
         clearDeadline()
-        draft = ""
+        clearReviewedImage()
         super.onDestroy()
     }
 
