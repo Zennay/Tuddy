@@ -28,6 +28,12 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="text/plain"/>
             </intent-filter>
+            <!-- One image share opens private preview; no automatic OCR. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
+            </intent-filter>
             <!-- Explicit "Open with Tuddy" from Android Files/providers.
                  Only content:// URI grants, bounded UTF-8 and human preview. -->
             <intent-filter>

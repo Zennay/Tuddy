@@ -58,6 +58,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     private var decodeJob: Job? = null
     private var deadline: Runnable? = null
     private var busy by mutableStateOf(false)
+    private var sharedImageUri by mutableStateOf<Uri?>(null)
     private var draft by mutableStateOf("")
     private var textBlocks by mutableStateOf<List<PrivateImageTextBlock>>(emptyList())
     private var selectedBlockIds by mutableStateOf<Set<Int>>(emptySet())
@@ -77,6 +78,27 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Restore visual privacy before showing any recognized text.
         PrivateScreenShield.restore(this)
+        if (savedInstanceState == null && intent?.action == ACTION_REVIEW_EXTERNAL) {
+            val incoming = intent
+            val selected = incoming?.data
+            val clips = incoming?.clipData
+            sharedImageUri = selected?.takeIf {
+                it.scheme == "content" &&
+                    (incoming.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0 &&
+                    clips?.itemCount == 1 && clips.getItemAt(0).uri == it
+            }
+            notice = if (sharedImageUri != null) {
+                "Eén afbeelding ontvangen. Er is nog niets gelezen. " +
+                    "Tik bewust op ‘Herken gedeelde afbeelding’ om offline OCR te starten."
+            } else {
+                "De gedeelde afbeelding had geen veilige tijdelijke leesrechten " +
+                    "of bevatte meerdere items. Kies hieronder zelf een afbeelding."
+            }
+            incoming?.data = null
+            incoming?.clipData = null
+            incoming?.removeExtra(Intent.EXTRA_STREAM)
+            incoming?.removeExtra(Intent.EXTRA_TEXT)
+        }
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -95,10 +117,22 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 "ook cloudfoto's van jouw provider aanbieden.",
                             style = MaterialTheme.typography.bodySmall
                         )
+                        if (sharedImageUri != null) {
+                            OutlinedButton(
+                                enabled = !busy,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    val selected = sharedImageUri
+                                    sharedImageUri = null
+                                    if (selected != null) readSelectedImage(selected)
+                                }
+                            ) { Text("Herken gedeelde afbeelding · lokaal") }
+                        }
                         OutlinedButton(
                             enabled = !busy,
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
+                                sharedImageUri = null
                                 // Never keep a previous image's text across picks.
                                 generation++
                                 clearReviewedImage()
@@ -397,6 +431,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         clearDeadline()
         busy = false
         clearReviewedImage()
+        sharedImageUri = null
         super.onPause()
     }
 
@@ -407,6 +442,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         clearDeadline()
         busy = false
         clearReviewedImage()
+        sharedImageUri = null
         super.onStop()
     }
 
@@ -415,10 +451,13 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         decodeJob?.cancel()
         clearDeadline()
         clearReviewedImage()
+        sharedImageUri = null
         super.onDestroy()
     }
 
     companion object {
+        const val ACTION_REVIEW_EXTERNAL =
+            "com.livelingo.android.action.REVIEW_IMAGE_SHARE"
         private const val MAX_TEXT = 8_000
     }
 }
