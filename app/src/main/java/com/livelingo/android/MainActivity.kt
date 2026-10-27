@@ -5432,7 +5432,7 @@ private fun TuddyScreen(
                 initialSharedDraft = sharedTextToTwoWay,
                 recentLines = lines.takeLast(80).map { row ->
                     TypedConversationLine(row.original, row.translated, row.status,
-                        row.sourceCode, row.targetCode)
+                        row.sourceCode, row.targetCode, id = row.id)
                 },
                 retryableCount = { from, to ->
                     lines.count { it.sourceCode == from && it.targetCode == to &&
@@ -6217,7 +6217,8 @@ private fun TuddyScreen(
                         translated = line.translated,
                         status = line.status,
                         source = line.sourceCode,
-                        target = line.targetCode
+                        target = line.targetCode,
+                        id = line.id
                     )
                 },
                 onBack = { liveTableOpen = false },
