@@ -155,6 +155,12 @@ internal fun OfflineAcceptanceReportAction(
                 "en start opnieuw vóór de volgende microfoonsessie."
             return
         }
+        if (sessionDiagnostics.strictRadioInterruptions > started.strictRadioInterruptions) {
+            attemptMessage = "Android heeft de strikte offline microfoonsessie onderbroken. " +
+                "Bewaar desgewenst een onvolledig rapport, wis het concept en " +
+                "start een nieuwe proef met blijvend uitgeschakelde netwerken."
+            return
+        }
         if (sessionDiagnostics.listeningStarts <= started.listeningStarts) {
             attemptMessage = "Start eerst daadwerkelijk een lokale microfoonsessie " +
                 "na het openen van dit proefconcept."
@@ -233,7 +239,12 @@ internal fun OfflineAcceptanceReportAction(
         val allSuccessfulTranslationsTimed =
             OfflineObservationLedger.timedSuccessesComplete(attempts)
         val android12Plus = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        val complete = android12Plus && digestMatches && radioSnapshotReady &&
+        val startedForReport = startedDiagnostics
+        val strictRadioUninterrupted = startedForReport != null &&
+            sessionDiagnostics.strictRadioInterruptions ==
+                startedForReport.strictRadioInterruptions
+        val complete = android12Plus && strictRadioUninterrupted &&
+            digestMatches && radioSnapshotReady &&
             disconnectedConfirmed &&
             permissionAndStopConfirmed && noCloudFallbackConfirmed &&
             privacyClearingConfirmed && recordedAllAttempts &&
@@ -247,6 +258,7 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Imported observations are NOT proof of one continuous offline radio session")
             appendLine("Independently verified by Tuddy: no")
             appendLine("Android 12+ minimum for this record: $android12Plus")
+            appendLine("No strict radio watchdog interruption since current draft started: $strictRadioUninterrupted")
             appendLine("Radio status rechecked before each NEW manually entered attempt: yes (not proof during utterance; imports excluded)")
             appendLine("New on-device-counter-gated attempts in current app session: ${newAttemptFlags.count { it }}")
             appendLine("Previously imported manual attempts not matched to live counters: ${newAttemptFlags.count { !it }}")

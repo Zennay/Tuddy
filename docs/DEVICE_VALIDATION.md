@@ -35,7 +35,10 @@ handmatig gemarkeerde successen moet Tuddy een aanvullende definitieve
 on-device herkenning respectievelijk lokale vertaling in de juiste richting
 hebben geteld sinds de start van het concept. Pogingen die mislukten, blijven
 handmatig geobserveerd; na een geïmporteerd concept worden eerdere pogingen
-niet ten onrechte als live tellerbewijs meegeteld. Deze controles bewijzen
+niet ten onrechte als live tellerbewijs meegeteld. Als de bestaande strikte radio-observer de lopende microfoon heeft afgebroken
+door een gerapporteerde verbinding, weigert de app verdere invoer en blijft
+het rapport bewust onvolledig. De operator kan een onvolledig rapport
+bewaren en voor nieuwe waarnemingen opnieuw beginnen. Deze controles bewijzen
 noch herkenningskwaliteit, noch echte radio-isolatie tijdens een gesproken zin.
 
 Na een activiteit- of procesherstart gaat het RAM-concept verloren. Een
