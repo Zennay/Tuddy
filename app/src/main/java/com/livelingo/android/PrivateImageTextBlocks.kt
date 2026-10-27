@@ -18,8 +18,8 @@ internal object PrivateImageTextBlocks {
         var total = 0
         val admitted = mutableListOf<PrivateImageTextBlock>()
         for (part in raw) {
+            if (part.length > MAX_OCR_CHARS - total) return null
             total += part.length
-            if (total > MAX_OCR_CHARS) return null
             val normalized = part.trim()
             if (normalized.isBlank()) continue
             // Reject non-printable contents rather than forwarding unexpected
@@ -39,14 +39,16 @@ internal object PrivateImageTextBlocks {
     ): String? {
         if (selected.isEmpty()) return null
         if (selected.any { id -> blocks.none { it.index == id } }) return null
-        val text = buildString {
-            blocks.forEach { block ->
-                if (block.index in selected) {
-                    if (isNotEmpty()) append("\n\n")
-                    append(block.text)
-                }
-            }
+        val output = StringBuilder()
+        for (block in blocks) {
+            if (block.index !in selected) continue
+            // Avoid allocating an oversized string for every checkbox tap.
+            val added = block.text.length + if (output.isNotEmpty()) 2 else 0
+            if (added > MAX_HANDOFF_CHARS - output.length) return null
+            if (output.isNotEmpty()) output.append("\n\n")
+            output.append(block.text)
         }
-        return text.takeIf { it.isNotBlank() && it.length <= MAX_HANDOFF_CHARS }
+        val text = output.toString()
+        return text.takeIf { it.isNotBlank() }
     }
 }
