@@ -170,10 +170,13 @@ internal fun OfflineAcceptanceReportAction(
             return
         }
         val previouslyRecorded = lastRecordedDiagnostics ?: started
-        if (!sessionDiagnostics.hasNewVoiceAttemptSince(previouslyRecorded)) {
-            attemptMessage = "Geen nieuwe lokale microfoonstart of definitieve " +
-                "spraak-/foutgebeurtenis sinds de vorige geregistreerde poging. " +
-                "Doe eerst een nieuwe echte spraakpoging in het gesprek."
+        val expectedSource = if (chosenDirection == OfflineObservationDirection.NL_EN) "nl" else "en"
+        val expectedTarget = if (chosenDirection == OfflineObservationDirection.NL_EN) "en" else "nl"
+        if (!sessionDiagnostics.hasNewVoiceAttemptInDirectionSince(
+                previouslyRecorded, expectedSource, expectedTarget)) {
+            attemptMessage = "Geen nieuwe lokale microfoonstart, definitieve herkenning " +
+                "of herkenningsfout in de gekozen taalrichting sinds de vorige poging. " +
+                "Doe eerst een echte spraakpoging in deze richting."
             return
         }
         if (sessionDiagnostics.strictRadioInterruptions > started.strictRadioInterruptions) {
@@ -283,7 +286,7 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("No strict radio watchdog interruption since current draft started: $strictRadioUninterrupted")
             appendLine("Radio status rechecked before each NEW manually entered attempt: yes (not proof during utterance; imports excluded)")
             appendLine("New on-device-counter-gated attempts in current app session: ${newAttemptFlags.count { it }}")
-            appendLine("Each new attempt needed fresh local capture or recognizer activity since the last record: yes (counter consistency only)")
+            appendLine("Each new attempt needed fresh local capture or recognizer activity IN ITS LANGUAGE DIRECTION since the last record: yes (counter consistency only)")
             appendLine("Previously imported manual attempts not matched to live counters: ${newAttemptFlags.count { !it }}")
             appendLine("RAM source-language ASR and local MT counters used only as consistency checks, not human quality or radio proof")
             appendLine("Session recorded at epoch milliseconds UTC: $recordedAt")
