@@ -123,6 +123,41 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
-      # Full Android compilation runs once, on the proposed merge tree.
-      # This independent job validates the contributor HEAD identity without
-      # launching a second competing Gradle daemon on the shared VPS.
+      # Verify the immutable PR HEAD with the mandated unit test compile,
+      # serialized on the repo-scoped runner after the proposed-merge APK build.
+      - name: Protect shared VPS memory before HEAD compile
+        shell: bash
+        run: |
+          set -euo pipefail
+          available_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)"
+          swap_free_kb="$(awk '/SwapFree:/ {print $2}' /proc/meminfo)"
+          min_available_kb=4718592
+          if [ "$swap_free_kb" -lt 1048576 ]; then
+            min_available_kb=6291456
+          fi
+          if [ "$available_kb" -lt "$min_available_kb" ]; then
+            echo "::error::Tuddy Android build deferred: shared VPS has only $((available_kb / 1024)) MiB available RAM and $((swap_free_kb / 1024)) MiB free swap. Keep the other worker sessions alive; free RAM before rerun."
+            exit 1
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Resolve installed Android SDK on Tuddy self-hosted runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/home/ubuntu/Android/Sdk}}"
+          test -x "$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+          echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
+      - name: Ensure Android 35 SDK
+        run: |
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" || command -v sdkmanager
+          test -s "$ANDROID_HOME/platforms/android-35/android.jar"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/aapt"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Validate lifecycle policy on exact source HEAD
+        run: gradle :app:testDebugUnitTest --stacktrace --no-daemon --max-workers=1
