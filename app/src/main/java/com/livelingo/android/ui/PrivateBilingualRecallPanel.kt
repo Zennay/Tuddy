@@ -208,6 +208,20 @@ internal fun PrivateBilingualRecallPanel(
                     privateRoundConcealed = false
                 }
             ) { Text("Hervat privé oefening bewust") }
+            TextButton(
+                enabled = enabled,
+                onClick = {
+                    // Delete even self-reported grades and sequence position,
+                    // with NO briefly revealed prompt or attempted answer.
+                    concealPrivateRecall()
+                    started = false
+                    position = 0
+                    review = PrivateRecallRoundReview()
+                    retryOnly = false
+                    retryIndices = emptyList()
+                    round = 1
+                }
+            ) { Text("Wis deze tijdelijke oefenronde") }
         }
         return
     }
