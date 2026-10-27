@@ -1,11 +1,24 @@
 # Tekst uit zelfgekozen afbeelding · lokaal (Android 12+)
 
-Open in Tuddy **Meer functies → Lees tekst uit afbeelding · volledig lokaal**.
-Kies bewust één foto of screenshot in Androids fotokiezer.
+Begin op één van twee manieren:
+
+- **Vanuit Android Galerij/Foto's/Bestanden:** deel bewust één foto of
+  screenshot via **Delen → Tuddy**. Je komt op een privévoorvertoning.
+  Tik apart **Herken gedeelde afbeelding · lokaal** om OCR te starten;
+  alleen openen leest nog geen foto. Bij ontbrekende URI-rechten of meerdere
+  gedeelde items kun je de eigen afbeeldingkiezer gebruiken.
+- **Vanuit Tuddy:** open **Meer functies → Lees tekst uit afbeelding ·
+  volledig lokaal** en kies bewust één foto in Androids fotokiezer.
+
 De fotokiezer verleent toegang tot die ene keuze, niet tot je hele fotobibliotheek.
 Sommige door Android aangeboden fotoproviders beheren ook cloudfoto's:
 selecteer een lokaal aanwezige afbeelding als je iedere externe overdracht
 wilt uitsluiten en controleer de toestand van je toestel zelf.
+
+Een gedeelde foto kan van een cloud-gesynchroniseerde externe fotoprovider
+komen. De provider kan zelf netwerkverkeer veroorzaken voordat Tuddy de
+tijdelijke URI ontvangt: de offlinegarantie geldt voor Tuddy's verwerking,
+niet voor iedere externe bronapp.
 
 Tuddy gebruikt het **in de APK gebundelde ML Kit Latin Text Recognition v2**
 model. De OCR-functie kan daardoor tekst uit een afbeelding halen zonder
@@ -15,7 +28,8 @@ geen betrouwbare Sorani, Arabische-schrift Kurmanji of Pasjtoe OCR-claim.
 
 ## Van foto naar vertaling
 
-1. Kies een afbeelding. Tuddy leest alleen de gekozen content-URI en
+1. Kies een afbeelding of bevestig expliciet de gedeelde afbeelding.
+   Tuddy leest alleen de gekozen content-URI en
    verkleint te grote pixelafmetingen vóór verwerking. Ongeldige, zeer grote
    of onleesbare afbeeldingen worden geweigerd.
 2. Bekijk de lokaal herkende tekst. Verkeerde woorden kun je zelf verbeteren.

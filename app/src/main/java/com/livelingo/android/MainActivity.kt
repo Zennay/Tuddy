@@ -3,6 +3,7 @@ package com.livelingo.android
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.ClipData
 import android.content.ComponentCallbacks2
 import android.content.res.Configuration
 import android.content.Intent
@@ -533,6 +534,53 @@ class MainActivity : ComponentActivity() {
         return true
     }
 
+
+    /**
+     * Forward a single explicitly shared image URI to a private preview.
+     * Neither entrypoint reads image bytes before the user's OCR tap.
+     */
+    private fun routeSharedImage(sourceIntent: Intent): Boolean {
+        if (sourceIntent.action != Intent.ACTION_SEND ||
+            sourceIntent.type?.startsWith("image/", ignoreCase = true) != true
+        ) return false
+
+        val shared = runCatching {
+            val clips = sourceIntent.clipData
+            if (clips != null && clips.itemCount != 1) return@runCatching null
+            val streamed = if (Build.VERSION.SDK_INT >= 33) {
+                sourceIntent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                (sourceIntent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))
+            }
+            val clipped = clips?.getItemAt(0)?.uri
+            val selected = streamed ?: clipped
+            selected?.takeIf {
+                (sourceIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0 &&
+                    it.scheme == "content" &&
+                    (clipped == null || streamed == null || clipped == streamed)
+            }
+        }.getOrNull()
+
+        val review = Intent(this, PrivateImageTextActivity::class.java).apply {
+            action = PrivateImageTextActivity.ACTION_REVIEW_EXTERNAL
+            if (shared != null) {
+                data = shared
+                clipData = ClipData.newRawUri("Tuddy gedeelde afbeelding", shared)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
+        // Do not retain a shared payload in the exported main entrypoint.
+        sourceIntent.removeExtra(Intent.EXTRA_STREAM)
+        sourceIntent.removeExtra(Intent.EXTRA_TEXT)
+        sourceIntent.removeExtra(Intent.EXTRA_PROCESS_TEXT)
+        sourceIntent.clipData = null
+        sourceIntent.data = null
+        setIntent(sourceIntent)
+        startActivity(review)
+        return true
+    }
+
     override fun onResume() {
         super.onResume()
         // A quick-translation Activity can change this shared preference.
@@ -546,6 +594,10 @@ class MainActivity : ComponentActivity() {
         // Apply the user's Android screenshot/recents preference *before*
         // routing selected private text to the separate quick translator.
         PrivateScreenShield.restore(this)
+        if (savedInstanceState == null && routeSharedImage(intent)) {
+            finish() // Do not leave an empty main screen behind a cold share.
+            return
+        }
         if (savedInstanceState == null && routePlainTextSelection(intent)) {
             return
         }
@@ -596,6 +648,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (routeSharedImage(intent)) return
         if (routePlainTextSelection(intent)) {
             return
         }
