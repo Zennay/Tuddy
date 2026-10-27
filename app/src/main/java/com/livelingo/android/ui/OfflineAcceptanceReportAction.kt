@@ -18,14 +18,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.os.Build
+import com.livelingo.android.OfflineRadioSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,67 +41,37 @@ import kotlinx.coroutines.withContext
 internal fun OfflineAcceptanceReportAction(
     enabled: Boolean,
     deviceSnapshot: () -> ByteArray?,
+    draft: OfflineAcceptanceDraft,
+    onReturnToConversation: () -> Unit,
     onPickerStarted: () -> Unit,
     onPickerFinished: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var baseline by remember { mutableStateOf<ByteArray?>(null) }
-    var recordedAt by remember { mutableStateOf(0L) }
-    var opened by remember { mutableStateOf(false) }
-    var confirmDiscard by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf("") }
-    var expectedApkSha256 by remember { mutableStateOf("") }
-    var sidecarNotice by remember { mutableStateOf("") }
-    var disconnectedConfirmed by remember { mutableStateOf(false) }
-    var permissionAndStopConfirmed by remember { mutableStateOf(false) }
-    var noCloudFallbackConfirmed by remember { mutableStateOf(false) }
-    var privacyClearingConfirmed by remember { mutableStateOf(false) }
+    var baseline by draft.baseline
+    var recordedAt by draft.recordedAt
+    var opened by draft.opened
+    var confirmDiscard by draft.confirmDiscard
+    var message by draft.message
+    var expectedApkSha256 by draft.expectedApkSha256
+    var sidecarNotice by draft.sidecarNotice
+    var disconnectedConfirmed by draft.disconnectedConfirmed
+    var permissionAndStopConfirmed by draft.permissionAndStopConfirmed
+    var noCloudFallbackConfirmed by draft.noCloudFallbackConfirmed
+    var privacyClearingConfirmed by draft.privacyClearingConfirmed
     // A bounded, transient observation ledger. Never store user utterances.
-    var attempts by remember { mutableStateOf<List<OfflineObservedAttempt>>(emptyList()) }
-    var chosenDirection by remember { mutableStateOf(OfflineObservationDirection.NL_EN) }
-    var observedSpeech by remember { mutableStateOf(false) }
-    var observedTranslation by remember { mutableStateOf(false) }
-    var attemptLatency by remember { mutableStateOf("") }
-    var attemptMessage by remember { mutableStateOf("") }
-    var pendingReport by remember { mutableStateOf<ByteArray?>(null) }
-    var pendingBaseline by remember { mutableStateOf<ByteArray?>(null) }
-    var pendingCheckpoint by remember { mutableStateOf<ByteArray?>(null) }
-    var checkpointImported by remember { mutableStateOf(false) }
-    var checkpointNotice by remember { mutableStateOf("") }
+    var attempts by draft.attempts
+    var chosenDirection by draft.chosenDirection
+    var observedSpeech by draft.observedSpeech
+    var observedTranslation by draft.observedTranslation
+    var attemptLatency by draft.attemptLatency
+    var attemptMessage by draft.attemptMessage
+    var pendingReport by draft.pendingReport
+    var pendingBaseline by draft.pendingBaseline
+    var pendingCheckpoint by draft.pendingCheckpoint
+    var checkpointImported by draft.checkpointImported
+    var checkpointNotice by draft.checkpointNotice
 
-    fun recordAttempt() {
-        val time = attemptLatency.toLongOrNull()
-        if (attemptLatency.isNotBlank() && (time == null || time !in 1L..600000L)) {
-            attemptMessage = "Voer een geldige duur in (1–600000 ms) of laat dit veld leeg."
-            return
-        }
-        if (!observedSpeech && observedTranslation) {
-            attemptMessage = "Zonder geslaagde spraakherkenning kan geen lokale spraakvertaling slagen."
-            return
-        }
-        if (!observedTranslation && time != null) {
-            attemptMessage = "Een vertaaltijd hoort alleen bij een geslaagde lokale vertaling."
-            return
-        }
-        val proposed = OfflineObservedAttempt(
-            chosenDirection, observedSpeech, observedTranslation, time
-        )
-        if (!OfflineObservationLedger.canRecord(attempts, proposed)) {
-            attemptMessage = "Maximaal tien pogingen per richting, zonder extra tekstgegevens."
-            return
-        }
-        attempts = attempts + proposed
-        attemptMessage = "Poging opgeslagen in tijdelijk appgeheugen."
-        observedSpeech = false
-        observedTranslation = false
-        attemptLatency = ""
-        if (chosenDirection == OfflineObservationDirection.NL_EN &&
-            OfflineObservationLedger.totals(
-                attempts, OfflineObservationDirection.NL_EN
-            ).attempts == OfflineObservationLedger.REQUIRED_ATTEMPTS_PER_DIRECTION
-        ) chosenDirection = OfflineObservationDirection.EN_NL
-    }
     fun installedApkDigest(bytes: ByteArray?): String? {
         val line = bytes?.toString(Charsets.UTF_8)?.lineSequence()
             ?.firstOrNull { it.startsWith("Installed base APK SHA-256:") } ?: return null
@@ -143,6 +113,61 @@ internal fun OfflineAcceptanceReportAction(
             "Android rapporteert een actieve netwerkverbinding of kan de netwerkstatus niet lezen. Verbreek verbindingen en open het rapport opnieuw."
         else -> "De radio-indicatoren zijn niet voldoende voor een complete offline-waarneming."
     }
+    fun recordAttempt() {
+        // A user must return to actual offline mode for EACH entered attempt.
+        // This check samples radios at entry, not during microphone capture.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            attemptMessage = "Deze toestelproef vereist Android 12 of hoger."
+            return
+        }
+        val radio = OfflineRadioSnapshot.capture(context)
+        if (radio.airplaneModeOn != true || radio.wifiEnabled != false ||
+            radio.networkReadFailed || radio.visibleTransports.isNotEmpty()) {
+            attemptMessage = "Poging niet vastgelegd: controleer vliegtuigmodus, " +
+                "wifi uit en geen Android-netwerktransporten. " +
+                "Dit bewijst niet dat eerdere spraak offline verliep."
+            return
+        }
+        val currentIdentity = deviceSnapshot()
+        if (installedApkDigest(currentIdentity) == null ||
+            installedApkDigest(currentIdentity) != installedApkDigest(baseline)) {
+            attemptMessage = "De geïnstalleerde APK-identiteit is niet meer dezelfde " +
+                "als bij aanvang. De poging is niet geregistreerd."
+            return
+        }
+        val time = attemptLatency.toLongOrNull()
+        if (attemptLatency.isNotBlank() && (time == null || time !in 1L..600000L)) {
+            attemptMessage = "Voer een geldige duur in (1–600000 ms) of laat dit veld leeg."
+            return
+        }
+        if (!observedSpeech && observedTranslation) {
+            attemptMessage = "Zonder geslaagde spraakherkenning kan geen lokale spraakvertaling slagen."
+            return
+        }
+        if (!observedTranslation && time != null) {
+            attemptMessage = "Een vertaaltijd hoort alleen bij een geslaagde lokale vertaling."
+            return
+        }
+        val proposed = OfflineObservedAttempt(
+            chosenDirection, observedSpeech, observedTranslation, time
+        )
+        if (!OfflineObservationLedger.canRecord(attempts, proposed)) {
+            attemptMessage = "Maximaal tien pogingen per richting, zonder extra tekstgegevens."
+            return
+        }
+        attempts = attempts + proposed
+        attemptMessage = "Poging opgeslagen in tijdelijk appgeheugen."
+        observedSpeech = false
+        observedTranslation = false
+        attemptLatency = ""
+        if (chosenDirection == OfflineObservationDirection.NL_EN &&
+            OfflineObservationLedger.totals(
+                attempts, OfflineObservationDirection.NL_EN
+            ).attempts == OfflineObservationLedger.REQUIRED_ATTEMPTS_PER_DIRECTION
+        ) chosenDirection = OfflineObservationDirection.EN_NL
+    }
+
+
     fun reportBytes(): ByteArray? {
         val identity = baseline ?: return null
         val installedDigest = installedApkDigest(identity)
@@ -161,7 +186,8 @@ internal fun OfflineAcceptanceReportAction(
         val recordedAllAttempts = OfflineObservationLedger.complete(attempts)
         val allSuccessfulTranslationsTimed =
             OfflineObservationLedger.timedSuccessesComplete(attempts)
-        val complete = digestMatches && radioSnapshotReady &&
+        val android12Plus = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        val complete = android12Plus && digestMatches && radioSnapshotReady &&
             disconnectedConfirmed &&
             permissionAndStopConfirmed && noCloudFallbackConfirmed &&
             privacyClearingConfirmed && recordedAllAttempts &&
@@ -174,6 +200,8 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Manually imported earlier attempt classifications: $checkpointImported")
             appendLine("Imported observations are NOT proof of one continuous offline radio session")
             appendLine("Independently verified by Tuddy: no")
+            appendLine("Android 12+ minimum for this record: $android12Plus")
+            appendLine("Radio status rechecked before each NEW manually entered attempt: yes (not proof during utterance; imports excluded)")
             appendLine("Session recorded at epoch milliseconds UTC: $recordedAt")
             appendLine("Observation completeness: ${if (complete) "required observations recorded (NOT acceptance)" else "incomplete; inspect unrecorded or unchecked observations"}")
             appendLine("Outcome acceptance by an independent reviewer: NOT GRANTED")
@@ -432,16 +460,29 @@ internal fun OfflineAcceptanceReportAction(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 val captured = deviceSnapshot()
-                if (captured == null || captured.isEmpty()) {
-                    message = "De exacte apparaat-/APK-identiteit is nog niet beschikbaar. Open de offline startcheck opnieuw."
-                } else {
-                    baseline = captured.copyOf()
-                    recordedAt = System.currentTimeMillis()
-                    opened = true
-                    message = ""
+                val installed = installedApkDigest(captured)
+                val prior = installedApkDigest(baseline)
+                when {
+                    captured == null || installed == null ->
+                        message = "De exacte apparaat-/APK-identiteit is niet beschikbaar."
+                    prior != null && installed != prior ->
+                        message = "De APK is sinds dit proefconcept veranderd. " +
+                            "Wis of bewaar eerst het oude concept; pogingen zijn niet overgenomen."
+                    baseline != null && !reportsOfflineRadioState(captured) ->
+                        message = "Hervatten geweigerd: zet vliegtuigmodus aan, wifi uit " +
+                            "en verbreek alle Android-netwerktransporten."
+                    else -> {
+                        baseline = captured.copyOf()
+                        if (recordedAt == 0L) recordedAt = System.currentTimeMillis()
+                        opened = true
+                        message = ""
+                    }
                 }
             }
-        ) { Text("Leg fysieke offline-waarnemingen vast…") }
+        ) {
+            Text(if (baseline == null) "Start fysieke offline-waarnemingen…"
+                else "Hervat ${attempts.size}/20 offline-waarnemingen…")
+        }
         OutlinedButton(
             enabled = enabled && !opened,
             modifier = Modifier.fillMaxWidth(),
@@ -697,28 +738,52 @@ internal fun OfflineAcceptanceReportAction(
                 TextButton(
                     enabled = readyReport != null,
                     onClick = {
-                        val capturedBaseline = baseline?.copyOf()
+                        val oldInstalled = installedApkDigest(baseline)
                         val fresh = deviceSnapshot()
-                        val bytes = reportBytes()
-                        if (capturedBaseline == null || fresh == null ||
-                            !fresh.contentEquals(capturedBaseline) || bytes == null) {
-                            message = "Apparaatstatus is veranderd of onvolledig. " +
-                                "Het huidige concept blijft bewaard, maar kan niet met " +
-                                "een verouderde apparaatmomentopname worden geëxporteerd."
-                            attemptMessage = message
+                        val freshInstalled = installedApkDigest(fresh)
+                        if (oldInstalled == null || freshInstalled != oldInstalled) {
+                            attemptMessage = "APK-identiteit gewijzigd of onleesbaar. " +
+                                "Concept behouden; export van deze toestelproef geweigerd."
+                        } else if (!reportsOfflineRadioState(fresh)) {
+                            attemptMessage = "Export geweigerd: Android meldt momenteel geen " +
+                                "vliegtuigmodus met uitgeschakelde wifi en netwerktransporten. " +
+                                "Herstel de offline toestand en probeer opnieuw."
                         } else {
-                            pendingReport = bytes
-                            pendingBaseline = capturedBaseline
-                            opened = false
-                            onPickerStarted()
-                            saveReport.launch("Tuddy-offline-waarnemingsrapport.txt")
+                            // Live RAM counters and model receipts change during
+                            // real attempts; refresh before export, not after it.
+                            baseline = fresh!!.copyOf()
+                            val bytes = reportBytes()
+                            if (bytes == null) {
+                                attemptMessage = "Rapport niet beschikbaar; concept behouden."
+                            } else {
+                                pendingReport = bytes
+                                pendingBaseline = fresh.copyOf()
+                                opened = false
+                                onPickerStarted()
+                                saveReport.launch("Tuddy-offline-waarnemingsrapport.txt")
+                            }
                         }
                     }
                 ) { Text("Bewaar rapport…") }
             },
             dismissButton = {
-                TextButton(onClick = { requestClose() }) {
-                    Text("Annuleren")
+                Column {
+                    TextButton(onClick = {
+                        // Keep RAM draft while the operator returns to speech.
+                        // The offline confirmation cannot survive that gap.
+                        opened = false
+                        disconnectedConfirmed = false
+                        noCloudFallbackConfirmed = false
+                        observedSpeech = false
+                        observedTranslation = false
+                        attemptLatency = ""
+                        attemptMessage = "Hervat na de echte spraakpoging en registreer " +
+                            "uitsluitend wat je zelf hebt waargenomen."
+                        onReturnToConversation()
+                    }) { Text("Terug naar gesprek · concept bewaren") }
+                    TextButton(onClick = { requestClose() }) {
+                        Text("Concept wissen of terug")
+                    }
                 }
             }
         )
@@ -767,4 +832,3 @@ private fun AcceptanceObservationCheck(
             style = MaterialTheme.typography.bodyMedium)
     }
 }
-

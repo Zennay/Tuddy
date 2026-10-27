@@ -67,6 +67,8 @@ internal fun OfflineReadinessDialog(
     onBrowseSpeechPacks: () -> Unit,
     onCopyDiagnostics: () -> Boolean,
     sessionDiagnostics: OfflineSessionDiagnostics,
+    acceptanceDraft: OfflineAcceptanceDraft,
+    onReturnToConversation: () -> Unit,
     onResetSessionCounters: () -> Unit,
     onReportSnapshot: () -> ByteArray?,
     onReportPickerStarted: () -> Unit,
@@ -377,6 +379,8 @@ internal fun OfflineReadinessDialog(
                 OfflineAcceptanceReportAction(
                     enabled = !isListening,
                     deviceSnapshot = onReportSnapshot,
+                    draft = acceptanceDraft,
+                    onReturnToConversation = onReturnToConversation,
                     onPickerStarted = onReportPickerStarted,
                     onPickerFinished = onReportPickerFinished
                 )
