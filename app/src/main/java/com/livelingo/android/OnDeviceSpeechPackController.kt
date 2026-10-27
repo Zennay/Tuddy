@@ -239,7 +239,8 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
         // A user can close or reopen this screen while Android's system
         // service continues a previously accepted download. Never start a
         // second overlapping request merely because the observer was destroyed.
-        if (!LocalSpeechPackDownloadAdmission.acquire(tag)) {
+        val physicalLease = LocalSpeechPackDownloadAdmission.acquire(tag)
+        if (physicalLease == null) {
             val pending = LocalSpeechPackDownloadAdmission.pendingTag()
             callback(SpeechPackReceipt(tag, SpeechPackStage.PENDING,
                 "Android heeft in dit app-proces al een onbevestigd offline " +
@@ -249,7 +250,7 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
             return
         }
         val (token, engine) = fresh(tag) ?: run {
-            LocalSpeechPackDownloadAdmission.releaseBeforeSubmission(tag)
+            LocalSpeechPackDownloadAdmission.releaseBeforeSubmission(physicalLease)
             callback(SpeechPackReceipt(tag, SpeechPackStage.UNSUPPORTED,
                 "Geen lokale spraakdienst om een pakket aan te vragen."))
             return
@@ -261,7 +262,7 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
             // invocation or callback registration later throws. Mark the
             // slot as submitted BEFORE invoking that external service;
             // uncertain completion remains blocked, not assumed canceled.
-            LocalSpeechPackDownloadAdmission.markSubmitted(tag)
+            LocalSpeechPackDownloadAdmission.markSubmitted(physicalLease)
             if (Build.VERSION.SDK_INT >= 34) {
                 engine.triggerModelDownload(requestedLanguage(tag), context.mainExecutor,
                     object : ModelDownloadListener {
@@ -275,7 +276,7 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
                             // Physical system completion is authoritative even
                             // when this UI's observer was canceled. Never
                             // present READY until a separate installed check.
-                            LocalSpeechPackDownloadAdmission.systemCompleted(tag)
+                            LocalSpeechPackDownloadAdmission.systemCompleted(physicalLease)
                             if (token != epoch) return
                             check(tag, callback)
                         }
@@ -293,7 +294,7 @@ internal class OnDeviceSpeechPackController(private val context: Context) {
                         }
 
                         override fun onError(error: Int) {
-                            LocalSpeechPackDownloadAdmission.systemCompleted(tag)
+                            LocalSpeechPackDownloadAdmission.systemCompleted(physicalLease)
                             if (token != epoch) return
                             cancel()
                             callback(SpeechPackReceipt(tag, SpeechPackStage.ERROR,
