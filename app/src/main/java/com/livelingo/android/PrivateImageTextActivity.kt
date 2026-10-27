@@ -777,7 +777,9 @@ internal class PrivateImageTextActivity : ComponentActivity() {
             pendingCameraPreview = cropped
             previewRotationDegrees = 0
             previewOrigin = "uitsnede van ${previewOrigin}"
-            source.recycle()
+            // Drop the source reference; let Android reclaim the bitmap after
+            // Compose stops displaying the old preview. Recycling here could
+            // invalidate a frame still being rendered by the UI.
             notice = "${area.title} toegepast. Alleen deze zichtbare foto " +
                 "gaat naar offline OCR zodra je op Herken tikt. " +
                 "Kies de oorspronkelijke foto opnieuw voor een nieuwe uitsnede."
