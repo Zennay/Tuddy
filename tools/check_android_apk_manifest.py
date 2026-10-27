@@ -48,6 +48,13 @@ def permitted_exported_component(kind, name, permission):
     if kind == "activity" and name in (
         ".MainActivity", "com.livelingo.android.MainActivity"):
         return True
+    # SystemUI alone can bind this exported TileService. Never admit
+    # arbitrary exported services or a tile lacking its signature guard.
+    if (kind == "service" and
+        name in (".TuddyOfflineQuickSettingsTile",
+                 "com.livelingo.android.TuddyOfflineQuickSettingsTile") and
+        permission == "android.permission.BIND_QUICK_SETTINGS_TILE"):
+        return True
     return (kind == "receiver" and
             name == "androidx.profileinstaller.ProfileInstallReceiver" and
             permission == "android.permission.DUMP")

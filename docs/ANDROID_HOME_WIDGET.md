@@ -54,3 +54,35 @@ hun eigen scherm openen, ook na koude start en wanneer Tuddy al openstaat;
 controleer met vliegtuigmodus dat één zin geen opname begint zonder een
 aparte tap. Noteer eventuele afwijkingen zonder issue #1 als afgerond te
 markeren. GitHub CI/build is geen bewijs van deze fysieke ervaring.
+
+## Android-snelinstelling · Offline check
+
+Tuddy kan ook één optionele knop aanbieden in **Snelinstellingen** (het paneel
+dat je opent door tweemaal vanaf de schermbovenkant omlaag te vegen).
+Die tegel opent direct de bestaande **Offline startcheck**, waar je de
+aanwezige lokale spraak- en tekstmodellen, permissies en verbinding kunt
+bekijken. Dit is een navigatieactie, **geen** aan-/uitknop voor offline
+spraak of vliegtuigmodus.
+
+- Op **Android 13+**: Tuddy → **Meer functies** → **Android-startscherm** →
+  **Voeg Offline check toe aan Snelinstellingen**. Android vraagt toestemming;
+  Tuddy onderscheidt *aanvraag verzonden*, *toegevoegd*, *al aanwezig* en
+  *geweigerd*. Alleen de Android-callback bevestigt plaatsing.
+- Op **Android 12** en wanneer een fabrikant de automatische tegelplaatsing
+  niet ondersteunt: open Snelinstellingen → **Bewerken** en sleep
+  **Tuddy · Offline** naar de actieve tegels.
+- Tik op de tegel om de offline check te openen. Is het toestel vergrendeld,
+  dan laat Tuddy **eerst door Android ontgrendelen**. Annuleren van het
+  ontgrendelen opent Tuddy niet.
+
+De tegel heeft geen toegang tot gesproken tekst, het klembord of
+modelinhoud. Alleen het tonen van Snelinstellingen doet niets behalve de
+statische knop tekenen. Een tik start **geen opname, download,
+vertaling, netwerkactie of toestemmingsverzoek**. Alle daadwerkelijke
+acties vragen nog steeds om een afzonderlijke gebruikerskeuze in Tuddy.
+
+Bij een geautoriseerde fysieke toestelproef moeten zowel de handmatige
+tegelplaatsing (Android 12) als de systeemaanvraag (Android 13+) waar
+beschikbaar, een tik na koude/warmestart, vergrendeld toestel,
+toegankelijkheidslabel en terugkeer naar de app worden beoordeeld.
+Een succesvolle CI-debugbuild bewijst die toestelervaring niet.
