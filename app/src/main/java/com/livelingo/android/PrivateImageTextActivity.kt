@@ -3,6 +3,10 @@ package com.livelingo.android
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.layout.heightIn
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -59,6 +63,9 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     private var deadline: Runnable? = null
     private var busy by mutableStateOf(false)
     private var sharedImageUri by mutableStateOf<Uri?>(null)
+    // Transient camera result held only until the user explicitly approves OCR.
+    // Never put the picture into saved state, Intent extras or external storage.
+    private var pendingCameraPreview by mutableStateOf<Bitmap?>(null)
     private var draft by mutableStateOf("")
     private var textBlocks by mutableStateOf<List<PrivateImageTextBlock>>(emptyList())
     private var selectedBlockIds by mutableStateOf<Set<Int>>(emptySet())
@@ -72,6 +79,25 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     ) { uri: Uri? ->
         if (uri != null) readSelectedImage(uri)
         else notice = "Geen afbeelding gekozen. Er is niets gelezen of opgeslagen."
+    }
+
+    private val camera = registerForActivityResult(
+        ActivityResultContracts.TakePicturePreview()
+    ) { bitmap: Bitmap? ->
+        if (bitmap == null) {
+            notice = "Geen camerafoto ontvangen. Niets herkend of bewaard."
+        } else if (bitmap.width !in 1..1600 || bitmap.height !in 1..1600 ||
+            runCatching { bitmap.byteCount > MAX_CAMERA_PREVIEW_BYTES }.getOrDefault(true)) {
+            notice = "Android gaf een te grote of ongeldige cameravoorvertoning. " +
+                "Gebruik de fotokiezer voor de volledige afbeelding."
+        } else {
+            generation++
+            clearReviewedImage()
+            sharedImageUri = null
+            pendingCameraPreview = bitmap
+            notice = "Cameravoorvertoning ontvangen, nog niets herkend. " +
+                "Controleer eerst de foto en tik bewust op ‘Herken deze camerafoto’."
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -132,6 +158,65 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             enabled = !busy,
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
+                                // The external camera owns its camera permission;
+                                // Tuddy receives only a transient thumbnail bitmap.
+                                generation++
+                                decodeJob?.cancel()
+                                clearDeadline()
+                                busy = false
+                                clearReviewedImage()
+                                pendingCameraPreview = null
+                                sharedImageUri = null
+                                notice = "Maak bewust één foto in Android. " +
+                                    "Na terugkeer bekijk je die eerst; OCR start niet automatisch."
+                                try {
+                                    camera.launch(null)
+                                } catch (_: RuntimeException) {
+                                    notice = "Android kon geen camera openen. " +
+                                        "Gebruik de fotokiezer voor een bestaande foto."
+                                }
+                            }
+                        ) { Text("Maak foto met Android-camera") }
+                        pendingCameraPreview?.let { preview ->
+                            Text(
+                                "Camerafoto controleren · nog niet uitgelezen",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Image(
+                                bitmap = preview.asImageBitmap(),
+                                contentDescription = "Voorvertoning van de net gemaakte camerafoto",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp)
+                            )
+                            Text(
+                                "Dit is de kleinere camera-voorvertoning, geen foto op " +
+                                    "volledige resolutie. Voor kleine letters kun je " +
+                                    "beter een bestaande scherpe foto kiezen.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Button(
+                                enabled = !busy,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    val image = pendingCameraPreview
+                                    pendingCameraPreview = null
+                                    if (image != null) readCapturedImage(image)
+                                }
+                            ) { Text("Herken deze camerafoto · lokaal") }
+                            OutlinedButton(
+                                enabled = !busy,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    pendingCameraPreview = null
+                                    notice = "Camerafoto weggegooid zonder OCR."
+                                }
+                            ) { Text("Verwerp camerafoto") }
+                        }
+                        OutlinedButton(
+                            enabled = !busy,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                pendingCameraPreview = null
                                 sharedImageUri = null
                                 // Never keep a previous image's text across picks.
                                 generation++
@@ -241,7 +326,15 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         }
     }
 
-    private fun readSelectedImage(uri: Uri) {
+    private fun readSelectedImage(uri: Uri) = processSelectedImage(uri = uri)
+
+    private fun readCapturedImage(bitmap: Bitmap) =
+        processSelectedImage(cameraBitmap = bitmap)
+
+    private fun processSelectedImage(uri: Uri? = null, cameraBitmap: Bitmap? = null) {
+        require((uri == null) != (cameraBitmap == null)) {
+            "Exactly one explicitly chosen source"
+        }
         val request = ++generation
         decodeJob?.cancel()
         deadline?.let(handler::removeCallbacks)
@@ -266,9 +359,10 @@ internal class PrivateImageTextActivity : ComponentActivity() {
             return
         }
         decodeJob = lifecycleScope.launch {
-            val bitmap = withContext(Dispatchers.IO) {
-                runCatching { decodeBounded(uri) }.getOrNull()
-            }
+            val bitmap = if (cameraBitmap != null) cameraBitmap
+                else withContext(Dispatchers.IO) {
+                    runCatching { decodeBounded(requireNotNull(uri)) }.getOrNull()
+                }
             if (request != generation || isFinishing) {
                 bitmap?.recycle()
                 return@launch
@@ -431,6 +525,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         clearDeadline()
         busy = false
         clearReviewedImage()
+        pendingCameraPreview = null
         sharedImageUri = null
         super.onPause()
     }
@@ -442,6 +537,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         clearDeadline()
         busy = false
         clearReviewedImage()
+        pendingCameraPreview = null
         sharedImageUri = null
         super.onStop()
     }
@@ -451,6 +547,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         decodeJob?.cancel()
         clearDeadline()
         clearReviewedImage()
+        pendingCameraPreview = null
         sharedImageUri = null
         super.onDestroy()
     }
@@ -459,5 +556,6 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         const val ACTION_REVIEW_EXTERNAL =
             "com.livelingo.android.action.REVIEW_IMAGE_SHARE"
         private const val MAX_TEXT = 8_000
+        private const val MAX_CAMERA_PREVIEW_BYTES = 12_000_000
     }
 }
