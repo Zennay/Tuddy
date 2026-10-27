@@ -2,6 +2,38 @@
 
 ---
 
+## Doorlopende Android 12+-proef via Tuddy (geen automatische goedkeuring)
+
+1. Installeer het geautoriseerde, exact met de gekozen `main`-SHA gebouwde
+   debug-APK op een **echt toestel met Android 12 of hoger**. Vergelijk de
+   `app-debug.apk.sha256` met de SHA van de geïnstalleerde APK in de app.
+2. Zet vliegtuigmodus aan, schakel wifi afzonderlijk uit en verbreek ook
+   alle overige netwerktransporten. Open **Offline startcheck → Start fysieke
+   offline-waarnemingen**. Een Android-statusmelding alleen is geen bewijs
+   dat alle radiosystemen volledig geïsoleerd zijn.
+3. Gebruik **Terug naar gesprek · concept bewaren** om daadwerkelijk een zin
+   in Tuddy te spreken of te vertalen. De observaties blijven uitsluitend
+   gedurende deze actieve appcompositie in RAM staan.
+4. Open de offline startcheck opnieuw en kies **Hervat x/20**. Tuddy vereist
+   dezelfde geïnstalleerde APK en een nieuwe Android-radio-indicatie zonder
+   gerapporteerde verbindingen. Registreer alleen de *zelf waargenomen*
+   uitkomst; mislukte pogingen tellen mee. Voor elke nieuwe registratie wordt
+   de Android-radio opnieuw gelezen. Deze momentcontrole bewijst niet dat
+   het toestel tijdens de voorafgaande uitspraak offline bleef.
+5. Herhaal voor tien pogingen NL→EN en tien EN→NL. Vul handmatig gemeten
+   vertragingen in voor de geslaagde vertalingen, controleer apart de vier
+   menselijke waarnemingen, en exporteer het rapport. Voor de export wordt
+   opnieuw een actuele APK-/apparaatmomentopname gemaakt, zodat gewijzigde
+   RAM-sessietellers na echte pogingen geen verouderde status opleveren.
+
+Na een activiteit- of procesherstart gaat het RAM-concept verloren. Een
+bewust via Android Documenten geëxporteerd, transcriptvrij proefconcept kan
+later handmatig worden heropend; een import **herstelt nooit** netwerk-,
+microfoon-, privacy- of releasebevestigingen. Opslagproviders kunnen eigen
+synchronisatie uitvoeren. Een volledig ingevuld rapport is géén zelfstandige
+apparaatacceptatie: menselijke observatie, onafhankelijke review en aparte
+modellicentie-/ondertekenings-/releasegates blijven verplicht.
+
 ## Optioneel: APK-checksum uit lokale sidecar overnemen
 
 Download bij de **bewust gekozen, vertrouwde** GitHub Actions debug-APK

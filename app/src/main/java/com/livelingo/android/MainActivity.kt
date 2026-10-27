@@ -93,6 +93,7 @@ import com.livelingo.android.ui.PrivateCaptionDeletionUndoControl
 import com.livelingo.android.ui.PrivateCaptionDeleteConfirmDialog
 import com.livelingo.android.ui.PrivateOfflineBackTranslationDialog
 import com.livelingo.android.ui.OfflineReadinessDialog
+import com.livelingo.android.ui.OfflineAcceptanceDraft
 import com.livelingo.android.ui.InstalledLocalVoicePickerDialog
 import com.livelingo.android.ui.InstalledDeviceVoiceCatalogDialog
 import com.livelingo.android.ui.FailedCaptionPair
@@ -1298,6 +1299,7 @@ private fun TuddyScreen(
     }
     // Only event counts and monotonic durations live in RAM, never speech/text.
     var sessionDiagnostics by remember { mutableStateOf(OfflineSessionDiagnostics()) }
+    val acceptanceDraft = remember { OfflineAcceptanceDraft() }
     val speechTranslationStarted = remember { mutableMapOf<Long, Long>() }
     // Return to the explicit startcheck only after the user opened Android speech settings.
     var pendingSpeechSettingsReturnTag by remember { mutableStateOf<String?>(null) }
@@ -5383,6 +5385,8 @@ private fun TuddyScreen(
                 },
                 onCopyDiagnostics = { copyOfflineReadinessReport() },
                 sessionDiagnostics = sessionDiagnostics,
+                acceptanceDraft = acceptanceDraft,
+                onReturnToConversation = { offlineReadinessOpen = false },
                 onResetSessionCounters = {
                     // Reset is manual and blocked during active recording by the dialog.
                     if (!listening) {
