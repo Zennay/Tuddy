@@ -1,5 +1,7 @@
 package com.livelingo.android
 
+import android.content.Context
+
 /**
  * One explicitly requested, bounded sequence of local ML Kit TEXT model checks
  * or Wi-Fi preparations for saved text-only conversation pairs.
@@ -12,8 +14,8 @@ package com.livelingo.android
  * Never touches SpeechRecognizer, user sentences, Android preferences or
  * any networking outside the user's explicit prepareViaWifi request.
  */
-internal class TypedFavoriteModelBatchController {
-    private val model = TypedConversationModelController()
+internal class TypedFavoriteModelBatchController(context: Context) {
+    private val model = TypedConversationModelController(context)
     private var epoch = 0L
 
     fun cancel() {
