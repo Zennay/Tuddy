@@ -1286,6 +1286,12 @@ private fun TuddyScreen(
                         "Tik zelf op Luister voor één offline spraakpoging; " +
                         "er is nog geen microfoon geopend."
                 }
+                TuddyLauncherDestination.IMAGE_TEXT -> {
+                    // Navigate only: OCR and camera still require separate taps.
+                    context.startActivity(
+                        Intent(context, PrivateImageTextActivity::class.java)
+                    )
+                }
             }
         }
         onLauncherShortcutConsumed(request.id)
@@ -9323,6 +9329,8 @@ private fun TuddyScreen(
                                             "Startscherm: offline startcheck toevoegen"
                                         TuddyLauncherDestination.ONE_SENTENCE ->
                                             "Startscherm: één zin klaarzetten"
+                                        TuddyLauncherDestination.IMAGE_TEXT ->
+                                            "Startscherm: lokale afbeeldingstekst openen"
                                     }
                                 )
                             }

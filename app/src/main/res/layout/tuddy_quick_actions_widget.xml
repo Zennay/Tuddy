@@ -63,16 +63,41 @@
             android:textSize="14sp"/>
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tuddy_widget_sentence"
-        android:contentDescription="@string/tuddy_widget_sentence"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="38dp"
-        android:layout_marginTop="6dp"
-        android:gravity="center"
-        android:background="@drawable/tuddy_widget_action"
-        android:text="@string/tuddy_widget_sentence"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:textSize="14sp"/>
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp">
+        <TextView
+            android:id="@+id/tuddy_widget_sentence"
+            android:contentDescription="@string/tuddy_widget_sentence"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:layout_height="38dp"
+            android:gravity="center"
+            android:background="@drawable/tuddy_widget_action"
+            android:text="@string/tuddy_widget_regular_sentence"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textStyle="bold"
+            android:textSize="13sp"/>
+
+        <TextView
+            android:id="@+id/tuddy_widget_image"
+            android:contentDescription="@string/tuddy_widget_image"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:layout_height="38dp"
+            android:gravity="center"
+            android:background="@drawable/tuddy_widget_action"
+            android:text="@string/tuddy_widget_regular_image"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textStyle="bold"
+            android:textSize="13sp"/>
+    </LinearLayout>
 </LinearLayout>

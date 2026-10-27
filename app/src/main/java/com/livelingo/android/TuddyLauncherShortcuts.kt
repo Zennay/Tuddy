@@ -18,7 +18,8 @@ import android.graphics.drawable.Icon
 internal enum class TuddyLauncherDestination(val shortcutId: String) {
     TYPE_TEXT("type-text"),
     OFFLINE_STARTCHECK("offline-startcheck"),
-    ONE_SENTENCE("one-sentence");
+    ONE_SENTENCE("one-sentence"),
+    IMAGE_TEXT("image-text");
 
     companion object {
         fun fromId(value: String?): TuddyLauncherDestination? =
@@ -75,6 +76,9 @@ internal object TuddyLauncherShortcuts {
             TuddyLauncherDestination.ONE_SENTENCE ->
                 Triple("Eén zin", "Zet één-zinsherkenning klaar; start de microfoon zelf",
                     android.R.drawable.ic_btn_speak_now)
+            TuddyLauncherDestination.IMAGE_TEXT ->
+                Triple("Afbeelding", "Open de privé-afbeeldingskiezer; herken pas na jouw keuze",
+                    android.R.drawable.ic_menu_camera)
         }
         val open = intentFor(context, route)
         return ShortcutInfo.Builder(context, "tuddy-" + route.shortcutId)
@@ -89,8 +93,12 @@ internal object TuddyLauncherShortcuts {
     fun publish(context: Context): Boolean = runCatching {
         val shortcuts = context.getSystemService(ShortcutManager::class.java)
             ?: return@runCatching false
+        // Keep existing route priority on launchers with fewer than 4 slots.
+        // The new OCR entry stays individually pinnable in every case.
         shortcuts.setDynamicShortcuts(
-            TuddyLauncherDestination.entries.map { shortcut(context, it) }
+            TuddyLauncherDestination.entries
+                .take(shortcuts.maxShortcutCountPerActivity.coerceAtLeast(0))
+                .map { shortcut(context, it) }
         )
     }.getOrDefault(false)
 

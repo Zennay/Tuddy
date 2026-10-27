@@ -81,12 +81,13 @@ internal fun TuddyHomeWidgetPinPanel(enabled: Boolean) {
     Column(modifier = Modifier.fillMaxWidth()) {
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         Text(
-            "Tuddy-widget · drie veilige startknoppen",
+            "Tuddy-widget · vier veilige startknoppen",
             style = MaterialTheme.typography.titleSmall
         )
         Text(
-            "Typ lokaal, bekijk je offline check of zet één zin klaar. " +
-                "De widget toont geen privé-inhoud en luistert nooit vanzelf.",
+            "Typ lokaal, bekijk de offline check, zet één zin klaar of open " +
+                "afbeeldingstekst. De widget toont geen privé-inhoud, " +
+                "opent geen camera en luistert nooit vanzelf.",
             style = MaterialTheme.typography.bodySmall
         )
         if (status.available && status.installedCount > 0) {
