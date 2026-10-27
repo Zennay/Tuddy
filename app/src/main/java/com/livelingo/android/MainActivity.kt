@@ -27,7 +27,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10599,57 +10598,19 @@ private fun TuddyScreen(
                     Text(captionDeleteNotice, style = MaterialTheme.typography.bodySmall)
                 }
                 if (historySearchOpen) {
-                    Text(
-                        "Spring naar gespreksregels op tekst én status. " +
-                            "Alle regels blijven zichtbaar; er wordt niets verwijderd of opgeslagen.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        SessionCaptionStatusFilter.entries.forEach { filter ->
-                            val count = lines.count {
-                                SessionCaptionStatusNavigation.matches(it.status, filter)
-                            }
-                            FilterChip(
-                                selected = historyStatusFilter == filter,
-                                onClick = { historyStatusFilter = filter },
-                                label = { Text("${filter.label} ($count)") }
-                            )
-                        }
-                    }
-                    OutlinedTextField(
-                        value = historySearchQuery,
-                        onValueChange = { historySearchQuery = it.take(80) },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Zoek tekst, vertaling of eigen uitleg") },
-                        supportingText = {
-                            Text("Zoekt ook met veelvoorkomende Arabisch/Perzische toetsenbordvarianten; opgeslagen tekst blijft exact behouden.")
-                        },
-                        singleLine = true
-                    )
-                    if (SessionCaptionStatusNavigation.isActive(
+                    SessionCaptionHistorySearchControls(
+                        statuses = lines.map { it.status },
+                        currentFilter = historyStatusFilter,
+                        onFilterChange = { historyStatusFilter = it },
+                        query = historySearchQuery,
+                        onQueryChange = { historySearchQuery = it.take(80) },
+                        searchActive = SessionCaptionStatusNavigation.isActive(
                             historyStatusFilter, normalizedHistoryQuery
-                        )) {
-                        Text(
-                            "${historyMatches.size} van ${lines.size} gespreksregels passen " +
-                                "bij jouw selectie. Tik op Vorige of Volgende om een " +
-                                "bestaande regel te openen.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = { jumpToHistoryMatch(false) },
-                            enabled = historyMatches.isNotEmpty()
-                        ) { Text("← Vorige") }
-                        OutlinedButton(
-                            onClick = { jumpToHistoryMatch(true) },
-                            enabled = historyMatches.isNotEmpty()
-                        ) { Text("Volgende →") }
-                    }
+                        ),
+                        matchingCount = historyMatches.size,
+                        onPrevious = { jumpToHistoryMatch(false) },
+                        onNext = { jumpToHistoryMatch(true) }
+                    )
                 }
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
                 if (correctionNotice.isNotBlank()) {
