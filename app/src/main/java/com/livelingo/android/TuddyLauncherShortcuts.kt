@@ -49,6 +49,21 @@ internal object TuddyLauncherShortcuts {
         intent?.removeExtra(EXTRA_DESTINATION)
     }
 
+    /**
+     * Shared, narrowly validated entrypoint for dynamic launcher shortcuts and
+     * the optional home-screen widget. Intent extras contain a route identifier
+     * only: no pasted text, microphone sample or remembered translation.
+     */
+    fun intentFor(context: Context, route: TuddyLauncherDestination): Intent =
+        Intent(context, MainActivity::class.java).apply {
+            action = ACTION_OPEN
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            )
+            putExtra(EXTRA_DESTINATION, route.shortcutId)
+        }
+
     private fun shortcut(context: Context, route: TuddyLauncherDestination): ShortcutInfo {
         val (short, long, drawable) = when (route) {
             TuddyLauncherDestination.TYPE_TEXT ->
@@ -61,11 +76,7 @@ internal object TuddyLauncherShortcuts {
                 Triple("Eén zin", "Zet één-zinsherkenning klaar; start de microfoon zelf",
                     android.R.drawable.ic_btn_speak_now)
         }
-        val open = Intent(context, MainActivity::class.java).apply {
-            action = ACTION_OPEN
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            putExtra(EXTRA_DESTINATION, route.shortcutId)
-        }
+        val open = intentFor(context, route)
         return ShortcutInfo.Builder(context, "tuddy-" + route.shortcutId)
             .setShortLabel(short)
             .setLongLabel(long)
