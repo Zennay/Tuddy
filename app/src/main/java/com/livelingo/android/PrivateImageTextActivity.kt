@@ -731,6 +731,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                         busy = false
                         notice = "Offline OCR kon niet worden gestart."
                     }
+                }
             } finally {
                 if (!providerSubmitted) ocrLease.release()
             }
