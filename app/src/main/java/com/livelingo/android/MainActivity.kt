@@ -2066,6 +2066,13 @@ private fun TuddyScreen(
                     "Er loopt inmiddels al een modelactie. Geen tweede download gestart."
                 return@check
             }
+            val storageBlocker = LocalModelStorageAdmission.blocker()
+            if (storageBlocker != null) {
+                failedCaptionRecoveryBusy = false
+                failedCaptionRecoveryNotice = storageBlocker +
+                    " Bestaande vertalingen en lokale modellen blijven beschikbaar."
+                return@check
+            }
             val translator = runCatching {
                 Translation.getClient(TranslatorOptions.Builder()
                     .setSourceLanguage(from).setTargetLanguage(to).build())
@@ -2406,6 +2413,10 @@ private fun TuddyScreen(
                 return
             }
             OfflinePairDecision.MODEL_REQUIRED -> Unit
+        }
+        LocalModelStorageAdmission.blocker()?.let { blocker ->
+            offlineModelStatus = blocker
+            return
         }
         val requestEpoch = offlinePreparationEpoch.begin()
         val sourceCode = source.translateCode
