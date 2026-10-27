@@ -51,7 +51,10 @@ internal data class TypedConversationLine(
     val translated: String,
     val status: String,
     val source: String,
-    val target: String
+    val target: String,
+    // Preserve the actual in-memory caption identity across fresh UI projections.
+    // Zero is reserved for older callers that do not supply an underlying ID.
+    val id: Long = 0L
 )
 
 /**

@@ -108,6 +108,8 @@ internal fun FaceToFaceConversationDialog(
     }
     var followNewest by remember { mutableStateOf(true) }
     var chosenIndex by remember { mutableStateOf(0) }
+    // An index is not stable: older RAM captions fall off the 80-line window.
+    var chosenLineId by remember { mutableStateOf<Long?>(null) }
     var translatedOnFarSide by remember { mutableStateOf(true) }
     var largeText by remember { mutableStateOf(true) }
     // Only the deliberate two-way typed caller offers input; live is read-only.
@@ -115,8 +117,15 @@ internal fun FaceToFaceConversationDialog(
     var turnFrom by remember(initialSource) { mutableStateOf(initialSource) }
     var turnTo by remember(initialTarget) { mutableStateOf(initialTarget) }
     var turnNotice by remember { mutableStateOf("") }
+    // Resolve an older selection by its original session ID, not by its
+    // former list position. Never silently substitute another person's text
+    // when the chosen caption is evicted from the temporary RAM window.
+    val anchoredIndex = chosenLineId?.takeIf { it != 0L }?.let { chosen ->
+        completed.indexOfFirst { it.id == chosen }
+    }
     val index = if (followNewest) completed.lastIndex
-        else chosenIndex.coerceIn(0, completed.lastIndex.coerceAtLeast(0))
+        else anchoredIndex ?: chosenIndex.coerceIn(0, completed.lastIndex.coerceAtLeast(0))
+    val selectionExpired = !followNewest && anchoredIndex == -1
     val selected = completed.getOrNull(index)
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -141,8 +150,8 @@ internal fun FaceToFaceConversationDialog(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer); speaker.close() }
     }
-    LaunchedEffect(selected?.original, selected?.translated, selected?.source,
-        selected?.target) {
+    LaunchedEffect(selected?.id, selected?.original, selected?.translated,
+        selected?.source, selected?.target) {
         speaker.stop()
         activeSpeechText = null
         activeSpeechSide = null
@@ -243,7 +252,9 @@ internal fun FaceToFaceConversationDialog(
                         Text("TEGENOVER · ${lang?.uppercase() ?: "—"}",
                             style = MaterialTheme.typography.labelLarge)
                         val farValue = FaceToFaceSpeechText(
-                            text = value ?: "Nog geen afgeronde lokale vertaling.",
+                            text = value ?: if (selectionExpired)
+                                "Deze oude regel is niet meer in het tijdelijke geheugen."
+                            else "Nog geen afgeronde lokale vertaling.",
                             sideLabel = "Tegenover",
                             activeSpeechText = activeSpeechText,
                             activeSpeechSide = activeSpeechSide,
@@ -282,21 +293,36 @@ internal fun FaceToFaceConversationDialog(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         TextButton(onClick = {
+                            val previous = (index - 1).coerceAtLeast(0)
                             followNewest = false
-                            chosenIndex = (index - 1).coerceAtLeast(0)
-                        }, enabled = index > 0) { Text("← Vorige") }
+                            chosenIndex = previous
+                            chosenLineId = completed.getOrNull(previous)?.id
+                                ?.takeIf { it != 0L }
+                        }, enabled = selected != null && index > 0) { Text("← Vorige") }
                         Text("${if (selected == null) 0 else index + 1}/${completed.size}",
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(top = 14.dp))
                         TextButton(onClick = {
                             if (index >= completed.lastIndex - 1) {
                                 followNewest = true
+                                chosenLineId = null
                             } else {
+                                val next = index + 1
                                 followNewest = false
-                                chosenIndex = index + 1
+                                chosenIndex = next
+                                chosenLineId = completed.getOrNull(next)?.id
+                                    ?.takeIf { it != 0L }
                             }
                         }, enabled = selected != null && index < completed.lastIndex
                         ) { Text("Volgende →") }
+                    }
+                    if (selectionExpired) {
+                        Text(
+                            "De gekozen oudere regel is uit het tijdelijke geheugen verdwenen. " +
+                                "Tik op ‘↓ Nieuwste’ om verder te lezen.",
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -314,6 +340,7 @@ internal fun FaceToFaceConversationDialog(
                         }
                         TextButton(onClick = {
                             followNewest = true
+                            chosenLineId = null
                         }) { Text("↓ Nieuwste") }
                         TextButton(onClick = onBack) { Text("Terug") }
                     }
@@ -413,6 +440,7 @@ internal fun FaceToFaceConversationDialog(
                                     turnFrom = turnTo
                                     turnTo = previous
                                     followNewest = true
+                                    chosenLineId = null
                                     turnNotice = "Beurt toegevoegd. Nog geen resultaat " +
                                         "tot de lokale vertaling voltooid is."
                                 } else {
@@ -447,7 +475,9 @@ internal fun FaceToFaceConversationDialog(
                         Text("HIER · ${lang?.uppercase() ?: "—"}",
                             style = MaterialTheme.typography.labelLarge)
                         val nearValue = FaceToFaceSpeechText(
-                            text = value ?: "Kies in de typmodus twee talen en vertaal een zin " +
+                            text = value ?: if (selectionExpired)
+                                "Tik op ‘↓ Nieuwste’ om recente regels te zien."
+                            else "Kies in de typmodus twee talen en vertaal een zin " +
                                 "met reeds aanwezige lokale modellen.",
                             sideLabel = "Hier",
                             activeSpeechText = activeSpeechText,
