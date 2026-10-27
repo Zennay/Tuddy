@@ -264,6 +264,19 @@ internal fun FaceToFaceConversationDialog(
                         horizontal = 12.dp, vertical = 5.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            // Cover both readers before any optional external handler.
+                            speaker.stop()
+                            activeSpeechText = null
+                            activeSpeechSide = null
+                            activeSpeechRange = null
+                            audioNotice = ""
+                            covered = true
+                            onCover?.invoke()
+                        }
+                    ) { Text("🔒 Beide kanten direct afdekken") }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -302,17 +315,6 @@ internal fun FaceToFaceConversationDialog(
                         TextButton(onClick = {
                             followNewest = true
                         }) { Text("↓ Nieuwste") }
-                        TextButton(onClick = {
-                            // A privacy curtain is available even if no external
-                            // cover handler was supplied by this entry point.
-                            speaker.stop()
-                            activeSpeechText = null
-                            activeSpeechSide = null
-                            activeSpeechRange = null
-                            audioNotice = ""
-                            covered = true
-                            onCover?.invoke()
-                        }) { Text("🔒 Afdekken") }
                         TextButton(onClick = onBack) { Text("Terug") }
                     }
                     if (selected != null) {
