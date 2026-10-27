@@ -1,1 +1,8 @@
-<resources><string name="app_name">Tuddy</string></resources>
+<resources><string name="app_name">Tuddy</string>    <string name="tuddy_widget_name">Tuddy · snelle acties</string>
+    <string name="tuddy_widget_description">Open veilig lokaal typen, de offline check of één-zinsmodus. De microfoon start nooit automatisch.</string>
+    <string name="tuddy_widget_title">Tuddy</string>
+    <string name="tuddy_widget_subtitle">Privé starten, alleen wanneer jij kiest.</string>
+    <string name="tuddy_widget_type">Typ lokaal</string>
+    <string name="tuddy_widget_check">Offline check</string>
+    <string name="tuddy_widget_sentence">Eén zin klaarzetten</string>
+</resources>

@@ -84,6 +84,19 @@
                 <data android:mimeType="text/plain"/>
             </intent-filter>
         </activity>
+        <!-- Optional Android home-screen widget. It has no microphone, data,
+             storage or network entrypoint; taps only open explicit app screens. -->
+        <receiver
+            android:name=".TuddyQuickActionsWidget"
+            android:exported="false"
+            android:label="@string/tuddy_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tuddy_quick_actions_widget_info"/>
+        </receiver>
     <activity
         android:name=".QuickTranslateActivity"
         android:label="Vertaal met Tuddy"
