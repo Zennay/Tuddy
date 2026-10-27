@@ -84,6 +84,43 @@ poging** in hetzelfde tijdelijke overhoorpaneel. Geen partiële tekst,
 geen auto-score en geen automatische vergelijking met de bestaande
 referentie. Die onthult de gebruiker nog altijd zelf.
 
+## Kies zelf uit lokale Android-herkenningsalternatieven
+
+Soms retourneert de on-device Android-spraakherkenner meerdere
+plausibele transcripties voor dezelfde opgenomen zin. Vroeger toonde
+Tuddy alleen het eerste resultaat; een verkeerd herkend woord was
+daardoor lastig te herstellen zonder nogmaals in te spreken.
+
+Na één bewuste opname inspecteert Tuddy nu **hoogstens acht** door
+Android teruggegeven alternatieven, valideert ze met dezelfde strenge
+Unicode-/tekstgrenzen en laat **maximaal vier unieke** transcripties
+zien. Overlange, ongeldige en identieke alternatieven vallen weg.
+Er wordt **niets afgekapt** of automatisch naar een andere taal
+omgezet. De eerste bruikbare transcriptie is aanvankelijk geselecteerd,
+maar je kunt **vóór Onthul referentie** bewust een andere kiezen die
+beter overeenkomt met wat je werkelijk hebt uitgesproken.
+
+Er is geen automatische spelling-, betekenis- of uitspraakbeoordeling,
+geen geschatte confidence-score en geen tweede microfoonopname. De
+oorspronkelijke vraag en referentie blijven verborgen totdat je zelf
+op **Onthul referentie** tikt. Na onthullen blijft de gekozen transcriptie
+staan en wordt zij gebruikt voor de bestaande optionele woord- en
+audiovergelijking. Een andere herkenningsoptie kiezen **na** onthullen
+kan niet, zodat een poging niet achteraf stilzwijgend herschreven wordt.
+
+Alle opties zijn **tijdelijk in RAM** en worden bij wissen, nieuwe
+opname, volgende/vorige oefenzin, oefenherstart, richtingwissel,
+achtergrond/stop, of verwijderen van het oefenscherm samen gewist.
+Er worden geen ruwe confidence-waarden, opnamebestanden,
+modeldownloads, toetsenbordinvoer, analytics of externe uploads
+aangemaakt. Android kan ook maar één of helemaal geen bruikbare
+transcriptie teruggeven; in dat geval verschijnen geen keuzeknoppen.
+
+Deze interface bewijst niet dat Android werkelijk offline was, dat
+de transcriptie juist is of dat de taal/dialect door een mens is
+gevalideerd. De fysieke Android 12+-vliegtuigmodusproef blijft
+afzonderlijk verplicht.
+
 ## Android-lifecycle en privacy
 
 - De gebruiker kan stoppen en de gesproken poging afzonderlijk wissen.

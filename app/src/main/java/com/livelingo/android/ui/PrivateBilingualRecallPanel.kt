@@ -88,6 +88,11 @@ internal fun PrivateBilingualRecallPanel(
     var spokenAnswer by remember(practice, sourceCode, targetCode) {
         mutableStateOf("")
     }
+    // Only bounded final Android ASR alternatives from this exact recall
+    // attempt. The learner chooses before revealing the reference.
+    var speechChoices by remember(practice, sourceCode, targetCode) {
+        mutableStateOf(emptyList<String>())
+    }
     // Explicit post-reveal compare of exactly one currently visible answer.
     // Not persisted and never feeds the learner's manual self-mark.
     var comparisonSource by remember(practice, sourceCode, targetCode) {
@@ -133,6 +138,7 @@ internal fun PrivateBilingualRecallPanel(
                 recordingAnswer = false
                 typedAnswer = ""
                 spokenAnswer = ""
+                speechChoices = emptyList()
                 comparisonSource = null
                 revealed = false
             }
@@ -144,6 +150,7 @@ internal fun PrivateBilingualRecallPanel(
             recallSpeech.cancel()
             typedAnswer = ""
             spokenAnswer = ""
+            speechChoices = emptyList()
             comparisonSource = null
             recordingAnswer = false
         }
@@ -156,6 +163,7 @@ internal fun PrivateBilingualRecallPanel(
             recallSpeech.cancel()
             recordingAnswer = false
             spokenAnswer = ""
+            speechChoices = emptyList()
             comparisonSource = null
             audioNotice = ""
         }
@@ -171,6 +179,7 @@ internal fun PrivateBilingualRecallPanel(
         recallSpeech.cancel()
         recordingAnswer = false
         spokenAnswer = ""
+        speechChoices = emptyList()
         comparisonSource = null
         speechNotice = ""
         started = true
@@ -190,6 +199,7 @@ internal fun PrivateBilingualRecallPanel(
         recallSpeech.cancel()
         recordingAnswer = false
         spokenAnswer = ""
+        speechChoices = emptyList()
         comparisonSource = null
         speechNotice = ""
         promptSide = side
@@ -211,6 +221,7 @@ internal fun PrivateBilingualRecallPanel(
         recallSpeech.cancel()
         recordingAnswer = false
         spokenAnswer = ""
+        speechChoices = emptyList()
         comparisonSource = null
         speechNotice = ""
         review = review.mark(index, currentIndices, assessment)
@@ -231,6 +242,7 @@ internal fun PrivateBilingualRecallPanel(
         recallSpeech.cancel()
         recordingAnswer = false
         spokenAnswer = ""
+        speechChoices = emptyList()
         typedAnswer = ""
         comparisonSource = null
         speechNotice = ""
@@ -301,6 +313,7 @@ internal fun PrivateBilingualRecallPanel(
                         retryOnly = true
                         comparisonSource = null
                         spokenAnswer = ""
+                        speechChoices = emptyList()
                         review = PrivateRecallRoundReview()
                         position = 0
                         revealed = false
@@ -381,6 +394,7 @@ internal fun PrivateBilingualRecallPanel(
                             } else {
                                 speaker.stop()
                                 spokenAnswer = ""
+                                speechChoices = emptyList()
                                 comparisonSource = null
                                 speechNotice = ""
                                 recordingAnswer = recallSpeech.start(
@@ -392,8 +406,11 @@ internal fun PrivateBilingualRecallPanel(
                                         // reflect both preflight and actual mic state.
                                         recordingAnswer = recallSpeech.isRecording()
                                     },
-                                    onFinalAnswer = { answer ->
-                                        spokenAnswer = answer
+                                    onFinalAnswer = { options ->
+                                        // These are suggestions from Android,
+                                        // never verified correctness or a grade.
+                                        speechChoices = options
+                                        spokenAnswer = options.firstOrNull().orEmpty()
                                         comparisonSource = null
                                         recordingAnswer = false
                                     },
@@ -415,6 +432,7 @@ internal fun PrivateBilingualRecallPanel(
                             recallSpeech.cancel()
                             recordingAnswer = false
                             spokenAnswer = ""
+                            speechChoices = emptyList()
                             comparisonSource = null
                             speechNotice = "Spraakpakketcontrole of opname gestopt. " +
                                 "Geen gesproken antwoord bewaard."
@@ -431,8 +449,39 @@ internal fun PrivateBilingualRecallPanel(
                     Text("Mijn gesproken poging · alleen tijdelijk",
                         style = MaterialTheme.typography.labelMedium)
                     Text(spokenAnswer, style = MaterialTheme.typography.bodyLarge)
+                    if (speechChoices.size > 1) {
+                        Text(
+                            "Android gaf meerdere lokale transcripties. Kies wat je " +
+                                "daadwerkelijk uitsprak; geen automatische beoordeling.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        speechChoices.forEachIndexed { index, choice ->
+                            FilterChip(
+                                selected = spokenAnswer == choice,
+                                enabled = enabled && !recordingAnswer && !revealed,
+                                onClick = {
+                                    speaker.stop()
+                                    spokenAnswer = choice
+                                    comparisonSource = null
+                                    audioNotice = ""
+                                    speechNotice = "Herkenningsoptie ${index + 1} gekozen. " +
+                                        "Jij bepaalt of dit klopt; onthul daarna de referentie."
+                                },
+                                label = {
+                                    Text("Optie ${index + 1} · $choice", maxLines = 3)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                                    .semantics {
+                                        contentDescription =
+                                            "Android-herkenningsoptie ${index + 1} van " +
+                                                "${speechChoices.size}: $choice"
+                                    }
+                            )
+                        }
+                    }
                     TextButton(onClick = {
                         spokenAnswer = ""
+                        speechChoices = emptyList()
                         comparisonSource = null
                         recallSpeech.cancel()
                         recordingAnswer = false
