@@ -9259,6 +9259,9 @@ private fun TuddyScreen(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
+                        // Native Android widget placement remains explicitly
+                        // user-requested and never starts speech capture.
+                        TuddyHomeWidgetPinPanel(enabled = !listening)
                 OutlinedButton(
                     onClick = {
                         showSettings = !showSettings
