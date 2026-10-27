@@ -123,6 +123,10 @@ jobs:
           test -z "$(git status --porcelain)"
       - name: Run offline workflow-identity regressions
         run: python3 -B -m unittest discover -s tests -p 'test_*.py'
+      - name: Syntax-check current-main Android artifact handoff
+        run: |
+          bash -n scripts/verify-current-tuddy-main-apk.sh
+          bash -n scripts/verify-tuddy-apk-artifact.sh
       - name: Protect shared VPS memory before HEAD validation
         shell: bash
         run: |
