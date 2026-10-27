@@ -10,6 +10,33 @@ Begin op één van twee manieren:
 - **Vanuit Tuddy:** open **Meer functies → Lees tekst uit afbeelding ·
   volledig lokaal** en kies bewust één foto in Androids fotokiezer.
 
+- **Nieuwe directe cameraoptie:** kies in hetzelfde scherm **Maak foto met
+  Android-camera**. Je toestel opent zijn eigen camera-app, zonder dat
+  Tuddy zelf cameratoegang of een camera-/fotopermissie aanvraagt.
+  Tuddy ontvangt enkel de **tijdelijke, kleinere Bitmap-voorvertoning**
+  van die ene opname, geen fotobestand of galerijrechten.
+  Bekijk de voorvertoning eerst: tik daarna bewust op **Herken deze
+  camerafoto · lokaal** of op **Verwerp camerafoto**. Het openen van de
+  camera alleen start dus **geen** OCR, modelcontrole of vertaling.
+  Alleen na de tweede toestemming begint dezelfde begrensde, ingebouwde
+  offline Latin OCR als voor een geselecteerde afbeelding.
+
+  Dit is bewust een opnamesnelkoppeling met mogelijk **lagere resolutie**,
+  niet een claim over volwaardige fotoscans of gegarandeerde
+  OCR-nauwkeurigheid. Voor kleine letters, documenten of een complete
+  pagina is de fotokiezer met een scherpe, bestaande afbeelding beter.
+  Als Android geen camera heeft, geen voorvertoning teruggeeft of een
+  te grote/ongeldige Bitmap levert, kan de gebruiker terugvallen op de
+  eigen foto-/bestandskeuze. De externe camera-app bepaalt zelf
+  eventuele opslag of cloudsynchronisatie: Tuddy slaat zelf **geen**
+  camerafoto op en deelt er geen.
+
+  De nog niet beoordeelde camerafoto vervalt bij naar de achtergrond
+  gaan, sluiten, een nieuwe keuze of een systeemonderbreking. Na
+  toestemming doorloopt de foto dezelfde OCR-tekstblokselectie,
+  handmatige tekstcorrectie en eenmalige RAM-only-handoff naar de
+  offline vertaler.
+
 
 De fotokiezer verleent toegang tot die ene keuze, niet tot je hele fotobibliotheek.
 Sommige door Android aangeboden fotoproviders beheren ook cloudfoto's:
