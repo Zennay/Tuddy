@@ -97,6 +97,18 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/tuddy_quick_actions_widget_info"/>
         </receiver>
+        <!-- SystemUI-only, signature-protected Quick Settings entrypoint.
+             It opens an explicit readiness screen after unlock; no background capture. -->
+        <service
+            android:name=".TuddyOfflineQuickSettingsTile"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:label="@string/tuddy_qs_tile_name"
+            android:icon="@drawable/tuddy_offline_check_tile">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
     <activity
         android:name=".QuickTranslateActivity"
         android:label="Vertaal met Tuddy"

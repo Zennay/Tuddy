@@ -132,4 +132,5 @@ internal fun TuddyHomeWidgetPinPanel(enabled: Boolean) {
             Text(requestNotice, style = MaterialTheme.typography.bodySmall)
         }
     }
+    TuddyQuickSettingsTilePinPanel(enabled = enabled)
 }

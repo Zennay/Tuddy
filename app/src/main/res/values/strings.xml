@@ -9,4 +9,6 @@
     <string name="tuddy_widget_compact_type">Typ</string>
     <string name="tuddy_widget_compact_check">Check</string>
     <string name="tuddy_widget_compact_sentence">Eén zin</string>
+    <string name="tuddy_qs_tile_name">Tuddy · Offline</string>
+    <string name="tuddy_qs_tile_accessibility">Open Tuddy offline startcheck. Start geen opname, modellen of vertaling.</string>
 </resources>
