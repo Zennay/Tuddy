@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
@@ -34,6 +35,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -71,10 +73,42 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     private var selectedBlockIds by mutableStateOf<Set<Int>>(emptySet())
     // Temporary order is explicit user preference for this one OCR review.
     private var blockOrder by mutableStateOf<List<Int>>(emptyList())
+    private var clipboardExpirySeconds by mutableStateOf(0)
+    // Only held in process RAM after the user explicitly opens Android's
+    // document picker. The image and ordinary OCR draft still clear on pause.
+    private var pendingDocumentText: String? = null
+    private var pendingShareText by mutableStateOf<String?>(null)
     private var notice by mutableStateOf(
         "Kies zelf een afbeelding. Alleen Latijns schrift wordt met " +
             "een ingebouwd offline OCR-model herkend. Controleer de tekst."
     )
+
+    private val saveReviewedDocument = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri: Uri? ->
+        val approvedText = pendingDocumentText
+        pendingDocumentText = null
+        when {
+            uri == null ->
+                notice = "Opslaan geannuleerd. Er is geen tekstbestand door Tuddy geschreven."
+            approvedText == null ->
+                notice = "De tijdelijke tekst is verlopen. Er is niets geschreven."
+            else -> {
+                val payload = PrivateImageTextOutboundPolicy.utf8Bytes(approvedText)
+                val saved = payload != null && runCatching {
+                    contentResolver.openOutputStream(uri, "w")?.use { output ->
+                        output.write(payload)
+                        output.flush()
+                        true
+                    } ?: false
+                }.getOrDefault(false)
+                notice = if (saved)
+                    "Je gecontroleerde afbeeldingstekst is als UTF-8-tekstbestand " +
+                        "op de zelfgekozen Android-locatie opgeslagen."
+                else "Opslaan is mislukt. Controleer de gekozen Android-bestandslocatie."
+            }
+        }
+    }
 
     private val picker = registerForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -104,6 +138,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        clipboardExpirySeconds = PrivateClipboardExpiry.selectedSeconds(this)
         // Restore visual privacy before showing any recognized text.
         PrivateScreenShield.restore(this)
         if (savedInstanceState == null && intent?.action == ACTION_REVIEW_EXTERNAL) {
@@ -340,6 +375,65 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             ) {
                                 Text("Controleer taal en vertaal lokaal…")
                             }
+                            PrivateImageTextOutboundPanel(
+                                enabled = !busy &&
+                                    PrivateImageTextOutboundPolicy.reviewedText(draft) != null,
+                                expirySeconds = clipboardExpirySeconds,
+                                onCopy = { copyReviewedText() },
+                                onSave = { saveReviewedText() },
+                                onShare = { requestShareReviewedText() },
+                                onExpiryChange = { seconds ->
+                                    val changed = PrivateClipboardExpiry.changeSeconds(
+                                        this@PrivateImageTextActivity, seconds
+                                    )
+                                    if (changed) clipboardExpirySeconds = seconds
+                                    notice = if (changed)
+                                        "Klembordinstelling bijgewerkt. " +
+                                            "Wissen werkt alleen best-effort op eigen ongewijzigde clips."
+                                    else "De klembordinstelling kon niet worden bewaard."
+                                }
+                            )
+                        }
+                        pendingShareText?.let { reviewed ->
+                            AlertDialog(
+                                onDismissRequest = { pendingShareText = null },
+                                title = { Text("Afbeeldingstekst buiten Tuddy delen?") },
+                                text = {
+                                    Text(
+                                        "Je stuurt alleen de door jou gecontroleerde OCR-tekst " +
+                                            "naar het Android-deelmenu. De ontvangende app kan " +
+                                            "de tekst bewaren, uploaden of synchroniseren. " +
+                                            "Tuddy verstuurt niets zonder deze bevestiging."
+                                    )
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        pendingShareText = null
+                                        if (PrivateImageTextOutboundPolicy.reviewedText(draft) !=
+                                            reviewed) {
+                                            notice = "De tekst is gewijzigd. Delen geannuleerd."
+                                        } else {
+                                            val send = Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(Intent.EXTRA_TEXT, reviewed)
+                                            }
+                                            runCatching {
+                                                startActivity(Intent.createChooser(
+                                                    send, "Deel gecontroleerde afbeeldingstekst…"
+                                                ))
+                                            }.onFailure {
+                                                notice = "Android kon het deelmenu niet openen. " +
+                                                    "Er is niets door Tuddy verzonden."
+                                            }
+                                        }
+                                    }) { Text("Open Android-deelmenu") }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { pendingShareText = null }) {
+                                        Text("Niet delen")
+                                    }
+                                }
+                            )
                         }
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
@@ -347,8 +441,9 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                         ) { Text("Sluiten en tekst wissen") }
                         Text(
                             "De tekst blijft alleen tijdelijk in het geheugen. " +
-                                "Zolang je hier bent wordt niets gekopieerd of gedeeld. " +
-                                "De vertaler downloadt geen ontbrekende modellen.",
+                                "OCR alleen start geen kopie, export of share. " +
+                                "Bij bewuste kopie, opslag of delen verlaat tekst Tuddy; " +
+                                "de vertaler downloadt geen ontbrekende modellen.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -556,6 +651,43 @@ internal class PrivateImageTextActivity : ComponentActivity() {
             "Controleer de tekst opnieuw vóór vertalen."
     }
 
+    private fun copyReviewedText() {
+        val text = PrivateImageTextOutboundPolicy.reviewedText(draft)
+        if (busy || isFinishing || text == null) {
+            notice = "Controleer eerst een geldig tekstfragment; er is niets gekopieerd."
+            return
+        }
+        val copied = PrivateClipboardExpiry.copy(this, "gecontroleerde afbeeldingstekst", text)
+        notice = if (copied)
+            "Goedgekeurde afbeeldingstekst gekopieerd. Andere Android-apps kunnen " +
+                "je klembord lezen; automatisch wissen is nooit gegarandeerd."
+        else "Android kon de tekst niet veilig kopiëren."
+    }
+
+    private fun saveReviewedText() {
+        val text = PrivateImageTextOutboundPolicy.reviewedText(draft)
+        if (busy || isFinishing || text == null || pendingDocumentText != null) {
+            notice = "Controleer eerst de afbeeldingstekst; er is niets opgeslagen."
+            return
+        }
+        pendingDocumentText = text
+        try {
+            saveReviewedDocument.launch(PrivateImageTextOutboundPolicy.FILE_NAME)
+        } catch (_: RuntimeException) {
+            pendingDocumentText = null
+            notice = "Android kon de bestandskiezer niet openen. Er is niets opgeslagen."
+        }
+    }
+
+    private fun requestShareReviewedText() {
+        val text = PrivateImageTextOutboundPolicy.reviewedText(draft)
+        if (busy || isFinishing || text == null) {
+            notice = "Controleer de herkende tekst voordat je deze deelt."
+            return
+        }
+        pendingShareText = text
+    }
+
     private fun openLocalTranslator() {
         val opaque = PrivateImageTextHandoff.offer(draft) ?: run {
             notice = "Geen geldige tekst om door te geven. Controleer je invoer."
@@ -581,6 +713,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         busy = false
         clearReviewedImage()
         pendingCameraPreview = null
+        pendingShareText = null
         sharedImageUri = null
         super.onPause()
     }
@@ -598,6 +731,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        pendingDocumentText = null
+        pendingShareText = null
         generation++
         decodeJob?.cancel()
         clearDeadline()
