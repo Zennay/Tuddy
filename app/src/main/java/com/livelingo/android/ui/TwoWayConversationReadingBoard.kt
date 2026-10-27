@@ -166,8 +166,28 @@ internal fun TwoWayConversationReadingBoard(
         )
     }
     val lastRow = selected.lastOrNull()
-    LaunchedEffect(query, finishedOnly, lines) {
+    LaunchedEffect(query, finishedOnly) {
+        // An intentional filter change invalidates the current spoken selection.
         clearSpeech()
+    }
+    LaunchedEffect(selected) {
+        // A new unrelated live caption must not cut off the older line a
+        // person explicitly chose to hear. Stop only if that selected
+        // original/translation disappears or changes (including eviction).
+        val index = activeSpeechLineIndex
+        val spoken = activeSpeechText
+        if (index != null && spoken != null) {
+            val current = selected.getOrNull(index)
+            val currentText = when (activeSpeechSide) {
+                "original" -> current?.original
+                "translated" -> current
+                    ?.takeIf { completed(it) }?.translated
+                else -> null
+            }
+            if (currentText?.replace('\n', ' ')?.replace('\r', ' ')?.trim() != spoken) {
+                clearSpeech()
+            }
+        }
     }
     LaunchedEffect(followNewest, selected.size, lastRow?.translated, query) {
         if (followNewest && query.isBlank() && selected.isNotEmpty()) {
