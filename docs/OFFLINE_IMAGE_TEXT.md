@@ -54,6 +54,46 @@ een modeldownload op het toestel, nieuwe camera-/fotopermissies, opname
 of Tuddy-netwerkverzoek. We ondersteunen hier alleen **Latijns schrift**;
 geen betrouwbare Sorani, Arabische-schrift Kurmanji of Pasjtoe OCR-claim.
 
+## Van gecontroleerde foto naar tekstbestand, klembord of Android-delen
+
+De afbeeldingstekst hoeft niet eerst vertaald te worden om bruikbaar te
+zijn. Na een expliciete OCR-actie, blokselectie, leesvolgorde en eventuele
+handmatige correctie verschijnen drie **afzonderlijke** acties naast
+`Controleer taal en vertaal lokaal…`:
+
+- **Kopieer gecontroleerde tekst:** kopieert exact de toegelaten,
+  nagekeken OCR-tekst als `text/plain` naar Androids klembord, met
+  Androids gevoelige-inhoudmarkering. De gedeelde Tuddy-instelling
+  `Uit / 1 minuut / 5 minuten` kan daarna **best-effort** proberen
+  een nog ongewijzigd Tuddy-clip te wissen. Andere apps en
+  klembordgeschiedenis kunnen tekst meteen behouden; dit is geen
+  gegarandeerde verwijdering of privacy van Androids klembord.
+- **Bewaar als .txt via Android…:** opent Androids eigen **bestand
+  maken**-dialoog, met de neutrale voorgestelde naam
+  `Tuddy-afbeeldingstekst.txt`. Alleen na jouw bevestiging van een
+  doelmap schrijft Tuddy uitsluitend de gecontroleerde tekst als
+  UTF-8 naar de geselecteerde document-URI. De gekozen foto zelf wordt
+  niet meegeschreven. Een geannuleerde keuze maakt geen bestand vanuit
+  Tuddy. Alleen zolang de bestandskiezer openstaat, bewaart de app één
+  tijdelijke, expliciet goedgekeurde tekstkopie in RAM om de gekozen
+  uitvoer te kunnen schrijven; die verdwijnt na het antwoord of bij
+  vernietiging van het scherm. De externe provider kan het bestand later
+  zelf synchroniseren.
+- **Deel tekst via Android…:** vraagt eerst nogmaals expliciet of je
+  de tekst **buiten Tuddy** wilt brengen. Alleen met `Open
+  Android-deelmenu` krijgt de door jou gekozen ontvangende app een
+  gewone `text/plain`-Intent met de tekst. Een ontvanger kan de
+  tekst bewaren of uploaden. Een afgebroken bevestiging deelt niets.
+
+Alle drie de uitgangen hergebruiken dezelfde bounded Unicode-beveiliging:
+maximaal 8.000 UTF-16-tekens, geen ongeldige surrogaatparen,
+gevaarlijke controlesymbolen of expliciete bidi-overrides. Onveilige
+tekst wordt **geweigerd**, niet stilzwijgend ingekort. Er is geen nieuw
+Android-recht, achtergrondbestand, server-endpoint, modeldownload of
+automatische export toegevoegd. De vertaalroute blijft de bestaande
+einmalige RAM-handoff en is volledig onafhankelijk van de drie
+uitgaande Android-acties.
+
 ## Van foto naar vertaling
 
 1. Kies een afbeelding of bevestig expliciet de gedeelde afbeelding.
