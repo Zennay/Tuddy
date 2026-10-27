@@ -384,6 +384,8 @@ internal fun OfflineReadinessDialog(
                     deviceSnapshot = onReportSnapshot,
                     draft = acceptanceDraft,
                     sessionDiagnostics = sessionDiagnostics,
+                    currentSourceCode = sourceTextCode,
+                    currentTargetCode = targetTextCode,
                     onArmStrictOffline = onArmStrictOffline,
                     onReturnToConversation = onReturnToConversation,
                     onPickerStarted = onReportPickerStarted,

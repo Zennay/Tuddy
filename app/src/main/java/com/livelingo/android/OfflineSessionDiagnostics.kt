@@ -29,6 +29,19 @@ internal data class OfflineSessionDiagnostics(
     val memorySafetyInterruptions: Int = 0,
     val translationLatenciesMs: List<Long> = emptyList()
 ) {
+    /**
+     * A fresh local capture/recognizer outcome is required between separately
+     * recorded manual attempts. This is only a consistency signal: it cannot
+     * attest the spoken words, radio isolation or a correct translation.
+     */
+    fun hasNewVoiceAttemptSince(previous: OfflineSessionDiagnostics): Boolean =
+        listeningStarts > previous.listeningStarts ||
+            finalUtterances > previous.finalUtterances ||
+            retryableSpeechErrors > previous.retryableSpeechErrors ||
+            stalledSpeechTurns > previous.stalledSpeechTurns ||
+            quietBudgetStops > previous.quietBudgetStops ||
+            terminalSpeechErrors > previous.terminalSpeechErrors
+
     fun asReportLines(): List<String> = listOf(
         "Listening starts (user taps): $listeningStarts",
         "Changed nonempty interim hypotheses: $interimUpdates",

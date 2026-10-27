@@ -94,6 +94,17 @@ internal fun OfflineAcceptanceLiveGuide(
                     speechDelta.coerceAtLeast(0) + " echte spraakresultaten · " +
                     translationDelta.coerceAtLeast(0) + " lokale vertalingen.",
                     style = MaterialTheme.typography.bodySmall)
+                val previous = draft.lastRecordedDiagnostics.value ?: started
+                val freshVoiceEvent = previous != null &&
+                    diagnostics.hasNewVoiceAttemptSince(previous)
+                Text(
+                    if (freshVoiceEvent)
+                        "Nieuwe lokale opname-/herkenningsactiviteit gezien sinds de " +
+                            "vorige registratie. Controleer zelf de echte uitkomst."
+                    else "Nog geen nieuwe lokale opname-/herkenningsactiviteit " +
+                        "sinds de vorige registratie. Doe eerst een echte spraakpoging.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 if (current != expected) {
                     Text(
                         "Actieve talen komen niet overeen met de volgende proefrichting. " +
