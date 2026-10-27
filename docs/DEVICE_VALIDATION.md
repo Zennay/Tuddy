@@ -526,3 +526,36 @@ spraakherkenner ook als een volgende Android-momentopname (ongeveer
 elke 1,5 seconde) een actieve of onbekende netwerkstatus meldt. Dat is
 een extra gebruikerscontrole, **niet** een meetbewijs dat gedurende
 de hele tussenliggende tijd geen verkeer mogelijk was.
+
+
+### Actieve proefkaart op het gespreksscherm
+
+Zodra je in **Offline startcheck** een fysiek proefconcept hebt gestart,
+blijft in het gewone gespreksscherm een compacte proefkaart zichtbaar:
+aantallen vastgelegde NL→EN- en EN→NL-pogingen, de eerstvolgende
+proefrichting, het aantal echte spraak- en lokale vertaalgebeurtenissen
+sinds proefstart, en een knop om na het stoppen van **Luister** de
+laatste poging in de observatielijst vast te leggen. Bij een verkeerde
+taalrichting kan de operator bewust wisselen; Tuddy stopt daarbij de
+microfoon, vraagt om hercontrole van beide lokale modellen en start
+niet vanzelf opnieuw met luisteren. De kaart helpt 10+10 pogingen op
+een echt toestel uitvoeren zonder verslag- of richtingsverlies.
+
+De kaart bewaart zelf geen spraak, afbeeldingen, ondertitels of
+identificerende gegevens. Vastgelegde pogingen blijven zelfgerapporteerde
+observaties. De knop is geen automatische goedkeuring en de hele proef
+vereist nog steeds de afzonderlijke vliegtuigmoduscontroles, vastgelegde
+exacte APK-identiteit, onafhankelijke menselijke beoordeling en releasegate.
+
+### CI-uitvoering op de eigen Tuddy-runner
+
+De Android-buildworkflow gebruikt de bestaande repositorygebonden
+**self-hosted Linux x64 Tuddy-runner** met lokaal aanwezige Android SDK 35,
+in plaats van GitHub-hosted Ubuntu-runners. De APK-build controleert de voorgestelde PR-mergeboom; daarnaast voert
+de onafhankelijke bron-HEAD-job de bestaande verplichte Gradle-unitcontrole
+op de exacte contributor-commit uit. De repo-gebonden runner handelt ze
+één voor één af, met maximaal één Gradle-worker per job. Een expliciete vrije-RAM/swap-check
+weigert de APK-build bij te hoge VPS-druk om andere workers te beschermen.
+Alleen de geslaagde build produceert een traceerbaar debug-APK met SHA-256-manifest.
+De gebruiker moet nog steeds het **exacte main-push artefact** installeren:
+een groene PR-build of een bron-merge alleen is geen fysieke validatie.

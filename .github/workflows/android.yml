@@ -1,4 +1,4 @@
-name: Android APK (hosted)
+name: Android APK (self-hosted)
 on:
   push:
     branches: [main]
@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     if: ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Zennay'))
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned v4
@@ -28,33 +28,47 @@ jobs:
           test -z "$(git status --porcelain)"
       - name: Test fail-closed workflow identity before untrusted Gradle code
         run: python3 -B -m unittest discover -s tests -p 'test_*.py'
+      - name: Protect shared VPS memory before Gradle
+        shell: bash
+        run: |
+          set -euo pipefail
+          available_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)"
+          swap_free_kb="$(awk '/SwapFree:/ {print $2}' /proc/meminfo)"
+          min_available_kb=4718592
+          if [ "$swap_free_kb" -lt 1048576 ]; then
+            min_available_kb=6291456
+          fi
+          if [ "$available_kb" -lt "$min_available_kb" ]; then
+            echo "::error::Tuddy Android build deferred: shared VPS has only $((available_kb / 1024)) MiB available RAM and $((swap_free_kb / 1024)) MiB free swap. Keep the other worker sessions alive; free RAM before rerun."
+            exit 1
+          fi
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      # Hosted Ubuntu runners ship the Android command-line SDK; this avoids
-      # competing with Tuddy/zCloud workloads on the overloaded VPS. The old
-      # setup-android action requests the removed 'tools' SDK package and fails.
-      - name: Resolve installed Android SDK on hosted runner
+      # Dedicated Tuddy repo runner has Android SDK 35 installed; no paid hosted minutes.
+      # Avoid repeated sdkmanager installs and keep Gradle workers bounded on the shared VPS.
+      - name: Resolve installed Android SDK on Tuddy self-hosted runner
         shell: bash
         run: |
           set -euo pipefail
-          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/home/ubuntu/Android/Sdk}}"
           test -x "$sdk_root/cmdline-tools/latest/bin/sdkmanager"
           echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
       - name: Check Android SDK environment
         run: |
           test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" || command -v sdkmanager
-      - name: Install Android 35 SDK
+      - name: Verify preinstalled Android 35 SDK
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
+          test -s "$ANDROID_HOME/platforms/android-35/android.jar"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/aapt"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
       - name: Verify unit tests and build APK
-        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --no-daemon --max-workers=1
       - name: Reject unexpected permissions or exported components in built APK
         run: python3 -B tools/check_android_apk_manifest.py "app/build/outputs/apk/debug/app-debug.apk"
       - name: Verify APK digest and bind artifact to built checkout
@@ -94,39 +108,51 @@ jobs:
   # intentionally continues validating GitHub's proposed PR merge tree.
   source-head:
     if: (github.event_name == 'pull_request') && ((github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Zennay'))
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
-      - name: Run offline workflow-identity regressions
-        run: python3 -B -m unittest discover -s tests -p 'test_*.py'
       - name: Verify exact immutable contributor revision
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test -z "$(git status --porcelain)"
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - name: Resolve installed Android SDK on hosted runner
+      - name: Run offline workflow-identity regressions
+        run: python3 -B -m unittest discover -s tests -p 'test_*.py'
+      - name: Protect shared VPS memory before HEAD validation
         shell: bash
         run: |
           set -euo pipefail
-          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
-          test -x "$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+          available_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)"
+          swap_free_kb="$(awk '/SwapFree:/ {print $2}' /proc/meminfo)"
+          min_available_kb=4718592
+          if [ "$swap_free_kb" -lt 1048576 ]; then
+            min_available_kb=6291456
+          fi
+          if [ "$available_kb" -lt "$min_available_kb" ]; then
+            echo "::error::Tuddy source-head Gradle deferred to protect the shared VPS. Available RAM: $((available_kb / 1024)) MiB; free swap: $((swap_free_kb / 1024)) MiB."
+            exit 1
+          fi
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Resolve preinstalled Android SDK 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/home/ubuntu/Android/Sdk}}"
+          test -s "$sdk_root/platforms/android-35/android.jar"
+          test -x "$sdk_root/build-tools/35.0.0/aapt"
           echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
-      - name: Ensure Android 35 SDK
-        run: |
-          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" || command -v sdkmanager
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
       - name: Validate lifecycle policy on exact source HEAD
-        run: gradle :app:testDebugUnitTest --stacktrace --no-daemon
+        run: gradle :app:testDebugUnitTest --stacktrace --no-daemon --max-workers=1
