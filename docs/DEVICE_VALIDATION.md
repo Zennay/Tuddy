@@ -1,29 +1,31 @@
 # Actuele fysieke Android-overdracht · 27 oktober 2026
 
-**Huidige kandidaat voor de fysieke Android 12+-proef:** [Tuddy `main` 79b96fa123d4](https://github.com/Zennay/Tuddy/commit/79b96fa123d4daab9302719a5e8d942b2af895c4), Git-tree `6b39b9dec77cca8bf600a32eb701fddfe7b0b24f`. [PR #569](https://github.com/Zennay/Tuddy/pull/569) is gemerged. De [self-hosted main-push workflow #40461652744](https://github.com/Zennay/Tuddy/actions/runs/40461652744) bouwde precies deze `main`-commit; de Android `build`-job slaagde. De `source-head`-job is bij een push terecht overgeslagen (hij geldt voor PR's). De afzonderlijke PR-checks op hoofd `545618bf21c500a9cbff6c5daf98bef54b9f3fb9` slaagden beide in [workflow #40459304603, poging 3](https://github.com/Zennay/Tuddy/actions/runs/40459304603).
+**Huidige kandidaat voor fysieke Android 12+-acceptatie:** [Tuddy `main` 714f9337ad9a](https://github.com/Zennay/Tuddy/commit/714f9337ad9a4fee6443226715fecf4744ebfeff), Git-tree `878dc8b3faf56d41bb38051a036c82f578f2f67d`. [PR #569](https://github.com/Zennay/Tuddy/pull/569) en [PR #571](https://github.com/Zennay/Tuddy/pull/571) zijn beide gemerged. Deze kandidaat bevat nu óók de gecontroleerde, RAM-only foto-preview en 90°-rotatie vóór expliciet bevestigde offline OCR. De [self-hosted main-push workflow #40466819777](https://github.com/Zennay/Tuddy/actions/runs/40466819777) bouwde precies deze commit: `build` geslaagd; de PR-only `source-head` wordt bij een push correct overgeslagen. Het exacte PR #571-hoofd had succesvolle verplichte checks in [#40465553601](https://github.com/Zennay/Tuddy/actions/runs/40465553601), poging 2.
 
-| Controlepunt | Actuele waarde |
+| Controlepunt | Actuele kandidaat |
 |---|---|
-| APK-artifact | [Tuddy-debug-apk #12714712900](https://github.com/Zennay/Tuddy/actions/runs/40461652744/artifacts/12714712900) — verloopt 10 november 2026 06:38 UTC |
-| Buildbron en manifest-`source_sha` | `79b96fa123d4daab9302719a5e8d942b2af895c4` |
-| Artifact-ZIP SHA-256 (GitHub-metadata en CI-upload) | `c24984776d849c7d9292d0acb27b5839652e5a22b09bb60070bded8b0cce7d7b` |
-| APK SHA-256 (buildlog en door CI gecontroleerde sidecar) | `f1598c850b1f03deb5d442b02b41442d1757d634460e5673d59ccdaacc28966f` |
-| Artifact-ZIP omvang | 63.155.211 bytes |
+| APK-artifact | [Tuddy-debug-apk #12717800173](https://github.com/Zennay/Tuddy/actions/runs/40466819777/artifacts/12717800173) — verloopt 10 november 2026 07:29 UTC |
+| Buildbron en manifest-`source_sha` | `714f9337ad9a4fee6443226715fecf4744ebfeff` |
+| Artifact ZIP SHA-256 (GitHub-metadata en CI-upload) | `b632bc03a150e1c605353431c2da2d685bb7f3138ae514fa4e3bad90a0522f96` |
+| APK SHA-256 (CI-buildlog en gecontroleerde sidecar) | `cc8241b89337622685da7504cb358bd954332418dbebc38e1ac033818f8516f1` |
+| Artifact ZIP omvang | 63.158.686 bytes |
 | APK-naam | `app-debug.apk` (debug, niet productie-ondertekend) |
-| Android 12+-installatie, vliegtuigmodus, echte 10+10 spraak/vertaling, onafhankelijke review | **NOG NIET UITGEVOERD / NIET BEWEZEN** |
+| Android 12+-installatie, echte vliegtuigmodus, 10+10 spraak/vertaling, onafhankelijke review | **NOG NIET UITGEVOERD / NIET BEWEZEN** |
 
-Het ZIP-archief is via GitHub beschikbaar. De ZIP-checksum is **bevestigd door GitHub-artifactmetadata en het uploadlog** en de APK-checksum door de succesvolle build en de bijbehorende `.sha256`-sidecar. Deze run heeft de gedownloade ZIP en uitgepakte APK nog **niet onafhankelijk lokaal nagemeten**; doe dat vóór de fysieke proef met:
+Deze ZIP- en APK-digests zijn door GitHub artifactmetadata respectievelijk het geslaagde CI-uploadlog en de CI-sidecarcheck bevestigd. **Onafhankelijke lokale verificatie van een gedownloade ZIP en uitgepakte APK is voor deze nieuwe kandidaat nog niet uitgevoerd.** Gebruik vóór installatie op een bevoegd fysiek toestel de bestaande repository-verifier:
 
 ```sh
 bash scripts/verify-tuddy-apk-artifact.sh \\
   artifact.zip \\
-  c24984776d849c7d9292d0acb27b5839652e5a22b09bb60070bded8b0cce7d7b \\
-  f1598c850b1f03deb5d442b02b41442d1757d634460e5673d59ccdaacc28966f \\
-  79b96fa123d4daab9302719a5e8d942b2af895c4 \\
-  40461652744
+  b632bc03a150e1c605353431c2da2d685bb7f3138ae514fa4e3bad90a0522f96 \\
+  cc8241b89337622685da7504cb358bd954332418dbebc38e1ac033818f8516f1 \\
+  714f9337ad9a4fee6443226715fecf4744ebfeff \\
+  40466819777
 ```
 
-Kies bij installatie expliciet dit artifact, controleer de exacte geïnstalleerde APK-hash in de app, en volg daarna het bestaande 10× NL→EN + 10× EN→NL menselijke observatieprotocol hieronder. Een geslaagde CI-build is **geen** offline toestelacceptatie, modellicentie, native-speakerbevestiging of vrijgave. [P1 #1](https://github.com/Zennay/Tuddy/issues/1) en [P1 #2](https://github.com/Zennay/Tuddy/issues/2) blijven open.
+Vergelijk daarna de daadwerkelijk **geïnstalleerde** APK-hash in de app, controleer echte netwerkisolatie in vliegtuigmodus en registreer alleen zelf geobserveerde tien NL→EN plus tien EN→NL lokale spraak- en vertaalsessies. Vraag onafhankelijke beoordeling. De overige modelrechten, native-speakerbeoordeling, release-signing en productie-admission blijven aparte gates. [P1 #1](https://github.com/Zennay/Tuddy/issues/1) en [P1 #2](https://github.com/Zennay/Tuddy/issues/2) blijven open. Een groene build bewijst dit alles niet.
+
+**Voorgaande kandidaat:** `79b96fa123d4daab9302719a5e8d942b2af895c4`, artifact #12714712900 / run #40461652744, is inmiddels historisch wegens nieuwe app-code in PR #571.
 
 ---
 
