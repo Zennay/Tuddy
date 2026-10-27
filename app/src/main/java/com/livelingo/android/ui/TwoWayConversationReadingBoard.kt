@@ -66,6 +66,7 @@ internal fun TwoWayConversationReadingBoard(
     var followNewest by remember { mutableStateOf(true) }
     var audioNotice by remember { mutableStateOf("") }
     var activeSpeechLineIndex by remember { mutableStateOf<Int?>(null) }
+    var activeSpeechLineId by remember { mutableStateOf<Long?>(null) }
     var activeSpeechSide by remember { mutableStateOf<String?>(null) }
     var activeSpeechText by remember { mutableStateOf<String?>(null) }
     var activeSpeechRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -76,6 +77,7 @@ internal fun TwoWayConversationReadingBoard(
     fun clearSpeech() {
         speaker.stop()
         activeSpeechLineIndex = null
+        activeSpeechLineId = null
         activeSpeechSide = null
         activeSpeechText = null
         activeSpeechRange = null
@@ -84,6 +86,7 @@ internal fun TwoWayConversationReadingBoard(
 
     fun pronounceLine(
         lineIndex: Int,
+        lineId: Long,
         text: String,
         language: String,
         side: String,
@@ -98,6 +101,7 @@ internal fun TwoWayConversationReadingBoard(
             return
         }
         activeSpeechLineIndex = lineIndex
+        activeSpeechLineId = lineId.takeIf { it != 0L }
         activeSpeechSide = side
         activeSpeechText = safe
         activeSpeechRange = null
@@ -112,6 +116,7 @@ internal fun TwoWayConversationReadingBoard(
             feedback = { audioNotice = it },
             onFinished = { completed ->
                 activeSpeechLineIndex = null
+                activeSpeechLineId = null
                 activeSpeechSide = null
                 activeSpeechText = null
                 activeSpeechRange = null
@@ -177,7 +182,13 @@ internal fun TwoWayConversationReadingBoard(
         val index = activeSpeechLineIndex
         val spoken = activeSpeechText
         if (index != null && spoken != null) {
-            val current = selected.getOrNull(index)
+            // Stable IDs outlive the sliding 80-line window and list filters.
+            // Legacy preview rows with no ID retain positional behavior.
+            val current = if (activeSpeechLineId != null) {
+                selected.firstOrNull { it.id == activeSpeechLineId }
+            } else {
+                selected.getOrNull(index)
+            }
             val currentText = when (activeSpeechSide) {
                 "original" -> current?.original
                 "translated" -> current
@@ -283,10 +294,17 @@ internal fun TwoWayConversationReadingBoard(
                         .nestedScroll(pauseFollowOnUserScroll),
                     state = scroll,
                     verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    itemsIndexed(selected) { index, row ->
-                        val originalActive = activeSpeechLineIndex == index &&
+                    itemsIndexed(selected, key = { index, row ->
+                        if (row.id != 0L) "caption:${row.id}" else "preview:$index"
+                    }) { index, row ->
+                        val matchesActiveLine = if (activeSpeechLineId != null) {
+                            row.id == activeSpeechLineId
+                        } else {
+                            activeSpeechLineIndex == index
+                        }
+                        val originalActive = matchesActiveLine &&
                             activeSpeechSide == "original" && activeSpeechText != null
-                        val translatedActive = activeSpeechLineIndex == index &&
+                        val translatedActive = matchesActiveLine &&
                             activeSpeechSide == "translated" && activeSpeechText != null
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.fillMaxWidth()) {
@@ -382,7 +400,7 @@ internal fun TwoWayConversationReadingBoard(
                                 turn = row,
                                 activeSpeechText = activeSpeechText,
                                 onSpeak = { text, language, side, pace ->
-                                    pronounceLine(index, text, language, side, pace)
+                                    pronounceLine(index, row.id, text, language, side, pace)
                                 }
                             )
                             HorizontalDivider()
