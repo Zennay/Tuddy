@@ -25,6 +25,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -138,6 +142,19 @@ internal fun TwoWayConversationReadingBoard(
         }
     }
     val scroll = rememberLazyListState()
+    // Match the main live-caption timeline: a person's real scroll gesture
+    // pauses automatic following so new captions cannot steal their place.
+    // Programmatic scrollToItem does not emit UserInput and remains allowed.
+    val pauseFollowOnUserScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source == NestedScrollSource.UserInput && available.y != 0f) {
+                    followNewest = false
+                }
+                return Offset.Zero
+            }
+        }
+    }
     val admitted = lines.takeLast(80)
     fun completed(row: TypedConversationLine): Boolean =
         row.status == "Lokaal vertaald" || row.status == "Lokaal"
@@ -149,8 +166,28 @@ internal fun TwoWayConversationReadingBoard(
         )
     }
     val lastRow = selected.lastOrNull()
-    LaunchedEffect(query, finishedOnly, lines) {
+    LaunchedEffect(query, finishedOnly) {
+        // An intentional filter change invalidates the current spoken selection.
         clearSpeech()
+    }
+    LaunchedEffect(selected) {
+        // A new unrelated live caption must not cut off the older line a
+        // person explicitly chose to hear. Stop only if that selected
+        // original/translation disappears or changes (including eviction).
+        val index = activeSpeechLineIndex
+        val spoken = activeSpeechText
+        if (index != null && spoken != null) {
+            val current = selected.getOrNull(index)
+            val currentText = when (activeSpeechSide) {
+                "original" -> current?.original
+                "translated" -> current
+                    ?.takeIf { completed(it) }?.translated
+                else -> null
+            }
+            if (currentText?.replace('\n', ' ')?.replace('\r', ' ')?.trim() != spoken) {
+                clearSpeech()
+            }
+        }
     }
     LaunchedEffect(followNewest, selected.size, lastRow?.translated, query) {
         if (followNewest && query.isBlank() && selected.isNotEmpty()) {
@@ -217,7 +254,7 @@ internal fun TwoWayConversationReadingBoard(
                     TextButton(onClick = {
                         query = ""
                         followNewest = true
-                    }) { Text("↓ Nieuwste volgen") }
+                    }) { Text(if (followNewest) "↓ Nieuwste volgen" else "↓ Hervat live volgen") }
                     Text("${selected.size} regels", style = MaterialTheme.typography.labelSmall)
                 }
                 Row(modifier = Modifier.fillMaxWidth(),
@@ -227,13 +264,24 @@ internal fun TwoWayConversationReadingBoard(
                         style = MaterialTheme.typography.bodySmall)
                     Switch(checked = finishedOnly, onCheckedChange = { finishedOnly = it })
                 }
+                if (!followNewest && query.isBlank()) {
+                    Text(
+                        "Historie lezen: automatisch meescrollen staat uit. " +
+                            "Tik op 'Hervat live volgen' om terug te gaan naar de nieuwste regel.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 HorizontalDivider()
                 if (selected.isEmpty()) {
                     Text(if (admitted.isEmpty()) "Er zijn nog geen tijdelijke gespreksregels."
                     else "Geen regels gevonden voor deze selectie.",
                         style = MaterialTheme.typography.bodyMedium)
                 }
-                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), state = scroll,
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                        .nestedScroll(pauseFollowOnUserScroll),
+                    state = scroll,
                     verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     itemsIndexed(selected) { index, row ->
                         val originalActive = activeSpeechLineIndex == index &&
