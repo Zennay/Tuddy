@@ -73,7 +73,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
         languageTag: String,
         strictOfflineRadioOnly: Boolean,
         onNotice: (String) -> Unit,
-        onFinalAnswer: (String) -> Unit,
+        onFinalAnswer: (List<String>) -> Unit,
         onVariantSelectionRequired: (List<String>) -> Unit = {}
     ): Boolean {
         cancel()
@@ -196,7 +196,7 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
         strictOfflineRadioOnly: Boolean,
         version: Long,
         onNotice: (String) -> Unit,
-        onFinalAnswer: (String) -> Unit
+        onFinalAnswer: (List<String>) -> Unit
     ): Boolean {
         if (version != epoch ||
             ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) !=
@@ -316,17 +316,22 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
                 }
                 override fun onResults(results: Bundle?) {
                     if (version != epoch || !gate.acceptFinalResult()) return
-                    val candidate = SpeechHypothesisPolicy.select(
+                    // Android may return several ranked *local* hypotheses.
+                    // Pass only a short, normalized list; do not silently
+                    // assume the top-ranked result is what the person said.
+                    val alternatives = PrivateRecallSpeechCandidates.admitted(
                         results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     )
-                    val safe = LocalTextBoundaryPolicy.speechHypothesis(candidate)
-                        ?.takeIf { it.length <= MAX_SPOKEN_CHARACTERS }
                     cancel()
-                    if (safe.isNullOrBlank()) {
+                    if (alternatives.isEmpty()) {
                         onNotice("Geen bruikbaar lokaal antwoord. Je kunt opnieuw inspreken.")
                     } else {
-                        onFinalAnswer(safe)
-                        onNotice("Gesproken poging lokaal herkend. Onthul zelf de referentie.")
+                        onFinalAnswer(alternatives)
+                        onNotice(
+                            if (alternatives.size > 1)
+                                "${alternatives.size} lokale herkenningsopties. Kies wat je werkelijk zei vóór het onthullen."
+                            else "Eén gesproken poging lokaal herkend. Onthul zelf de referentie."
+                        )
                     }
                 }
             })
@@ -362,6 +367,5 @@ internal class PrivateRecallSpeechAttempt(context: Context) {
     companion object {
         private const val PACK_CHECK_LIMIT_MS = 12_000L
         private const val MAX_CAPTURE_MS = 20_000L
-        private const val MAX_SPOKEN_CHARACTERS = 400
     }
 }
