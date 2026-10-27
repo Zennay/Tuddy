@@ -608,6 +608,22 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         deadline?.let(handler::removeCallbacks)
         deadline = null
         clearReviewedImage()
+        // A previous ML Kit request may still own a bitmap/recognizer after
+        // its visible timeout or Activity pause. Never queue more heavy OCR.
+        if (LocalMemoryPressurePolicy.isSystemLowMemory(this)) {
+            busy = false
+            notice = "Android meldt weinig werkgeheugen. Geen nieuwe afbeelding " +
+                "verwerkt; sluit andere zware apps en probeer later opnieuw."
+            return
+        }
+        val ocrLease = LocalOcrWorkBudget.shared.acquire()
+        if (ocrLease == null) {
+            busy = false
+            notice = "De vorige offline afbeeldingherkenning draait nog op dit toestel. " +
+                "Wacht tot Android deze werkelijk afrondt voordat je opnieuw herkent. " +
+                "Geen tweede OCR-taak gestart."
+            return
+        }
         busy = true
         notice = "De gekozen afbeelding wordt lokaal gelezen…"
         val timeout = Runnable {
@@ -622,11 +638,17 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         deadline = timeout
         if (!handler.postDelayed(timeout, 20_000L)) {
             generation++
+            ocrLease.release()
             busy = false
             notice = "Android kon de tijdslimiet niet instellen. Geen OCR gestart."
             return
         }
         decodeJob = lifecycleScope.launch {
+            // The lease stays owned by ML Kit even after the Activity is
+            // paused or a visual deadline expires. A coroutine cancellation
+            // releases it only if provider work was NOT submitted.
+            var providerSubmitted = false
+            try {
             val bitmap = if (cameraBitmap != null) cameraBitmap
                 else withContext(Dispatchers.IO) {
                     runCatching { decodeBounded(requireNotNull(uri)) }.getOrNull()
@@ -653,8 +675,10 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                 return@launch
             }
             try {
-                recognizer.process(InputImage.fromBitmap(bitmap, 0))
-                    .addOnCompleteListener { task ->
+                val operation = recognizer.process(InputImage.fromBitmap(bitmap, 0))
+                providerSubmitted = true
+                operation.addOnCompleteListener { task ->
+                    try {
                         bitmap.recycle()
                         recognizer.close()
                         if (request != generation || isFinishing) return@addOnCompleteListener
@@ -693,7 +717,12 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                         }
                         reviewHistory.reset(reviewSnapshot())
                         reviewVersion++
+                    } finally {
+                        // Task actually completed, even if the owner has been
+                        // destroyed or the result callback throws.
+                        ocrLease.release()
                     }
+                }
             } catch (_: Exception) {
                 bitmap.recycle()
                 recognizer.close()
@@ -702,6 +731,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                     busy = false
                     notice = "Offline OCR kon niet worden gestart."
                 }
+            } finally {
+                if (!providerSubmitted) ocrLease.release()
             }
         }
     }
