@@ -386,6 +386,28 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 }
                             }
                         }
+                        if (textBlocks.isNotEmpty()) {
+                            // Keep Undo visible even after clearing every block.
+                            // This restores the last explicit correction/selection
+                            // without re-reading the image or sharing its contents.
+                            androidx.compose.foundation.layout.Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    enabled = reviewHistory.canUndo && !busy,
+                                    onClick = { reviewHistory.undo()?.let(::restoreReview) }
+                                ) { Text("↶ Ongedaan") }
+                                OutlinedButton(
+                                    enabled = reviewHistory.canRedo && !busy,
+                                    onClick = { reviewHistory.redo()?.let(::restoreReview) }
+                                ) { Text("↷ Opnieuw") }
+                            }
+                            Text(
+                                "Lokale correctiegeschiedenis · max. 16 stappen · " +
+                                    "wissen bij verlaten (stap ${reviewVersion}).",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                         if (draft.isNotEmpty()) {
                             Text("Controleer en corrigeer de herkende tekst",
                                 style = MaterialTheme.typography.titleSmall)
@@ -400,27 +422,6 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 5,
                                 label = { Text("Afbeeldingstekst · max. 8.000 tekens") }
-                            )
-                            // A single, RAM-only correction history covers typing,
-                            // block selection, and reading order. No automatic edits.
-                            androidx.compose.foundation.layout.Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedButton(
-                                    enabled = reviewHistory.canUndo && !busy,
-                                    onClick = { reviewHistory.undo()?.let(::restoreReview) }
-                                ) { Text("↶ Ongedaan") }
-                                OutlinedButton(
-                                    enabled = reviewHistory.canRedo && !busy,
-                                    onClick = { reviewHistory.redo()?.let(::restoreReview) }
-                                ) { Text("↷ Opnieuw") }
-                            }
-                            // Observing revision ensures buttons refresh even
-                            // though the history itself is an ordinary RAM class.
-                            Text(
-                                "Correcties uitsluitend in dit scherm · max. 16 stappen · " +
-                                    "bij verlaten wissen (stap ${reviewVersion}).",
-                                style = MaterialTheme.typography.bodySmall
                             )
                             OutlinedTextField(
                                 value = findCorrection,
