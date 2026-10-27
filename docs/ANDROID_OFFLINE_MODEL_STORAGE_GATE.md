@@ -33,6 +33,47 @@ bevestigt de app dezelfde conditie opnieuw vlak vóór de werkelijke
 aanvraag. Een toegestane aanvraag behoudt daarnaast alle bestaande
 Wi-Fi-, expliciete bevestigings-, on-device- en modelrechtencontroles.
 
+## Kostenvriendelijke netwerktoelating op Android
+
+Naast de opslagcontrole is er nu één `LocalModelNetworkAdmission`
+voor alle bewust gestarte downloads van offline ML Kit-tekstmodellen
+en Android-spraakpakketten. Vlak vóór een nieuwe aanvraag leest Tuddy
+uitsluitend de actieve Android-netwerkcapaciteiten:
+
+- actieve **wifi** moet daadwerkelijk als wifi gerapporteerd worden;
+- het netwerk moet **INTERNET** en **VALIDATED** hebben;
+- het netwerk moet door Android als **NOT_METERED** (ongemeten)
+  zijn gemarkeerd.
+
+Onbekende status of een ontbrekende capaciteit betekent **niet
+starten**. Hiermee vermijdt Tuddy het bewust starten van grote
+modeldownloads op een door Android als beperkt of betaald gemeld
+wifi-netwerk, waaronder veel telefoonhotspots. Een wifi-verbinding
+is niet automatisch onbeperkt: `requireWifi()` in de bestaande
+ML Kit-downloadvoorwaarden blijft onveranderd van kracht.
+
+In **Offline startcheck** staan naast de vrije opslagruimte nu ook
+de wifi-toelating, een knop om de toestand opnieuw te lezen en een
+expliciete knop om de **Android-wifiinstellingen** te openen. Tuddy
+schakelt de verbinding niet zelf om. Na terugkomst in de app wordt de
+read-only status bijgewerkt; opnieuw downloaden gebeurt uitsluitend
+na een nieuwe bewuste keuze. Een slechte status maakt de twee
+modeldownloadknoppen onbeschikbaar. De aanvraagmethodes lezen de
+status zelfstandig opnieuw, zodat downloads via tweeweg-tekst,
+favorietenreeksen of het gerichte herstel van een mislukte zin niet
+langs de schermcontrole heen kunnen starten.
+
+**Grenzen:** Android bepaalt zelf of een verbinding als ongemeten
+wordt geclassificeerd; een mobiele hotspot kan verkeerd zijn
+geconfigureerd. De netwerkstatus kan veranderen *na* de aanvraag.
+Tuddy kan eenmaal door ML Kit of Android geaccepteerde downloads
+niet betrouwbaar intrekken. Dit is een conservatieve startcontrole,
+geen belofte van nul dataverbruik, geen captive-portal-bypass en geen
+onafhankelijke offline-acceptatie. Bestaande geïnstalleerde modellen,
+read-only inventaris, herkenning en vertaling blijven bruikbaar als
+wifi niet toegelaten wordt. Er worden geen SSID, IP-adressen,
+verbruikscijfers, teksten of identiteiten opgeslagen.
+
 ## Wat het wel en niet garandeert
 
 - Bestaande geïnstalleerde modellen, offline vertalingen, spraakherkenning
