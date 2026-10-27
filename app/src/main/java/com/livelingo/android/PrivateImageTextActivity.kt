@@ -77,6 +77,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     // Only held in process RAM after the user explicitly opens Android's
     // document picker. The image and ordinary OCR draft still clear on pause.
     private var pendingDocumentText: String? = null
+    private var documentWriteJob: Job? = null
     private var pendingShareText by mutableStateOf<String?>(null)
     private var notice by mutableStateOf(
         "Kies zelf een afbeelding. Alleen Latijns schrift wordt met " +
@@ -95,17 +96,34 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                 notice = "De tijdelijke tekst is verlopen. Er is niets geschreven."
             else -> {
                 val payload = PrivateImageTextOutboundPolicy.utf8Bytes(approvedText)
-                val saved = payload != null && runCatching {
-                    contentResolver.openOutputStream(uri, "w")?.use { output ->
-                        output.write(payload)
-                        output.flush()
-                        true
-                    } ?: false
-                }.getOrDefault(false)
-                notice = if (saved)
-                    "Je gecontroleerde afbeeldingstekst is als UTF-8-tekstbestand " +
-                        "op de zelfgekozen Android-locatie opgeslagen."
-                else "Opslaan is mislukt. Controleer de gekozen Android-bestandslocatie."
+                if (payload == null) {
+                    notice = "De tekst voldoet niet meer aan de veilige grens. " +
+                        "Er is niets naar Android geschreven."
+                } else {
+                    // Document providers may be remote or stall. Never block
+                    // Compose or the Android main thread on provider I/O.
+                    documentWriteJob?.cancel()
+                    busy = true
+                    notice = "Gecontroleerde tekst bewaren op de gekozen Android-locatie…"
+                    documentWriteJob = lifecycleScope.launch {
+                        val saved = withContext(Dispatchers.IO) {
+                            runCatching {
+                                contentResolver.openOutputStream(uri, "w")?.use { output ->
+                                    output.write(payload)
+                                    output.flush()
+                                    true
+                                } ?: false
+                            }.getOrDefault(false)
+                        }
+                        busy = false
+                        if (!isFinishing && !isDestroyed) {
+                            notice = if (saved)
+                                "Je gecontroleerde afbeeldingstekst is als UTF-8-tekstbestand " +
+                                    "op de zelfgekozen Android-locatie opgeslagen."
+                            else "Opslaan is mislukt. Controleer de gekozen Android-bestandslocatie."
+                        }
+                    }
+                }
             }
         }
     }
@@ -731,6 +749,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        documentWriteJob?.cancel()
+        documentWriteJob = null
         pendingDocumentText = null
         pendingShareText = null
         generation++
