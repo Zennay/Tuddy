@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.os.Build
 import com.livelingo.android.OfflineRadioSnapshot
+import com.livelingo.android.OfflineSessionDiagnostics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -42,6 +43,8 @@ internal fun OfflineAcceptanceReportAction(
     enabled: Boolean,
     deviceSnapshot: () -> ByteArray?,
     draft: OfflineAcceptanceDraft,
+    sessionDiagnostics: OfflineSessionDiagnostics,
+    onArmStrictOffline: () -> Unit,
     onReturnToConversation: () -> Unit,
     onPickerStarted: () -> Unit,
     onPickerFinished: () -> Unit
@@ -71,6 +74,8 @@ internal fun OfflineAcceptanceReportAction(
     var pendingCheckpoint by draft.pendingCheckpoint
     var checkpointImported by draft.checkpointImported
     var checkpointNotice by draft.checkpointNotice
+    var startedDiagnostics by draft.startedDiagnostics
+    var newAttemptFlags by draft.newAttemptFlags
 
     fun installedApkDigest(bytes: ByteArray?): String? {
         val line = bytes?.toString(Charsets.UTF_8)?.lineSequence()
@@ -113,6 +118,12 @@ internal fun OfflineAcceptanceReportAction(
             "Android rapporteert een actieve netwerkverbinding of kan de netwerkstatus niet lezen. Verbreek verbindingen en open het rapport opnieuw."
         else -> "De radio-indicatoren zijn niet voldoende voor een complete offline-waarneming."
     }
+    fun freshClaims(direction: OfflineObservationDirection, speech: Boolean): Int =
+        attempts.zip(newAttemptFlags).count { (entry, isFresh) ->
+            isFresh && entry.direction == direction &&
+                (if (speech) entry.recognizedSpeech else entry.translatedLocally)
+        }
+
     fun recordAttempt() {
         // A user must return to actual offline mode for EACH entered attempt.
         // This check samples radios at entry, not during microphone capture.
@@ -133,6 +144,46 @@ internal fun OfflineAcceptanceReportAction(
             installedApkDigest(currentIdentity) != installedApkDigest(baseline)) {
             attemptMessage = "De geïnstalleerde APK-identiteit is niet meer dezelfde " +
                 "als bij aanvang. De poging is niet geregistreerd."
+            return
+        }
+        // The counter baseline was captured before the microphone was armed.
+        // These counters do NOT prove correctness, only that this app observed
+        // local events in the requested direction since the draft started.
+        val started = startedDiagnostics
+        if (started == null || newAttemptFlags.size != attempts.size) {
+            attemptMessage = "Geen geldige live-proefbasis. Bewaar of wis dit concept " +
+                "en start opnieuw vóór de volgende microfoonsessie."
+            return
+        }
+        if (sessionDiagnostics.strictRadioInterruptions > started.strictRadioInterruptions) {
+            attemptMessage = "Android heeft de strikte offline microfoonsessie onderbroken. " +
+                "Bewaar desgewenst een onvolledig rapport, wis het concept en " +
+                "start een nieuwe proef met blijvend uitgeschakelde netwerken."
+            return
+        }
+        if (sessionDiagnostics.listeningStarts <= started.listeningStarts) {
+            attemptMessage = "Start eerst daadwerkelijk een lokale microfoonsessie " +
+                "na het openen van dit proefconcept."
+            return
+        }
+        val localSpeechNow = if (chosenDirection == OfflineObservationDirection.NL_EN)
+            sessionDiagnostics.nlEnFinalUtterances else sessionDiagnostics.enNlFinalUtterances
+        val localSpeechStart = if (chosenDirection == OfflineObservationDirection.NL_EN)
+            started.nlEnFinalUtterances else started.enNlFinalUtterances
+        val localTranslationNow = if (chosenDirection == OfflineObservationDirection.NL_EN)
+            sessionDiagnostics.nlEnLocalTranslations else sessionDiagnostics.enNlLocalTranslations
+        val localTranslationStart = if (chosenDirection == OfflineObservationDirection.NL_EN)
+            started.nlEnLocalTranslations else started.enNlLocalTranslations
+        if (observedSpeech && localSpeechNow - localSpeechStart <=
+            freshClaims(chosenDirection, speech = true)) {
+            attemptMessage = "Nog geen extra definitieve lokale spraakherkenning " +
+                "in deze richting geteld sinds de start van de proef."
+            return
+        }
+        if (observedTranslation && localTranslationNow - localTranslationStart <=
+            freshClaims(chosenDirection, speech = false)) {
+            attemptMessage = "Nog geen extra afgeronde lokale vertaling " +
+                "in deze richting geteld sinds de start van de proef."
             return
         }
         val time = attemptLatency.toLongOrNull()
@@ -156,6 +207,7 @@ internal fun OfflineAcceptanceReportAction(
             return
         }
         attempts = attempts + proposed
+        newAttemptFlags = newAttemptFlags + true
         attemptMessage = "Poging opgeslagen in tijdelijk appgeheugen."
         observedSpeech = false
         observedTranslation = false
@@ -187,7 +239,12 @@ internal fun OfflineAcceptanceReportAction(
         val allSuccessfulTranslationsTimed =
             OfflineObservationLedger.timedSuccessesComplete(attempts)
         val android12Plus = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        val complete = android12Plus && digestMatches && radioSnapshotReady &&
+        val startedForReport = startedDiagnostics
+        val strictRadioUninterrupted = startedForReport != null &&
+            sessionDiagnostics.strictRadioInterruptions ==
+                startedForReport.strictRadioInterruptions
+        val complete = android12Plus && strictRadioUninterrupted &&
+            digestMatches && radioSnapshotReady &&
             disconnectedConfirmed &&
             permissionAndStopConfirmed && noCloudFallbackConfirmed &&
             privacyClearingConfirmed && recordedAllAttempts &&
@@ -201,7 +258,11 @@ internal fun OfflineAcceptanceReportAction(
             appendLine("Imported observations are NOT proof of one continuous offline radio session")
             appendLine("Independently verified by Tuddy: no")
             appendLine("Android 12+ minimum for this record: $android12Plus")
+            appendLine("No strict radio watchdog interruption since current draft started: $strictRadioUninterrupted")
             appendLine("Radio status rechecked before each NEW manually entered attempt: yes (not proof during utterance; imports excluded)")
+            appendLine("New on-device-counter-gated attempts in current app session: ${newAttemptFlags.count { it }}")
+            appendLine("Previously imported manual attempts not matched to live counters: ${newAttemptFlags.count { !it }}")
+            appendLine("RAM source-language ASR and local MT counters used only as consistency checks, not human quality or radio proof")
             appendLine("Session recorded at epoch milliseconds UTC: $recordedAt")
             appendLine("Observation completeness: ${if (complete) "required observations recorded (NOT acceptance)" else "incomplete; inspect unrecorded or unchecked observations"}")
             appendLine("Outcome acceptance by an independent reviewer: NOT GRANTED")
@@ -253,6 +314,8 @@ internal fun OfflineAcceptanceReportAction(
         noCloudFallbackConfirmed = false
         privacyClearingConfirmed = false
         attempts = emptyList()
+        newAttemptFlags = emptyList()
+        startedDiagnostics = null
         chosenDirection = OfflineObservationDirection.NL_EN
         observedSpeech = false
         observedTranslation = false
@@ -390,6 +453,9 @@ internal fun OfflineAcceptanceReportAction(
                     recordedAt = System.currentTimeMillis()
                     expectedApkSha256 = parsed.expectedApkSha256.orEmpty()
                     attempts = parsed.attempts
+                    newAttemptFlags = List(parsed.attempts.size) { false }
+                    startedDiagnostics = sessionDiagnostics
+                    onArmStrictOffline()
                     chosenDirection = OfflineObservationDirection.entries.firstOrNull {
                         OfflineObservationLedger.totals(attempts, it).attempts <
                             OfflineObservationLedger.REQUIRED_ATTEMPTS_PER_DIRECTION
@@ -472,6 +538,8 @@ internal fun OfflineAcceptanceReportAction(
                         message = "Hervatten geweigerd: zet vliegtuigmodus aan, wifi uit " +
                             "en verbreek alle Android-netwerktransporten."
                     else -> {
+                        onArmStrictOffline()
+                        if (startedDiagnostics == null) startedDiagnostics = sessionDiagnostics
                         baseline = captured.copyOf()
                         if (recordedAt == 0L) recordedAt = System.currentTimeMillis()
                         opened = true
@@ -641,6 +709,13 @@ internal fun OfflineAcceptanceReportAction(
                             "noteer geen namen, inhoud of audio.",
                         fontWeight = FontWeight.SemiBold
                     )
+                    Text(
+                        "Tijdens dit concept blijft de strikte radio-/microfoonbewaking " +
+                            "ingeschakeld. Nieuwe claims van geslaagde herkenning en " +
+                            "vertaling vereisen ook overeenkomstige lokale RAM-tellerstappen. " +
+                            "Dit bewijst niet dat een zin correct of fysiek offline was.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     OfflineObservationDirection.entries.forEach { direction ->
                         val totals = OfflineObservationLedger.totals(attempts, direction)
                         OutlinedButton(
@@ -702,6 +777,7 @@ internal fun OfflineAcceptanceReportAction(
                             val index = attempts.indexOfLast { it.direction == chosenDirection }
                             if (index >= 0) {
                                 attempts = attempts.filterIndexed { i, _ -> i != index }
+                                newAttemptFlags = newAttemptFlags.filterIndexed { i, _ -> i != index }
                                 attemptMessage = "Laatste ${chosenDirection.label}-poging ongedaan gemaakt."
                             } else {
                                 attemptMessage = "Voor ${chosenDirection.label} is nog niets vastgelegd."

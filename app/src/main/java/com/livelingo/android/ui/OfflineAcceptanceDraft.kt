@@ -1,6 +1,7 @@
 package com.livelingo.android.ui
 
 import androidx.compose.runtime.mutableStateOf
+import com.livelingo.android.OfflineSessionDiagnostics
 
 /**
  * RAM-only acceptance draft that survives leaving the startcheck for a real
@@ -33,4 +34,8 @@ internal class OfflineAcceptanceDraft {
     val pendingCheckpoint = mutableStateOf<ByteArray?>(null)
     val checkpointImported = mutableStateOf<Boolean>(false)
     val checkpointNotice = mutableStateOf<String>("")
+    // Baseline of actual on-device event counters at the START of the draft.
+    val startedDiagnostics = mutableStateOf<OfflineSessionDiagnostics?>(null)
+    // Imported checkpoint rows cannot be represented as freshly observed turns.
+    val newAttemptFlags = mutableStateOf<List<Boolean>>(emptyList())
 }
