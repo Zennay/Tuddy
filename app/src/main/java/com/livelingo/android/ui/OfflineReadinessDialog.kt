@@ -25,6 +25,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.livelingo.android.OfflineRadioSnapshot
 import com.livelingo.android.LocalModelStorageAdmission
+import com.livelingo.android.LocalModelNetworkAdmission
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livelingo.android.OfflineTextReceipt
@@ -77,12 +78,16 @@ internal fun OfflineReadinessDialog(
     val lifecycleOwner = LocalLifecycleOwner.current
     var radioStatus by remember { mutableStateOf(OfflineRadioSnapshot.capture(context)) }
     var storageReceipt by remember { mutableStateOf(LocalModelStorageAdmission.inspect()) }
+    var networkReceipt by remember(context) {
+        mutableStateOf(LocalModelNetworkAdmission.inspect(context))
+    }
     // Android settings is outside Tuddy. Refresh when the user returns.
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 radioStatus = OfflineRadioSnapshot.capture(context)
                 storageReceipt = LocalModelStorageAdmission.inspect()
+                networkReceipt = LocalModelNetworkAdmission.inspect(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -140,6 +145,24 @@ internal fun OfflineReadinessDialog(
                     style = MaterialTheme.typography.bodySmall
                 )
                 HorizontalDivider()
+                Text("Wifi voor een bewuste offline modeldownload",
+                    style = MaterialTheme.typography.titleSmall)
+                Text(networkReceipt.message, style = MaterialTheme.typography.bodySmall,
+                    color = if (networkReceipt.canBegin)
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.error)
+                OutlinedButton(
+                    onClick = { networkReceipt = LocalModelNetworkAdmission.inspect(context) },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Controleer wifi-toelating opnieuw") }
+                Text(
+                    "Ook een wifi-hotspot kan mobiele databundels kosten. " +
+                        "Tuddy vraagt nieuwe modellen alleen aan op door Android " +
+                        "als gevalideerd en ongemeten aangemerkte wifi. " +
+                        "Bestaande lokale spraak en vertalingen blijven werken.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                HorizontalDivider()
                 Text("1 · Spraakherkenning op dit toestel",
                     style = MaterialTheme.typography.titleSmall)
                 Text(
@@ -161,7 +184,7 @@ internal fun OfflineReadinessDialog(
                         Button(
                             onClick = onDownloadSpeech,
                             enabled = canInspect && speechServicePresent &&
-                                storageReceipt.canBegin,
+                                storageReceipt.canBegin && networkReceipt.canBegin,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Spraak via wifi") }
                     }
@@ -210,7 +233,8 @@ internal fun OfflineReadinessDialog(
                     }
                     if (!textReady && sourceTextCode != targetTextCode) {
                         Button(onClick = onPrepareText,
-                            enabled = canInspect && storageReceipt.canBegin,
+                            enabled = canInspect && storageReceipt.canBegin &&
+                                networkReceipt.canBegin,
                             modifier = Modifier.fillMaxWidth()) {
                             Text("Tekst via wifi")
                         }
