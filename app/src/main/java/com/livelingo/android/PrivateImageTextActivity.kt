@@ -73,6 +73,12 @@ internal class PrivateImageTextActivity : ComponentActivity() {
     private var selectedBlockIds by mutableStateOf<Set<Int>>(emptySet())
     // Temporary order is explicit user preference for this one OCR review.
     private var blockOrder by mutableStateOf<List<Int>>(emptyList())
+    // Never saved in Bundle, disk, preferences, or an Intent. Cleared on Pause.
+    private val reviewHistory = PrivateOcrReviewHistory()
+    private var reviewVersion by mutableStateOf(0)
+    private var findCorrection by mutableStateOf("")
+    private var replaceCorrection by mutableStateOf("")
+    private var pendingReplacement by mutableStateOf<PrivateOcrReplacePlan?>(null)
     private var clipboardExpirySeconds by mutableStateOf(0)
     // Only held in process RAM after the user explicitly opens Android's
     // document picker. The image and ordinary OCR draft still clear on pause.
@@ -387,8 +393,7 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 value = draft,
                                 onValueChange = {
                                     if (it.length <= MAX_TEXT) {
-                                        stopReadback("Voorlezen gestopt: tekst is aangepast.")
-                                        draft = it
+                                        applyReview(reviewSnapshot().copy(draft = it), typing = true)
                                         notice = "Handmatig aangepast. Controleer tekst en taalrichting."
                                     }
                                 },
@@ -396,6 +401,97 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                                 minLines = 5,
                                 label = { Text("Afbeeldingstekst · max. 8.000 tekens") }
                             )
+                            // A single, RAM-only correction history covers typing,
+                            // block selection, and reading order. No automatic edits.
+                            androidx.compose.foundation.layout.Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    enabled = reviewHistory.canUndo && !busy,
+                                    onClick = { reviewHistory.undo()?.let(::restoreReview) }
+                                ) { Text("↶ Ongedaan") }
+                                OutlinedButton(
+                                    enabled = reviewHistory.canRedo && !busy,
+                                    onClick = { reviewHistory.redo()?.let(::restoreReview) }
+                                ) { Text("↷ Opnieuw") }
+                            }
+                            // Observing revision ensures buttons refresh even
+                            // though the history itself is an ordinary RAM class.
+                            Text(
+                                "Correcties uitsluitend in dit scherm · max. 16 stappen · " +
+                                    "bij verlaten wissen (stap ${reviewVersion}).",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OutlinedTextField(
+                                value = findCorrection,
+                                onValueChange = {
+                                    findCorrection = it.take(120)
+                                    pendingReplacement = null
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text("Zoek letterlijk in gecontroleerde OCR-tekst") }
+                            )
+                            OutlinedTextField(
+                                value = replaceCorrection,
+                                onValueChange = {
+                                    replaceCorrection = it.take(120)
+                                    pendingReplacement = null
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text("Vervang met (leeg = verwijderen)") }
+                            )
+                            OutlinedButton(
+                                enabled = !busy && findCorrection.isNotEmpty(),
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    pendingReplacement = PrivateOcrReplacePolicy.plan(
+                                        draft, findCorrection, replaceCorrection
+                                    )
+                                    notice = if (pendingReplacement == null)
+                                        "Geen geldige letterlijke vervanging: controleer je " +
+                                            "zoektekst, maximaal 100 treffers en 8.000 tekens."
+                                    else "Bekijk en bevestig de voorgestelde tekstcorrectie."
+                                }
+                            ) { Text("Toon en bevestig alle vervangingen…") }
+                            pendingReplacement?.let { proposal ->
+                                AlertDialog(
+                                    onDismissRequest = { pendingReplacement = null },
+                                    title = { Text("OCR-tekst echt wijzigen?") },
+                                    text = {
+                                        Text(
+                                            "${proposal.occurrences} letterlijke vervangingen. " +
+                                                "Nieuwe lengte: ${proposal.updated.length} tekens. " +
+                                                "Dit verandert je huidige, beoordeelde tekst, " +
+                                                "niet het originele plaatje of OCR-blokken. " +
+                                                "Je kunt de wijziging ongedaan maken."
+                                        )
+                                    },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            if (!busy && draft == proposal.original &&
+                                                PrivateOcrReplacePolicy.plan(
+                                                    draft, findCorrection, replaceCorrection
+                                                ) == proposal) {
+                                                applyReview(
+                                                    reviewSnapshot().copy(draft = proposal.updated)
+                                                )
+                                                notice = "${proposal.occurrences} correcties bewust toegepast. " +
+                                                    "Controleer de tekst vóór vertaling of delen."
+                                            } else {
+                                                notice = "Tekst is intussen gewijzigd; bevestig opnieuw."
+                                            }
+                                            pendingReplacement = null
+                                        }) { Text("Pas bewust toe") }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { pendingReplacement = null }) {
+                                            Text("Annuleren")
+                                        }
+                                    }
+                                )
+                            }
                             Button(
                                 enabled = !busy && draft.isNotBlank(),
                                 modifier = Modifier.fillMaxWidth(),
@@ -594,6 +690,8 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                             notice = "Meer dan 8.000 tekens herkend. Kies hieronder " +
                                 "zelf de relevante tekstblokken; niets is doorgegeven."
                         }
+                        reviewHistory.reset(reviewSnapshot())
+                        reviewVersion++
                     }
             } catch (_: Exception) {
                 bitmap.recycle()
@@ -623,20 +721,40 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         }
     }
 
+    private fun reviewSnapshot(): PrivateOcrReviewState =
+        PrivateOcrReviewState(draft, selectedBlockIds, blockOrder)
+
+    private fun applyReview(next: PrivateOcrReviewState, typing: Boolean = false) {
+        if (reviewHistory.change(next, typing)) restoreReview(next)
+    }
+
+    private fun restoreReview(state: PrivateOcrReviewState) {
+        stopReadback("Voorlezen gestopt: gecontroleerde tekst gewijzigd.")
+        draft = state.draft
+        selectedBlockIds = state.selectedIds
+        blockOrder = state.order
+        pendingReplacement = null
+        reviewVersion++
+    }
+
     private fun clearReviewedImage() {
         stopReadback("Voorlezen gestopt: afbeeldingstekst gewist.")
         draft = ""
         textBlocks = emptyList()
         selectedBlockIds = emptySet()
         blockOrder = emptyList()
+        reviewHistory.reset()
+        reviewVersion++
+        pendingReplacement = null
+        findCorrection = ""
+        replaceCorrection = ""
     }
 
     private fun toggleBlock(index: Int, checked: Boolean) {
         stopReadback("Voorlezen gestopt: tekstblokselectie of volgorde gewijzigd.")
         val next = if (checked) selectedBlockIds + index else selectedBlockIds - index
         if (next.isEmpty()) {
-            selectedBlockIds = emptySet()
-            draft = ""
+            applyReview(reviewSnapshot().copy(selectedIds = emptySet(), draft = ""))
             notice = "Geen blokken geselecteerd. Kies eerst de relevante tekst."
             return
         }
@@ -646,15 +764,13 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                 "Laat een blok weg of kies een kleinere uitsnede."
             return
         }
-        selectedBlockIds = next
-        draft = assembled
+        applyReview(reviewSnapshot().copy(selectedIds = next, draft = assembled))
         notice = "Blokselectie bijgewerkt. Controleer de samengevoegde tekst."
     }
 
     private fun clearBlockSelection() {
         stopReadback("Voorlezen gestopt: tekstblokselectie of volgorde gewijzigd.")
-        selectedBlockIds = emptySet()
-        draft = ""
+        applyReview(reviewSnapshot().copy(selectedIds = emptySet(), draft = ""))
         notice = "Blokselectie gewist. De herkende blokken blijven tijdelijk beschikbaar."
     }
 
@@ -673,8 +789,12 @@ internal class PrivateImageTextActivity : ComponentActivity() {
                 accepted.add(block.index)
             }
         }
-        selectedBlockIds = accepted
-        draft = PrivateImageTextBlocks.assemble(textBlocks, accepted, blockOrder).orEmpty()
+        applyReview(
+            reviewSnapshot().copy(
+                selectedIds = accepted,
+                draft = PrivateImageTextBlocks.assemble(textBlocks, accepted, blockOrder).orEmpty()
+            )
+        )
         notice = if (accepted.isEmpty()) "Geen blok past binnen de 8.000-tekengrens."
             else "${accepted.size} van ${textBlocks.size} blokken geselecteerd. " +
                 "Mogelijk zijn blokken overgeslagen; controleer wat is meegenomen."
@@ -685,19 +805,24 @@ internal class PrivateImageTextActivity : ComponentActivity() {
         stopReadback("Voorlezen gestopt: tekstblokselectie of volgorde gewijzigd.")
         val next = PrivateImageTextBlocks.move(textBlocks, blockOrder, id, direction)
             ?: return
-        blockOrder = next
         // Preserve exactly the chosen blocks; do not resurrect unselected ones.
-        draft = PrivateImageTextBlocks.assemble(textBlocks, selectedBlockIds, next).orEmpty()
+        applyReview(reviewSnapshot().copy(
+            order = next,
+            draft = PrivateImageTextBlocks.assemble(textBlocks, selectedBlockIds, next).orEmpty()
+        ))
         notice = "Leesvolgorde aangepast. Controleer de samengevoegde tekst opnieuw; " +
             "handmatige tekstcorrecties zijn opnieuw samengesteld."
     }
 
     private fun restoreBlockOrder() {
         stopReadback("Voorlezen gestopt: tekstblokselectie of volgorde gewijzigd.")
-        blockOrder = textBlocks.map { it.index }
-        draft = PrivateImageTextBlocks.assemble(
-            textBlocks, selectedBlockIds, blockOrder
-        ).orEmpty()
+        val originalOrder = textBlocks.map { it.index }
+        applyReview(reviewSnapshot().copy(
+            order = originalOrder,
+            draft = PrivateImageTextBlocks.assemble(
+                textBlocks, selectedBlockIds, originalOrder
+            ).orEmpty()
+        ))
         notice = "Oorspronkelijke OCR-volgorde hersteld. " +
             "Controleer de tekst opnieuw vóór vertalen."
     }
