@@ -128,6 +128,38 @@ wijzigen. Dit is een luisterhulpmiddel voor de beoordeelde oorspronkelijke
 tekst, geen vertaal- of herkenningsnauwkeurigheidsclaim en geen bewijs
 van de nog vereiste fysieke Android 12+-vliegtuigmodusproef.
 
+## Veilig corrigeren, terugdraaien en letterlijk zoeken/vervangen
+
+Na OCR vormt Tuddy één tijdelijke correctiewerkruimte van de door jou
+geselecteerde blokken, hun leesvolgorde en het handmatig bewerkte tekstveld.
+**Ongedaan** en **Opnieuw** herstellen de volledige voorgaande combinatie;
+dus ook een per ongeluk verwijderde blokselectie, omgewisselde volgorde
+of overschreven handmatige correctie. De knoppen blijven beschikbaar als
+je alle blokken hebt gedeselecteerd. Snelle toetsaanslagen zijn gegroepeerd
+in één herstelbare bewerkingsstap; maximaal **16** versies worden uitsluitend
+in het werkgeheugen gehouden. Een nieuwe foto, verlaten of naar de
+achtergrond gaan wist de hele geschiedenis. Niets gaat naar opslag,
+Androids saved instance state, de tekstvertaler of het klembord zonder
+je eigen aparte actie.
+
+Om een veelgemaakte OCR-fout in meerdere woorden tegelijk te corrigeren
+gebruik je **Zoek letterlijk** en **Vervang met**. Tuddy gebruikt
+hoofdlettergevoelige, letterlijke matches (geen regex of automatisch
+genereren). De knop toont eerst het aantal treffers en de nieuwe
+tekstlengte. Pas na **Pas bewust toe** verandert de huidige tekst.
+Er zijn grenzen van 120 tekens per zoek/vervangveld, 100 treffers en
+8.000 tekens totale beoordeelde tekst. Lege vervangtekst verwijdert
+alleen de expliciet gezochte fragmenten. Ongeldige, te lange of
+verouderde voorstellen worden niet toegepast en je kunt de laatste
+toegepaste correctie weer ongedaan maken.
+
+Elke tekstbewerking en herstelactie stopt eventuele lopende lokale
+voorleesuitvoer meteen. Vertalen, voorlezen, opslaan, kopiëren en delen
+blijven aparte expliciete acties op de actuele tekst. Het originele
+beeld wordt niet bewerkt. Controleer het resultaat altijd zelf:
+OCR-herkenning en zoeken/vervangen zijn geen bewijs van tekstkwaliteit
+of volledige Android-vliegtuigmodusacceptatie.
+
 ## Van foto naar vertaling
 
 1. Kies een afbeelding of bevestig expliciet de gedeelde afbeelding.
