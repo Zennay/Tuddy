@@ -130,7 +130,9 @@ internal fun PrivatePhraseTopicsDialog(
                         output.toByteArray()
                     }.getOrNull()
                 }
-                val candidate = bytes?.let { storage.previewImport(it) }
+                val candidate = bytes?.let { data ->
+                    runCatching { storage.previewImport(data) }.getOrNull()
+                }
                 importing = false
                 if (candidate == null) {
                     notice = "Thema-back-up geweigerd: ongeldige gegevens of " +
