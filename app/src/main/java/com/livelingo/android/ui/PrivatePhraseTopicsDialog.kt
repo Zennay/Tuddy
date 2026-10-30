@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +27,9 @@ import com.livelingo.android.PersonalPhrase
 import com.livelingo.android.PrivatePhraseTopics
 import com.livelingo.android.PrivatePhraseTopicBackup
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private data class PendingTopicRestore(
     val backup: PrivatePhraseTopicBackup,
@@ -71,6 +75,8 @@ internal fun PrivatePhraseTopicsDialog(
     var pendingBackup by remember { mutableStateOf<ByteArray?>(null) }
     var pendingRestore by remember { mutableStateOf<PendingTopicRestore?>(null) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var importing by remember { mutableStateOf(false) }
     val exportDocument = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -97,37 +103,50 @@ internal fun PrivatePhraseTopicsDialog(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         pendingRestore = null
-        if (uri != null) {
-            val candidate = runCatching {
-                val source = context.contentResolver.openInputStream(uri)
-                    ?: throw IllegalArgumentException("Unreadable file")
-                val output = ByteArrayOutputStream()
-                source.use { input ->
-                    val buffer = ByteArray(4096)
-                    while (true) {
-                        val size = input.read(buffer)
-                        if (size < 0) break
-                        if (size == 0 || output.size() + size >
-                            PrivatePhraseTopics.MAX_BACKUP_BYTES) {
-                            throw IllegalArgumentException("Invalid backup size")
+        if (uri != null && !importing) {
+            importing = true
+            notice = "Privéthema-bestand wordt gelezen…"
+            scope.launch {
+                // A user-selected document provider can be slow or remote.
+                // Only bounded I/O runs on Dispatchers.IO; the current
+                // storage snapshot and human confirmation remain on Main.
+                val bytes = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val source = context.contentResolver.openInputStream(uri)
+                            ?: throw IllegalArgumentException("Unreadable file")
+                        val output = ByteArrayOutputStream()
+                        source.use { input ->
+                            val buffer = ByteArray(4096)
+                            while (true) {
+                                val size = input.read(buffer)
+                                if (size < 0) break
+                                if (size == 0 || output.size() + size >
+                                    PrivatePhraseTopics.MAX_BACKUP_BYTES) {
+                                    throw IllegalArgumentException("Invalid backup size")
+                                }
+                                output.write(buffer, 0, size)
+                            }
                         }
-                        output.write(buffer, 0, size)
-                    }
+                        output.toByteArray()
+                    }.getOrNull()
                 }
-                storage.previewImport(output.toByteArray())
-            }.getOrNull()
-            if (candidate == null) {
-                notice = "Thema-back-up geweigerd: ongeldige gegevens of " +
-                    "bijbehorende eigen zinnen ontbreken. Herstel eerst die zinnen."
-            } else {
-                val previousNotes = storage.notesSnapshot()
-                if (previousNotes == null) {
-                    notice = "De eigen zinnen zijn intussen veranderd. Open de back-up opnieuw."
+                val candidate = bytes?.let { data ->
+                    runCatching { storage.previewImport(data) }.getOrNull()
+                }
+                importing = false
+                if (candidate == null) {
+                    notice = "Thema-back-up geweigerd: ongeldige gegevens of " +
+                        "bijbehorende eigen zinnen ontbreken. Herstel eerst die zinnen."
                 } else {
-                    pendingRestore = PendingTopicRestore(
-                        candidate, storage.exportSnapshot(), previousNotes
-                    )
-                    notice = ""
+                    val previousNotes = storage.notesSnapshot()
+                    if (previousNotes == null) {
+                        notice = "De eigen zinnen zijn intussen veranderd. Open de back-up opnieuw."
+                    } else {
+                        pendingRestore = PendingTopicRestore(
+                            candidate, storage.exportSnapshot(), previousNotes
+                        )
+                        notice = ""
+                    }
                 }
             }
         }
@@ -463,7 +482,7 @@ internal fun PrivatePhraseTopicsDialog(
                         exportDocument.launch("tuddy-privethemas.json")
                     }
                 }) { Text("Bewaar thema-indeling als aparte JSON…") }
-                TextButton(onClick = {
+                TextButton(enabled = !importing, onClick = {
                     pendingRestore = null
                     importDocument.launch(arrayOf("application/json", "text/plain"))
                 }) { Text("Herstel thema-indeling uit JSON…") }
