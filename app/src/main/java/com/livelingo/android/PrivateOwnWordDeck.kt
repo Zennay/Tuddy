@@ -128,11 +128,14 @@ internal class PrivateOwnWordDeck(context: Context) {
         catch (_: RuntimeException) { false }
 
     @Synchronized
-    fun enableReviews(): Boolean = prefs.edit().putBoolean(REVIEW_OPT_IN, true).commit()
+    fun enableReviews(): Boolean = try {
+        prefs.edit().putBoolean(REVIEW_OPT_IN, true).commit()
+    } catch (_: RuntimeException) { false }
 
     @Synchronized
-    fun disableReviews(): Boolean = prefs.edit()
-        .remove(REVIEW_OPT_IN).remove(REVIEW_DATA).commit()
+    fun disableReviews(): Boolean = try {
+        prefs.edit().remove(REVIEW_OPT_IN).remove(REVIEW_DATA).commit()
+    } catch (_: RuntimeException) { false }
 
     @Synchronized
     fun scheduledReviews(): List<ScheduledOwnWord>? {
@@ -158,7 +161,9 @@ internal class PrivateOwnWordDeck(context: Context) {
         val stage = if (remembered) ((records[hash]?.first ?: 0) + 1).coerceAtMost(5) else 0
         records[hash] = stage to java.time.LocalDate.now()
             .plusDays(INTERVAL_DAYS[stage]).toEpochDay()
-        return prefs.edit().putStringSet(REVIEW_DATA, encodeReviews(records)).commit()
+        return try {
+            prefs.edit().putStringSet(REVIEW_DATA, encodeReviews(records)).commit()
+        } catch (_: RuntimeException) { false }
     }
 
     private fun write(items: List<OwnWord>, resetReviews: Boolean = false): Boolean {
