@@ -106,7 +106,9 @@ internal fun PrivatePhraseArchiveAction(
                     }.getOrNull()
                 }
                 // Keep deck/preview state and the human confirmation on Main.
-                val candidate = bytes?.let { deck.previewArchiveImport(it) }
+                val candidate = bytes?.let { data ->
+                    runCatching { deck.previewArchiveImport(data) }.getOrNull()
+                }
                 val baseline = deck.entries()
                 importing = false
                 if (candidate == null || baseline == null) {
