@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,6 +29,9 @@ import com.livelingo.android.PrivatePhraseDeck
 import com.livelingo.android.PrivatePhraseShortcuts
 import com.livelingo.android.PrivatePhraseTopics
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private data class ArchiveExport(val bytes: ByteArray, val archive: PrivatePhraseArchive)
 private data class ArchiveRestore(
@@ -43,8 +47,10 @@ internal fun PrivatePhraseArchiveAction(
     onChanged: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val topics = remember(context) { PrivatePhraseTopics(context) }
     var feedback by remember { mutableStateOf("") }
+    var importing by remember { mutableStateOf(false) }
     var previewExport by remember { mutableStateOf<ArchiveExport?>(null) }
     var pendingWrite by remember { mutableStateOf<ByteArray?>(null) }
     var previewRestore by remember { mutableStateOf<ArchiveRestore?>(null) }
@@ -75,33 +81,44 @@ internal fun PrivatePhraseArchiveAction(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         previewRestore = null
-        if (uri != null) {
-            val candidate = runCatching {
-                val input = context.contentResolver.openInputStream(uri)
-                    ?: throw IllegalArgumentException("Unreadable file")
-                val data = ByteArrayOutputStream()
-                input.use { stream ->
-                    val buffer = ByteArray(4096)
-                    while (true) {
-                        val n = stream.read(buffer)
-                        if (n < 0) break
-                        if (n == 0 || data.size() + n > 70_000)
-                            throw IllegalArgumentException("Oversized archive")
-                        data.write(buffer, 0, n)
-                    }
+        if (uri != null && !importing) {
+            importing = true
+            feedback = "Privébestand wordt veilig gelezen…"
+            scope.launch {
+                // A chosen Android provider may be remote or slow: never block
+                // the Compose UI thread during its bounded stream reads.
+                val bytes = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val input = context.contentResolver.openInputStream(uri)
+                            ?: throw IllegalArgumentException("Unreadable file")
+                        val data = ByteArrayOutputStream()
+                        input.use { stream ->
+                            val buffer = ByteArray(4096)
+                            while (true) {
+                                val n = stream.read(buffer)
+                                if (n < 0) break
+                                if (n == 0 || data.size() + n > 70_000)
+                                    throw IllegalArgumentException("Oversized archive")
+                                data.write(buffer, 0, n)
+                            }
+                        }
+                        data.toByteArray()
+                    }.getOrNull()
                 }
-                deck.previewArchiveImport(data.toByteArray())
-            }.getOrNull()
-            val baseline = deck.entries()
-            if (candidate == null || baseline == null) {
-                feedback = "Bestand geweigerd: ongeldig, onbekende versie of te groot. " +
-                    "De eigen zinnen blijven intact."
-            } else {
-                mergeMode = true
-                previewRestore = ArchiveRestore(
-                    candidate, baseline.toList(), topics.exportSnapshot()
-                )
-                feedback = ""
+                // Keep deck/preview state and the human confirmation on Main.
+                val candidate = bytes?.let { deck.previewArchiveImport(it) }
+                val baseline = deck.entries()
+                importing = false
+                if (candidate == null || baseline == null) {
+                    feedback = "Bestand geweigerd: ongeldig, onbekende versie of te groot. " +
+                        "De eigen zinnen blijven intact."
+                } else {
+                    mergeMode = true
+                    previewRestore = ArchiveRestore(
+                        candidate, baseline.toList(), topics.exportSnapshot()
+                    )
+                    feedback = ""
+                }
             }
         }
     }
@@ -126,6 +143,7 @@ internal fun PrivatePhraseArchiveAction(
         ) { Text("Bewaar zinnen én thema’s in één bestand…") }
         OutlinedButton(
             modifier = Modifier.fillMaxWidth(),
+            enabled = !importing,
             onClick = {
                 openFile.launch(arrayOf("application/json", "text/plain"))
             }
